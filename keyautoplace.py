@@ -65,7 +65,7 @@ class KeyPlacer():
         track.SetLocked(True)
 
 
-    def Run(self):
+    def Run(self, routeTracks=False):
         for key in self.layout["keys"]:
             keyModule = self.GetCurrentKey()
             position = wxPoint(self.referenceCoordinate.x + (self.keyDistance * key["x"]) + (self.keyDistance * key["width"] // 2), 
@@ -81,8 +81,9 @@ class KeyPlacer():
             if not diodeModule.IsFlipped():
                 diodeModule.Flip(diodeModule.GetPosition())
 
-            #self.RouteKeyWithDiode(keyModule, diodeModule)
-            #self.RouteColumn(keyModule)
+            if routeTracks == True:
+                self.RouteKeyWithDiode(keyModule, diodeModule)
+                self.RouteColumn(keyModule)
 
 
 class KeyAutoPlaceDialog(wx.Dialog):
@@ -97,19 +98,30 @@ class KeyAutoPlaceDialog(wx.Dialog):
         filePicker = wx.FilePickerCtrl(self, -1)
         row1.Add(filePicker, 1, wx.EXPAND|wx.ALL, 5)
 
+        row2 = wx.BoxSizer(wx.HORIZONTAL)
+
+        tracksCheckbox = wx.CheckBox(self, label="Add tracks")
+        row2.Add(tracksCheckbox, 1, wx.EXPAND|wx.ALL, 5)
+
         box = wx.BoxSizer(wx.VERTICAL)
 
         box.Add(row1, 0, wx.EXPAND|wx.ALL, 5)
+        box.Add(row2, 0, wx.EXPAND|wx.ALL, 5)
 
         buttons = self.CreateButtonSizer(wx.OK|wx.CANCEL)
         box.Add(buttons, 0, wx.EXPAND|wx.ALL, 5)
 
         self.SetSizerAndFit(box)
         self.filePicker = filePicker
+        self.tracksCheckbox = tracksCheckbox
 
 
     def GetValue(self):
         return self.filePicker.GetPath()
+
+
+    def IsTracks(self):
+        return self.tracksCheckbox.GetValue()
 
         
 class KeyAutoPlace(ActionPlugin):
@@ -153,7 +165,7 @@ class KeyAutoPlace(ActionPlugin):
             layout = json.loads(textInput)
             self.logger.info("User layout: {}".format(layout))
             placer = KeyPlacer(self.logger, self.board, layout)
-            placer.Run()
+            placer.Run(dlg.IsTracks())
 
 
         dlg.Destroy()
