@@ -30,6 +30,7 @@ All PCB's for mechanical keyboards shares common properties which creates great 
 - See created `keyautoplace.log` file (in PCB directory)
 
 ## Known bugs and limitations
-- Key rotation support is not reliable. Might be related to issue in kle-serial (see [this](https://github.com/ijprest/kle-serial/pull/1)
+- Key rotation support is not reliable. Might be related to issue in kle-serial (see [this](https://github.com/ijprest/kle-serial/pull/1))
 - Tested only with SOD-323F diodes. Predefined diode location might not be suitable for larger footprints and custom location is not supported without code modification
+- Tested only with KiCad version 5.1.5
 
