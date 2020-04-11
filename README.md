@@ -23,7 +23,7 @@ All PCB's for mechanical keyboards shares common properties which creates great 
 - Run KeyAutoPlace plugin
 - Select desired json file and click OK.
 
-![demo](demo.webm)
+![demo](demo.gif)
 
 ## Troubleshooting
 - See stacktrace
