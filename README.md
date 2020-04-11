@@ -19,7 +19,7 @@ All PCB's for mechanical keyboards shares common properties which creates great 
 
 ## How to use?
 - Create new PCB and load netlist
-- Obtain [kle-serial](https://github.com/ijprest/kle-serial) compatible layout json file (note: this is not json which can be downloaded directly from [keyboard-layout-editor](http://www.keyboard-layout-editor.com/) website. Guide is in preparation)
+- Obtain [kle-serial](https://github.com/ijprest/kle-serial) compatible layout json file (**note**: this is not json which can be downloaded directly from [keyboard-layout-editor](http://www.keyboard-layout-editor.com/) website. Expected json format can be seen in `examples` directory. Guide is in preparation.)
 - Run KeyAutoPlace plugin
 - Select desired json file and click OK.
 
@@ -29,4 +29,7 @@ All PCB's for mechanical keyboards shares common properties which creates great 
 - See stacktrace
 - See created `keyautoplace.log` file (in PCB directory)
 
+## Known bugs and limitations
+- Key rotation support is not reliable. Might be related to issue in kle-serial (see [this](https://github.com/ijprest/kle-serial/pull/1)
+- Tested only with SOD-323F diodes. Predefined diode location might not be suitable for larger footprints and custom location is not supported without code modification
 
