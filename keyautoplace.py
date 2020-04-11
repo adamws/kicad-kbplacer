@@ -36,33 +36,26 @@ class KeyPlacer():
         module.SetPosition(wxPoint(referencePoint.x + FromMM(direction[0]), referencePoint.y + FromMM(direction[1])))
 
 
-    def RouteKeyWithDiode(self, key, diode):
+    def AddTrackSegment(self, start, vector, layer=B_Cu):
         track = TRACK(self.board)
         track.SetWidth(FromMM(0.25))
-        track.SetLayer(B_Cu)
-        track.SetStart(diode.FindPadByName('2').GetPosition())
-        segmentEnd = wxPoint(track.GetStart().x - FromMM(1.98), track.GetStart().y - FromMM(1.98))
+        track.SetLayer(layer)
+        track.SetStart(start)
+        segmentEnd = wxPoint(track.GetStart().x + FromMM(vector[0]), track.GetStart().y + FromMM(vector[1]))
         track.SetEnd(segmentEnd)
         self.board.Add(track)
         track.SetLocked(True)
+        return segmentEnd
 
-        track = TRACK(self.board)
-        track.SetWidth(FromMM(0.25))
-        track.SetLayer(B_Cu)
-        track.SetStart(segmentEnd)
-        track.SetEnd(wxPoint(track.GetStart().x, track.GetStart().y - FromMM(4.2)))
-        self.board.Add(track)
-        track.SetLocked(True)
+
+    def RouteKeyWithDiode(self, key, diode):
+        end = self.AddTrackSegment(diode.FindPadByName('2').GetPosition(), [-1.98, -1.98])
+        self.AddTrackSegment(end, [0, -4.2])
 
 
     def RouteColumn(self, key):
-        track = TRACK(self.board)
-        track.SetWidth(FromMM(0.25))
-        track.SetLayer(F_Cu)
-        track.SetStart(wxPoint(key.GetPosition().x - FromMM(3.11), key.GetPosition().y - FromMM(1.84)))
-        track.SetEnd(wxPoint(key.GetPosition().x - FromMM(3.11), key.GetPosition().y + FromMM(10)))
-        self.board.Add(track)
-        track.SetLocked(True)
+        segmentStart = wxPoint(key.GetPosition().x - FromMM(3.11), key.GetPosition().y - FromMM(1.84))
+        self.AddTrackSegment(segmentStart, [0, 10], layer=F_Cu)
 
 
     def Run(self, routeTracks=False):
