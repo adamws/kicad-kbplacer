@@ -18,22 +18,34 @@ class KeyPlacer():
         self.referenceCoordinate = wxPoint(FromMM(25), FromMM(25))
 
 
-    def GetCurrentKey(self):
-        reference = 'MX_{}'.format(self.currentKey)
+    def GetModule(self, reference):
         self.logger.info('Searching for {} module'.format(reference))
+        module = self.board.FindModuleByReference(reference)
+        if module == None:
+            self.logger.error('Module not found')
+            raise Exception('Cannot find module {}'.format(reference))
+        return module
+
+    def GetCurrentKey(self, keyFormat):
+        key = self.GetModule(keyFormat.format(self.currentKey))
         self.currentKey += 1
-        return self.board.FindModuleByReference(reference)
+        return key
 
     
-    def GetCurrentDiode(self):
-        reference = 'D_{}'.format(self.currentDiode)
-        self.logger.info('Searching for {} module'.format(reference))
+    def GetCurrentDiode(self, diodeFormat):
+        diode = self.GetModule(diodeFormat.format(self.currentDiode))
         self.currentDiode += 1
-        return self.board.FindModuleByReference(reference)
+        return diode
+
+
+    def SetPosition(self, module, position):
+        self.logger.info('Setting {} module position: {}'.format(module.GetReference(), position))
+        module.SetPosition(position)
 
 
     def SetRelativePositionMM(self, module, referencePoint, direction):
-        module.SetPosition(wxPoint(referencePoint.x + FromMM(direction[0]), referencePoint.y + FromMM(direction[1])))
+        position = wxPoint(referencePoint.x + FromMM(direction[0]), referencePoint.y + FromMM(direction[1]))
+        self.SetPosition(module, position)
 
 
     def AddTrackSegment(self, start, vector, layer=B_Cu):
@@ -43,7 +55,10 @@ class KeyPlacer():
         track.SetStart(start)
         segmentEnd = wxPoint(track.GetStart().x + FromMM(vector[0]), track.GetStart().y + FromMM(vector[1]))
         track.SetEnd(segmentEnd)
+
+        self.logger.info('Adding track segment ({}): [{}, {}]'.format(self.board.GetLayerName(layer), start, segmentEnd))
         self.board.Add(track)
+
         track.SetLocked(True)
         return segmentEnd
 
@@ -58,19 +73,23 @@ class KeyPlacer():
         self.AddTrackSegment(segmentStart, [0, 10], layer=F_Cu)
 
 
-    def Run(self, routeTracks=False):
+    def Run(self, keyFormat, diodeFormat, routeTracks=False, rotateModules=False):
         for key in self.layout["keys"]:
-            keyModule = self.GetCurrentKey()
+            keyModule = self.GetCurrentKey(keyFormat)
             position = wxPoint(self.referenceCoordinate.x + (self.keyDistance * key["x"]) + (self.keyDistance * key["width"] // 2), 
                     self.referenceCoordinate.y + (self.keyDistance * key["y"]) + (self.keyDistance * key["height"] // 2))
-            keyModule.SetPosition(position)
-            #rotationReference = wxPoint(self.referenceCoordinate.x + (self.keyDistance * key["rotation_x"]) + (self.keyDistance * key["width"] // 2), 
-            #        self.referenceCoordinate.y + (self.keyDistance * key["rotation_y"]) + (self.keyDistance * key["height"] // 2))
-            #keyModule.Rotate(rotationReference, key["rotation_angle"] * -10)
+            self.SetPosition(keyModule, position)
 
-            diodeModule = self.GetCurrentDiode()
+            # something is not quite right, not recomented to use it yet:
+            if rotateModules == True:
+                rotationReference = wxPoint(self.referenceCoordinate.x + (self.keyDistance * key["rotation_x"]) + (self.keyDistance * key["width"] // 2), 
+                        self.referenceCoordinate.y + (self.keyDistance * key["rotation_y"]) + (self.keyDistance * key["height"] // 2))
+                keyModule.Rotate(rotationReference, key["rotation_angle"] * -10)
+
+            diodeModule = self.GetCurrentDiode(diodeFormat)
             self.SetRelativePositionMM(diodeModule, position, [5.08, 3.03])
             diodeModule.SetOrientationDegrees(270)
+
             if not diodeModule.IsFlipped():
                 diodeModule.Flip(diodeModule.GetPosition())
 
@@ -93,28 +112,66 @@ class KeyAutoPlaceDialog(wx.Dialog):
 
         row2 = wx.BoxSizer(wx.HORIZONTAL)
 
+        keyAnnotationLabel = wx.StaticText(self, -1, "Key annotation format string:")
+        row2.Add(keyAnnotationLabel, 1, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, 5)
+
+        keyAnnotationFormat = wx.TextCtrl(self, value='MX_{}')
+        row2.Add(keyAnnotationFormat, 1, wx.EXPAND|wx.ALL, 5)
+
+        row3 = wx.BoxSizer(wx.HORIZONTAL)
+
+        diodeAnnotationLabel = wx.StaticText(self, -1, "Diode annotation format string:")
+        row3.Add(diodeAnnotationLabel, 1, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, 5)
+
+        diodeAnnotationFormat = wx.TextCtrl(self, value='D_{}')
+        row3.Add(diodeAnnotationFormat, 1, wx.EXPAND|wx.ALL, 5)
+
+        row4 = wx.BoxSizer(wx.HORIZONTAL)
+
         tracksCheckbox = wx.CheckBox(self, label="Add tracks")
-        row2.Add(tracksCheckbox, 1, wx.EXPAND|wx.ALL, 5)
+        tracksCheckbox.SetValue(True)
+        row4.Add(tracksCheckbox, 1, wx.EXPAND|wx.ALL, 5)
+
+        rotationCheckbox = wx.CheckBox(self, label="Enable rotations")
+        rotationCheckbox.SetValue(False)
+        row4.Add(rotationCheckbox, 1, wx.EXPAND|wx.ALL, 5)
 
         box = wx.BoxSizer(wx.VERTICAL)
 
         box.Add(row1, 0, wx.EXPAND|wx.ALL, 5)
         box.Add(row2, 0, wx.EXPAND|wx.ALL, 5)
+        box.Add(row3, 0, wx.EXPAND|wx.ALL, 5)
+        box.Add(row4, 0, wx.EXPAND|wx.ALL, 5)
 
         buttons = self.CreateButtonSizer(wx.OK|wx.CANCEL)
         box.Add(buttons, 0, wx.EXPAND|wx.ALL, 5)
 
         self.SetSizerAndFit(box)
         self.filePicker = filePicker
+        self.keyAnnotationFormat = keyAnnotationFormat
+        self.diodeAnnotationFormat = diodeAnnotationFormat
         self.tracksCheckbox = tracksCheckbox
+        self.rotationCheckbox = rotationCheckbox
 
 
-    def GetValue(self):
+    def GetJsonPath(self):
         return self.filePicker.GetPath()
+
+
+    def GetKeyAnnotationFormat(self):
+        return self.keyAnnotationFormat.GetValue()
+
+
+    def GetDiodeAnnotationFormat(self):
+        return self.diodeAnnotationFormat.GetValue()
 
 
     def IsTracks(self):
         return self.tracksCheckbox.GetValue()
+
+
+    def IsRotation(self):
+        return self.rotationCheckbox.GetValue()
 
         
 class KeyAutoPlace(ActionPlugin):
@@ -151,14 +208,14 @@ class KeyAutoPlace(ActionPlugin):
 
         dlg = KeyAutoPlaceDialog(pcbFrame, 'Title', 'Caption')
         if dlg.ShowModal() == wx.ID_OK:
-            layoutPath = dlg.GetValue()
+            layoutPath = dlg.GetJsonPath()
             f = open(layoutPath, "r")
             textInput = f.read()
             f.close()
             layout = json.loads(textInput)
             self.logger.info("User layout: {}".format(layout))
             placer = KeyPlacer(self.logger, self.board, layout)
-            placer.Run(dlg.IsTracks())
+            placer.Run(dlg.GetKeyAnnotationFormat(), dlg.GetDiodeAnnotationFormat(), dlg.IsTracks(), dlg.IsRotation())
 
 
         dlg.Destroy()
