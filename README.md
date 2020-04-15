@@ -12,14 +12,14 @@ All PCB's for mechanical keyboards shares common properties which creates great 
 - [ ] Footprint replacement
 - [ ] User selectable diode position in relation to key position
 
-## Instalation
+## Installation
 - Clone this repository
 - Copy `keyautoplace.py` (or create symbolic link) to one of the KiCad's plugin search locations. For details see [kicad documentation](https://docs.kicad-pcb.org/doxygen/md_Documentation_development_pcbnew-plugins.html) 
 - Open KiCad's Pcbnew, run `Tools->External Plugins...->Refresh Plugins`. KeyAutoPlace plugin should appear in plugin list.
 
 ## How to use?
 - Create new PCB and load netlist
-- Obtain [kle-serial](https://github.com/ijprest/kle-serial) compatible layout json file (**note**: this is not json which can be downloaded directly from [keyboard-layout-editor](http://www.keyboard-layout-editor.com/) website. Expected json format can be seen in `examples` directory. Guide is in preparation.)
+- Obtain [kle-serial](https://github.com/ijprest/kle-serial) compatible layout json file (**note**: this is not json which can be downloaded directly from [keyboard-layout-editor](http://www.keyboard-layout-editor.com/) website. Expected json format can be seen in `examples` directory. For conversion follow guide from [kle-serial-server](https://github.com/adamws/kle-serial-server)
 - Run KeyAutoPlace plugin
 - Select desired json file and click OK.
 
