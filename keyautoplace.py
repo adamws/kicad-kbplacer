@@ -31,7 +31,7 @@ class KeyPlacer():
         self.currentKey += 1
         return key
 
-    
+
     def GetCurrentDiode(self, diodeFormat):
         diode = self.GetModule(diodeFormat.format(self.currentDiode))
         self.currentDiode += 1
@@ -73,25 +73,36 @@ class KeyPlacer():
         self.AddTrackSegment(segmentStart, [0, 10], layer=F_Cu)
 
 
-    def Run(self, keyFormat, diodeFormat, routeTracks=False, rotateModules=False):
+    def Run(self, keyFormat, diodeFormat, routeTracks=False):
         for key in self.layout["keys"]:
             keyModule = self.GetCurrentKey(keyFormat)
-            position = wxPoint(self.referenceCoordinate.x + (self.keyDistance * key["x"]) + (self.keyDistance * key["width"] // 2), 
-                    self.referenceCoordinate.y + (self.keyDistance * key["y"]) + (self.keyDistance * key["height"] // 2))
+
+            position = wxPoint((self.keyDistance * key["x"]) + (self.keyDistance * key["width"] // 2),
+                (self.keyDistance * key["y"]) + (self.keyDistance * key["height"] // 2)) + self.referenceCoordinate
             self.SetPosition(keyModule, position)
 
-            # something is not quite right, not recomented to use it yet:
-            if rotateModules == True:
-                rotationReference = wxPoint(self.referenceCoordinate.x + (self.keyDistance * key["rotation_x"]) + (self.keyDistance * key["width"] // 2), 
-                        self.referenceCoordinate.y + (self.keyDistance * key["rotation_y"]) + (self.keyDistance * key["height"] // 2))
-                keyModule.Rotate(rotationReference, key["rotation_angle"] * -10)
+            angle = key["rotation_angle"]
+            if angle != 0:
+                rotationReference = wxPoint((self.keyDistance * key["rotation_x"]), (self.keyDistance * key["rotation_y"])) + self.referenceCoordinate
+                self.logger.info('Rotating {} module: rotationReference: {}, rotationAngle: {}'
+                        .format(keyModule.GetReference(), rotationReference, angle))
+                keyModule.Rotate(rotationReference, angle * -10)
 
             diodeModule = self.GetCurrentDiode(diodeFormat)
             self.SetRelativePositionMM(diodeModule, position, [5.08, 3.03])
-            diodeModule.SetOrientationDegrees(270)
+            if angle != 0:
+                rotationReference = wxPoint((self.keyDistance * key["rotation_x"]), (self.keyDistance * key["rotation_y"])) + self.referenceCoordinate
+                self.logger.info('Rotating {} module: rotationReference: {}, rotationAngle: {}'
+                        .format(diodeModule.GetReference(), rotationReference, angle))
+                diodeModule.Rotate(rotationReference, angle * -10)
+                if not diodeModule.IsFlipped():
+                    diodeModule.Flip(diodeModule.GetPosition())
+                diodeModule.SetOrientationDegrees(keyModule.GetOrientationDegrees() - 270)
+            else:
+                diodeModule.SetOrientationDegrees(270)
+                if not diodeModule.IsFlipped():
+                    diodeModule.Flip(diodeModule.GetPosition())
 
-            if not diodeModule.IsFlipped():
-                diodeModule.Flip(diodeModule.GetPosition())
 
             if routeTracks == True:
                 self.RouteKeyWithDiode(keyModule, diodeModule)
@@ -132,10 +143,6 @@ class KeyAutoPlaceDialog(wx.Dialog):
         tracksCheckbox.SetValue(True)
         row4.Add(tracksCheckbox, 1, wx.EXPAND|wx.ALL, 5)
 
-        rotationCheckbox = wx.CheckBox(self, label="Enable rotations")
-        rotationCheckbox.SetValue(False)
-        row4.Add(rotationCheckbox, 1, wx.EXPAND|wx.ALL, 5)
-
         box = wx.BoxSizer(wx.VERTICAL)
 
         box.Add(row1, 0, wx.EXPAND|wx.ALL, 5)
@@ -151,7 +158,6 @@ class KeyAutoPlaceDialog(wx.Dialog):
         self.keyAnnotationFormat = keyAnnotationFormat
         self.diodeAnnotationFormat = diodeAnnotationFormat
         self.tracksCheckbox = tracksCheckbox
-        self.rotationCheckbox = rotationCheckbox
 
 
     def GetJsonPath(self):
@@ -170,10 +176,6 @@ class KeyAutoPlaceDialog(wx.Dialog):
         return self.tracksCheckbox.GetValue()
 
 
-    def IsRotation(self):
-        return self.rotationCheckbox.GetValue()
-
-        
 class KeyAutoPlace(ActionPlugin):
     def defaults(self):
         self.name = "KeyAutoPlace"
@@ -215,7 +217,7 @@ class KeyAutoPlace(ActionPlugin):
             layout = json.loads(textInput)
             self.logger.info("User layout: {}".format(layout))
             placer = KeyPlacer(self.logger, self.board, layout)
-            placer.Run(dlg.GetKeyAnnotationFormat(), dlg.GetDiodeAnnotationFormat(), dlg.IsTracks(), dlg.IsRotation())
+            placer.Run(dlg.GetKeyAnnotationFormat(), dlg.GetDiodeAnnotationFormat(), dlg.IsTracks())
 
 
         dlg.Destroy()

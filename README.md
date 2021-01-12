@@ -1,5 +1,5 @@
 ## kicad-kbplacer
-KiCad plugin for mechanical keyboard design. It features automatic key placement based on popular layout description from [keyboard-layout-editor](http://www.keyboard-layout-editor.com/) 
+KiCad plugin for mechanical keyboard design. It features automatic key placement based on popular layout description from [keyboard-layout-editor](http://www.keyboard-layout-editor.com/)
 
 ## Motivation
 All PCB's for mechanical keyboards shares common properties which creates great opportunity for scripting. Although this project does not aim to provide complete automatic PCB generation tool it speeds up development process by reducing tidiuos element placement task.
@@ -8,7 +8,7 @@ All PCB's for mechanical keyboards shares common properties which creates great 
 - [x] Automatic keys and diodes placement
 - [x] Support for different annotation schemes
 - [x] Basic track routing
-- [ ] Key rotation support (experimental) 
+- [x] Key rotation support
 - [ ] Footprint replacement
 - [ ] User selectable diode position in relation to key position
 
@@ -24,13 +24,14 @@ All PCB's for mechanical keyboards shares common properties which creates great 
 - Select desired json file and click OK.
 
 ![demo](demo.gif)
+- Rotated keys are supported
+![ergodox-demo](ergodox-demo.gif)
 
 ## Troubleshooting
 - See stacktrace
 - See created `keyautoplace.log` file (in PCB directory)
 
 ## Known bugs and limitations
-- Key rotation support is not reliable. Might be related to issue in kle-serial (see [this](https://github.com/ijprest/kle-serial/pull/1))
 - Tested only with SOD-323F diodes. Predefined diode location might not be suitable for larger footprints and custom location is not supported without code modification
 - Tested only with KiCad version 5.1.5
 
