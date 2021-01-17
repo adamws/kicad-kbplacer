@@ -1,4 +1,5 @@
 from pcbnew import *
+import argparse
 import wx
 import os
 import sys
@@ -19,11 +20,11 @@ class KeyPlacer():
 
 
     def GetModule(self, reference):
-        self.logger.info('Searching for {} module'.format(reference))
+        self.logger.info(f"Searching for {reference} module")
         module = self.board.FindModuleByReference(reference)
         if module == None:
-            self.logger.error('Module not found')
-            raise Exception('Cannot find module {}'.format(reference))
+            self.logger.error("Module not found")
+            raise Exception(f"Cannot find module {reference}")
         return module
 
     def GetCurrentKey(self, keyFormat):
@@ -39,7 +40,7 @@ class KeyPlacer():
 
 
     def SetPosition(self, module, position):
-        self.logger.info('Setting {} module position: {}'.format(module.GetReference(), position))
+        self.logger.info(f"Setting {module.GetReference()} module position: {position}")
         module.SetPosition(position)
 
 
@@ -56,7 +57,8 @@ class KeyPlacer():
         segmentEnd = wxPoint(track.GetStart().x + FromMM(vector[0]), track.GetStart().y + FromMM(vector[1]))
         track.SetEnd(segmentEnd)
 
-        self.logger.info('Adding track segment ({}): [{}, {}]'.format(self.board.GetLayerName(layer), start, segmentEnd))
+        layerName = self.board.GetLayerName(layer)
+        self.logger.info(f"Adding track segment ({layerName}): [{start}, {segmentEnd}]")
         self.board.Add(track)
 
         track.SetLocked(True)
@@ -73,6 +75,11 @@ class KeyPlacer():
         self.AddTrackSegment(segmentStart, [0, 10], layer=F_Cu)
 
 
+    def Rotate(self, module, rotationReference, angle):
+        self.logger.info("Rotating {module.GetReference()} module: rotationReference: {rotationReference}, rotationAngle: {angle}")
+        module.Rotate(rotationReference, angle * -10)
+
+
     def Run(self, keyFormat, diodeFormat, routeTracks=False):
         for key in self.layout["keys"]:
             keyModule = self.GetCurrentKey(keyFormat)
@@ -84,17 +91,12 @@ class KeyPlacer():
             angle = key["rotation_angle"]
             if angle != 0:
                 rotationReference = wxPoint((self.keyDistance * key["rotation_x"]), (self.keyDistance * key["rotation_y"])) + self.referenceCoordinate
-                self.logger.info('Rotating {} module: rotationReference: {}, rotationAngle: {}'
-                        .format(keyModule.GetReference(), rotationReference, angle))
-                keyModule.Rotate(rotationReference, angle * -10)
+                self.Rotate(keyModule, rotationReference, angle)
 
             diodeModule = self.GetCurrentDiode(diodeFormat)
             self.SetRelativePositionMM(diodeModule, position, [5.08, 3.03])
             if angle != 0:
-                rotationReference = wxPoint((self.keyDistance * key["rotation_x"]), (self.keyDistance * key["rotation_y"])) + self.referenceCoordinate
-                self.logger.info('Rotating {} module: rotationReference: {}, rotationAngle: {}'
-                        .format(diodeModule.GetReference(), rotationReference, angle))
-                diodeModule.Rotate(rotationReference, angle * -10)
+                self.Rotate(diodeModule, rotationReference, angle)
                 if not diodeModule.IsFlipped():
                     diodeModule.Flip(diodeModule.GetPosition())
                 diodeModule.SetOrientationDegrees(keyModule.GetOrientationDegrees() - 270)
@@ -126,7 +128,7 @@ class KeyAutoPlaceDialog(wx.Dialog):
         keyAnnotationLabel = wx.StaticText(self, -1, "Key annotation format string:")
         row2.Add(keyAnnotationLabel, 1, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, 5)
 
-        keyAnnotationFormat = wx.TextCtrl(self, value='MX_{}')
+        keyAnnotationFormat = wx.TextCtrl(self, value='MX{}')
         row2.Add(keyAnnotationFormat, 1, wx.EXPAND|wx.ALL, 5)
 
         row3 = wx.BoxSizer(wx.HORIZONTAL)
@@ -134,7 +136,7 @@ class KeyAutoPlaceDialog(wx.Dialog):
         diodeAnnotationLabel = wx.StaticText(self, -1, "Diode annotation format string:")
         row3.Add(diodeAnnotationLabel, 1, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, 5)
 
-        diodeAnnotationFormat = wx.TextCtrl(self, value='D_{}')
+        diodeAnnotationFormat = wx.TextCtrl(self, value='D{}')
         row3.Add(diodeAnnotationFormat, 1, wx.EXPAND|wx.ALL, 5)
 
         row4 = wx.BoxSizer(wx.HORIZONTAL)
@@ -197,8 +199,8 @@ class KeyAutoPlace(ActionPlugin):
         logging.basicConfig(level=logging.DEBUG,
                             filename="keyautoplace.log",
                             filemode='w',
-                            format='%(asctime)s %(name)s %(lineno)d:%(message)s',
-                            datefmt='%m-%d %H:%M:%S')
+                            format='%(asctime)s %(name)s %(lineno)d: %(message)s',
+                            datefmt='%H:%M:%S')
         self.logger = logging.getLogger(__name__)
         self.logger.info("Plugin executed with python version: " + repr(sys.version))
 
@@ -211,11 +213,10 @@ class KeyAutoPlace(ActionPlugin):
         dlg = KeyAutoPlaceDialog(pcbFrame, 'Title', 'Caption')
         if dlg.ShowModal() == wx.ID_OK:
             layoutPath = dlg.GetJsonPath()
-            f = open(layoutPath, "r")
-            textInput = f.read()
-            f.close()
+            with open(layoutPath, "r") as f:
+                textInput = f.read()
             layout = json.loads(textInput)
-            self.logger.info("User layout: {}".format(layout))
+            self.logger.info(f"User layout: {layout}")
             placer = KeyPlacer(self.logger, self.board, layout)
             placer.Run(dlg.GetKeyAnnotationFormat(), dlg.GetDiodeAnnotationFormat(), dlg.IsTracks())
 
@@ -224,4 +225,35 @@ class KeyAutoPlace(ActionPlugin):
         logging.shutdown()
 
 
-KeyAutoPlace().register()
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Keyboard's key autoplacer")
+    parser.add_argument('-l', '--layout', required=True, help="json layout definition file")
+    parser.add_argument('-b', '--board', required=True, help=".kicad_pcb file to be processed")
+
+    args = parser.parse_args()
+    layoutPath = args.layout
+    boardPath = args.board
+
+    # set up logger
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(asctime)s: %(message)s',
+                        datefmt='%H:%M:%S')
+    logger = logging.getLogger(__name__)
+
+    with open(layoutPath, "r") as f:
+        textInput = f.read()
+        layout = json.loads(textInput)
+
+    logger.info(f"User layout: {layout}")
+
+    board = LoadBoard(boardPath)
+    placer = KeyPlacer(logger, board, layout)
+    placer.Run("MX{}", "D{}", False)
+
+    Refresh()
+    SaveBoard(boardPath, board)
+
+    logging.shutdown()
+
+else:
+    KeyAutoPlace().register()
