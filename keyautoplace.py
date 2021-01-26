@@ -128,7 +128,7 @@ class KeyAutoPlaceDialog(wx.Dialog):
         keyAnnotationLabel = wx.StaticText(self, -1, "Key annotation format string:")
         row2.Add(keyAnnotationLabel, 1, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, 5)
 
-        keyAnnotationFormat = wx.TextCtrl(self, value='MX{}')
+        keyAnnotationFormat = wx.TextCtrl(self, value='SW{}')
         row2.Add(keyAnnotationFormat, 1, wx.EXPAND|wx.ALL, 5)
 
         row3 = wx.BoxSizer(wx.HORIZONTAL)
@@ -248,7 +248,7 @@ if __name__ == "__main__":
 
     board = LoadBoard(boardPath)
     placer = KeyPlacer(logger, board, layout)
-    placer.Run("MX{}", "D{}", False)
+    placer.Run("SW{}", "D{}", False)
 
     Refresh()
     SaveBoard(boardPath, board)
