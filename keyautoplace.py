@@ -20,11 +20,11 @@ class KeyPlacer():
 
 
     def GetModule(self, reference):
-        self.logger.info(f"Searching for {reference} module")
+        self.logger.info("Searching for {} module".format(reference))
         module = self.board.FindModuleByReference(reference)
         if module == None:
             self.logger.error("Module not found")
-            raise Exception(f"Cannot find module {reference}")
+            raise Exception("Cannot find module {}".format(reference))
         return module
 
     def GetCurrentKey(self, keyFormat):
@@ -40,7 +40,7 @@ class KeyPlacer():
 
 
     def SetPosition(self, module, position):
-        self.logger.info(f"Setting {module.GetReference()} module position: {position}")
+        self.logger.info("Setting {} module position: {}".format(module.GetReference(), position))
         module.SetPosition(position)
 
 
@@ -58,7 +58,7 @@ class KeyPlacer():
         track.SetEnd(segmentEnd)
 
         layerName = self.board.GetLayerName(layer)
-        self.logger.info(f"Adding track segment ({layerName}): [{start}, {segmentEnd}]")
+        self.logger.info("Adding track segment ({}): [{}, {}]".format(layerName, start, segmentEnd))
         self.board.Add(track)
 
         track.SetLocked(True)
@@ -76,7 +76,7 @@ class KeyPlacer():
 
 
     def Rotate(self, module, rotationReference, angle):
-        self.logger.info("Rotating {module.GetReference()} module: rotationReference: {rotationReference}, rotationAngle: {angle}")
+        self.logger.info("Rotating {} module: rotationReference: {}, rotationAngle: {}".format(module.GetReference(), rotationReference, angle))
         module.Rotate(rotationReference, angle * -10)
 
 
@@ -88,14 +88,14 @@ class KeyPlacer():
                 (self.keyDistance * key["y"]) + (self.keyDistance * key["height"] // 2)) + self.referenceCoordinate
             self.SetPosition(keyModule, position)
 
+            diodeModule = self.GetCurrentDiode(diodeFormat)
+            self.SetRelativePositionMM(diodeModule, position, [5.08, 3.03])
+
             angle = key["rotation_angle"]
             if angle != 0:
                 rotationReference = wxPoint((self.keyDistance * key["rotation_x"]), (self.keyDistance * key["rotation_y"])) + self.referenceCoordinate
                 self.Rotate(keyModule, rotationReference, angle)
 
-            diodeModule = self.GetCurrentDiode(diodeFormat)
-            self.SetRelativePositionMM(diodeModule, position, [5.08, 3.03])
-            if angle != 0:
                 self.Rotate(diodeModule, rotationReference, angle)
                 if not diodeModule.IsFlipped():
                     diodeModule.Flip(diodeModule.GetPosition())
@@ -216,7 +216,7 @@ class KeyAutoPlace(ActionPlugin):
             with open(layoutPath, "r") as f:
                 textInput = f.read()
             layout = json.loads(textInput)
-            self.logger.info(f"User layout: {layout}")
+            self.logger.info("User layout: {}".format(layout))
             placer = KeyPlacer(self.logger, self.board, layout)
             placer.Run(dlg.GetKeyAnnotationFormat(), dlg.GetDiodeAnnotationFormat(), dlg.IsTracks())
 
@@ -244,7 +244,7 @@ if __name__ == "__main__":
         textInput = f.read()
         layout = json.loads(textInput)
 
-    logger.info(f"User layout: {layout}")
+    logger.info("User layout: {}".format(layout))
 
     board = LoadBoard(boardPath)
     placer = KeyPlacer(logger, board, layout)
