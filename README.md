@@ -37,7 +37,9 @@ by reducing tidiuos element placement task.
 - Obtain [kle-serial](https://github.com/ijprest/kle-serial) compatible layout
   json file (**note**: this is not json which can be downloaded directly from [keyboard-layout-editor](http://www.keyboard-layout-editor.com/)
   website. Expected json format can be seen in `examples` directory.
-  For conversion follow guide from [kle-serial-server](https://github.com/adamws/kle-serial-server)
+
+  For conversion you can use [https://adamws.github.io/kle-serial](https://adamws.github.io/kle-serial/)
+  or [keyboard-tools.xyz/kle-converter](http://keyboard-tools.xyz/kle-converter)
 - Run KeyAutoPlace plugin
 - Select desired json file and click OK.
 
