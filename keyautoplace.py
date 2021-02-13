@@ -28,8 +28,13 @@ class KeyPlacer():
 
     def GetCurrentKey(self, keyFormat, stabilizerFormat):
         key = self.GetModule(keyFormat.format(self.currentKey))
+
+        # in case of Switch_Keyboard library, stabilizer holes are not part of of switch footprint and needs to be handled
+        # separately, check if there is stabilizer with id matching current key and return it
+        # stabilizer will be None if not found
         stabilizer = self.board.FindModuleByReference(stabilizerFormat.format(self.currentKey))
         self.currentKey += 1
+
         return key, stabilizer
 
     def GetCurrentDiode(self, diodeFormat):
@@ -97,11 +102,19 @@ class KeyPlacer():
         for key in self.layout["keys"]:
             switchModule, stabilizer = self.GetCurrentKey(keyFormat, stabilizerFormat)
 
-            position = wxPoint((self.keyDistance * key["x"]) + (self.keyDistance * key["width"] // 2),
-                (self.keyDistance * key["y"]) + (self.keyDistance * key["height"] // 2)) + self.referenceCoordinate
+            width = key["width"]
+            height = key["height"]
+            position = wxPoint((self.keyDistance * key["x"]) + (self.keyDistance * width // 2),
+                (self.keyDistance * key["y"]) + (self.keyDistance * height // 2)) + self.referenceCoordinate
             self.SetPosition(switchModule, position)
+
             if stabilizer:
                 self.SetPosition(stabilizer, position)
+                # recognize special case of of ISO enter:
+                width2 = key["width2"]
+                height2 = key["height2"]
+                if width == 1.25 and height == 2 and width2 == 1.5 and height2 == 1:
+                    stabilizer.SetOrientationDegrees(90)
 
             diodeModule = self.GetCurrentDiode(diodeFormat)
             self.SetRelativePositionMM(diodeModule, position, [5.08, 3.03])
