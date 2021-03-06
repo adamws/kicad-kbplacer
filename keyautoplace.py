@@ -8,15 +8,11 @@ import itertools
 import logging
 import re
 
-class KeyPlacer():
-    def __init__(self, logger, board, layout):
+
+class BoardModifier():
+    def __init__(self, logger, board):
         self.logger = logger
         self.board = board
-        self.layout = layout
-        self.keyDistance = 19050000
-        self.currentKey = 1
-        self.currentDiode = 1
-        self.referenceCoordinate = wxPoint(FromMM(25), FromMM(25))
 
     def GetModule(self, reference):
         self.logger.info("Searching for {} module".format(reference))
@@ -25,22 +21,6 @@ class KeyPlacer():
             self.logger.error("Module not found")
             raise Exception("Cannot find module {}".format(reference))
         return module
-
-    def GetCurrentKey(self, keyFormat, stabilizerFormat):
-        key = self.GetModule(keyFormat.format(self.currentKey))
-
-        # in case of Switch_Keyboard library, stabilizer holes are not part of of switch footprint and needs to be handled
-        # separately, check if there is stabilizer with id matching current key and return it
-        # stabilizer will be None if not found
-        stabilizer = self.board.FindModuleByReference(stabilizerFormat.format(self.currentKey))
-        self.currentKey += 1
-
-        return key, stabilizer
-
-    def GetCurrentDiode(self, diodeFormat):
-        diode = self.GetModule(diodeFormat.format(self.currentDiode))
-        self.currentDiode += 1
-        return diode
 
     def SetPosition(self, module, position):
         self.logger.info("Setting {} module position: {}".format(module.GetReference(), position))
@@ -62,7 +42,6 @@ class KeyPlacer():
         self.logger.info("Adding track segment ({}): [{}, {}]".format(layerName, start, segmentEnd))
         self.board.Add(track)
 
-        track.SetLocked(True)
         return segmentEnd
 
     def AddTrackSegmentByPoints(self, start, stop, layer=B_Cu):
@@ -76,8 +55,60 @@ class KeyPlacer():
         self.logger.info("Adding track segment ({}): [{}, {}]".format(layerName, start, stop))
         self.board.Add(track)
 
-        track.SetLocked(True)
         return stop
+
+    def Rotate(self, module, rotationReference, angle):
+        self.logger.info("Rotating {} module: rotationReference: {}, rotationAngle: {}".format(module.GetReference(), rotationReference, angle))
+        module.Rotate(rotationReference, angle * -10)
+
+
+class TemplateCopier(BoardModifier):
+    def __init__(self, logger, board, templatePath):
+        super().__init__(logger, board)
+        self.template = LoadBoard(templatePath)
+
+    def Run(self):
+        module = self.template.GetModules().GetFirst()
+
+        while module:
+            reference = module.GetReference()
+            destinationModule = self.GetModule(reference)
+
+            layer = module.GetLayerName()
+            position = module.GetPosition()
+            orientation = module.GetOrientation()
+
+            if layer == "B.Cu":
+                destinationModule.Flip(destinationModule.GetCenter())
+            self.SetPosition(destinationModule, position)
+            destinationModule.SetOrientation(orientation)
+            module = module.Next()
+
+
+class KeyPlacer(BoardModifier):
+    def __init__(self, logger, board, layout):
+        super().__init__(logger, board)
+        self.layout = layout
+        self.keyDistance = 19050000
+        self.currentKey = 1
+        self.currentDiode = 1
+        self.referenceCoordinate = wxPoint(FromMM(25), FromMM(25))
+
+    def GetCurrentKey(self, keyFormat, stabilizerFormat):
+        key = self.GetModule(keyFormat.format(self.currentKey))
+
+        # in case of perigoso/keyswitch-kicad-library, stabilizer holes are not part of of switch footprint and needs to be handled
+        # separately, check if there is stabilizer with id matching current key and return it
+        # stabilizer will be None if not found
+        stabilizer = self.board.FindModuleByReference(stabilizerFormat.format(self.currentKey))
+        self.currentKey += 1
+
+        return key, stabilizer
+
+    def GetCurrentDiode(self, diodeFormat):
+        diode = self.GetModule(diodeFormat.format(self.currentDiode))
+        self.currentDiode += 1
+        return diode
 
     def RouteSwitchWithDiode(self, switch, diode):
         switchPadPosition = switch.FindPadByName("2").GetPosition()
@@ -91,10 +122,6 @@ class KeyPlacer():
     def RouteColumn(self, switch):
         switchPadPosition = switch.FindPadByName("1").GetPosition()
         self.AddTrackSegment(switchPadPosition, [0, FromMM(8)], layer=F_Cu)
-
-    def Rotate(self, module, rotationReference, angle):
-        self.logger.info("Rotating {} module: rotationReference: {}, rotationAngle: {}".format(module.GetReference(), rotationReference, angle))
-        module.Rotate(rotationReference, angle * -10)
 
     def Run(self, keyFormat, stabilizerFormat, diodeFormat, routeTracks=False):
         column_switch_pads = {}
@@ -196,8 +223,8 @@ class KeyAutoPlaceDialog(wx.Dialog):
         text = wx.StaticText(self, -1, "Select kle json file:")
         row1.Add(text, 0, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, 5)
 
-        filePicker = wx.FilePickerCtrl(self, -1)
-        row1.Add(filePicker, 1, wx.EXPAND|wx.ALL, 5)
+        layoutFilePicker = wx.FilePickerCtrl(self, -1)
+        row1.Add(layoutFilePicker, 1, wx.EXPAND|wx.ALL, 5)
 
         row2 = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -229,6 +256,14 @@ class KeyAutoPlaceDialog(wx.Dialog):
         tracksCheckbox.SetValue(True)
         row5.Add(tracksCheckbox, 1, wx.EXPAND|wx.ALL, 5)
 
+        row6 = wx.BoxSizer(wx.HORIZONTAL)
+
+        text = wx.StaticText(self, -1, "Select controler circuit template:")
+        row6.Add(text, 0, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, 5)
+
+        templateFilePicker = wx.FilePickerCtrl(self, -1)
+        row6.Add(templateFilePicker, 1, wx.EXPAND|wx.ALL, 5)
+
         box = wx.BoxSizer(wx.VERTICAL)
 
         box.Add(row1, 0, wx.EXPAND|wx.ALL, 5)
@@ -236,19 +271,21 @@ class KeyAutoPlaceDialog(wx.Dialog):
         box.Add(row3, 0, wx.EXPAND|wx.ALL, 5)
         box.Add(row4, 0, wx.EXPAND|wx.ALL, 5)
         box.Add(row5, 0, wx.EXPAND|wx.ALL, 5)
+        box.Add(row6, 0, wx.EXPAND|wx.ALL, 5)
 
         buttons = self.CreateButtonSizer(wx.OK|wx.CANCEL)
         box.Add(buttons, 0, wx.EXPAND|wx.ALL, 5)
 
         self.SetSizerAndFit(box)
-        self.filePicker = filePicker
+        self.layoutFilePicker = layoutFilePicker
         self.keyAnnotationFormat = keyAnnotationFormat
         self.stabilizerAnnotationFormat = stabilizerAnnotationFormat
         self.diodeAnnotationFormat = diodeAnnotationFormat
         self.tracksCheckbox = tracksCheckbox
+        self.templateFilePicker = templateFilePicker
 
-    def GetJsonPath(self):
-        return self.filePicker.GetPath()
+    def GetLayoutPath(self):
+        return self.layoutFilePicker.GetPath()
 
     def GetKeyAnnotationFormat(self):
         return self.keyAnnotationFormat.GetValue()
@@ -261,6 +298,9 @@ class KeyAutoPlaceDialog(wx.Dialog):
 
     def IsTracks(self):
         return self.tracksCheckbox.GetValue()
+
+    def GetTemplatePath(self):
+        return self.templateFilePicker.GetPath()
 
 
 class KeyAutoPlace(ActionPlugin):
@@ -295,13 +335,19 @@ class KeyAutoPlace(ActionPlugin):
 
         dlg = KeyAutoPlaceDialog(pcbFrame, 'Title', 'Caption')
         if dlg.ShowModal() == wx.ID_OK:
-            layoutPath = dlg.GetJsonPath()
-            with open(layoutPath, "r") as f:
-                textInput = f.read()
-            layout = json.loads(textInput)
-            self.logger.info("User layout: {}".format(layout))
-            placer = KeyPlacer(self.logger, self.board, layout)
-            placer.Run(dlg.GetKeyAnnotationFormat(), dlg.GetStabilizerAnnotationFormat(), dlg.GetDiodeAnnotationFormat(), dlg.IsTracks())
+            layoutPath = dlg.GetLayoutPath()
+            if layoutPath:
+                with open(layoutPath, "r") as f:
+                    textInput = f.read()
+                layout = json.loads(textInput)
+                self.logger.info("User layout: {}".format(layout))
+                placer = KeyPlacer(self.logger, self.board, layout)
+                placer.Run(dlg.GetKeyAnnotationFormat(), dlg.GetStabilizerAnnotationFormat(), dlg.GetDiodeAnnotationFormat(), dlg.IsTracks())
+
+            templatePath = dlg.GetTemplatePath()
+            if templatePath:
+                templateCopier = TemplateCopier(self.logger, self.board, templatePath)
+                templateCopier.Run()
 
         dlg.Destroy()
         logging.shutdown()
@@ -312,11 +358,13 @@ if __name__ == "__main__":
     parser.add_argument('-l', '--layout', required=True, help="json layout definition file")
     parser.add_argument('-b', '--board', required=True, help=".kicad_pcb file to be processed")
     parser.add_argument('-r', '--route', action="store_true", help="Enable experimental routing")
+    parser.add_argument('-t', '--template', help="controler circuit template")
 
     args = parser.parse_args()
     layoutPath = args.layout
     boardPath = args.board
     routeTracks = args.route
+    templatePath = args.template
 
     # set up logger
     logging.basicConfig(level=logging.DEBUG,
@@ -333,6 +381,10 @@ if __name__ == "__main__":
     board = LoadBoard(boardPath)
     placer = KeyPlacer(logger, board, layout)
     placer.Run("SW{}", "ST{}", "D{}", routeTracks)
+
+    if templatePath:
+        copier = TemplateCopier(logger, board, templatePath)
+        copier.Run()
 
     Refresh()
     SaveBoard(boardPath, board)
