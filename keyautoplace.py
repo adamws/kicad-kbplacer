@@ -63,10 +63,15 @@ class BoardModifier():
 
 
 class TemplateCopier(BoardModifier):
-    def __init__(self, logger, board, templatePath):
+    def __init__(self, logger, board, templatePath, routeTracks):
         super().__init__(logger, board)
         self.template = LoadBoard(templatePath)
+        self.boardNetsByName = board.GetNetsByName()
+        self.routeTracks = routeTracks
 
+    # Copy positions of elements and tracks from template to board.
+    # This method does not copy parts itself - parts to be positioned need to be present in board
+    # prior to calling this.
     def Run(self):
         module = self.template.GetModules().GetFirst()
 
@@ -78,11 +83,27 @@ class TemplateCopier(BoardModifier):
             position = module.GetPosition()
             orientation = module.GetOrientation()
 
-            if layer == "B.Cu":
+            if layer == "B.Cu" and destinationModule.GetLayerName() != "B.Cu":
                 destinationModule.Flip(destinationModule.GetCenter())
             self.SetPosition(destinationModule, position)
             destinationModule.SetOrientation(orientation)
             module = module.Next()
+
+        if self.routeTracks:
+            track = self.template.GetTracks().GetFirst()
+            track = track.Next()
+            while track:
+                # clone track but remap netinfo because net codes in template might be different.
+                # use net names for remmaping (names in template and bourd under modification must match)
+                clone = track.Duplicate()
+                netName = clone.GetNetname()
+                netCode = clone.GetNetCode()
+                netInfoInBoard = self.boardNetsByName[netName]
+                self.logger.info("Cloning track from template: {}:{} -> {}:{}"
+                        .format(netName, netCode, netInfoInBoard.GetNetname(), netInfoInBoard.GetNet()))
+                clone.SetNet(netInfoInBoard)
+                self.board.Add(clone)
+                track = track.Next()
 
 
 class KeyPlacer(BoardModifier):
@@ -335,6 +356,11 @@ class KeyAutoPlace(ActionPlugin):
 
         dlg = KeyAutoPlaceDialog(pcbFrame, 'Title', 'Caption')
         if dlg.ShowModal() == wx.ID_OK:
+            templatePath = dlg.GetTemplatePath()
+            if templatePath:
+                templateCopier = TemplateCopier(self.logger, self.board, templatePath, dlg.IsTracks())
+                templateCopier.Run()
+
             layoutPath = dlg.GetLayoutPath()
             if layoutPath:
                 with open(layoutPath, "r") as f:
@@ -343,11 +369,6 @@ class KeyAutoPlace(ActionPlugin):
                 self.logger.info("User layout: {}".format(layout))
                 placer = KeyPlacer(self.logger, self.board, layout)
                 placer.Run(dlg.GetKeyAnnotationFormat(), dlg.GetStabilizerAnnotationFormat(), dlg.GetDiodeAnnotationFormat(), dlg.IsTracks())
-
-            templatePath = dlg.GetTemplatePath()
-            if templatePath:
-                templateCopier = TemplateCopier(self.logger, self.board, templatePath)
-                templateCopier.Run()
 
         dlg.Destroy()
         logging.shutdown()
@@ -372,19 +393,21 @@ if __name__ == "__main__":
                         datefmt='%H:%M:%S')
     logger = logging.getLogger(__name__)
 
-    with open(layoutPath, "r") as f:
-        textInput = f.read()
-        layout = json.loads(textInput)
-
-    logger.info("User layout: {}".format(layout))
-
     board = LoadBoard(boardPath)
-    placer = KeyPlacer(logger, board, layout)
-    placer.Run("SW{}", "ST{}", "D{}", routeTracks)
 
     if templatePath:
-        copier = TemplateCopier(logger, board, templatePath)
+        copier = TemplateCopier(logger, board, templatePath, routeTracks)
         copier.Run()
+
+    if layoutPath:
+        with open(layoutPath, "r") as f:
+            textInput = f.read()
+            layout = json.loads(textInput)
+
+        logger.info("User layout: {}".format(layout))
+
+        placer = KeyPlacer(logger, board, layout)
+        placer.Run("SW{}", "ST{}", "D{}", routeTracks)
 
     Refresh()
     SaveBoard(boardPath, board)
