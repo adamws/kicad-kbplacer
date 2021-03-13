@@ -19,7 +19,6 @@ by reducing tidiuos element placement task.
 - [ ] User selectable diode position in relation to key position
 
 ![demo](demo.gif)
-![ergodox-demo](ergodox-demo.gif)
 
 ## Installation
 
