@@ -1,0 +1,4 @@
+*.kicad_pcb-bak
+fp-info-cache
+keyautoplace.log
+*.pro
