@@ -22,3 +22,4 @@ Each example has own directory with following file structure:
 Name | Keyboard layout | PCB result
 --- | --- | ---
 2x2 | ![2x2-layout](./2x2/pictures/keyboard-layout.png) | ![2x2-after](./2x2/pictures/2x2-after-brd.png)
+3x2-sizes | ![3x2-layout](./3x2-sizes/pictures/keyboard-layout.png) | ![3x2-sizes-after](./3x2-sizes/pictures/3x2-sizes-after-brd.png)<br/>Note that in this example `SW2` belongs to column 1 and `SW4&SW6` to column 2.
