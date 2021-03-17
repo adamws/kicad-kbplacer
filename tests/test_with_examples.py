@@ -6,9 +6,9 @@ import shutil
 import subprocess
 
 
-def run_keyautoplace_process(tmpdir, name):
-    layout_file = "{}-kle-internal.json".format(name)
-    pcb_path = "{}/{}-before.kicad_pcb".format(tmpdir, name)
+def run_keyautoplace_process(tmpdir):
+    layout_file = "kle-internal.json"
+    pcb_path = "{}/keyboard-before.kicad_pcb".format(tmpdir)
 
     script_path = os.path.dirname(os.path.abspath(__file__)) + "/../keyautoplace.py"
     keyautoplace_args = [
@@ -29,8 +29,8 @@ def run_keyautoplace_process(tmpdir, name):
         raise Exception("Switch placement failed")
 
 
-def add_edge_cuts(tmpdir, name):
-    pcb_path = "{}/{}-before.kicad_pcb".format(tmpdir, name)
+def add_edge_cuts(tmpdir):
+    pcb_path = "{}/keyboard-before.kicad_pcb".format(tmpdir)
     try:
         board = pcbnew.LoadBoard(pcb_path)
         positions = [
@@ -69,12 +69,12 @@ def add_edge_cuts(tmpdir, name):
 # API for that isn't directly exposed to python. Instead of two images
 # it would be easier to have all layers in one.
 # For now let's stick to pcbdraw utility.
-def generate_render(tmpdir, name):
+def generate_render(tmpdir):
     # without edge cuts pcbdraw isn't working
-    add_edge_cuts(tmpdir, name)
+    add_edge_cuts(tmpdir)
 
     pcbdraw_log = open("{}/pcbdraw.log".format(tmpdir), "w")
-    pcb_path = "{}/{}-before.kicad_pcb".format(tmpdir, name)
+    pcb_path = "{}/keyboard-before.kicad_pcb".format(tmpdir)
 
     for side in ["front", "back"]:
         render_path = "{}/{}.png".format(tmpdir, side)
@@ -96,13 +96,13 @@ def generate_render(tmpdir, name):
 
 @pytest.mark.parametrize(
     ("example"),
-    ["2x2", "3x2-sizes", "3x2-rotations"],
+    ["2x2", "3x2-sizes", "2x3-rotations", "1x4-rotations-90-step"],
 )
 def test_with_examples(example, tmpdir, request):
     test_dir = request.fspath.dirname
 
     source_dir = "{}/../examples/{}".format(test_dir, example)
-    shutil.copy("{}/{}-before.kicad_pcb".format(source_dir, example), tmpdir)
-    shutil.copy("{}/{}-kle-internal.json".format(source_dir, example), tmpdir)
-    run_keyautoplace_process(tmpdir, example)
-    generate_render(tmpdir, example)
+    shutil.copy("{}/keyboard-before.kicad_pcb".format(source_dir), tmpdir)
+    shutil.copy("{}/kle-internal.json".format(source_dir), tmpdir)
+    run_keyautoplace_process(tmpdir)
+    generate_render(tmpdir)
