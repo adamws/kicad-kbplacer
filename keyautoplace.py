@@ -1,4 +1,5 @@
 from pcbnew import *
+import math
 import argparse
 import wx
 import os
@@ -7,6 +8,43 @@ import json
 import itertools
 import logging
 import re
+
+
+def PositionInRotatedCoordinates(point, angle):
+    """
+    Map position in xy-Cartesian coordinate system to x'y'-Cartesian which has same origin
+    but axes are rotated by angle
+
+    :param point: A point to be mapped
+    :param angle: Rotation angle (in degrees) of x'y'-Cartesian coordinates
+    :type point: wxPoint
+    :type angle: float
+    :return: Result position in x'y'-Cartesian coordinates
+    :rtype: wxPoint
+    """
+    x, y = point.x, point.y
+    angle = math.radians(angle)
+    xr = (x * math.cos(angle)) + (y * math.sin(angle))
+    yr = (-x * math.sin(angle)) + (y * math.cos(angle))
+    return wxPoint(xr, yr)
+
+
+def PositionInCartesianCoordinates(point, angle):
+    """Performs inverse operation to PositionInRotatedCoordinates i.e.
+    map position in rotated (by angle) x'y'-Cartesian to xy-Cartesian
+
+    :param point: A point to be mapped
+    :param angle: Rotation angle (in degrees) of x'y'-Cartesian coordinates
+    :type point: wxPoint
+    :type angle: float
+    :return: Result position in xy-Cartesian coordinates
+    :rtype: wxPoint
+    """
+    xr, yr = point.x, point.y
+    angle = math.radians(angle)
+    x = (xr * math.cos(angle)) - (yr * math.sin(angle))
+    y = (xr * math.sin(angle)) + (yr * math.cos(angle))
+    return wxPoint(x, y)
 
 
 class BoardModifier():
@@ -131,18 +169,34 @@ class KeyPlacer(BoardModifier):
         self.currentDiode += 1
         return diode
 
-    def RouteSwitchWithDiode(self, switch, diode):
+    def RouteSwitchWithDiode(self, switch, diode, angle):
+        self.logger.info("Routing {} with {}".format(switch.GetReference(), diode.GetReference()))
+
         switchPadPosition = switch.FindPadByName("2").GetPosition()
         diodePadPosition = diode.FindPadByName("2").GetPosition()
-        x_diff = abs(diodePadPosition.x - switchPadPosition.x)
-        # first segment: at 45 degree angle towards switch pad
-        end = self.AddTrackSegment(diodePadPosition, [-x_diff, -x_diff])
-        # second segment: up to switch pad
-        self.AddTrackSegment(end, [0, -abs(end.y - switchPadPosition.y)])
 
-    def RouteColumn(self, switch):
-        switchPadPosition = switch.FindPadByName("1").GetPosition()
-        self.AddTrackSegment(switchPadPosition, [0, FromMM(8)], layer=F_Cu)
+        self.logger.debug("switchPadPosition: {}, diodePadPosition: {}".format(switchPadPosition, diodePadPosition))
+
+        if angle != 0:
+            self.logger.info("Routing at {} degree angle".format(angle))
+            switchPadPositionR = PositionInRotatedCoordinates(switchPadPosition, angle)
+            diodePadPositionR = PositionInRotatedCoordinates(diodePadPosition, angle)
+
+            self.logger.debug("In rotated coordinates: switchPadPosition: {}, diodePadPosition: {}".format(
+                switchPadPositionR, diodePadPositionR))
+
+            x_diff = abs(diodePadPositionR.x - switchPadPositionR.x)
+
+            corner = wxPoint(diodePadPositionR.x - x_diff, diodePadPositionR.y - x_diff)
+            corner = PositionInCartesianCoordinates(corner, angle)
+        else:
+            x_diff = abs(diodePadPosition.x - switchPadPosition.x)
+            corner = wxPoint(diodePadPosition.x - x_diff, diodePadPosition.y - x_diff)
+
+        # first segment: at 45 degree angle (might be in rotated coordinate system) towards switch pad
+        self.AddTrackSegmentByPoints(diodePadPosition, corner)
+        # second segment: up to switch pad
+        self.AddTrackSegmentByPoints(corner, switchPadPosition)
 
     def Run(self, keyFormat, stabilizerFormat, diodeFormat, routeTracks=False):
         column_switch_pads = {}
@@ -203,7 +257,7 @@ class KeyPlacer(BoardModifier):
                 self.logger.warning("Switch pad without recognized net name found.")
 
             if routeTracks:
-                self.RouteSwitchWithDiode(switchModule, diodeModule)
+                self.RouteSwitchWithDiode(switchModule, diodeModule, angle)
 
         if routeTracks:
             # very naive routing approach, will fail in some scenarios:
