@@ -73,22 +73,17 @@ def generate_render(tmpdir):
     # without edge cuts pcbdraw isn't working
     add_edge_cuts(tmpdir)
 
-    pcbdraw_log = open("{}/pcbdraw.log".format(tmpdir), "w")
     pcb_path = "{}/keyboard-before.kicad_pcb".format(tmpdir)
 
     for side in ["front", "back"]:
-        render_path = "{}/{}.png".format(tmpdir, side)
+        render_path = "{}/{}.svg".format(tmpdir, side)
 
         render_args = ["pcbdraw", "--filter", '""', pcb_path, render_path]
         if side == "back":
             render_args.append("--back")
             render_args.append("--mirror")
 
-        p = subprocess.Popen(
-            render_args,
-            stdout=pcbdraw_log,
-            stderr=subprocess.STDOUT,
-        )
+        p = subprocess.Popen(render_args)
         p.communicate()
         if p.returncode != 0:
             raise Exception("Preview render failed")

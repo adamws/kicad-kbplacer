@@ -1,0 +1,22 @@
+version: 2.1
+
+jobs:
+  test:
+    docker:
+      - image: admwscki/kicad-kbplacer-primary:0.0.1
+    steps:
+      - checkout
+      - run:
+          command: |
+            pip3 install -r dev-requirements.txt
+            pytest --junitxml=test-results/pytest/results.xml
+          name: Test
+      - store_artifacts:
+          path: report.html
+      - store_test_results:
+          path: test-results
+
+workflows:
+  main:
+    jobs:
+      - test
