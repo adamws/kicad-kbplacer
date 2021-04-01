@@ -1,7 +1,6 @@
 # kicad-kbplacer
 
-[![CircleCI](https://img.shields.io/circleci/build/github/adamws/kicad-kbplacer)](https://circleci.com/gh/adamws/kicad-kbplacer/tree/master)
-[![CircleCIReport](https://img.shields.io/badge/build-report-informational)](https://circleci.com/api/v1.1/project/github/adamws/kicad-kbplacer/latest/artifacts/0/report.html)
+[![CircleCI](https://circleci.com/gh/adamws/kicad-kbplacer.svg?style=shield)](https://circleci.com/gh/adamws/kicad-kbplacer/tree/master)
 
 KiCad plugin for mechanical keyboard design. It features automatic key placement
 based on popular layout description from [keyboard-layout-editor](http://www.keyboard-layout-editor.com/)
