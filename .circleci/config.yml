@@ -7,16 +7,37 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Run tests
           command: |
             pip3 install --no-cache-dir -r dev-requirements.txt
             pytest --junitxml=test-results/pytest/results.xml
-          name: Test
       - store_artifacts:
           path: report.html
       - store_test_results:
           path: test-results
-
+  deploy-image:
+    docker:
+      - image: docker:20.10.5-git
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build and push Docker image
+          command: |
+            export TAG=0.1.${CIRCLE_SHA1}
+            export IMAGE_NAME=kicad-kbplacer
+            docker build -t admwscki/$IMAGE_NAME:$TAG -f docker/Dockerfile .
+            docker tag admwscki/$IMAGE_NAME:$TAG admwscki/$IMAGE_NAME:latest
+            echo $DOCKERHUB_PASSWORD | docker login -u $DOCKERHUB_LOGIN --password-stdin
+            docker push admwscki/$IMAGE_NAME:$TAG
+            docker push admwscki/$IMAGE_NAME:latest
 workflows:
   main:
     jobs:
       - test
+      - deploy-image:
+          requires:
+            - test
+          filters:
+            branches:
+              only: master
