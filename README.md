@@ -38,7 +38,7 @@ For KiCad 5.1 compatible version see tag [v0.1](https://github.com/adamws/kicad-
 
   For conversion you can use [https://adamws.github.io/kle-serial](https://adamws.github.io/kle-serial/)
   or [keyboard-tools.xyz/kle-converter](http://keyboard-tools.xyz/kle-converter)
-- Run KeyAutoPlace plugin
+- Run `kicad-kbplacer` plugin
 - Select desired json file and click OK.
 
 ### As a service
@@ -48,7 +48,7 @@ This plugin is part of my another project. See [keyboard-tools](https://github.c
 ## Troubleshooting
 
 - See stacktrace
-- See created `keyautoplace.log` file (in PCB directory)
+- See created `kbplacer.log` file (in PCB directory)
 
 ## Known bugs and limitations
 

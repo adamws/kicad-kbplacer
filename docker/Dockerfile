@@ -6,5 +6,5 @@ RUN useradd --create-home --shell /bin/bash kicad \
 USER kicad
 WORKDIR /kicad
 
-COPY keyautoplace.py /usr/share/kicad/scripting/plugins/keyautoplace.py
-
+RUN mkdir -p /kicad/.local/share/kicad/6.0/3rdparty/plugins/
+COPY --chown=kicad:kicad kbplacer/ /kicad/.local/share/kicad/6.0/3rdparty/plugins/com_github_adamws_kicad-kbplacer/

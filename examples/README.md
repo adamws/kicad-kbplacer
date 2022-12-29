@@ -4,7 +4,7 @@ Each example has own directory with following file structure:
 
 - `kle.json` - keyboard's layout downloaded from [keyboard-layout-editor](http://www.keyboard-layout-editor.com).
 - `kle-internal.json` - keyboard's layout after processing with [kle-serial](https://github.com/ijprest/kle-serial).
-  This file is expected by `keyautoplace` plugin.
+  This file is expected by `kbplacer` plugin.
 - `keyboard.net` - example's netlist.
 - `keyboard-before.kicad_pcb` - PCB file with loaded netlist and parts placed
   at default location (by KiCad's netlist loader). This file is useful for manual

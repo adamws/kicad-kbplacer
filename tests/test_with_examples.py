@@ -4,14 +4,19 @@ import shutil
 import subprocess
 
 
-def run_keyautoplace_process(tmpdir):
-    layout_file = "kle-internal.json"
+def run_kbplacer_process(tmpdir):
+    layout_file = "{}/kle-internal.json".format(tmpdir)
     pcb_path = "{}/keyboard-before.kicad_pcb".format(tmpdir)
 
-    script_path = os.path.dirname(os.path.abspath(__file__)) + "/../keyautoplace.py"
-    keyautoplace_args = [
+    workdir = os.path.dirname(os.path.abspath(__file__)) + "/.."
+    package_name = "kbplacer"
+    # to test version installed on docker image:
+    #workdir = "/kicad/.local/share/kicad/6.0/3rdparty/plugins"
+    #package_name = "com_github_adamws_kicad-kbplacer"
+    kbplacer_args = [
         "python3",
-        script_path,
+        "-m",
+        package_name,
         "-l",
         layout_file,
         "-b",
@@ -19,8 +24,8 @@ def run_keyautoplace_process(tmpdir):
         "--route",
     ]
     p = subprocess.Popen(
-        keyautoplace_args,
-        cwd=tmpdir,
+        kbplacer_args,
+        cwd=workdir,
     )
     p.communicate()
     if p.returncode != 0:
@@ -37,4 +42,4 @@ def test_with_examples(example, tmpdir, request):
     source_dir = "{}/../examples/{}".format(test_dir, example)
     shutil.copy("{}/keyboard-before.kicad_pcb".format(source_dir), tmpdir)
     shutil.copy("{}/kle-internal.json".format(source_dir), tmpdir)
-    run_keyautoplace_process(tmpdir)
+    run_kbplacer_process(tmpdir)
