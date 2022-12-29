@@ -3,7 +3,7 @@ version: 2.1
 jobs:
   test:
     docker:
-      - image: admwscki/kicad-kbplacer-primary:0.0.1
+      - image: admwscki/kicad-kbplacer-primary:6.0-lunar
     steps:
       - checkout
       - run:
@@ -24,7 +24,7 @@ jobs:
       - run:
           name: Build and push Docker image
           command: |
-            export TAG=0.1.${CIRCLE_SHA1}
+            export TAG=0.2.${CIRCLE_SHA1}
             export IMAGE_NAME=kicad-kbplacer
             docker build -t admwscki/$IMAGE_NAME:$TAG -f docker/Dockerfile .
             docker tag admwscki/$IMAGE_NAME:$TAG admwscki/$IMAGE_NAME:latest

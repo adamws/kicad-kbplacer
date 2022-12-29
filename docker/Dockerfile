@@ -1,4 +1,4 @@
-FROM admwscki/kicad-kbplacer-primary:0.0.1
+FROM admwscki/kicad-kbplacer-primary:6.0-lunar
 
 RUN useradd --create-home --shell /bin/bash kicad \
   && usermod -m -d /kicad kicad
@@ -6,7 +6,5 @@ RUN useradd --create-home --shell /bin/bash kicad \
 USER kicad
 WORKDIR /kicad
 
-COPY keyautoplace.py /kicad/.kicad/scripting/plugins/keyautoplace.py
+COPY keyautoplace.py /usr/share/kicad/scripting/plugins/keyautoplace.py
 
-ENV KICAD_SYMBOL_DIR=/usr/share/kicad/library
-ENV KISYSMOD=/usr/share/kicad/modules

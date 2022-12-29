@@ -10,7 +10,7 @@ based on popular layout description from [keyboard-layout-editor](http://www.key
 All PCB's for mechanical keyboards shares common properties which creates great
 opportunity for scripting. Although this project does not aim to provide
 complete automatic PCB generation tool it speeds up development process
-by reducing tidiuos element placement task.
+by reducing tedious element placement task.
 
 ## Features
 
@@ -24,11 +24,8 @@ by reducing tidiuos element placement task.
 
 ## Installation
 
-- Clone this repository
-- Copy `keyautoplace.py` (or create symbolic link) to one of the KiCad's plugin
-  search locations. For details see [kicad documentation](https://docs.kicad-pcb.org/doxygen/md_Documentation_development_pcbnew-plugins.html)
-- Open KiCad's Pcbnew, run `Tools->External Plugins...->Refresh Plugins`.
-  KeyAutoPlace plugin should appear in plugin list.
+Install with KiCad's `Plugin and Content Manager` (available since version 6.0).
+For KiCad 5.1 compatible version see tag [v0.1](https://github.com/adamws/kicad-kbplacer/tree/v0.1)
 
 ## How to use?
 
@@ -58,5 +55,4 @@ This plugin is part of my another project. See [keyboard-tools](https://github.c
 - Tested only with SOD-323F diodes. Predefined diode location might not be
   suitable for larger footprints and custom location is not supported without
   code modification
-- Tested only with KiCad version 5.1.5
 
