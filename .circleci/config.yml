@@ -7,14 +7,20 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Prepare tests
+          command: |
+            pip3 install --no-cache-dir -r tests/dev-requirements.txt
+            mkdir -p /root/.local/share/kicad/6.0/3rdparty/plugins
+            cp -r kbplacer/ /root/.local/share/kicad/6.0/3rdparty/plugins/com_github_adamws_kicad-kbplacer
+      - run:
           name: Run tests
           command: |
-            pip3 install --no-cache-dir -r dev-requirements.txt
             pytest --junitxml=test-results/pytest/results.xml
+          working_directory: tests
       - store_artifacts:
-          path: report.html
+          path: tests/report.html
       - store_test_results:
-          path: test-results
+          path: tests/test-results
   create-release:
     docker:
       - image: cimg/python:3.11

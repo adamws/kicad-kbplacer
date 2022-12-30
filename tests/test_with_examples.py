@@ -2,17 +2,16 @@ import os
 import pytest
 import shutil
 import subprocess
+from pathlib import Path
 
 
 def run_kbplacer_process(tmpdir):
     layout_file = "{}/kle-internal.json".format(tmpdir)
     pcb_path = "{}/keyboard-before.kicad_pcb".format(tmpdir)
 
-    workdir = os.path.dirname(os.path.abspath(__file__)) + "/.."
-    package_name = "kbplacer"
-    # to test version installed on docker image:
-    #workdir = "/kicad/.local/share/kicad/6.0/3rdparty/plugins"
-    #package_name = "com_github_adamws_kicad-kbplacer"
+    home_directory = Path.home()
+    workdir = f"{home_directory}/.local/share/kicad/6.0/3rdparty/plugins"
+    package_name = "com_github_adamws_kicad-kbplacer"
     kbplacer_args = [
         "python3",
         "-m",
