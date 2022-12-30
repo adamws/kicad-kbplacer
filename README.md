@@ -25,6 +25,7 @@ by reducing tedious element placement task.
 ## Installation
 
 Install with KiCad's `Plugin and Content Manager` (available since version 6.0).
+
 For KiCad 5.1 compatible version see tag [v0.1](https://github.com/adamws/kicad-kbplacer/tree/v0.1)
 
 ## How to use?
@@ -40,6 +41,13 @@ For KiCad 5.1 compatible version see tag [v0.1](https://github.com/adamws/kicad-
   or [keyboard-tools.xyz/kle-converter](http://keyboard-tools.xyz/kle-converter)
 - Run `kicad-kbplacer` plugin
 - Select desired json file and click OK.
+
+#### Demo project
+
+For example demo project see `demo` directory. This project contains 4x4 switch matrix with
+already generated layout json file (`kle_internal.json`) in expected by plugin format.
+It requires [keyswitch-kicad-library](https://github.com/perigoso/keyswitch-kicad-library) to be installed.
+Use this project to validate plugin installation.
 
 ### As a service
 
