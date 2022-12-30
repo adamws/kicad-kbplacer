@@ -1,10 +1,18 @@
 FROM admwscki/kicad-kbplacer-primary:6.0-lunar
 
-RUN useradd --create-home --shell /bin/bash kicad \
+RUN userdel -r ubuntu
+
+ARG UID=1000
+ARG GID=1000
+RUN groupadd -g $GID -o kicad \
+  && useradd -u $UID -g $GID --create-home --shell /bin/bash kicad \
   && usermod -m -d /kicad kicad
 
 USER kicad
 WORKDIR /kicad
 
-RUN mkdir -p /kicad/.local/share/kicad/6.0/3rdparty/plugins/
-COPY --chown=kicad:kicad kbplacer/ /kicad/.local/share/kicad/6.0/3rdparty/plugins/com_github_adamws_kicad-kbplacer/
+ARG PLUGINS_PATH=/kicad/.local/share/kicad/6.0/3rdparty/plugins
+RUN mkdir -p $PLUGINS_PATH
+COPY --chown=kicad:kicad kbplacer/ $PLUGINS_PATH/com_github_adamws_kicad-kbplacer/
+
+ENV PYTHONPATH "${PYTHONPATH}:${PLUGINS_PATH}"

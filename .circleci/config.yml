@@ -33,21 +33,32 @@ jobs:
       - store_artifacts:
           path: release/kicad-kbplacer.zip
   deploy-image:
-    docker:
-      - image: cimg/base:2021.04
+    machine:
+      image: ubuntu-2204:2022.10.2
     steps:
       - checkout
-      - setup_remote_docker
       - run:
-          name: Build and push Docker image
+          name: Setup environment variables
           command: |
-            export TAG=0.2.${CIRCLE_SHA1}
-            export IMAGE_NAME=kicad-kbplacer
+            echo 'export TAG="0.2.${CIRCLE_SHA1}"' >> "$BASH_ENV"
+            echo 'export IMAGE_NAME="kicad-kbplacer"' >> "$BASH_ENV"
+      - run:
+          name: Build and test docker image
+          command: |
             docker build -t admwscki/$IMAGE_NAME:$TAG -f docker/Dockerfile .
-            docker tag admwscki/$IMAGE_NAME:$TAG admwscki/$IMAGE_NAME:latest
-            echo $DOCKERHUB_PASSWORD | docker login -u $DOCKERHUB_LOGIN --password-stdin
-            docker push admwscki/$IMAGE_NAME:$TAG
-            docker push admwscki/$IMAGE_NAME:latest
+            docker run --rm -v $(pwd)/tests:/kicad/tests -v $(pwd)/examples:/kicad/examples \
+              -w /kicad/tests admwscki/$IMAGE_NAME:$TAG \
+              /bin/bash -c "pip3 install -r dev-requirements.txt && /kicad/.local/bin/pytest -c /dev/null"
+      - run:
+          name: Push docker image
+          command: |
+            if [ "${CIRCLE_BRANCH}" = "master" ]
+            then
+              docker tag admwscki/$IMAGE_NAME:$TAG admwscki/$IMAGE_NAME:latest
+              echo $DOCKERHUB_PASSWORD | docker login -u $DOCKERHUB_LOGIN --password-stdin
+              docker push admwscki/$IMAGE_NAME:$TAG
+              docker push admwscki/$IMAGE_NAME:latest
+            fi
 workflows:
   main:
     jobs:
@@ -58,6 +69,3 @@ workflows:
       - deploy-image:
           requires:
             - create-release
-          filters:
-            branches:
-              only: master
