@@ -20,7 +20,7 @@ by reducing tedious element placement task.
 - [x] Key rotation support
 - [ ] User selectable diode position in relation to key position
 
-![demo](demo.gif)
+![demo](resources/demo.gif)
 
 ## Installation
 
