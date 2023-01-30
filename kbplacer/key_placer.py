@@ -1,8 +1,16 @@
 import math
 import re
+from dataclasses import dataclass
 
 from pcbnew import *
-from .board_modifier import BoardModifier
+from .board_modifier import BoardModifier, Point, Side
+
+
+@dataclass
+class DiodePosition:
+    relativePosition: Point
+    orientation: float
+    side: Side
 
 
 def PositionInRotatedCoordinates(point, angle):
@@ -96,7 +104,20 @@ class KeyPlacer(BoardModifier):
         # second segment: up to switch pad
         self.AddTrackSegmentByPoints(corner, switchPadPosition)
 
-    def Run(self, keyFormat, stabilizerFormat, diodeFormat, routeTracks=False):
+    def GetDefaultDiodePosition(self):
+        return DiodePosition(Point(5.08, 3.03), 90.0, Side.BACK)
+
+    def GetDiodePosition(self, keyFormat, diodeFormat, isFirstPairUsedAsTemplate):
+        if isFirstPairUsedAsTemplate:
+            key1 = self.GetFootprint(keyFormat.format(1))
+            diode1 = self.GetFootprint(diodeFormat.format(1))
+            pos1 = self.GetPosition(key1)
+            pos2 = self.GetPosition(diode1)
+            return DiodePosition(Point(ToMM(pos2.x - pos1.x), ToMM(pos2.y - pos1.y)), diode1.GetOrientationDegrees(), self.GetSide(diode1))
+        else:
+            return self.GetDefaultDiodePosition()
+
+    def Run(self, keyFormat, stabilizerFormat, diodeFormat, diodePosition, routeTracks=False):
         column_switch_pads = {}
         row_diode_pads = {}
         for key in self.layout["keys"]:
@@ -110,14 +131,16 @@ class KeyPlacer(BoardModifier):
 
             if stabilizer:
                 self.SetPosition(stabilizer, position)
-                # recognize special case of of ISO enter:
+                # recognize special case of ISO enter:
                 width2 = key["width2"]
                 height2 = key["height2"]
                 if width == 1.25 and height == 2 and width2 == 1.5 and height2 == 1:
                     stabilizer.SetOrientationDegrees(90)
 
             diodeFootprint = self.GetCurrentDiode(diodeFormat)
-            self.SetRelativePositionMM(diodeFootprint, position, [5.08, 3.03])
+            self.SetSide(diodeFootprint, diodePosition.side)
+            diodeFootprint.SetOrientationDegrees(diodePosition.orientation)
+            self.SetRelativePositionMM(diodeFootprint, position, diodePosition.relativePosition.toList())
 
             angle = key["rotation_angle"]
             if angle != 0:
@@ -126,14 +149,6 @@ class KeyPlacer(BoardModifier):
                 if stabilizer:
                     self.Rotate(stabilizer, rotationReference, angle)
                 self.Rotate(diodeFootprint, rotationReference, angle)
-                if not diodeFootprint.IsFlipped():
-                    diodeFootprint.Flip(diodeFootprint.GetPosition(), False)
-                diodeFootprint.SetOrientationDegrees(switchFootprint.GetOrientationDegrees() - 270)
-            else:
-                if diodeFootprint.GetOrientationDegrees() != 90.0:
-                    diodeFootprint.SetOrientationDegrees(270)
-                if not diodeFootprint.IsFlipped():
-                    diodeFootprint.Flip(diodeFootprint.GetPosition(), False)
 
             # append pad:
             pad = switchFootprint.FindPadByNumber("1")

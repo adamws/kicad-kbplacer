@@ -1,4 +1,20 @@
+from dataclasses import dataclass
+from enum import Flag
 from pcbnew import *
+
+
+class Side(Flag):
+    FRONT = False
+    BACK = True
+
+
+@dataclass
+class Point:
+    x: float
+    y: float
+
+    def toList(self):
+        return [self.x, self.y]
 
 
 class BoardModifier():
@@ -17,6 +33,11 @@ class BoardModifier():
     def SetPosition(self, footprint, position):
         self.logger.info("Setting {} footprint position: {}".format(footprint.GetReference(), position))
         footprint.SetPosition(position)
+
+    def GetPosition(self, footprint):
+        position = footprint.GetPosition()
+        self.logger.info("Getting {} footprint position: {}".format(footprint.GetReference(), position))
+        return position
 
     def SetRelativePositionMM(self, footprint, referencePoint, direction):
         position = wxPoint(referencePoint.x + FromMM(direction[0]), referencePoint.y + FromMM(direction[1]))
@@ -52,3 +73,11 @@ class BoardModifier():
     def Rotate(self, footprint, rotationReference, angle):
         self.logger.info("Rotating {} footprint: rotationReference: {}, rotationAngle: {}".format(footprint.GetReference(), rotationReference, angle))
         footprint.Rotate(rotationReference, angle * -10)
+
+    def SetSide(self, footprint, side: Side):
+        if side ^ self.GetSide(footprint):
+            footprint.Flip(footprint.GetPosition(), False)
+
+    def GetSide(self, footprint):
+        return Side(footprint.IsFlipped())
+

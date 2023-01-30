@@ -45,11 +45,18 @@ class KbplacerDialog(wx.Dialog):
 
         row6 = wx.BoxSizer(wx.HORIZONTAL)
 
+        useFirstPairAsTemplateCheckbox = wx.CheckBox(self,
+            label="Use first switch-diode pair as reference for relative position")
+        useFirstPairAsTemplateCheckbox.SetValue(False)
+        row6.Add(useFirstPairAsTemplateCheckbox, 1, wx.EXPAND|wx.ALL, 5)
+
+        row7 = wx.BoxSizer(wx.HORIZONTAL)
+
         text = wx.StaticText(self, -1, "Select controler circuit template:")
-        row6.Add(text, 0, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, 5)
+        row7.Add(text, 0, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, 5)
 
         templateFilePicker = wx.FilePickerCtrl(self, -1)
-        row6.Add(templateFilePicker, 1, wx.EXPAND|wx.ALL, 5)
+        row7.Add(templateFilePicker, 1, wx.EXPAND|wx.ALL, 5)
 
         box = wx.BoxSizer(wx.VERTICAL)
 
@@ -59,6 +66,7 @@ class KbplacerDialog(wx.Dialog):
         box.Add(row4, 0, wx.EXPAND|wx.ALL, 5)
         box.Add(row5, 0, wx.EXPAND|wx.ALL, 5)
         box.Add(row6, 0, wx.EXPAND|wx.ALL, 5)
+        box.Add(row7, 0, wx.EXPAND|wx.ALL, 5)
 
         buttons = self.CreateButtonSizer(wx.OK|wx.CANCEL)
         box.Add(buttons, 0, wx.EXPAND|wx.ALL, 5)
@@ -68,8 +76,11 @@ class KbplacerDialog(wx.Dialog):
         self.keyAnnotationFormat = keyAnnotationFormat
         self.stabilizerAnnotationFormat = stabilizerAnnotationFormat
         self.diodeAnnotationFormat = diodeAnnotationFormat
+        self.useFirstPairAsTemplateCheckbox = useFirstPairAsTemplateCheckbox
         self.tracksCheckbox = tracksCheckbox
         self.templateFilePicker = templateFilePicker
+
+        self.Bind(wx.EVT_CHECKBOX, self.HandleUseFirstPairAsTemplateCheckbox, self.useFirstPairAsTemplateCheckbox)
 
     def GetLayoutPath(self):
         return self.layoutFilePicker.GetPath()
@@ -86,5 +97,16 @@ class KbplacerDialog(wx.Dialog):
     def IsTracks(self):
         return self.tracksCheckbox.GetValue()
 
+    def IsFirstPairUsedAsTemplate(self):
+        return self.useFirstPairAsTemplateCheckbox.GetValue()
+
     def GetTemplatePath(self):
         return self.templateFilePicker.GetPath()
+
+    def HandleUseFirstPairAsTemplateCheckbox(self, event):
+        if self.useFirstPairAsTemplateCheckbox.IsChecked():
+            self.tracksCheckbox.SetValue(False)
+            self.tracksCheckbox.Disable()
+        else:
+            self.tracksCheckbox.Enable()
+

@@ -54,7 +54,21 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
                 layout = json.loads(textInput)
                 self.logger.info("User layout: {}".format(layout))
                 placer = KeyPlacer(self.logger, self.board, layout)
-                placer.Run(dlg.GetKeyAnnotationFormat(), dlg.GetStabilizerAnnotationFormat(), dlg.GetDiodeAnnotationFormat(), dlg.IsTracks())
+                keyFormat = dlg.GetKeyAnnotationFormat()
+                stabilizerFormat = dlg.GetStabilizerAnnotationFormat()
+                diodeFormat = dlg.GetDiodeAnnotationFormat()
+                diodePosition = placer.GetDiodePosition(
+                    keyFormat,
+                    diodeFormat,
+                    dlg.IsFirstPairUsedAsTemplate(),
+                )
+                placer.Run(
+                    keyFormat,
+                    stabilizerFormat,
+                    diodeFormat,
+                    diodePosition,
+                    dlg.IsTracks(),
+                )
 
         dlg.Destroy()
         logging.shutdown()

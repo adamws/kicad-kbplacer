@@ -39,7 +39,7 @@ if __name__ == "__main__":
         logger.info("User layout: {}".format(layout))
 
         placer = KeyPlacer(logger, board, layout)
-        placer.Run("SW{}", "ST{}", "D{}", routeTracks)
+        placer.Run("SW{}", "ST{}", "D{}", placer.GetDefaultDiodePosition(), routeTracks)
 
     pcbnew.Refresh()
     pcbnew.SaveBoard(boardPath, board)
