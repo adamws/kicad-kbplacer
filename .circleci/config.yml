@@ -49,16 +49,17 @@ jobs:
             docker run --rm -v $(pwd)/tests:/kicad/tests -v $(pwd)/examples:/kicad/examples \
               -w /kicad/tests admwscki/$IMAGE_NAME:$TAG \
               /bin/bash -c "pip3 install -r dev-requirements.txt && /kicad/.local/bin/pytest -c /dev/null"
-      - run:
-          name: Push docker image
-          command: |
-            if [ "${CIRCLE_BRANCH}" = "master" ]
-            then
-              docker tag admwscki/$IMAGE_NAME:$TAG admwscki/$IMAGE_NAME:latest
-              echo $DOCKERHUB_PASSWORD | docker login -u $DOCKERHUB_LOGIN --password-stdin
-              docker push admwscki/$IMAGE_NAME:$TAG
-              docker push admwscki/$IMAGE_NAME:latest
-            fi
+      - when:
+          condition:
+            equal: [ master, << pipeline.git.branch >> ]
+          steps:
+            - run:
+                name: Push docker image
+                command: |
+                  docker tag admwscki/$IMAGE_NAME:$TAG admwscki/$IMAGE_NAME:latest
+                  echo $DOCKERHUB_PASSWORD | docker login -u $DOCKERHUB_LOGIN --password-stdin
+                  docker push admwscki/$IMAGE_NAME:$TAG
+                  docker push admwscki/$IMAGE_NAME:latest
 workflows:
   main:
     jobs:
