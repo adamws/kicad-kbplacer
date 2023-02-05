@@ -22,9 +22,17 @@ by reducing tedious element placement task.
 
 ![demo](resources/demo.gif)
 
+Some examples can be found in [examples](./examples) directory.
+
 ## Installation
 
-Install with KiCad's `Plugin and Content Manager` (available since version 6.0).
+To install release version use this plugin, use KiCad's `Plugin and Content Manager` (available since version KiCad 6.0).
+
+![pcm](resources/pcm.png)
+
+In order to work with latest version of plugin, checkout this repository and copy (or link)
+content of `kbplacer` directory to one of the KiCad's plugin search paths.
+For more details see [this](https://dev-docs.kicad.org/en/python/pcbnew/) guide.
 
 For KiCad 5.1 compatible version see tag [v0.1](https://github.com/adamws/kicad-kbplacer/tree/v0.1)
 
