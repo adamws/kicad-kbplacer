@@ -10,8 +10,6 @@ jobs:
           name: Prepare tests
           command: |
             pip3 install --no-cache-dir -r tests/dev-requirements.txt
-            mkdir -p /root/.local/share/kicad/6.0/3rdparty/plugins
-            cp -r kbplacer/ /root/.local/share/kicad/6.0/3rdparty/plugins/com_github_adamws_kicad-kbplacer
       - run:
           name: Run tests
           command: |
@@ -48,7 +46,8 @@ jobs:
             docker build -t admwscki/$IMAGE_NAME:$TAG -f docker/Dockerfile .
             docker run --rm -v $(pwd)/tests:/kicad/tests -v $(pwd)/examples:/kicad/examples \
               -w /kicad/tests admwscki/$IMAGE_NAME:$TAG \
-              /bin/bash -c "pip3 install -r dev-requirements.txt && /kicad/.local/bin/pytest -c /dev/null"
+              /bin/bash -c \
+              "pip3 install -r dev-requirements.txt && /kicad/.local/bin/pytest -c /dev/null --test-plugin-installation"
       - when:
           condition:
             equal: [ master, << pipeline.git.branch >> ]

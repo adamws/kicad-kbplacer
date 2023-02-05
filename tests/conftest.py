@@ -5,13 +5,36 @@ import pytest
 import svgpathtools
 
 import xml.etree.ElementTree as ET
+from pathlib import Path
 from typing import Callable, Tuple, Union
+
 
 Numeric = Union[int, float]
 Box = Tuple[Numeric, Numeric, Numeric, Numeric]
 
 
-# pcb plotting based on https://github.com/kitspace/kitspace-v2/tree/master/processor/src/tasks/processKicadPCB
+def pytest_addoption(parser):
+    parser.addoption(
+        "--test-plugin-installation",
+        action="store_true",
+        help="Run tests using ~/.local/hsare/kicad/6.0/3rdparty/plugins instance instead of local one",
+        default=False,
+    )
+
+
+@pytest.fixture(scope="session")
+def workdir(request):
+    if request.config.getoption("--test-plugin-installation"):
+        home_directory = Path.home()
+        return f"{home_directory}/.local/share/kicad/6.0/3rdparty/plugins"
+    return Path(os.path.realpath(__file__)).parents[1]
+
+
+@pytest.fixture(scope="session")
+def package_name(request):
+    if request.config.getoption("--test-plugin-installation"):
+        return "com_github_adamws_kicad-kbplacer"
+    return "kbplacer"
 
 
 def merge_bbox(left: Box, right: Box) -> Box:
@@ -43,6 +66,7 @@ def shrink_svg(svg: ET.ElementTree) -> None:
     root.set("height", str(int(bbox[3] - bbox[2])))
 
 
+# pcb plotting based on https://github.com/kitspace/kitspace-v2/tree/master/processor/src/tasks/processKicadPCB
 def generate_render(tmpdir):
     project_name = "keyboard-before"
     pcb_path = "{}/{}.kicad_pcb".format(tmpdir, project_name)
@@ -75,7 +99,9 @@ def generate_render(tmpdir):
 
     for (layer_name, layer_id) in plot_plan:
         plot_control.SetLayer(layer_id)
-        plot_control.OpenPlotfile(layer_name, pcbnew.PLOT_FORMAT_SVG, aSheetDesc=layer_name)
+        plot_control.OpenPlotfile(
+            layer_name, pcbnew.PLOT_FORMAT_SVG, aSheetDesc=layer_name
+        )
         plot_control.PlotLayer()
         plot_control.ClosePlot()
 
