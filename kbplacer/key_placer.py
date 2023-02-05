@@ -118,6 +118,8 @@ class KeyPlacer(BoardModifier):
             return self.GetDefaultDiodePosition()
 
     def Run(self, keyFormat, stabilizerFormat, diodeFormat, diodePosition, routeTracks=False):
+        self.logger.info("Diode position: {}".format(diodePosition))
+
         column_switch_pads = {}
         row_diode_pads = {}
         for key in self.layout["keys"]:
