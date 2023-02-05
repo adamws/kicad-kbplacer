@@ -18,7 +18,7 @@ by reducing tedious element placement task.
 - [x] Support for different annotation schemes
 - [x] Basic track routing
 - [x] Key rotation support
-- [ ] User selectable diode position in relation to key position
+- [x] User selectable diode position in relation to key position
 
 ![demo](resources/demo.gif)
 
@@ -57,10 +57,4 @@ This plugin is part of my another project. See [keyboard-tools](https://github.c
 
 - See stacktrace
 - See created `kbplacer.log` file (in PCB directory)
-
-## Known bugs and limitations
-
-- Tested only with SOD-323F diodes. Predefined diode location might not be
-  suitable for larger footprints and custom location is not supported without
-  code modification
 
