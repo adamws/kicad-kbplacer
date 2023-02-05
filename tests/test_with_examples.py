@@ -1,10 +1,9 @@
-import os
 import pytest
 import shutil
 import subprocess
 
 
-def run_kbplacer_process(tmpdir, workdir, package_name):
+def run_kbplacer_process(tmpdir, route, workdir, package_name):
     layout_file = "{}/kle-internal.json".format(tmpdir)
     pcb_path = "{}/keyboard-before.kicad_pcb".format(tmpdir)
 
@@ -16,8 +15,10 @@ def run_kbplacer_process(tmpdir, workdir, package_name):
         layout_file,
         "-b",
         pcb_path,
-        "--route",
     ]
+    if route:
+        kbplacer_args.append("--route")
+
     p = subprocess.Popen(
         kbplacer_args,
         cwd=workdir,
@@ -31,10 +32,12 @@ def run_kbplacer_process(tmpdir, workdir, package_name):
     ("example"),
     ["2x2", "3x2-sizes", "2x3-rotations", "1x4-rotations-90-step"],
 )
-def test_with_examples(example, tmpdir, request, workdir, package_name):
+@pytest.mark.parametrize(("route"), [False, True])
+def test_with_examples(example, route, tmpdir, request, workdir, package_name):
     test_dir = request.fspath.dirname
 
     source_dir = "{}/../examples/{}".format(test_dir, example)
     shutil.copy("{}/keyboard-before.kicad_pcb".format(source_dir), tmpdir)
     shutil.copy("{}/kle-internal.json".format(source_dir), tmpdir)
-    run_kbplacer_process(tmpdir, workdir, package_name)
+
+    run_kbplacer_process(tmpdir, route, workdir, package_name)
