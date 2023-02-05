@@ -23,7 +23,7 @@ class KbplacerDialog(wx.Dialog):
 
         row3 = wx.BoxSizer(wx.HORIZONTAL)
 
-        stabilizerAnnotationLabel = wx.StaticText(self, -1, "Key annotation format string:")
+        stabilizerAnnotationLabel = wx.StaticText(self, -1, "Stabilizer annotation format string:")
         row3.Add(stabilizerAnnotationLabel, 1, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, 5)
 
         stabilizerAnnotationFormat = wx.TextCtrl(self, value='ST{}')
