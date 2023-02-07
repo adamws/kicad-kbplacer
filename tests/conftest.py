@@ -2,6 +2,7 @@ import base64
 import os
 import pcbnew
 import pytest
+import shutil
 import svgpathtools
 
 import xml.etree.ElementTree as ET
@@ -37,11 +38,20 @@ def package_name(request):
     return "kbplacer"
 
 
+@pytest.fixture(autouse=True, scope="session")
+def prepare_kicad_config(request):
+    config_path = pcbnew.SETTINGS_MANAGER.GetUserSettingsPath()
+    colors_path = config_path + "/colors"
+    os.makedirs(colors_path, exist_ok=True)
+    if not os.path.exists(colors_path + "/user.json"):
+        shutil.copy("./colors/user.json", colors_path)
+
+
 def merge_bbox(left: Box, right: Box) -> Box:
     """
     Merge bounding boxes in format (xmin, xmax, ymin, ymax)
     """
-    return tuple([f(l, r) for l, r, f in zip(left, right, [min, max, min, max])])  #
+    return tuple([f(l, r) for l, r, f in zip(left, right, [min, max, min, max])])
 
 
 def shrink_svg(svg: ET.ElementTree) -> None:
@@ -49,7 +59,7 @@ def shrink_svg(svg: ET.ElementTree) -> None:
     Shrink the SVG canvas to the size of the drawing.
     """
     root = svg.getroot()
-    paths = svgpathtools.document.flattened_paths(ET.fromstring(ET.tostring(root)))
+    paths = svgpathtools.document.flattened_paths(root)
 
     if len(paths) == 0:
         return
@@ -62,19 +72,48 @@ def shrink_svg(svg: ET.ElementTree) -> None:
         "viewBox",
         "{} {} {} {}".format(bbox[0], bbox[2], bbox[1] - bbox[0], bbox[3] - bbox[2]),
     )
-    root.set("width", str(int(bbox[1] - bbox[0])))
-    root.set("height", str(int(bbox[3] - bbox[2])))
+    root.set("width", str(float((bbox[1] - bbox[0]) / 1000)) + "cm")
+    root.set("height", str(float((bbox[3] - bbox[2]) / 1000)) + "cm")
+
+
+def remove_empty_groups(root):
+    name = "{http://www.w3.org/2000/svg}g"
+    for elem in root.findall(name):
+        if len(elem) == 0:
+            root.remove(elem)
+    for child in root:
+        remove_empty_groups(child)
+
+
+def remove_tags(root, name):
+    for elem in root.findall(name):
+        root.remove(elem)
 
 
 # pcb plotting based on https://github.com/kitspace/kitspace-v2/tree/master/processor/src/tasks/processKicadPCB
+# and https://gitlab.com/kicad/code/kicad/-/blob/master/demos/python_scripts_examples/plot_board.py
 def generate_render(tmpdir):
     project_name = "keyboard-before"
     pcb_path = "{}/{}.kicad_pcb".format(tmpdir, project_name)
     board = pcbnew.LoadBoard(pcb_path)
 
+    plot_layers = [
+        "B_Cu",
+        "F_Cu",
+        "B_Silkscreen",
+        "F_Silkscreen",
+        "Edge_cuts",
+        "B_Courtyard",
+        "F_Courtyard",
+        "B_Fab",
+        "F_Fab",
+        "B_Mask", # always printed in black, see: https://gitlab.com/kicad/code/kicad/-/issues/10293
+        "F_Mask",
+    ]
     plot_control = pcbnew.PLOT_CONTROLLER(board)
     plot_options = plot_control.GetPlotOptions()
     plot_options.SetOutputDirectory(tmpdir)
+    plot_options.SetColorSettings(pcbnew.GetSettingsManager().GetColorSettings("user"))
     plot_options.SetPlotFrameRef(False)
     plot_options.SetSketchPadLineWidth(pcbnew.FromMM(0.35))
     plot_options.SetAutoScale(False)
@@ -95,13 +134,15 @@ def generate_render(tmpdir):
     end = pcbnew.PCBNEW_LAYER_ID_START + pcbnew.PCB_LAYER_ID_COUNT
     for i in range(start, end):
         name = pcbnew.LayerName(i).replace(".", "_")
-        plot_plan.append((name, i))
+        if name in plot_layers:
+            plot_plan.append((name, i))
 
     for (layer_name, layer_id) in plot_plan:
         plot_control.SetLayer(layer_id)
         plot_control.OpenPlotfile(
             layer_name, pcbnew.PLOT_FORMAT_SVG, aSheetDesc=layer_name
         )
+        plot_control.SetColorMode(True)
         plot_control.PlotLayer()
         plot_control.ClosePlot()
 
@@ -117,6 +158,15 @@ def generate_render(tmpdir):
         else:
             for child in layer:
                 new_root.append(child)
+
+    # for some reason there is plenty empty groups in generated svg's (kicad bug?)
+    # remove for clarity:
+    remove_empty_groups(new_root)
+
+    # due to merging of multiple files we have multiple titles/descriptions,
+    # remove all title/desc from root since we do not care about them:
+    remove_tags(new_root, "{http://www.w3.org/2000/svg}title")
+    remove_tags(new_root, "{http://www.w3.org/2000/svg}desc")
 
     shrink_svg(new_tree)
     new_tree.write(f"{tmpdir}/render.svg")
