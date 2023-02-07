@@ -54,7 +54,7 @@ def merge_bbox(left: Box, right: Box) -> Box:
     return tuple([f(l, r) for l, r, f in zip(left, right, [min, max, min, max])])
 
 
-def shrink_svg(svg: ET.ElementTree) -> None:
+def shrink_svg(svg: ET.ElementTree, margin: int) -> None:
     """
     Shrink the SVG canvas to the size of the drawing.
     """
@@ -67,6 +67,10 @@ def shrink_svg(svg: ET.ElementTree) -> None:
     for x in paths:
         bbox = merge_bbox(bbox, x.bbox())
     bbox = list(bbox)
+    bbox[0] -= int(margin)
+    bbox[1] += int(margin)
+    bbox[2] -= int(margin)
+    bbox[3] += int(margin)
 
     root.set(
         "viewBox",
@@ -168,7 +172,7 @@ def generate_render(tmpdir):
     remove_tags(new_root, "{http://www.w3.org/2000/svg}title")
     remove_tags(new_root, "{http://www.w3.org/2000/svg}desc")
 
-    shrink_svg(new_tree)
+    shrink_svg(new_tree, margin=1000)
     new_tree.write(f"{tmpdir}/render.svg")
 
 
