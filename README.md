@@ -26,7 +26,7 @@ Some examples can be found in [examples](./examples) directory.
 
 ## Installation
 
-To install release version use this plugin, use KiCad's `Plugin and Content Manager` (available since version KiCad 6.0).
+To install release version of this plugin, use KiCad's `Plugin and Content Manager` (available since version KiCad 6.0).
 
 ![pcm](resources/pcm.png)
 
