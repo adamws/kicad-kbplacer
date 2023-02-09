@@ -111,7 +111,7 @@ def generate_render(tmpdir):
         "F_Courtyard",
         "B_Fab",
         "F_Fab",
-        "B_Mask", # always printed in black, see: https://gitlab.com/kicad/code/kicad/-/issues/10293
+        "B_Mask",  # always printed in black, see: https://gitlab.com/kicad/code/kicad/-/issues/10293
         "F_Mask",
     ]
     plot_control = pcbnew.PLOT_CONTROLLER(board)
@@ -195,9 +195,8 @@ def pytest_runtest_makereport(item, call):
     report = outcome.get_result()
     extra = getattr(report, "extra", [])
 
-    if report.when == "call":
+    if report.when == "call" and not report.skipped:
         tmpdir = item.funcargs["tmpdir"]
-        generate_render(tmpdir)
         render = svg_to_base64_html(os.path.join(tmpdir, "render.svg"))
         extra.append(pytest_html.extras.html(render))
         report.extra = extra
