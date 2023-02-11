@@ -85,12 +85,21 @@ def assert_kicad_svg(expected, actual):
         assert_layer(expected_groups[i], actual_groups[i])
 
 
-@pytest.mark.parametrize(
-    ("example"),
-    ["2x2", "3x2-sizes", "2x3-rotations", "1x4-rotations-90-step"],
-)
-@pytest.mark.parametrize(("route"), [False, True])
-@pytest.mark.parametrize(("diode_position"), [None, "0,4.5,0,BACK"])
+def __get_parameters():
+    examples = ["2x2", "3x2-sizes", "2x3-rotations", "1x4-rotations-90-step"]
+    route_options = {"NoTracks": False, "Tracks": True}
+    diode_options = {"DefaultDiode": None, "DiodeOption1": "0,4.5,0,BACK"}
+    test_params = []
+    for example in examples:
+        for route_option_name, route_option in route_options.items():
+            for diode_option_name, diode_option in diode_options.items():
+                test_id = f"{example};{route_option_name};{diode_option_name}"
+                param = pytest.param(example, route_option, diode_option, id=test_id)
+                test_params.append(param)
+    return test_params
+
+
+@pytest.mark.parametrize("example,route,diode_position", __get_parameters())
 def test_with_examples(
     example, route, diode_position, tmpdir, request, workdir, package_name
 ):
