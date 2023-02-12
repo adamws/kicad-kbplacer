@@ -1,4 +1,5 @@
 import base64
+import logging
 import os
 import pcbnew
 import pytest
@@ -14,11 +15,21 @@ Numeric = Union[int, float]
 Box = Tuple[Numeric, Numeric, Numeric, Numeric]
 
 
+logger = logging.getLogger(__name__)
+
+
 def pytest_addoption(parser):
     parser.addoption(
         "--test-plugin-installation",
         action="store_true",
         help="Run tests using ~/.local/hsare/kicad/6.0/3rdparty/plugins instance instead of local one",
+        default=False,
+    )
+    parser.addoption(
+        "--save-results-as-reference",
+        action="store_true",
+        help="Save test results as expected results."
+        "This option is for updating expected results and NOT for testing",
         default=False,
     )
 
@@ -45,6 +56,16 @@ def prepare_kicad_config(request):
     os.makedirs(colors_path, exist_ok=True)
     if not os.path.exists(colors_path + "/user.json"):
         shutil.copy("./colors/user.json", colors_path)
+
+
+def get_references_dir(request):
+    test_dir = Path(request.module.__file__).parent
+    test_name, test_parameters = request.node.name.split("[")
+    example_name, route_option, diode_option = test_parameters[:-1].split(";")
+    references_dir = (
+        test_dir / "data" / test_name / example_name / f"{route_option}-{diode_option}"
+    )
+    return references_dir
 
 
 def merge_bbox(left: Box, right: Box) -> Box:
@@ -96,7 +117,7 @@ def remove_tags(root, name):
 
 # pcb plotting based on https://github.com/kitspace/kitspace-v2/tree/master/processor/src/tasks/processKicadPCB
 # and https://gitlab.com/kicad/code/kicad/-/blob/master/demos/python_scripts_examples/plot_board.py
-def generate_render(tmpdir):
+def generate_render(tmpdir, request):
     project_name = "keyboard-before"
     pcb_path = "{}/{}.kicad_pcb".format(tmpdir, project_name)
     board = pcbnew.LoadBoard(pcb_path)
@@ -107,10 +128,6 @@ def generate_render(tmpdir):
         "B_Silkscreen",
         "F_Silkscreen",
         "Edge_cuts",
-        "B_Courtyard",
-        "F_Courtyard",
-        "B_Fab",
-        "F_Fab",
         "B_Mask",  # always printed in black, see: https://gitlab.com/kicad/code/kicad/-/issues/10293
         "F_Mask",
     ]
@@ -150,10 +167,28 @@ def generate_render(tmpdir):
         plot_control.PlotLayer()
         plot_control.ClosePlot()
 
+        filepath = os.path.join(tmpdir, f"{project_name}-{layer_name}.svg")
+        tree = ET.parse(filepath)
+        root = tree.getroot()
+        # for some reason there is plenty empty groups in generated svg's (kicad bug?)
+        # remove for clarity:
+        remove_empty_groups(root)
+        shrink_svg(tree, margin=1000)
+        tree.write(f"{tmpdir}/{layer_name}.svg")
+        os.remove(f"{tmpdir}/{project_name}-{layer_name}.svg")
+
+    if request.config.getoption("--save-results-as-reference"):
+        references_dir = get_references_dir(request)
+        references_dir.mkdir(parents=True, exist_ok=True)
+
+        for i, (layer_name, _) in enumerate(plot_plan):
+            filepath = os.path.join(tmpdir, f"{layer_name}.svg")
+            shutil.copy(filepath, references_dir)
+
     new_tree = None
     new_root = None
     for i, (layer_name, _) in enumerate(plot_plan):
-        filepath = os.path.join(tmpdir, f"{project_name}-{layer_name}.svg")
+        filepath = os.path.join(tmpdir, f"{layer_name}.svg")
         tree = ET.parse(filepath)
         layer = tree.getroot()
         if i == 0:
@@ -162,10 +197,6 @@ def generate_render(tmpdir):
         else:
             for child in layer:
                 new_root.append(child)
-
-    # for some reason there is plenty empty groups in generated svg's (kicad bug?)
-    # remove for clarity:
-    remove_empty_groups(new_root)
 
     # due to merging of multiple files we have multiple titles/descriptions,
     # remove all title/desc from root since we do not care about them:

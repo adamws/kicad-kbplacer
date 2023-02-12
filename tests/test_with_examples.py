@@ -5,8 +5,9 @@ import shutil
 import subprocess
 import xml.etree.ElementTree as ET
 
+from pathlib import Path
 from xmldiff import actions, main
-from .conftest import generate_render
+from .conftest import generate_render, get_references_dir
 
 
 logger = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ def run_kbplacer_process(tmpdir, route, diode_position, workdir, package_name):
         raise Exception("Switch placement failed")
 
 
-def assert_layer(expected: ET.ElementTree, actual: ET.ElementTree):
+def assert_group(expected: ET.ElementTree, actual: ET.ElementTree):
     expected = ET.tostring(expected).decode()
     actual = ET.tostring(actual).decode()
 
@@ -65,11 +66,11 @@ def assert_layer(expected: ET.ElementTree, actual: ET.ElementTree):
                 differences.remove(node)
 
         assert len(differences) == 0, "Not allowd differences found"
+    else:
+        logger.info("No differences found")
 
 
-def assert_kicad_svg(expected, actual):
-    logger.info("Analyzing SVG file")
-
+def assert_kicad_svg(expected: Path, actual: Path):
     ns = {"svg": "http://www.w3.org/2000/svg"}
     expected_root = ET.parse(expected).getroot()
     expected_groups = expected_root.findall("svg:g", ns)
@@ -82,7 +83,8 @@ def assert_kicad_svg(expected, actual):
     number_of_groups = len(expected_groups)
 
     for i in range(0, number_of_groups):
-        assert_layer(expected_groups[i], actual_groups[i])
+        logger.info(f"Analyzing {expected.name} file, group {i+1}/{number_of_groups}")
+        assert_group(expected_groups[i], actual_groups[i])
 
 
 def __get_parameters():
@@ -114,8 +116,8 @@ def test_with_examples(
 
     run_kbplacer_process(tmpdir, route, diode_position, workdir, package_name)
 
-    generate_render(tmpdir)
+    generate_render(tmpdir, request)
 
-    # checking with reference currently suppored only for this subset of options:
-    if route and diode_position == None:
-        assert_kicad_svg(f"{source_dir}/pictures/render.svg", f"{tmpdir}/render.svg")
+    references_dir = get_references_dir(request)
+    for path in Path(references_dir).glob("*.svg"):
+        assert_kicad_svg(path, Path(f"{tmpdir}/{path.name}"))
