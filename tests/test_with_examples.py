@@ -119,5 +119,8 @@ def test_with_examples(
     generate_render(tmpdir, request)
 
     references_dir = get_references_dir(request)
-    for path in Path(references_dir).glob("*.svg"):
+    references = Path(references_dir).glob("*.svg")
+    reference_files = list(references)
+    assert len(reference_files) == 6, "Reference files not found"
+    for path in reference_files:
         assert_kicad_svg(path, Path(f"{tmpdir}/{path.name}"))
