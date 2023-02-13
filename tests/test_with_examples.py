@@ -45,11 +45,19 @@ def assert_group(expected: ET.ElementTree, actual: ET.ElementTree):
     expected = ET.tostring(expected).decode()
     actual = ET.tostring(actual).decode()
 
-    edit_script = main.diff_texts(
-        expected, actual, diff_options={"F": 0, "ratio_mode": "accurate"}
-    )
+    edit_script = None
+    try:
+        edit_script = main.diff_texts(
+            expected, actual, diff_options={"F": 0, "ratio_mode": "accurate"}
+        )
+    except Exception as e:
+        logger.warning(f"Running diff on xml failed: {e}")
+        diff = difflib.unified_diff(expected.splitlines(), actual.splitlines())
+        for d in diff:
+            logger.info(d)
+        assert False, "Difference probably found"
 
-    if not all([type(node) == actions.MoveNode for node in edit_script]):
+    if edit_script and not all([type(node) == actions.MoveNode for node in edit_script]):
         logger.info("Difference found")
         diff = difflib.unified_diff(expected.splitlines(), actual.splitlines())
         for d in diff:

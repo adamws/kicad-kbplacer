@@ -23,4 +23,4 @@ Name | Keyboard layout | PCB result
 2x2 (ok) | ![2x2-layout](./2x2/keyboard-layout.png) | ![2x2-after](./2x2/render.svg)
 3x2-sizes (ok) | ![3x2-sizes-layout](./3x2-sizes/keyboard-layout.png) | ![3x2-sizes-after](./3x2-sizes/render.svg)<br/>Note that in this example `SW2` belongs to column 1 and `SW4&SW6` to column 2.
 1x4-rotations-90-step (not ok) | ![1x4-rotations-90-step-layout](./1x4-rotations-90-step/keyboard-layout.png) | ![1x4-rotations-90-step-after](./1x4-rotations-90-step/render.svg)<br/>Diodes are not connected together.
-2x3-rotations (not ok) | ![2x3-rotations-layout](./2x3-rotations/keyboard-layout.png) | ![2x3-rotations-after](./2x3-rotations/render.svg)<br/>Although `COL1` trace do not colide with drill holes, distance is to small to pass DRC checks. Diodes are not connected together. Routing support for rotations is incomplete. Parts placement is ok.
+2x3-rotations (not ok) | ![2x3-rotations-layout](./2x3-rotations/keyboard-layout.png) | ![2x3-rotations-after](./2x3-rotations/render.svg)<br/>Trace connecting `SW3` and `SW4` is excluded because it would be to close to drill hole. Placement is ok but some traces need to be added manually.

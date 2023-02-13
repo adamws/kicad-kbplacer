@@ -3,6 +3,9 @@ from enum import Flag
 from pcbnew import *
 
 
+DEFAULT_CLEARANCE_MM = 0.25
+
+
 class Side(Flag):
     FRONT = False
     BACK = True
@@ -43,19 +46,42 @@ class BoardModifier():
         position = wxPoint(referencePoint.x + FromMM(direction[0]), referencePoint.y + FromMM(direction[1]))
         self.SetPosition(footprint, position)
 
-    def AddTrackSegment(self, start, vector, layer=B_Cu):
-        track = PCB_TRACK(self.board)
-        track.SetWidth(FromMM(0.25))
-        track.SetLayer(layer)
-        track.SetStart(start)
-        segmentEnd = wxPoint(track.GetStart().x + vector[0], track.GetStart().y + vector[1])
-        track.SetEnd(segmentEnd)
+    def TestTrackCollision(self, track):
+        collide = False
+        trackShape = track.GetEffectiveShape()
+        trackStart = track.GetStart()
+        trackEnd = track.GetEnd()
+        footprints = self.board.GetFootprints()
+        for f in footprints:
+            reference = f.GetReference()
+            hull = f.GetBoundingHull()
+            hitTestResult = hull.Collide(trackShape)
+            if hitTestResult:
+                for p in f.Pads():
+                    padName = p.GetName()
+                    padShape = p.GetEffectiveShape()
+                    # if track starts or ends in pad than assume this collision is expected
+                    if p.HitTest(trackStart) or p.HitTest(trackEnd):
+                        self.logger.info("Pad {}:{} - collision ignored, track starts or ends in pad".format(reference, padName))
+                    else:
+                        hitTestResult = padShape.Collide(trackShape, FromMM(DEFAULT_CLEARANCE_MM))
+                        if hitTestResult:
+                            self.logger.info("Track collide pad {}:{}".format(reference, padName))
+                            collide = True
+                            break
+        return collide
 
-        layerName = self.board.GetLayerName(layer)
-        self.logger.info("Adding track segment ({}): [{}, {}]".format(layerName, start, segmentEnd))
-        self.board.Add(track)
-
-        return segmentEnd
+    def AddTrackToBoard(self, track):
+        if not self.TestTrackCollision(track):
+            layerName = self.board.GetLayerName(track.GetLayer())
+            start = track.GetStart()
+            stop = track.GetEnd()
+            self.logger.info("Adding track segment ({}): [{}, {}]".format(layerName, start, stop))
+            self.board.Add(track)
+            return stop
+        else:
+            self.logger.warning("Could not add track segment due to detected collision")
+            return None
 
     def AddTrackSegmentByPoints(self, start, stop, layer=B_Cu):
         track = PCB_TRACK(self.board)
@@ -63,12 +89,11 @@ class BoardModifier():
         track.SetLayer(layer)
         track.SetStart(start)
         track.SetEnd(stop)
+        return self.AddTrackToBoard(track)
 
-        layerName = self.board.GetLayerName(layer)
-        self.logger.info("Adding track segment ({}): [{}, {}]".format(layerName, start, stop))
-        self.board.Add(track)
-
-        return stop
+    def AddTrackSegment(self, start, vector, layer=B_Cu):
+        stop = wxPoint(start.x + vector[0], start.y + vector[1])
+        return self.AddTrackSegmentByPoints(start, stop, layer)
 
     def Rotate(self, footprint, rotationReference, angle):
         self.logger.info("Rotating {} footprint: rotationReference: {}, rotationAngle: {}".format(footprint.GetReference(), rotationReference, angle))

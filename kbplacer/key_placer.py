@@ -192,7 +192,8 @@ class KeyPlacer(BoardModifier):
                             self.logger.warning("Switch pad to far to route 2 segment track with 45 degree angles")
                         else:
                             lastPosition = self.AddTrackSegment(pos1, vector, layer=F_Cu)
-                            self.AddTrackSegmentByPoints(lastPosition, pos2, layer=F_Cu)
+                            if lastPosition:
+                                self.AddTrackSegmentByPoints(lastPosition, pos2, layer=F_Cu)
 
             for row in row_diode_pads:
                 pads = row_diode_pads[row]
@@ -202,3 +203,9 @@ class KeyPlacer(BoardModifier):
                         self.AddTrackSegmentByPoints(pos1, pos2)
                     else:
                         self.logger.warning("Automatic diode routing supported only when diodes aligned vertically")
+
+            # remove dangling tracks
+            self.board.BuildConnectivity()
+            for track in self.board.GetTracks():
+                if self.board.GetConnectivity().TestTrackEndpointDangling(track):
+                    self.board.Delete(track)
