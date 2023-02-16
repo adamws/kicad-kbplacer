@@ -54,8 +54,7 @@ class BoardModifier():
         trackShape = track.GetEffectiveShape()
         trackStart = track.GetStart()
         trackEnd = track.GetEnd()
-        footprints = self.board.GetFootprints()
-        for f in footprints:
+        for f in self.board.GetFootprints():
             reference = f.GetReference()
             hull = f.GetBoundingHull()
             hitTestResult = hull.Collide(trackShape)
@@ -73,6 +72,17 @@ class BoardModifier():
                             self.logger.info("Track collide pad {}:{}".format(reference, padName))
                             collide = True
                             break
+        for t in self.board.GetTracks():
+            # do not check collision with itself:
+            if t.m_Uuid.__ne__(track.m_Uuid) and t.IsOnLayer(track.GetLayer()):
+                if trackStart == t.GetStart() or trackStart == t.GetEnd() or trackEnd == t.GetStart() or trackEnd == t.GetEnd():
+                    self.logger.info("Collision ignored, track starts or ends at the end of another track")
+                else:
+                    hitTestResult = t.GetEffectiveShape().Collide(trackShape, FromMM(DEFAULT_CLEARANCE_MM))
+                    if hitTestResult:
+                        self.logger.info("Track collide with another track")
+                        collide = True
+                        break
         return collide
 
     def AddTrackToBoard(self, track):
