@@ -33,9 +33,12 @@ class BoardModifier():
             raise Exception("Cannot find footprint {}".format(reference))
         return footprint
 
-    def SetPosition(self, footprint, position):
+    def SetPosition(self, footprint, position: wxPoint):
         self.logger.info("Setting {} footprint position: {}".format(footprint.GetReference(), position))
         footprint.SetPosition(position)
+
+    def SetPositionByPoints(self, footprint, x: int, y: int):
+        self.SetPosition(footprint, wxPoint(x, y))
 
     def GetPosition(self, footprint):
         position = footprint.GetPosition()
@@ -65,7 +68,8 @@ class BoardModifier():
                         self.logger.info("Pad {}:{} - collision ignored, track starts or ends in pad".format(reference, padName))
                     else:
                         hitTestResult = padShape.Collide(trackShape, FromMM(DEFAULT_CLEARANCE_MM))
-                        if hitTestResult:
+                        onSameLayer = p.IsOnLayer(track.GetLayer())
+                        if hitTestResult and onSameLayer:
                             self.logger.info("Track collide pad {}:{}".format(reference, padName))
                             collide = True
                             break
