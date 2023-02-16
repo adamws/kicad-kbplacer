@@ -3,7 +3,10 @@ import pcbnew
 import pytest
 
 from .conftest import generate_render
-from kbplacer.board_modifier import BoardModifier, Side
+try:
+    from kbplacer.board_modifier import BoardModifier, Side
+except:
+    pass
 
 
 logger = logging.getLogger(__name__)

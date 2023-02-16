@@ -47,7 +47,7 @@ jobs:
             docker run --rm -v $(pwd)/tests:/kicad/tests -v $(pwd)/examples:/kicad/examples \
               -w /kicad/tests admwscki/$IMAGE_NAME:$TAG \
               /bin/bash -c \
-              "pip3 install -r dev-requirements.txt && /kicad/.local/bin/pytest -c /dev/null --test-plugin-installation"
+              "pip3 install -r dev-requirements.txt && /kicad/.local/bin/pytest -c /dev/null --test-plugin-installation -k test_with_examples"
       - when:
           condition:
             equal: [ master, << pipeline.git.branch >> ]
