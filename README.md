@@ -40,6 +40,13 @@ For KiCad 5.1 compatible version see tag [v0.1](https://github.com/adamws/kicad-
 
 ### Direct usage
 
+- Create switch matrix schematic which meets following requirements:
+  - Each switch has dedicated diode with same annotation number
+  - Symbols are ordered by Y position
+  - Diodes are column-to-row configuration (COL = Anode, ROW = Cathode)
+
+  ![schematic-example](resources/schematic-example.png)
+
 - Create new PCB and load netlist
 - Obtain [kle-serial](https://github.com/ijprest/kle-serial) compatible layout
   json file (**note**: this is not json which can be downloaded directly from [keyboard-layout-editor](http://www.keyboard-layout-editor.com/)
