@@ -1,10 +1,10 @@
 version: 2.1
 
 jobs:
-  test:
+  test-kicad6:
     docker:
       - image: admwscki/kicad-kbplacer-primary:6.0-lunar
-    steps:
+    steps: &test-steps
       - checkout
       - run:
           name: Prepare tests
@@ -19,6 +19,10 @@ jobs:
           path: tests/report.html
       - store_test_results:
           path: tests/test-results
+  test-kicad7:
+    docker:
+      - image: admwscki/kicad-kbplacer-primary:7.0-lunar
+    steps: *test-steps
   create-release:
     docker:
       - image: cimg/python:3.11
@@ -62,10 +66,12 @@ jobs:
 workflows:
   main:
     jobs:
-      - test
+      - test-kicad6
+      - test-kicad7
       - create-release:
           requires:
-            - test
+            - test-kicad6
+            - test-kicad7
       - deploy-image:
           requires:
             - create-release

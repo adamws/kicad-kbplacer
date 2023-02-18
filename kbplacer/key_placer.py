@@ -1,9 +1,10 @@
+import builtins
 import math
 import re
 from dataclasses import dataclass
 
 from pcbnew import *
-from .board_modifier import BoardModifier, Point, Side
+from .board_modifier import BoardModifier, Point, Side, KICAD_VERSION
 
 
 @dataclass
@@ -78,12 +79,12 @@ class KeyPlacer(BoardModifier):
     def CalculateCornerPositionOfSwitchDiodeRoute(self, diodePadPosition, switchPadPosition):
         x_diff = diodePadPosition.x - switchPadPosition.x
         y_diff = diodePadPosition.y - switchPadPosition.y
-        if abs(x_diff) < abs(y_diff):
+        if builtins.abs(x_diff) < builtins.abs(y_diff):
             upOrDown = -1 if y_diff > 0 else 1
-            return wxPoint(diodePadPosition.x - x_diff, diodePadPosition.y + (upOrDown * abs(x_diff)))
+            return wxPoint(diodePadPosition.x - x_diff, diodePadPosition.y + (upOrDown * builtins.abs(x_diff)))
         else:
             leftOrRight = -1 if x_diff > 0 else 1
-            return wxPoint(diodePadPosition.x + (leftOrRight * abs(y_diff)), diodePadPosition.y - y_diff)
+            return wxPoint(diodePadPosition.x + (leftOrRight * builtins.abs(y_diff)), diodePadPosition.y - y_diff)
 
     def RouteSwitchWithDiode(self, switch, diode, angle):
         self.logger.info("Routing {} with {}".format(switch.GetReference(), diode.GetReference()))
@@ -91,6 +92,9 @@ class KeyPlacer(BoardModifier):
         layer = B_Cu if self.GetSide(diode) == Side.BACK else F_Cu
         switchPadPosition = switch.FindPadByNumber("2").GetPosition()
         diodePadPosition = diode.FindPadByNumber("2").GetPosition()
+        if KICAD_VERSION == 7:
+            switchPadPosition = switchPadPosition.getWxPoint()
+            diodePadPosition = diodePadPosition.getWxPoint()
 
         self.logger.debug("switchPadPosition: {}, diodePadPosition: {}".format(switchPadPosition, diodePadPosition))
 
@@ -203,8 +207,8 @@ class KeyPlacer(BoardModifier):
                         self.AddTrackSegmentByPoints(pos1, pos2, layer=F_Cu)
                     else:
                         # two segment track
-                        y_diff = abs(pos1.y - pos2.y)
-                        x_diff = abs(pos1.x - pos2.x)
+                        y_diff = builtins.abs(pos1.y - pos2.y)
+                        x_diff = builtins.abs(pos1.x - pos2.x)
                         vector = [0, (y_diff - x_diff)]
                         if vector[1] <= 0:
                             self.logger.warning("Switch pad to far to route 2 segment track with 45 degree angles")

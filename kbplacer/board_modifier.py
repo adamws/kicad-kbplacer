@@ -3,6 +3,7 @@ from enum import Flag
 from pcbnew import *
 
 
+KICAD_VERSION = int(Version().split(".")[0])
 DEFAULT_CLEARANCE_MM = 0.25
 
 
@@ -35,7 +36,10 @@ class BoardModifier():
 
     def SetPosition(self, footprint, position: wxPoint):
         self.logger.info("Setting {} footprint position: {}".format(footprint.GetReference(), position))
-        footprint.SetPosition(position)
+        if KICAD_VERSION == 7:
+            footprint.SetPosition(VECTOR2I(position))
+        else:
+            footprint.SetPosition(position)
 
     def SetPositionByPoints(self, footprint, x: int, y: int):
         self.SetPosition(footprint, wxPoint(x, y))
@@ -97,21 +101,28 @@ class BoardModifier():
             self.logger.warning("Could not add track segment due to detected collision")
             return None
 
-    def AddTrackSegmentByPoints(self, start, stop, layer=B_Cu):
+    def AddTrackSegmentByPoints(self, start, end, layer=B_Cu):
         track = PCB_TRACK(self.board)
         track.SetWidth(FromMM(0.25))
         track.SetLayer(layer)
-        track.SetStart(start)
-        track.SetEnd(stop)
+        if KICAD_VERSION == 7:
+            track.SetStart(VECTOR2I(start))
+            track.SetEnd(VECTOR2I(end))
+        else:
+            track.SetStart(start)
+            track.SetEnd(end)
         return self.AddTrackToBoard(track)
 
     def AddTrackSegment(self, start, vector, layer=B_Cu):
-        stop = wxPoint(start.x + vector[0], start.y + vector[1])
-        return self.AddTrackSegmentByPoints(start, stop, layer)
+        end = wxPoint(start.x + vector[0], start.y + vector[1])
+        return self.AddTrackSegmentByPoints(start, end, layer)
 
     def Rotate(self, footprint, rotationReference, angle):
         self.logger.info("Rotating {} footprint: rotationReference: {}, rotationAngle: {}".format(footprint.GetReference(), rotationReference, angle))
-        footprint.Rotate(rotationReference, angle * -10)
+        if KICAD_VERSION == 7:
+            footprint.Rotate(VECTOR2I(rotationReference), EDA_ANGLE(angle * -1, DEGREES_T))
+        else:
+            footprint.Rotate(rotationReference, angle * -10)
 
     def SetSide(self, footprint, side: Side):
         if side ^ self.GetSide(footprint):

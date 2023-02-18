@@ -2,7 +2,7 @@ import logging
 import pcbnew
 import pytest
 
-from .conftest import generate_render, get_footprints_dir
+from .conftest import generate_render, get_footprints_dir, KICAD_VERSION
 
 try:
     from kbplacer.board_modifier import BoardModifier, Side
@@ -25,8 +25,12 @@ def add_track(board, start, end, layer):
     track = pcbnew.PCB_TRACK(board)
     track.SetWidth(pcbnew.FromMM(0.25))
     track.SetLayer(layer)
-    track.SetStart(start)
-    track.SetEnd(end)
+    if KICAD_VERSION == 7:
+        track.SetStart(pcbnew.VECTOR2I(start))
+        track.SetEnd(pcbnew.VECTOR2I(end))
+    else:
+        track.SetStart(start)
+        track.SetEnd(end)
     board.Add(track)
     return track
 

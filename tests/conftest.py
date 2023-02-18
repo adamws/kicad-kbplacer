@@ -15,6 +15,7 @@ Numeric = Union[int, float]
 Box = Tuple[Numeric, Numeric, Numeric, Numeric]
 
 
+KICAD_VERSION = int(pcbnew.Version().split(".")[0])
 logger = logging.getLogger(__name__)
 
 
@@ -62,8 +63,14 @@ def get_references_dir(request):
     test_dir = Path(request.module.__file__).parent
     test_name, test_parameters = request.node.name.split("[")
     example_name, route_option, diode_option = test_parameters[:-1].split(";")
+    kicad_dir = "kicad7" if KICAD_VERSION == 7 else "kicad6"
     references_dir = (
-        test_dir / "data" / test_name / example_name / f"{route_option}-{diode_option}"
+        test_dir
+        / "data"
+        / test_name
+        / kicad_dir
+        / example_name
+        / f"{route_option}-{diode_option}"
     )
     return references_dir
 
@@ -81,7 +88,7 @@ def merge_bbox(left: Box, right: Box) -> Box:
     return tuple([f(l, r) for l, r, f in zip(left, right, [min, max, min, max])])
 
 
-def shrink_svg(svg: ET.ElementTree, margin: int) -> None:
+def shrink_svg(svg: ET.ElementTree, margin: int = 0) -> None:
     """
     Shrink the SVG canvas to the size of the drawing.
     """
@@ -103,8 +110,9 @@ def shrink_svg(svg: ET.ElementTree, margin: int) -> None:
         "viewBox",
         "{} {} {} {}".format(bbox[0], bbox[2], bbox[1] - bbox[0], bbox[3] - bbox[2]),
     )
-    root.set("width", str(float((bbox[1] - bbox[0]) / 1000)) + "cm")
-    root.set("height", str(float((bbox[3] - bbox[2]) / 1000)) + "cm")
+
+    root.set("width", str(float((bbox[1] - bbox[0]))) + "mm")
+    root.set("height", str(float((bbox[3] - bbox[2]))) + "mm")
 
 
 def remove_empty_groups(root):
@@ -134,7 +142,8 @@ def generate_render(tmpdir, request):
         "B_Silkscreen",
         "F_Silkscreen",
         "Edge_cuts",
-        "B_Mask",  # always printed in black, see: https://gitlab.com/kicad/code/kicad/-/issues/10293
+        # on Kicad6 always printed in black, see: https://gitlab.com/kicad/code/kicad/-/issues/10293:
+        "B_Mask",
         "F_Mask",
     ]
     plot_control = pcbnew.PLOT_CONTROLLER(board)
@@ -146,15 +155,18 @@ def generate_render(tmpdir, request):
     plot_options.SetAutoScale(False)
     plot_options.SetMirror(False)
     plot_options.SetUseGerberAttributes(False)
-    plot_options.SetExcludeEdgeLayer(True)
     plot_options.SetScale(1)
     plot_options.SetUseAuxOrigin(True)
     plot_options.SetNegative(False)
     plot_options.SetPlotReference(True)
     plot_options.SetPlotValue(True)
     plot_options.SetPlotInvisibleText(False)
-    plot_options.SetDrillMarksType(pcbnew.PCB_PLOT_PARAMS.NO_DRILL_SHAPE)
-    plot_options.SetSvgPrecision(aPrecision=1, aUseInch=False)
+    if KICAD_VERSION == 7:
+        plot_options.SetDrillMarksType(pcbnew.DRILL_MARKS_NO_DRILL_SHAPE)
+        plot_options.SetSvgPrecision(aPrecision=1)
+    else:
+        plot_options.SetDrillMarksType(pcbnew.PCB_PLOT_PARAMS.NO_DRILL_SHAPE)
+        plot_options.SetSvgPrecision(aPrecision=1, aUseInch=False)
 
     plot_plan = []
     start = pcbnew.PCBNEW_LAYER_ID_START
@@ -166,9 +178,12 @@ def generate_render(tmpdir, request):
 
     for (layer_name, layer_id) in plot_plan:
         plot_control.SetLayer(layer_id)
-        plot_control.OpenPlotfile(
-            layer_name, pcbnew.PLOT_FORMAT_SVG, aSheetDesc=layer_name
-        )
+        if KICAD_VERSION == 7:
+            plot_control.OpenPlotfile(layer_name, pcbnew.PLOT_FORMAT_SVG)
+        else:
+            plot_control.OpenPlotfile(
+                layer_name, pcbnew.PLOT_FORMAT_SVG, aSheetDesc=layer_name
+            )
         plot_control.SetColorMode(True)
         plot_control.PlotLayer()
         plot_control.ClosePlot()
@@ -179,7 +194,7 @@ def generate_render(tmpdir, request):
         # for some reason there is plenty empty groups in generated svg's (kicad bug?)
         # remove for clarity:
         remove_empty_groups(root)
-        shrink_svg(tree, margin=1000)
+        shrink_svg(tree, margin=1)
         tree.write(f"{tmpdir}/{layer_name}.svg")
         os.remove(f"{tmpdir}/{project_name}-{layer_name}.svg")
 
@@ -209,7 +224,7 @@ def generate_render(tmpdir, request):
     remove_tags(new_root, "{http://www.w3.org/2000/svg}title")
     remove_tags(new_root, "{http://www.w3.org/2000/svg}desc")
 
-    shrink_svg(new_tree, margin=1000)
+    shrink_svg(new_tree, margin=1)
     new_tree.write(f"{tmpdir}/render.svg")
 
 
@@ -234,6 +249,8 @@ def pytest_runtest_makereport(item, call):
 
     if report.when == "call" and not report.skipped:
         tmpdir = item.funcargs["tmpdir"]
-        render = svg_to_base64_html(os.path.join(tmpdir, "render.svg"))
-        extra.append(pytest_html.extras.html(render))
+        render_path = tmpdir / "render.svg"
+        if render_path.isfile():
+            render = svg_to_base64_html(render_path)
+            extra.append(pytest_html.extras.html(render))
         report.extra = extra

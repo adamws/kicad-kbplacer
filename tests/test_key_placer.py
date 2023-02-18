@@ -13,6 +13,7 @@ except:
     # these tests should not be executed but pytest
     # would fail to collect test information without that:
     from enum import Flag
+
     class Side(Flag):
         FRONT = False
         BACK = True
