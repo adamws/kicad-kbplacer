@@ -75,6 +75,16 @@ class KeyPlacer(BoardModifier):
         self.currentDiode += 1
         return diode
 
+    def CalculateCornerPositionOfSwitchDiodeRoute(self, diodePadPosition, switchPadPosition):
+        x_diff = diodePadPosition.x - switchPadPosition.x
+        y_diff = diodePadPosition.y - switchPadPosition.y
+        if abs(x_diff) < abs(y_diff):
+            upOrDown = -1 if y_diff > 0 else 1
+            return wxPoint(diodePadPosition.x - x_diff, diodePadPosition.y + (upOrDown * abs(x_diff)))
+        else:
+            leftOrRight = -1 if x_diff > 0 else 1
+            return wxPoint(diodePadPosition.x + (leftOrRight * abs(y_diff)), diodePadPosition.y - y_diff)
+
     def RouteSwitchWithDiode(self, switch, diode, angle):
         self.logger.info("Routing {} with {}".format(switch.GetReference(), diode.GetReference()))
 
@@ -83,26 +93,27 @@ class KeyPlacer(BoardModifier):
 
         self.logger.debug("switchPadPosition: {}, diodePadPosition: {}".format(switchPadPosition, diodePadPosition))
 
-        if angle != 0:
-            self.logger.info("Routing at {} degree angle".format(angle))
-            switchPadPositionR = PositionInRotatedCoordinates(switchPadPosition, angle)
-            diodePadPositionR = PositionInRotatedCoordinates(diodePadPosition, angle)
-
-            self.logger.debug("In rotated coordinates: switchPadPosition: {}, diodePadPosition: {}".format(
-                switchPadPositionR, diodePadPositionR))
-
-            x_diff = abs(diodePadPositionR.x - switchPadPositionR.x)
-
-            corner = wxPoint(diodePadPositionR.x - x_diff, diodePadPositionR.y - x_diff)
-            corner = PositionInCartesianCoordinates(corner, angle)
+        if switchPadPosition.x == diodePadPosition.x or switchPadPosition.y == diodePadPosition.y:
+            self.AddTrackSegmentByPoints(diodePadPosition, switchPadPosition)
         else:
-            x_diff = abs(diodePadPosition.x - switchPadPosition.x)
-            corner = wxPoint(diodePadPosition.x - x_diff, diodePadPosition.y - x_diff)
+            # pads are not in single line, attempt routing with two segment track
+            if angle != 0:
+                self.logger.info("Routing at {} degree angle".format(angle))
+                switchPadPositionR = PositionInRotatedCoordinates(switchPadPosition, angle)
+                diodePadPositionR = PositionInRotatedCoordinates(diodePadPosition, angle)
 
-        # first segment: at 45 degree angle (might be in rotated coordinate system) towards switch pad
-        self.AddTrackSegmentByPoints(diodePadPosition, corner)
-        # second segment: up to switch pad
-        self.AddTrackSegmentByPoints(corner, switchPadPosition)
+                self.logger.debug("In rotated coordinates: switchPadPosition: {}, diodePadPosition: {}".format(
+                    switchPadPositionR, diodePadPositionR))
+
+                corner = self.CalculateCornerPositionOfSwitchDiodeRoute(diodePadPositionR, switchPadPositionR)
+                corner = PositionInCartesianCoordinates(corner, angle)
+            else:
+                corner = self.CalculateCornerPositionOfSwitchDiodeRoute(diodePadPosition, switchPadPosition)
+
+            # first segment: at 45 degree angle (might be in rotated coordinate system) towards switch pad
+            self.AddTrackSegmentByPoints(diodePadPosition, corner)
+            # second segment: up to switch pad
+            self.AddTrackSegmentByPoints(corner, switchPadPosition)
 
     def GetDefaultDiodePosition(self):
         return DiodePosition(Point(5.08, 3.03), 90.0, Side.BACK)
@@ -116,6 +127,12 @@ class KeyPlacer(BoardModifier):
             return DiodePosition(Point(ToMM(pos2.x - pos1.x), ToMM(pos2.y - pos1.y)), diode1.GetOrientationDegrees(), self.GetSide(diode1))
         else:
             return self.GetDefaultDiodePosition()
+
+    def RemoveDanglingTracks(self):
+        self.board.BuildConnectivity()
+        for track in self.board.GetTracks():
+            if self.board.GetConnectivity().TestTrackEndpointDangling(track):
+                self.board.Delete(track)
 
     def Run(self, keyFormat, stabilizerFormat, diodeFormat, diodePosition, routeTracks=False):
         self.logger.info("Diode position: {}".format(diodePosition))
@@ -204,8 +221,4 @@ class KeyPlacer(BoardModifier):
                     else:
                         self.logger.warning("Automatic diode routing supported only when diodes aligned vertically")
 
-            # remove dangling tracks
-            self.board.BuildConnectivity()
-            for track in self.board.GetTracks():
-                if self.board.GetConnectivity().TestTrackEndpointDangling(track):
-                    self.board.Delete(track)
+            self.RemoveDanglingTracks()
