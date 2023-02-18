@@ -88,13 +88,14 @@ class KeyPlacer(BoardModifier):
     def RouteSwitchWithDiode(self, switch, diode, angle):
         self.logger.info("Routing {} with {}".format(switch.GetReference(), diode.GetReference()))
 
+        layer = B_Cu if self.GetSide(diode) == Side.BACK else F_Cu
         switchPadPosition = switch.FindPadByNumber("2").GetPosition()
         diodePadPosition = diode.FindPadByNumber("2").GetPosition()
 
         self.logger.debug("switchPadPosition: {}, diodePadPosition: {}".format(switchPadPosition, diodePadPosition))
 
         if switchPadPosition.x == diodePadPosition.x or switchPadPosition.y == diodePadPosition.y:
-            self.AddTrackSegmentByPoints(diodePadPosition, switchPadPosition)
+            self.AddTrackSegmentByPoints(diodePadPosition, switchPadPosition, layer)
         else:
             # pads are not in single line, attempt routing with two segment track
             if angle != 0:
@@ -111,9 +112,9 @@ class KeyPlacer(BoardModifier):
                 corner = self.CalculateCornerPositionOfSwitchDiodeRoute(diodePadPosition, switchPadPosition)
 
             # first segment: at 45 degree angle (might be in rotated coordinate system) towards switch pad
-            self.AddTrackSegmentByPoints(diodePadPosition, corner)
+            self.AddTrackSegmentByPoints(diodePadPosition, corner, layer)
             # second segment: up to switch pad
-            self.AddTrackSegmentByPoints(corner, switchPadPosition)
+            self.AddTrackSegmentByPoints(corner, switchPadPosition, layer)
 
     def GetDefaultDiodePosition(self):
         return DiodePosition(Point(5.08, 3.03), 90.0, Side.BACK)

@@ -8,7 +8,14 @@ try:
     from kbplacer.key_placer import KeyPlacer
     from kbplacer.board_modifier import Side
 except:
-    pass
+    # satisfy import issues when running examples tests
+    # in docker image on CI.
+    # these tests should not be executed but pytest
+    # would fail to collect test information without that:
+    from enum import Flag
+    class Side(Flag):
+        FRONT = False
+        BACK = True
 
 
 logger = logging.getLogger(__name__)
@@ -91,7 +98,8 @@ def equal_ignore_order(a, b):
         # fmt: on
     ],
 )
-def test_diode_switch_routing(position, orientation, expected, tmpdir, request):
+@pytest.mark.parametrize("side", [Side.FRONT, Side.BACK])
+def test_diode_switch_routing(position, orientation, side, expected, tmpdir, request):
     if expected:
         expected = [pcbnew.wxPoint(x[0], x[1]) for x in expected]
     board = pcbnew.CreateEmptyBoard()
@@ -108,7 +116,7 @@ def test_diode_switch_routing(position, orientation, expected, tmpdir, request):
         switchPadPosition.y + pcbnew.FromMM(position[1]),
     )
     keyPlacer.SetPosition(diode, diodePosition)
-    keyPlacer.SetSide(diode, Side.BACK)
+    keyPlacer.SetSide(diode, side)
     diode.SetOrientationDegrees(orientation)
 
     keyPlacer.RouteSwitchWithDiode(switch, diode, 0)
