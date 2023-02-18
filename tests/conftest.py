@@ -68,6 +68,12 @@ def get_references_dir(request):
     return references_dir
 
 
+def get_footprints_dir(request):
+    test_dir = Path(request.module.__file__).parent
+    footprints_dir = test_dir / "data/footprints/tests.pretty"
+    return footprints_dir
+
+
 def merge_bbox(left: Box, right: Box) -> Box:
     """
     Merge bounding boxes in format (xmin, xmax, ymin, ymax)

@@ -2,7 +2,8 @@ import logging
 import pcbnew
 import pytest
 
-from .conftest import generate_render
+from .conftest import generate_render, get_footprints_dir
+
 try:
     from kbplacer.board_modifier import BoardModifier, Side
 except:
@@ -12,15 +13,9 @@ except:
 logger = logging.getLogger(__name__)
 
 
-def add_diode_footprint(board, footprint):
-    if footprint == "D_SOD-323":
-        library = "/usr/share/kicad/footprints/Diode_SMD.pretty"
-    elif footprint == "D_DO-34_SOD68_P7.62mm_Horizontal":
-        library = "/usr/share/kicad/footprints/Diode_THT.pretty"
-    else:
-        assert False, "Unsupported footprint"
-
-    f = pcbnew.FootprintLoad(library, footprint)
+def add_diode_footprint(board, footprint, request):
+    library = get_footprints_dir(request)
+    f = pcbnew.FootprintLoad(str(library), footprint)
     f.SetReference("D1")
     board.Add(f)
     return f
@@ -67,7 +62,7 @@ def test_track_with_footprint_collision(
     footprint, start, end, layer, expected, tmpdir, request
 ):
     board = pcbnew.CreateEmptyBoard()
-    f = add_diode_footprint(board, footprint)
+    f = add_diode_footprint(board, footprint, request)
 
     modifier = BoardModifier(logger, board)
     f = modifier.GetFootprint("D1")
