@@ -55,7 +55,29 @@ For KiCad 5.1 compatible version see tag [v0.1](https://github.com/adamws/kicad-
   For conversion you can use [https://adamws.github.io/kle-serial](https://adamws.github.io/kle-serial/)
   or [keyboard-tools.xyz/kle-converter](http://keyboard-tools.xyz/kle-converter)
 - Run `kicad-kbplacer` plugin
-- Select desired json file and click OK.
+- Select json layout file and plugin options and click OK.
+
+  ![plugin-gui](resources/plugin-gui.png)
+
+#### Diode placement and routing
+
+By default diodes are placed like shown below. This placement may not work for all switch and diode
+footprints combinations.
+
+Before | After
+--- | ---
+![default-before](./resources/default-before.png) | ![default-after](./resources/default-after.png)
+
+In order to set custom diode position, manually place `D1` diode
+and run plugin with `Use first switch-diode pair as reference for relative position` option enabled.
+Remaining switch/diode pairs will be placed same as the first one.
+
+Before | After
+--- | ---
+![custom-before](./resources/custom-before.png) | ![custom-after](./resources/custom-after.png)
+
+Some custom diodes positions may be to difficult for automatic router algorithm.
+In the above example it managed to connect diodes to switches but failed to connect diodes together.
 
 #### Demo project
 
