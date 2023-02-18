@@ -216,9 +216,11 @@ class KeyPlacer(BoardModifier):
             for row in row_diode_pads:
                 pads = row_diode_pads[row]
                 positions = [pad.GetPosition() for pad in pads]
+                # we can assume that all diodes are on the same side:
+                layer = B_Cu if self.GetSide(pad.GetParent()) == Side.BACK else F_Cu
                 for pos1, pos2 in zip(positions, positions[1:]):
                     if pos1.y == pos2.y:
-                        self.AddTrackSegmentByPoints(pos1, pos2)
+                        self.AddTrackSegmentByPoints(pos1, pos2, layer)
                     else:
                         self.logger.warning("Automatic diode routing supported only when diodes aligned vertically")
 
