@@ -119,9 +119,6 @@ def test_with_examples(
     shutil.copy("{}/keyboard-before.kicad_pcb".format(source_dir), tmpdir)
     shutil.copy("{}/kle-internal.json".format(source_dir), tmpdir)
 
-    if route and diode_position != None:
-        pytest.skip("Routing with non-default diode position not supported yet")
-
     run_kbplacer_process(tmpdir, route, diode_position, workdir, package_name)
 
     generate_render(tmpdir, request)

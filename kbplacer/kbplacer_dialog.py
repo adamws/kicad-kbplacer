@@ -80,8 +80,6 @@ class KbplacerDialog(wx.Dialog):
         self.tracksCheckbox = tracksCheckbox
         self.templateFilePicker = templateFilePicker
 
-        self.Bind(wx.EVT_CHECKBOX, self.HandleUseFirstPairAsTemplateCheckbox, self.useFirstPairAsTemplateCheckbox)
-
     def GetLayoutPath(self):
         return self.layoutFilePicker.GetPath()
 
@@ -102,11 +100,4 @@ class KbplacerDialog(wx.Dialog):
 
     def GetTemplatePath(self):
         return self.templateFilePicker.GetPath()
-
-    def HandleUseFirstPairAsTemplateCheckbox(self, event):
-        if self.useFirstPairAsTemplateCheckbox.IsChecked():
-            self.tracksCheckbox.SetValue(False)
-            self.tracksCheckbox.Disable()
-        else:
-            self.tracksCheckbox.Enable()
 

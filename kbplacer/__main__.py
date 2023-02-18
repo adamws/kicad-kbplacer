@@ -22,9 +22,6 @@ if __name__ == "__main__":
     diodePosition = args.diode_position
     templatePath = args.template
 
-    if routeTracks and diodePosition != None:
-        parser.error("Routing with non-default diode position not supported yet")
-
     # set up logger
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s: %(message)s',
