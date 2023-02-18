@@ -82,6 +82,9 @@ def equal_ignore_order(a, b):
         ((-1, -4), 180, [(490000,   -9080000), (2540000,  -7030000), (2540000, -5080000)]),
         (( 1, -4), 270, [(3540000,  -8030000), (2540000,  -7030000), (2540000, -5080000)]),
         ((-1, -4), 270, [(1540000,  -8030000), (2540000,  -7030000), (2540000, -5080000)]),
+        # special cases testing some edge cases or special conditions:
+        # this position should be possible to route but resulting corner is to close to pad
+        ((5.5, 5), 90, None),
         # cases to difficult for router. Two segment track would collide with footprint:
         ((-7, 10), 90, None),
         ((7, 10), 90, None),
