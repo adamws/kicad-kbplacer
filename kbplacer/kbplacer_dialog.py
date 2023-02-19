@@ -52,7 +52,7 @@ class KbplacerDialog(wx.Dialog):
 
         row7 = wx.BoxSizer(wx.HORIZONTAL)
 
-        text = wx.StaticText(self, -1, "Select controler circuit template:")
+        text = wx.StaticText(self, -1, "Select controller circuit template:")
         row7.Add(text, 0, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_VERTICAL, 5)
 
         templateFilePicker = wx.FilePickerCtrl(self, -1)
