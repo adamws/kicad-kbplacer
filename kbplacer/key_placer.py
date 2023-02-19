@@ -86,7 +86,21 @@ class KeyPlacer(BoardModifier):
             leftOrRight = -1 if x_diff > 0 else 1
             return wxPoint(diodePadPosition.x + (leftOrRight * builtins.abs(y_diff)), diodePadPosition.y - y_diff)
 
-    def RouteSwitchWithDiode(self, switch, diode, angle):
+    def RouteSwitchWithDiode(self, switch, diode, angle, templateTrackPoints=None):
+        """Performs routing between switch and diode elements.
+        Assumes col-to-row configuration where diode anode is pad number '2'.
+
+        :param switch: Switch footprint to be routed.
+        :param diode: Diode footprint to be routed.
+        :param angle: Rotation angle (in degrees) of switch footprint (diode rotation is assumed to be the same)
+        :param templateTrackPoints: List of positions (relative to diode pad position) of track corners connecting switch and diode.
+                                    Does not support vias, will be routed on the layer of the diode.
+                                    If None, use automatic routing algorithm.
+        :type switch: FOOTPRINT
+        :type diode: FOOTPRINT
+        :type angle: float
+        :type templateTrackPoints: List[wxPoint]
+        """
         self.logger.info("Routing {} with {}".format(switch.GetReference(), diode.GetReference()))
 
         layer = B_Cu if self.GetSide(diode) == Side.BACK else F_Cu
@@ -98,27 +112,42 @@ class KeyPlacer(BoardModifier):
 
         self.logger.debug("switchPadPosition: {}, diodePadPosition: {}".format(switchPadPosition, diodePadPosition))
 
-        if switchPadPosition.x == diodePadPosition.x or switchPadPosition.y == diodePadPosition.y:
-            self.AddTrackSegmentByPoints(diodePadPosition, switchPadPosition, layer)
-        else:
-            # pads are not in single line, attempt routing with two segment track
+        if templateTrackPoints:
             if angle != 0:
                 self.logger.info("Routing at {} degree angle".format(angle))
-                switchPadPositionR = PositionInRotatedCoordinates(switchPadPosition, angle)
-                diodePadPositionR = PositionInRotatedCoordinates(diodePadPosition, angle)
-
-                self.logger.debug("In rotated coordinates: switchPadPosition: {}, diodePadPosition: {}".format(
-                    switchPadPositionR, diodePadPositionR))
-
-                corner = self.CalculateCornerPositionOfSwitchDiodeRoute(diodePadPositionR, switchPadPositionR)
-                corner = PositionInCartesianCoordinates(corner, angle)
+            start = diodePadPosition
+            for t in templateTrackPoints:
+                if angle != 0:
+                    diodePadPositionR = PositionInRotatedCoordinates(diodePadPosition, angle)
+                    end = t.__add__(diodePadPositionR)
+                    end = PositionInCartesianCoordinates(end, angle)
+                else:
+                    end = t.__add__(diodePadPosition)
+                end = self.AddTrackSegmentByPoints(start, end, layer)
+                if end:
+                    start = end
+        else:
+            if switchPadPosition.x == diodePadPosition.x or switchPadPosition.y == diodePadPosition.y:
+                self.AddTrackSegmentByPoints(diodePadPosition, switchPadPosition, layer)
             else:
-                corner = self.CalculateCornerPositionOfSwitchDiodeRoute(diodePadPosition, switchPadPosition)
+                # pads are not in single line, attempt routing with two segment track
+                if angle != 0:
+                    self.logger.info("Routing at {} degree angle".format(angle))
+                    switchPadPositionR = PositionInRotatedCoordinates(switchPadPosition, angle)
+                    diodePadPositionR = PositionInRotatedCoordinates(diodePadPosition, angle)
 
-            # first segment: at 45 degree angle (might be in rotated coordinate system) towards switch pad
-            self.AddTrackSegmentByPoints(diodePadPosition, corner, layer)
-            # second segment: up to switch pad
-            self.AddTrackSegmentByPoints(corner, switchPadPosition, layer)
+                    self.logger.debug("In rotated coordinates: switchPadPosition: {}, diodePadPosition: {}".format(
+                        switchPadPositionR, diodePadPositionR))
+
+                    corner = self.CalculateCornerPositionOfSwitchDiodeRoute(diodePadPositionR, switchPadPositionR)
+                    corner = PositionInCartesianCoordinates(corner, angle)
+                else:
+                    corner = self.CalculateCornerPositionOfSwitchDiodeRoute(diodePadPosition, switchPadPosition)
+
+                # first segment: at 45 degree angle (might be in rotated coordinate system) towards switch pad
+                self.AddTrackSegmentByPoints(diodePadPosition, corner, layer)
+                # second segment: up to switch pad
+                self.AddTrackSegmentByPoints(corner, switchPadPosition, layer)
 
     def GetDefaultDiodePosition(self):
         return DiodePosition(Point(5.08, 3.03), 90.0, Side.BACK)
@@ -139,8 +168,53 @@ class KeyPlacer(BoardModifier):
             if self.board.GetConnectivity().TestTrackEndpointDangling(track):
                 self.board.Delete(track)
 
+    def CheckIfDiodeRouted(self, keyFormat, diodeFormat):
+        switch = self.GetFootprint(keyFormat.format(1))
+        diode = self.GetFootprint(diodeFormat.format(1))
+        net1 = switch.FindPadByNumber("2").GetNetname()
+        net2 = diode.FindPadByNumber("2").GetNetname()
+        tracks = [t for t in self.board.GetTracks() if t.GetNetname() == net1 == net2]
+
+        # convert tracks to list of vectors which will be used by `AddTrackSegmentByPoints`
+        switchPadPosition = switch.FindPadByNumber("2").GetPosition()
+        diodePadPosition = diode.FindPadByNumber("2").GetPosition()
+        if KICAD_VERSION == 7:
+            switchPadPosition = switchPadPosition.getWxPoint()
+            diodePadPosition = diodePadPosition.getWxPoint()
+
+        pointsSorted = []
+        searchPoint = diodePadPosition
+        for i in range(0, len(tracks) + 1):
+            for t in list(tracks):
+                start = t.GetStart()
+                end = t.GetEnd()
+                if KICAD_VERSION == 7:
+                    start = start.getWxPoint()
+                    end = end.getWxPoint()
+                foundStart = start.__eq__(searchPoint)
+                foundEnd = end.__eq__(searchPoint)
+                if foundStart or foundEnd:
+                    pointsSorted.append(searchPoint)
+                    searchPoint = end if foundStart else start
+                    tracks.remove(t)
+                    self.board.Delete(t)
+                    break
+        if len(pointsSorted) != 0:
+            pointsSorted.pop(0)
+            pointsSorted.append(switchPadPosition)
+
+        reducedPoints = [p.__sub__(diodePadPosition) for p in pointsSorted]
+        self.logger.info("Detected template switch-to-diode path: {}".format(reducedPoints))
+        return reducedPoints
+
     def Run(self, keyFormat, stabilizerFormat, diodeFormat, diodePosition, routeTracks=False):
         self.logger.info("Diode position: {}".format(diodePosition))
+
+        templateTracks = []
+        if routeTracks:
+            # check if first switch-diode pair is already routed, if yes,
+            # then reuse its track shape for remaining pairs, otherwise try to use automatic 'router'
+            templateTracks = self.CheckIfDiodeRouted(keyFormat, diodeFormat)
 
         column_switch_pads = {}
         row_diode_pads = {}
@@ -194,7 +268,7 @@ class KeyPlacer(BoardModifier):
                 self.logger.warning("Switch pad without recognized net name found.")
 
             if routeTracks:
-                self.RouteSwitchWithDiode(switchFootprint, diodeFootprint, angle)
+                self.RouteSwitchWithDiode(switchFootprint, diodeFootprint, angle, templateTracks)
 
         if routeTracks:
             # very naive routing approach, will fail in some scenarios:

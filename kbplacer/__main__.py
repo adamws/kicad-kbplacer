@@ -43,7 +43,9 @@ if __name__ == "__main__":
 
         placer = KeyPlacer(logger, board, layout)
 
-        if diodePosition:
+        if diodePosition == "USE_CURRENT":
+            diodePosition = placer.GetDiodePosition("SW{}", "D{}", True)
+        elif diodePosition != None:
             x, y, orientation, side = diodePosition.split(",")
             x, y = float(x), float(y)
             orientation = float(orientation)

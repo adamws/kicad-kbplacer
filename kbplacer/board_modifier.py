@@ -51,6 +51,8 @@ class BoardModifier():
     def GetPosition(self, footprint):
         position = footprint.GetPosition()
         self.logger.info("Getting {} footprint position: {}".format(footprint.GetReference(), position))
+        if KICAD_VERSION == 7:
+            return position.getWxPoint()
         return position
 
     def SetRelativePositionMM(self, footprint, referencePoint, direction):
