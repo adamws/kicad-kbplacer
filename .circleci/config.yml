@@ -1,10 +1,10 @@
 version: 2.1
 
 jobs:
-  test-kicad6:
+  test-linux-kicad6:
     docker:
       - image: admwscki/kicad-kbplacer-primary:6.0-lunar
-    steps: &test-steps
+    steps: &in-docker-test-steps
       - checkout
       - run:
           name: Prepare tests
@@ -19,10 +19,47 @@ jobs:
           path: tests/report.html
       - store_test_results:
           path: tests/test-results
-  test-kicad7:
+  test-linux-kicad7:
     docker:
       - image: admwscki/kicad-kbplacer-primary:7.0-lunar
-    steps: *test-steps
+    steps: *in-docker-test-steps
+  test-windows-kicad6:
+    machine:
+      image: windows-server-2022-gui:current
+      shell: powershell.exe -ExecutionPolicy Bypass
+    resource_class: windows.medium
+    steps:
+      - checkout
+      - restore_cache:
+          key: scoop-{{ .Branch }}-{{ checksum "tests/dev-requirements.txt" }}
+      - run:
+          name: Install scoop and KiCad
+          command: |
+            irm get.scoop.sh -outfile "install.ps1"
+            .\install.ps1 -RunAsAdmin -ScoopDir "C:\scoop"
+            scoop bucket add extras
+            scoop install kicad@6.0.11
+            scoop cache rm --all
+      - run:
+          name: Install dependencies
+          command: |
+            .\.circleci\scripts\use-kicad-python.ps1
+            python -m pip install --upgrade pip
+            pip install --no-cache-dir -r tests/dev-requirements.txt
+      - save_cache:
+          key: scoop-{{ .Branch }}-{{ checksum "tests/dev-requirements.txt" }}
+          paths:
+            - C:\scoop
+      - run:
+          name: Run tests
+          command: |
+            ..\.circleci\scripts\use-kicad-python.ps1
+            pytest --junitxml=test-results/pytest/results.xml
+          working_directory: tests
+      - store_artifacts:
+          path: tests/report.html
+      - store_test_results:
+          path: tests/test-results
   create-release:
     docker:
       - image: cimg/python:3.11
@@ -66,12 +103,14 @@ jobs:
 workflows:
   main:
     jobs:
-      - test-kicad6
-      - test-kicad7
+      - test-linux-kicad6
+      - test-linux-kicad7
+      - test-windows-kicad6
       - create-release:
           requires:
-            - test-kicad6
-            - test-kicad7
+            - test-linux-kicad6
+            - test-linux-kicad7
+            - test-windows-kicad6
       - deploy-image:
           requires:
             - create-release
