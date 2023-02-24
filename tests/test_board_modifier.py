@@ -1,3 +1,4 @@
+import enum
 import logging
 import pcbnew
 import pytest
@@ -5,12 +6,23 @@ import pytest
 from .conftest import generate_render, get_footprints_dir, KICAD_VERSION
 
 try:
-    from kbplacer.board_modifier import BoardModifier, Side
+    from kbplacer.board_modifier import BoardModifier, Side, DEFAULT_CLEARANCE_MM
 except:
     pass
 
 
 logger = logging.getLogger(__name__)
+
+
+class TrackToElementPosition(enum.Enum):
+    APART = 1
+    STARTS_AT = 2
+    GOES_THROUGH = 3
+
+
+class TrackSide(enum.Enum):
+    SAME = 1
+    OPPOSITE = 2
 
 
 def add_diode_footprint(board, footprint, request):
@@ -21,7 +33,7 @@ def add_diode_footprint(board, footprint, request):
     return f
 
 
-def add_track(board, start, end, layer):
+def get_track(board, start, end, layer):
     track = pcbnew.PCB_TRACK(board)
     track.SetWidth(pcbnew.FromMM(0.25))
     track.SetLayer(layer)
@@ -31,60 +43,183 @@ def add_track(board, start, end, layer):
     else:
         track.SetStart(start)
         track.SetEnd(end)
+    return track
+
+
+def add_track(board, start, end, layer):
+    track = get_track(board, start, end, layer)
     board.Add(track)
     return track
+
+
+def add_nets(board, netnames):
+    net_info = board.GetNetInfo()
+    net_count = board.GetNetCount()
+    for i, n in enumerate(netnames):
+        net = pcbnew.NETINFO_ITEM(board, n, net_count + i)
+        net_info.AppendNet(net)
+        board.Add(net)
 
 
 def pointMM(x, y):
     return pcbnew.wxPoint(pcbnew.FromMM(x), pcbnew.FromMM(y))
 
 
-@pytest.mark.parametrize(
-    "footprint,start,end,layer,expected",
-    [
-        ("D_SOD-323", pointMM(2, 0), pointMM(5, 0), pcbnew.B_Cu, False),
-        ("D_SOD-323", pointMM(0, 0), pointMM(5, 0), pcbnew.B_Cu, True),
-        ("D_SOD-323", pointMM(1, 0), pointMM(5, 0), pcbnew.B_Cu, False),
-        ("D_SOD-323", pointMM(0, 0), pointMM(5, 0), pcbnew.F_Cu, False),
-        (
-            "D_DO-34_SOD68_P7.62mm_Horizontal",
-            pointMM(2, 0),
-            pointMM(9, 0),
-            pcbnew.B_Cu,
-            True,
-        ),
-        (
-            "D_DO-34_SOD68_P7.62mm_Horizontal",
-            pointMM(2, 0),
-            pointMM(9, 0),
-            pcbnew.F_Cu,
-            True,
-        ),
-    ],
-)
-def test_track_with_footprint_collision(
-    footprint, start, end, layer, expected, tmpdir, request
-):
+def __get_parameters():
+    examples = ["D_SOD-323", "D_DO-34_SOD68_P7.62mm_Horizontal"]
+    positions = [e for e in TrackToElementPosition]
+    sides = [e for e in TrackSide]
+    netlists = [("", ""), ("", "n1"), ("n1", ""), ("n1", "n1"), ("n1", "n2")]
+    test_params = []
+    for example in examples:
+        for position in positions:
+            for side in sides:
+                for netlist in netlists:
+                    param = pytest.param(example, position, side, netlist)
+                    test_params.append(param)
+    return test_params
+
+
+@pytest.mark.parametrize("footprint,position,side,netlist", __get_parameters())
+def test_track_with_pad_collision(footprint, position, side, netlist, tmpdir, request):
     board = pcbnew.CreateEmptyBoard()
-    f = add_diode_footprint(board, footprint, request)
+    netnames = [n for n in netlist if n != ""]
+    add_nets(board, netnames)
+
+    logger.info(f"Board nets:")
+    netcodes_map = board.GetNetInfo().NetsByName()
+    for v in netcodes_map.itervalues():
+        logger.info(f"Net: {v.GetNetCode()}:{v.GetNetname()}")
+
+    diode = add_diode_footprint(board, footprint, request)
+    pad = diode.FindPadByNumber("2")
+    pad_netlist = netlist[0]
+    if pad_netlist:
+        pad.SetNet(netcodes_map[pad_netlist])
 
     modifier = BoardModifier(logger, board)
-    f = modifier.GetFootprint("D1")
+    modifier.SetPositionByPoints(diode, 0, 0)
+    modifier.SetSide(diode, Side.BACK)
 
-    # place footprint
-    modifier.SetPositionByPoints(f, 0, 0)
-    modifier.SetSide(f, Side.BACK)
+    pad_position = pad.GetPosition()
+    if KICAD_VERSION == 7:
+        pad_position = pad_position.getWxPoint()
 
     # create track to test
+    if position == TrackToElementPosition.APART:
+        start = pad_position.__add__(pcbnew.wxPoint(pad.GetSizeX() / 2, 0))
+        start = start.__add__(
+            pcbnew.wxPoint(pcbnew.FromMM(DEFAULT_CLEARANCE_MM + 0.2), 0)
+        )
+    elif position == TrackToElementPosition.STARTS_AT:
+        start = pad_position
+    elif position == TrackToElementPosition.GOES_THROUGH:
+        start = pad_position.__sub__(pcbnew.wxPoint(pad.GetSizeX() / 2, 0))
+        start = start.__sub__(
+            pcbnew.wxPoint(pcbnew.FromMM(DEFAULT_CLEARANCE_MM + 0.2), 0)
+        )
+    else:
+        assert False, "Unexpected position option"
+
+    end = start.__add__(pcbnew.wxPoint(pcbnew.FromMM(5), 0))
+
+    if side == TrackSide.SAME:
+        layer = pcbnew.B_Cu
+    elif side == TrackSide.OPPOSITE:
+        layer = pcbnew.F_Cu
+    else:
+        assert False, "Unexpected side option"
+
     track = add_track(board, start, end, layer)
+    track_netlist = netlist[1]
+    if track_netlist:
+        track.SetNet(netcodes_map[track_netlist])
+
+    if not pad.IsOnLayer(track.GetLayer()) or position == TrackToElementPosition.APART:
+        expected_collision_result = False
+    else:
+        if track_netlist and track_netlist == pad_netlist:
+            # same non '0' netlist never colide
+            expected_collision_result = False
+        elif track_netlist == "" and position == TrackToElementPosition.STARTS_AT:
+            expected_collision_result = False
+        else:
+            expected_collision_result = True
+
+    pad_netlist_str = pad_netlist if pad_netlist else "''"
+    track_netlist_str = track_netlist if track_netlist else "''"
+    logger.info(f"Pad net: {pad_netlist_str}, track net: {track_netlist_str}")
+    if expected_collision_result:
+        logger.info("Expecting collision")
+    else:
+        logger.info("Expecting no collision")
 
     collide = modifier.TestTrackCollision(track)
 
     board.Add(track)
+    board.BuildListOfNets()
     board.Save("{}/keyboard-before.kicad_pcb".format(tmpdir))
     generate_render(tmpdir, request)
 
-    assert collide == expected, "Unexpected track collision result"
+    assert collide == expected_collision_result, "Unexpected track collision result"
+
+
+def add_track_segments_test(steps, tmpdir, request):
+    board = pcbnew.CreateEmptyBoard()
+    f = add_diode_footprint(board, "D_SOD-323", request)
+
+    modifier = BoardModifier(logger, board)
+    # place footprint
+    modifier.SetPositionByPoints(f, 0, 0)
+    modifier.SetSide(f, Side.BACK)
+
+    start = f.FindPadByNumber("2").GetPosition()
+    for step in steps:
+        direction, should_succeed = step
+        start = modifier.AddTrackSegment(start, direction)
+        if should_succeed:
+            assert type(start) != type(None), "Unexpected track add failure"
+        else:
+            assert type(start) == type(None), "Unexpected track success"
+
+    board.Save("{}/keyboard-before.kicad_pcb".format(tmpdir))
+    generate_render(tmpdir, request)
+
+
+def test_track_with_track_collision_close_to_footprint(tmpdir, request):
+    steps = []
+    # adding track which starts at pad but is so short it barely
+    # reaches out of it meaning that next track starting there might
+    # be incorrectly detected as colliding with pad
+    steps.append((pcbnew.wxPoint(-pcbnew.FromMM(0.4), 0), True))
+    steps.append((pcbnew.wxPoint(0, pcbnew.FromMM(1)), True))
+    add_track_segments_test(steps, tmpdir, request)
+
+
+def test_track_with_track_collision_close_to_footprints_one_good_one_bad(
+    tmpdir, request
+):
+    steps = []
+    # same as 'test_track_with_track_collision_close_to_footprint' but second segment
+    # instead going down (where there is nothing to collide with), it goes to left and
+    # reaches second pad of diode which should be detected as collision,
+    # hence segment should not be added
+    steps.append((pcbnew.wxPoint(-pcbnew.FromMM(0.4), 0), True))
+    steps.append((pcbnew.wxPoint(-pcbnew.FromMM(5), 0), False))
+    add_track_segments_test(steps, tmpdir, request)
+
+
+def test_track_with_track_collision_close_to_footprint_many_small_tracks(
+    tmpdir, request
+):
+    steps = []
+    # kind of ridiculous example but all tracks here should succeed, such
+    # scenario should never happen under normal circumstances
+    steps.append((pcbnew.wxPoint(-pcbnew.FromMM(0.4), 0), True))
+    steps.append((pcbnew.wxPoint(0, -pcbnew.FromMM(0.4)), True))
+    steps.append((pcbnew.wxPoint(pcbnew.FromMM(0.4), 0), True))
+    steps.append((pcbnew.wxPoint(0, pcbnew.FromMM(0.4)), True))
+    add_track_segments_test(steps, tmpdir, request)
 
 
 @pytest.mark.parametrize(
