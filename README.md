@@ -68,16 +68,28 @@ Before | After
 --- | ---
 ![default-before](./resources/default-before.png) | ![default-after](./resources/default-after.png)
 
-In order to set custom diode position, manually place `D1` diode
+To use custom diode position, manually place `D1` diode
 and run plugin with `Use first switch-diode pair as reference for relative position` option enabled.
-Remaining switch/diode pairs will be placed same as the first one.
+Remaining switch-diode pairs will be placed same as the first one.
 
 Before | After
 --- | ---
 ![custom-before](./resources/custom-before.png) | ![custom-after](./resources/custom-after.png)
 
-Some custom diodes positions may be to difficult for automatic router algorithm.
+Some custom diodes positions may be to difficult for router algorithm.
 In the above example it managed to connect diodes to switches but failed to connect diodes together.
+
+Switch-to-diode routing is not done with proper auto-routing algorithm and it is very limited.
+It attempts to create track in the shortest way (using 45&deg; angles) and doesn't look for other options
+if there is a collision, leaving elements unconnected.
+
+If first switch-diode pair is routed before plugin execution, as shown below, `kicad-kbplacer` instead of
+using it's built in routing algorithm, will copy user's track. This allow to circumvent plugin's router
+limitations.
+
+Before | After
+--- | ---
+![custom-with-track-before](./resources/custom-with-track-before.png) | ![custom-with-track-after](./resources/custom-with-track-after.png)
 
 #### Demo project
 
