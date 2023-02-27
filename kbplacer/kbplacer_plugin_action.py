@@ -42,11 +42,6 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
 
         dlg = KbplacerDialog(pcbFrame, 'Title', 'Caption')
         if dlg.ShowModal() == wx.ID_OK:
-            templatePath = dlg.GetTemplatePath()
-            if templatePath:
-                templateCopier = TemplateCopier(self.logger, self.board, templatePath, dlg.IsTracks())
-                templateCopier.Run()
-
             layoutPath = dlg.GetLayoutPath()
             if layoutPath:
                 with open(layoutPath, "r") as f:
@@ -69,6 +64,11 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
                     diodePosition,
                     dlg.IsTracks(),
                 )
+            templatePath = dlg.GetTemplatePath()
+            if templatePath:
+                templateCopier = TemplateCopier(self.logger, self.board, templatePath, dlg.IsTracks())
+                templateCopier.Run()
+
 
         dlg.Destroy()
         logging.shutdown()

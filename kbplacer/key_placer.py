@@ -302,4 +302,9 @@ class KeyPlacer(BoardModifier):
                     else:
                         self.logger.warning("Automatic diode routing supported only when diodes aligned vertically")
 
+            # NOTE: this conflicts with TemplateCopier, if we copy template first and then
+            # do switch-diode placement and routing, there is a big chance that
+            # RemoveDanglingTracks will end with segmentation fault. I don't know why.
+            # This should be investigated laters. As a quick fix changed order of operations and
+            # moved TemplateCopier to be executed at the end
             self.RemoveDanglingTracks()

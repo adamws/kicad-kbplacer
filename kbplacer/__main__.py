@@ -30,10 +30,6 @@ if __name__ == "__main__":
 
     board = pcbnew.LoadBoard(boardPath)
 
-    if templatePath:
-        copier = TemplateCopier(logger, board, templatePath, routeTracks)
-        copier.Run()
-
     if layoutPath:
         with open(layoutPath, "r") as f:
             textInput = f.read()
@@ -55,6 +51,10 @@ if __name__ == "__main__":
             diodePosition = placer.GetDefaultDiodePosition()
 
         placer.Run("SW{}", "ST{}", "D{}", diodePosition, routeTracks)
+
+    if templatePath:
+        copier = TemplateCopier(logger, board, templatePath, routeTracks)
+        copier.Run()
 
     pcbnew.Refresh()
     pcbnew.SaveBoard(boardPath, board)
