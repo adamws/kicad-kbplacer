@@ -23,7 +23,7 @@ def pytest_addoption(parser):
     parser.addoption(
         "--test-plugin-installation",
         action="store_true",
-        help="Run tests using ~/.local/hsare/kicad/6.0/3rdparty/plugins instance instead of local one",
+        help="Run tests using ~/.local/share/kicad/7.0/3rdparty/plugins instance instead of local one",
         default=False,
     )
     parser.addoption(
@@ -39,7 +39,7 @@ def pytest_addoption(parser):
 def workdir(request):
     if request.config.getoption("--test-plugin-installation"):
         home_directory = Path.home()
-        return f"{home_directory}/.local/share/kicad/6.0/3rdparty/plugins"
+        return f"{home_directory}/.local/share/kicad/7.0/3rdparty/plugins"
     return Path(os.path.realpath(__file__)).parents[1]
 
 
