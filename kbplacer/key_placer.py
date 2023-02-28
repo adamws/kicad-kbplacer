@@ -226,9 +226,11 @@ class KeyPlacer(BoardModifier):
             position = wxPoint((self.keyDistance * key["x"]) + (self.keyDistance * width // 2),
                 (self.keyDistance * key["y"]) + (self.keyDistance * height // 2)) + self.referenceCoordinate
             self.SetPosition(switchFootprint, position)
+            self.ResetRotation(switchFootprint)
 
             if stabilizer:
                 self.SetPosition(stabilizer, position)
+                self.ResetRotation(stabilizer)
                 # recognize special case of ISO enter:
                 width2 = key["width2"]
                 height2 = key["height2"]
@@ -236,6 +238,7 @@ class KeyPlacer(BoardModifier):
                     stabilizer.SetOrientationDegrees(90)
 
             diodeFootprint = self.GetCurrentDiode(diodeFormat)
+            self.ResetRotation(diodeFootprint)
             self.SetSide(diodeFootprint, diodePosition.side)
             diodeFootprint.SetOrientationDegrees(diodePosition.orientation)
             self.SetRelativePositionMM(diodeFootprint, position, diodePosition.relativePosition.toList())

@@ -160,6 +160,9 @@ class BoardModifier():
         end = wxPoint(start.x + vector[0], start.y + vector[1])
         return self.AddTrackSegmentByPoints(start, end, layer)
 
+    def ResetRotation(self, footprint):
+        footprint.SetOrientationDegrees(0)
+
     def Rotate(self, footprint, rotationReference, angle):
         self.logger.info("Rotating {} footprint: rotationReference: {}, rotationAngle: {}".format(footprint.GetReference(), rotationReference, angle))
         if KICAD_VERSION == 7:
