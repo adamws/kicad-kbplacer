@@ -41,7 +41,7 @@ class BoardModifier():
     def SetPosition(self, footprint, position: wxPoint):
         self.logger.info("Setting {} footprint position: {}".format(footprint.GetReference(), position))
         if KICAD_VERSION == 7:
-            footprint.SetPosition(VECTOR2I(position))
+            footprint.SetPosition(VECTOR2I(position.x, position.y))
         else:
             footprint.SetPosition(position)
 
@@ -52,7 +52,7 @@ class BoardModifier():
         position = footprint.GetPosition()
         self.logger.info("Getting {} footprint position: {}".format(footprint.GetReference(), position))
         if KICAD_VERSION == 7:
-            return position.getWxPoint()
+            return wxPoint(position.x, position.y)
         return position
 
     def SetRelativePositionMM(self, footprint, referencePoint, direction):
@@ -149,8 +149,8 @@ class BoardModifier():
         track.SetWidth(FromMM(0.25))
         track.SetLayer(layer)
         if KICAD_VERSION == 7:
-            track.SetStart(VECTOR2I(start))
-            track.SetEnd(VECTOR2I(end))
+            track.SetStart(VECTOR2I(start.x, start.y))
+            track.SetEnd(VECTOR2I(end.x, end.y))
         else:
             track.SetStart(start)
             track.SetEnd(end)
@@ -163,7 +163,7 @@ class BoardModifier():
     def Rotate(self, footprint, rotationReference, angle):
         self.logger.info("Rotating {} footprint: rotationReference: {}, rotationAngle: {}".format(footprint.GetReference(), rotationReference, angle))
         if KICAD_VERSION == 7:
-            footprint.Rotate(VECTOR2I(rotationReference), EDA_ANGLE(angle * -1, DEGREES_T))
+            footprint.Rotate(VECTOR2I(rotationReference.x, rotationReference.y), EDA_ANGLE(angle * -1, DEGREES_T))
         else:
             footprint.Rotate(rotationReference, angle * -10)
 

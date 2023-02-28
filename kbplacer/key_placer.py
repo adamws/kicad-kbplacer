@@ -107,8 +107,8 @@ class KeyPlacer(BoardModifier):
         switchPadPosition = switch.FindPadByNumber("2").GetPosition()
         diodePadPosition = diode.FindPadByNumber("2").GetPosition()
         if KICAD_VERSION == 7:
-            switchPadPosition = switchPadPosition.getWxPoint()
-            diodePadPosition = diodePadPosition.getWxPoint()
+            switchPadPosition = wxPoint(switchPadPosition.x, switchPadPosition.y)
+            diodePadPosition = wxPoint(diodePadPosition.x, diodePadPosition.y)
 
         self.logger.debug("switchPadPosition: {}, diodePadPosition: {}".format(switchPadPosition, diodePadPosition))
 
@@ -179,8 +179,8 @@ class KeyPlacer(BoardModifier):
         switchPadPosition = switch.FindPadByNumber("2").GetPosition()
         diodePadPosition = diode.FindPadByNumber("2").GetPosition()
         if KICAD_VERSION == 7:
-            switchPadPosition = switchPadPosition.getWxPoint()
-            diodePadPosition = diodePadPosition.getWxPoint()
+            switchPadPosition = wxPoint(switchPadPosition.x, switchPadPosition.y)
+            diodePadPosition = wxPoint(diodePadPosition.x, diodePadPosition.y)
 
         pointsSorted = []
         searchPoint = diodePadPosition
@@ -189,8 +189,8 @@ class KeyPlacer(BoardModifier):
                 start = t.GetStart()
                 end = t.GetEnd()
                 if KICAD_VERSION == 7:
-                    start = start.getWxPoint()
-                    end = end.getWxPoint()
+                    start = wxPoint(start.x, start.y)
+                    end = wxPoint(end.x, end.y)
                 foundStart = start.__eq__(searchPoint)
                 foundEnd = end.__eq__(searchPoint)
                 if foundStart or foundEnd:

@@ -38,8 +38,8 @@ def get_track(board, start, end, layer):
     track.SetWidth(pcbnew.FromMM(0.25))
     track.SetLayer(layer)
     if KICAD_VERSION == 7:
-        track.SetStart(pcbnew.VECTOR2I(start))
-        track.SetEnd(pcbnew.VECTOR2I(end))
+        track.SetStart(pcbnew.VECTOR2I(start.x, start.y))
+        track.SetEnd(pcbnew.VECTOR2I(end.x, end.y))
     else:
         track.SetStart(start)
         track.SetEnd(end)
@@ -103,7 +103,7 @@ def test_track_with_pad_collision(footprint, position, side, netlist, tmpdir, re
 
     pad_position = pad.GetPosition()
     if KICAD_VERSION == 7:
-        pad_position = pad_position.getWxPoint()
+        pad_position = pcbnew.wxPoint(pad_position.x, pad_position.y)
 
     # create track to test
     if position == TrackToElementPosition.APART:
