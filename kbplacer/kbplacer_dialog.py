@@ -2,7 +2,7 @@ import wx
 
 
 class KbplacerDialog(wx.Dialog):
-    def __init__(self, parent, title, caption):
+    def __init__(self, parent, title):
         style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
         super(KbplacerDialog, self).__init__(parent, -1, title, style=style)
         row1 = wx.BoxSizer(wx.HORIZONTAL)

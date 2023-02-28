@@ -44,7 +44,7 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
 
         pcbFrame = [x for x in wx.GetTopLevelWindows() if x.GetName() == 'PcbFrame'][0]
 
-        dlg = KbplacerDialog(pcbFrame, 'Title', 'Caption')
+        dlg = KbplacerDialog(pcbFrame, 'kbplacer')
         if dlg.ShowModal() == wx.ID_OK:
             layoutPath = dlg.GetLayoutPath()
             if layoutPath:
