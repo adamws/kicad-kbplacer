@@ -17,6 +17,9 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
         self.description = "Auto placement for key switches and diodes"
 
     def Initialize(self):
+        version = pcbnew.Version()
+        if int(version.split(".")[0]) < 6:
+            raise Exception("KiCad version {} is not supported".format(version))
         self.board = pcbnew.GetBoard()
 
         # go to the project folder - so that log will be in proper place
@@ -33,6 +36,7 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
                             format='%(asctime)s %(name)s %(lineno)d: %(message)s',
                             datefmt='%H:%M:%S')
         self.logger = logging.getLogger(__name__)
+        self.logger.info("Plugin executed with KiCad version: " + version)
         self.logger.info("Plugin executed with python version: " + repr(sys.version))
 
     def Run(self):
