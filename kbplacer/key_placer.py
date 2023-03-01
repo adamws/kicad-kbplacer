@@ -163,10 +163,10 @@ class KeyPlacer(BoardModifier):
             return self.GetDefaultDiodePosition()
 
     def RemoveDanglingTracks(self):
-        self.board.BuildConnectivity()
+        connectivity = self.GetConnectivity()
         for track in self.board.GetTracks():
-            if self.board.GetConnectivity().TestTrackEndpointDangling(track):
-                self.board.Delete(track)
+            if connectivity.TestTrackEndpointDangling(track):
+                self.board.RemoveNative(track)
 
     def CheckIfDiodeRouted(self, keyFormat, diodeFormat):
         switch = self.GetFootprint(keyFormat.format(1))
@@ -197,7 +197,7 @@ class KeyPlacer(BoardModifier):
                     pointsSorted.append(searchPoint)
                     searchPoint = end if foundStart else start
                     tracks.remove(t)
-                    self.board.Delete(t)
+                    self.board.RemoveNative(t)
                     break
         if len(pointsSorted) != 0:
             pointsSorted.pop(0)
@@ -305,9 +305,4 @@ class KeyPlacer(BoardModifier):
                     else:
                         self.logger.warning("Automatic diode routing supported only when diodes aligned vertically")
 
-            # NOTE: this conflicts with TemplateCopier, if we copy template first and then
-            # do switch-diode placement and routing, there is a big chance that
-            # RemoveDanglingTracks will end with segmentation fault. I don't know why.
-            # This should be investigated laters. As a quick fix changed order of operations and
-            # moved TemplateCopier to be executed at the end
             self.RemoveDanglingTracks()
