@@ -19,6 +19,19 @@ KICAD_VERSION = int(pcbnew.Version().split(".")[0])
 logger = logging.getLogger(__name__)
 
 
+def pytest_collection_modifyitems(items):
+    try:
+        is_nightly = pcbnew.IsNightlyVersion()
+    except AttributeError:
+        is_nightly = False
+
+    if is_nightly:
+        for item in items:
+            item.add_marker(
+                pytest.mark.xfail(reason="Failures on nightly version ignored")
+            )
+
+
 def pytest_addoption(parser):
     parser.addoption(
         "--test-plugin-installation",

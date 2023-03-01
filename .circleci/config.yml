@@ -112,6 +112,10 @@ jobs:
             echo $DOCKERHUB_PASSWORD | docker login -u $DOCKERHUB_LOGIN --password-stdin
             docker push admwscki/kicad-kbplacer-primary:nightly-lunar
           working_directory: .circleci/images/lunar
+  test-linux-kicad-nightly:
+    docker:
+      - image: admwscki/kicad-kbplacer-primary:nightly-lunar
+    steps: *in-docker-test-steps
 
 workflows:
   main:
@@ -134,7 +138,9 @@ workflows:
           filters:
             branches:
               only:
-                - master
                 - kicad-nightly
     jobs:
       - build-nightly-image
+      - test-linux-kicad-nightly:
+          requires:
+            - build-nightly-image
