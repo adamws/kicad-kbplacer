@@ -15,6 +15,8 @@ RUN apt-get update \
       wget \
   && rm -rf /var/lib/apt/lists/*
 
+RUN find / -type f -name "EXTERNALLY-MANAGED" -exec rm {} \;
+
 RUN add-apt-repository --yes ppa:kicad/kicad-7.0-releases \
   && apt-get update \
   && apt-get install -y --no-install-recommends \
