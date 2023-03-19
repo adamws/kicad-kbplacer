@@ -1,6 +1,7 @@
 import argparse
 import json
 import logging
+
 import pcbnew
 
 from .board_modifier import Point, Side

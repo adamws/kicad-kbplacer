@@ -1,8 +1,9 @@
-import logging
 import json
+import logging
 import os
-import pcbnew
 import sys
+
+import pcbnew
 import wx
 
 from .kbplacer_dialog import KbplacerDialog

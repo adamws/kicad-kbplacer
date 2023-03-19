@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import Flag
-from pcbnew import *
 
+from pcbnew import *
 
 KICAD_VERSION = int(Version().split(".")[0])
 DEFAULT_CLEARANCE_MM = 0.25

@@ -4,7 +4,8 @@ import re
 from dataclasses import dataclass
 
 from pcbnew import *
-from .board_modifier import BoardModifier, Point, Side, KICAD_VERSION
+
+from .board_modifier import KICAD_VERSION, BoardModifier, Point, Side
 
 
 @dataclass
