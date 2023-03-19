@@ -37,7 +37,13 @@ class TemplateCopier(BoardModifier):
                 netName = clone.GetNetname()
                 netCode = clone.GetNetCode()
                 netInfoInBoard = self.boardNetsByName[netName]
-                self.logger.info("Cloning track from template: {}:{} -> {}:{}"
-                        .format(netName, netCode, netInfoInBoard.GetNetname(), netInfoInBoard.GetNetCode()))
+                self.logger.info(
+                    "Cloning track from template: {}:{} -> {}:{}".format(
+                        netName,
+                        netCode,
+                        netInfoInBoard.GetNetname(),
+                        netInfoInBoard.GetNetCode(),
+                    )
+                )
                 clone.SetNet(netInfoInBoard)
                 self.board.Add(clone)

@@ -9,11 +9,17 @@ from .template_copier import TemplateCopier
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Keyboard's key autoplacer")
-    parser.add_argument('-l', '--layout', required=True, help="json layout definition file")
-    parser.add_argument('-b', '--board', required=True, help=".kicad_pcb file to be processed")
-    parser.add_argument('-r', '--route', action="store_true", help="Enable experimental routing")
-    parser.add_argument('-d', '--diode-position', help="Relative diode position")
-    parser.add_argument('-t', '--template', help="Controller circuit template")
+    parser.add_argument(
+        "-l", "--layout", required=True, help="json layout definition file"
+    )
+    parser.add_argument(
+        "-b", "--board", required=True, help=".kicad_pcb file to be processed"
+    )
+    parser.add_argument(
+        "-r", "--route", action="store_true", help="Enable experimental routing"
+    )
+    parser.add_argument("-d", "--diode-position", help="Relative diode position")
+    parser.add_argument("-t", "--template", help="Controller circuit template")
 
     args = parser.parse_args()
     layoutPath = args.layout
@@ -23,9 +29,9 @@ if __name__ == "__main__":
     templatePath = args.template
 
     # set up logger
-    logging.basicConfig(level=logging.DEBUG,
-                        format='%(asctime)s: %(message)s',
-                        datefmt='%H:%M:%S')
+    logging.basicConfig(
+        level=logging.DEBUG, format="%(asctime)s: %(message)s", datefmt="%H:%M:%S"
+    )
     logger = logging.getLogger(__name__)
 
     board = pcbnew.LoadBoard(boardPath)

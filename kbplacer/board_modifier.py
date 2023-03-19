@@ -21,7 +21,7 @@ class Point:
         return [self.x, self.y]
 
 
-class BoardModifier():
+class BoardModifier:
     def __init__(self, logger, board):
         self.logger = logger
         self.board = board
@@ -39,7 +39,11 @@ class BoardModifier():
         return footprint
 
     def SetPosition(self, footprint, position: wxPoint):
-        self.logger.info("Setting {} footprint position: {}".format(footprint.GetReference(), position))
+        self.logger.info(
+            "Setting {} footprint position: {}".format(
+                footprint.GetReference(), position
+            )
+        )
         if KICAD_VERSION == 7:
             footprint.SetPosition(VECTOR2I(position.x, position.y))
         else:
@@ -50,13 +54,20 @@ class BoardModifier():
 
     def GetPosition(self, footprint):
         position = footprint.GetPosition()
-        self.logger.info("Getting {} footprint position: {}".format(footprint.GetReference(), position))
+        self.logger.info(
+            "Getting {} footprint position: {}".format(
+                footprint.GetReference(), position
+            )
+        )
         if KICAD_VERSION == 7:
             return wxPoint(position.x, position.y)
         return position
 
     def SetRelativePositionMM(self, footprint, referencePoint, direction):
-        position = wxPoint(referencePoint.x + FromMM(direction[0]), referencePoint.y + FromMM(direction[1]))
+        position = wxPoint(
+            referencePoint.x + FromMM(direction[0]),
+            referencePoint.y + FromMM(direction[1]),
+        )
         self.SetPosition(footprint, position)
 
     def TestTrackCollision(self, track):
@@ -78,46 +89,97 @@ class BoardModifier():
 
                     # track has non default netlist set so we can skip collision detection for pad of same netlist:
                     if trackNetCode != 0 and trackNetCode == p.GetNetCode():
-                        self.logger.debug("Track collision ignored, pad {}:{} on same netlist: {}/{}".format(reference, padName, track.GetNetname(), p.GetNetname()))
+                        self.logger.debug(
+                            "Track collision ignored, pad {}:{} on same netlist: {}/{}".format(
+                                reference, padName, track.GetNetname(), p.GetNetname()
+                            )
+                        )
                         continue
 
                     # if track starts or ends in pad than assume this collision is expected, with the execption of case where track
                     # already has netlist set and it is different than pad's netlist
                     if p.HitTest(trackStart) or p.HitTest(trackEnd):
-                        if trackNetCode != 0 and trackNetCode != p.GetNetCode() and p.IsOnLayer(track.GetLayer()):
-                            self.logger.debug("Track collide with pad {}:{}".format(reference, padName))
+                        if (
+                            trackNetCode != 0
+                            and trackNetCode != p.GetNetCode()
+                            and p.IsOnLayer(track.GetLayer())
+                        ):
+                            self.logger.debug(
+                                "Track collide with pad {}:{}".format(
+                                    reference, padName
+                                )
+                            )
                             collideList.append(p)
                         else:
-                            self.logger.debug("Track collision ignored, track starts or ends in pad {}:{}".format(reference, padName))
+                            self.logger.debug(
+                                "Track collision ignored, track starts or ends in pad {}:{}".format(
+                                    reference, padName
+                                )
+                            )
                     else:
-                        hitTestResult = padShape.Collide(trackShape, FromMM(DEFAULT_CLEARANCE_MM))
+                        hitTestResult = padShape.Collide(
+                            trackShape, FromMM(DEFAULT_CLEARANCE_MM)
+                        )
                         onSameLayer = p.IsOnLayer(track.GetLayer())
                         if hitTestResult and onSameLayer:
-                            self.logger.debug("Track collide with pad {}:{}".format(reference, padName))
+                            self.logger.debug(
+                                "Track collide with pad {}:{}".format(
+                                    reference, padName
+                                )
+                            )
                             collideList.append(p)
         # track ids to clear at the end:
         tracksToClear = []
         for t in self.board.GetTracks():
             # check collision if not itself, on same layer and with different netlist (unless 'trackNetCode' is default '0' netlist):
-            if t.m_Uuid.__ne__(track.m_Uuid) and t.IsOnLayer(track.GetLayer()) and (trackNetCode != t.GetNetCode() or trackNetCode == 0):
-                if trackStart == t.GetStart() or trackStart == t.GetEnd() or trackEnd == t.GetStart() or trackEnd == t.GetEnd():
-                    self.logger.debug("Track collision ignored, track starts or ends at the end of {} track".format(t.m_Uuid.AsString()))
+            if (
+                t.m_Uuid.__ne__(track.m_Uuid)
+                and t.IsOnLayer(track.GetLayer())
+                and (trackNetCode != t.GetNetCode() or trackNetCode == 0)
+            ):
+                if (
+                    trackStart == t.GetStart()
+                    or trackStart == t.GetEnd()
+                    or trackEnd == t.GetStart()
+                    or trackEnd == t.GetEnd()
+                ):
+                    self.logger.debug(
+                        "Track collision ignored, track starts or ends at the end of {} track".format(
+                            t.m_Uuid.AsString()
+                        )
+                    )
                     # ignoring one track means that we can ignore all other connected to it:
-                    tracksToClear += [x.m_Uuid for x in connectivity.GetConnectedTracks(t)]
+                    tracksToClear += [
+                        x.m_Uuid for x in connectivity.GetConnectedTracks(t)
+                    ]
                     # check if connection to this track clears pad collision:
-                    connectedPadsIds = [x.m_Uuid for x in connectivity.GetConnectedPads(t)]
+                    connectedPadsIds = [
+                        x.m_Uuid for x in connectivity.GetConnectedPads(t)
+                    ]
                     for collision in list(collideList):
                         if collision.m_Uuid in connectedPadsIds:
-                            self.logger.debug("Pad collision removed due to connection with track which leads to that pad")
+                            self.logger.debug(
+                                "Pad collision removed due to connection with track which leads to that pad"
+                            )
                             collideList.remove(collision)
                 else:
-                    hitTestResult = t.GetEffectiveShape().Collide(trackShape, FromMM(DEFAULT_CLEARANCE_MM))
+                    hitTestResult = t.GetEffectiveShape().Collide(
+                        trackShape, FromMM(DEFAULT_CLEARANCE_MM)
+                    )
                     if hitTestResult:
-                        self.logger.debug("Track collide with another track: {}".format(t.m_Uuid.AsString()))
+                        self.logger.debug(
+                            "Track collide with another track: {}".format(
+                                t.m_Uuid.AsString()
+                            )
+                        )
                         collideList.append(t)
         for collision in list(collideList):
             if collision.m_Uuid in tracksToClear:
-                self.logger.debug("Track collision with {} removed due to connection with track which leads to it".format(collision.m_Uuid.AsString()))
+                self.logger.debug(
+                    "Track collision with {} removed due to connection with track which leads to it".format(
+                        collision.m_Uuid.AsString()
+                    )
+                )
                 collideList.remove(collision)
         return len(collideList) != 0
 
@@ -137,7 +199,9 @@ class BoardModifier():
             layerName = self.board.GetLayerName(track.GetLayer())
             start = track.GetStart()
             stop = track.GetEnd()
-            self.logger.info("Adding track segment ({}): [{}, {}]".format(layerName, start, stop))
+            self.logger.info(
+                "Adding track segment ({}): [{}, {}]".format(layerName, start, stop)
+            )
             self.board.Add(track)
             return stop
         else:
@@ -164,9 +228,16 @@ class BoardModifier():
         footprint.SetOrientationDegrees(0)
 
     def Rotate(self, footprint, rotationReference, angle):
-        self.logger.info("Rotating {} footprint: rotationReference: {}, rotationAngle: {}".format(footprint.GetReference(), rotationReference, angle))
+        self.logger.info(
+            "Rotating {} footprint: rotationReference: {}, rotationAngle: {}".format(
+                footprint.GetReference(), rotationReference, angle
+            )
+        )
         if KICAD_VERSION == 7:
-            footprint.Rotate(VECTOR2I(rotationReference.x, rotationReference.y), EDA_ANGLE(angle * -1, DEGREES_T))
+            footprint.Rotate(
+                VECTOR2I(rotationReference.x, rotationReference.y),
+                EDA_ANGLE(angle * -1, DEGREES_T),
+            )
         else:
             footprint.Rotate(rotationReference, angle * -10)
 
@@ -176,4 +247,3 @@ class BoardModifier():
 
     def GetSide(self, footprint):
         return Side(footprint.IsFlipped())
-

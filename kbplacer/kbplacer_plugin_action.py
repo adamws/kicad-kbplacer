@@ -30,11 +30,13 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
             logging.root.removeHandler(handler)
 
         # set up logger
-        logging.basicConfig(level=logging.DEBUG,
-                            filename="kbplacer.log",
-                            filemode='w',
-                            format='%(asctime)s %(name)s %(lineno)d: %(message)s',
-                            datefmt='%H:%M:%S')
+        logging.basicConfig(
+            level=logging.DEBUG,
+            filename="kbplacer.log",
+            filemode="w",
+            format="%(asctime)s %(name)s %(lineno)d: %(message)s",
+            datefmt="%H:%M:%S",
+        )
         self.logger = logging.getLogger(__name__)
         self.logger.info("Plugin executed with KiCad version: " + version)
         self.logger.info("Plugin executed with python version: " + repr(sys.version))
@@ -42,9 +44,9 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
     def Run(self):
         self.Initialize()
 
-        pcbFrame = [x for x in wx.GetTopLevelWindows() if x.GetName() == 'PcbFrame'][0]
+        pcbFrame = [x for x in wx.GetTopLevelWindows() if x.GetName() == "PcbFrame"][0]
 
-        dlg = KbplacerDialog(pcbFrame, 'kbplacer')
+        dlg = KbplacerDialog(pcbFrame, "kbplacer")
         if dlg.ShowModal() == wx.ID_OK:
             layoutPath = dlg.GetLayoutPath()
             if layoutPath:
@@ -70,9 +72,10 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
                 )
             templatePath = dlg.GetTemplatePath()
             if templatePath:
-                templateCopier = TemplateCopier(self.logger, self.board, templatePath, dlg.IsTracks())
+                templateCopier = TemplateCopier(
+                    self.logger, self.board, templatePath, dlg.IsTracks()
+                )
                 templateCopier.Run()
-
 
         dlg.Destroy()
         logging.shutdown()
