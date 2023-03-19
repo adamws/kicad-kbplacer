@@ -9,7 +9,7 @@ jobs:
       - run:
           name: Prepare tests
           command: |
-            pip3 install --no-cache-dir -r tests/dev-requirements.txt
+            pip3 install --no-cache-dir -r dev-requirements.txt
       - run:
           name: Run tests
           command: |
@@ -31,7 +31,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: scoop-{{ .Branch }}-{{ checksum "tests/dev-requirements.txt" }}
+          key: scoop-{{ .Branch }}-{{ checksum "dev-requirements.txt" }}
       - run:
           name: Install scoop and KiCad
           command: |
@@ -45,9 +45,9 @@ jobs:
           command: |
             .\.circleci\scripts\use-kicad-python.ps1
             python -m pip install --upgrade pip
-            pip install --no-cache-dir -r tests/dev-requirements.txt
+            pip install --no-cache-dir -r dev-requirements.txt
       - save_cache:
-          key: scoop-{{ .Branch }}-{{ checksum "tests/dev-requirements.txt" }}
+          key: scoop-{{ .Branch }}-{{ checksum "dev-requirements.txt" }}
           paths:
             - C:\scoop
       - run:
@@ -86,6 +86,7 @@ jobs:
           command: |
             docker build -t admwscki/$IMAGE_NAME:$TAG -f docker/Dockerfile .
             docker run --rm -v $(pwd)/tests:/kicad/tests -v $(pwd)/examples:/kicad/examples \
+              -v $(pwd)/dev-requirements.txt:/kicad/tests/dev-requirements.txt \
               -w /kicad/tests admwscki/$IMAGE_NAME:$TAG \
               /bin/bash -c \
               "pip3 install -r dev-requirements.txt && /kicad/.local/bin/pytest -c /dev/null --test-plugin-installation -k test_with_examples"

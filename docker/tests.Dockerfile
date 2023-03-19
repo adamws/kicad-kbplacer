@@ -1,6 +1,6 @@
 FROM admwscki/kicad-kbplacer-primary:7.0-lunar
 
-COPY tests/dev-requirements.txt .
+COPY dev-requirements.txt .
 RUN pip3 install --no-cache-dir -r dev-requirements.txt && rm dev-requirements.txt
 
 COPY kbplacer/ /tmp/kbplacer
