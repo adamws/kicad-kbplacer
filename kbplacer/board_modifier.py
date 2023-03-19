@@ -33,7 +33,7 @@ class BoardModifier:
     def GetFootprint(self, reference):
         self.logger.info(f"Searching for {reference} footprint")
         footprint = self.board.FindFootprintByReference(reference)
-        if footprint == None:
+        if footprint is None:
             self.logger.error("Footprint not found")
             msg = f"Cannot find footprint {reference}"
             raise Exception(msg)

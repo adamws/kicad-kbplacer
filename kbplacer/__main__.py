@@ -48,7 +48,7 @@ if __name__ == "__main__":
 
         if diodePosition == "USE_CURRENT":
             diodePosition = placer.GetDiodePosition("SW{}", "D{}", True)
-        elif diodePosition != None:
+        elif diodePosition is not None:
             x, y, orientation, side = diodePosition.split(",")
             x, y = float(x), float(y)
             orientation = float(orientation)
