@@ -31,11 +31,12 @@ class BoardModifier:
         return self.board.GetConnectivity()
 
     def GetFootprint(self, reference):
-        self.logger.info("Searching for {} footprint".format(reference))
+        self.logger.info(f"Searching for {reference} footprint")
         footprint = self.board.FindFootprintByReference(reference)
         if footprint == None:
             self.logger.error("Footprint not found")
-            raise Exception("Cannot find footprint {}".format(reference))
+            msg = f"Cannot find footprint {reference}"
+            raise Exception(msg)
         return footprint
 
     def SetPosition(self, footprint, position: wxPoint):
@@ -200,7 +201,7 @@ class BoardModifier:
             start = track.GetStart()
             stop = track.GetEnd()
             self.logger.info(
-                "Adding track segment ({}): [{}, {}]".format(layerName, start, stop)
+                f"Adding track segment ({layerName}): [{start}, {stop}]",
             )
             self.board.Add(track)
             return stop

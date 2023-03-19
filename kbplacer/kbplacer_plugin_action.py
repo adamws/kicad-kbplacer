@@ -19,7 +19,8 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
     def Initialize(self):
         version = pcbnew.Version()
         if int(version.split(".")[0]) < 6:
-            raise Exception("KiCad version {} is not supported".format(version))
+            msg = f"KiCad version {version} is not supported"
+            raise Exception(msg)
         self.board = pcbnew.GetBoard()
 
         # go to the project folder - so that log will be in proper place
@@ -53,7 +54,7 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
                 with open(layoutPath, "r") as f:
                     textInput = f.read()
                 layout = json.loads(textInput)
-                self.logger.info("User layout: {}".format(layout))
+                self.logger.info(f"User layout: {layout}")
                 placer = KeyPlacer(self.logger, self.board, layout)
                 keyFormat = dlg.GetKeyAnnotationFormat()
                 stabilizerFormat = dlg.GetStabilizerAnnotationFormat()

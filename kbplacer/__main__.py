@@ -41,7 +41,7 @@ if __name__ == "__main__":
             textInput = f.read()
             layout = json.loads(textInput)
 
-        logger.info("User layout: {}".format(layout))
+        logger.info(f"User layout: {layout}")
 
         placer = KeyPlacer(logger, board, layout)
 

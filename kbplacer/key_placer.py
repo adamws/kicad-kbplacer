@@ -111,9 +111,7 @@ class KeyPlacer(BoardModifier):
         :type angle: float
         :type templateTrackPoints: List[wxPoint]
         """
-        self.logger.info(
-            "Routing {} with {}".format(switch.GetReference(), diode.GetReference())
-        )
+        self.logger.info(f"Routing {switch.GetReference()} with {diode.GetReference()}")
 
         layer = B_Cu if self.GetSide(diode) == Side.BACK else F_Cu
         switchPadPosition = switch.FindPadByNumber("2").GetPosition()
@@ -123,14 +121,12 @@ class KeyPlacer(BoardModifier):
             diodePadPosition = wxPoint(diodePadPosition.x, diodePadPosition.y)
 
         self.logger.debug(
-            "switchPadPosition: {}, diodePadPosition: {}".format(
-                switchPadPosition, diodePadPosition
-            )
+            f"switchPadPosition: {switchPadPosition}, diodePadPosition: {diodePadPosition}",
         )
 
         if templateTrackPoints:
             if angle != 0:
-                self.logger.info("Routing at {} degree angle".format(angle))
+                self.logger.info(f"Routing at {angle} degree angle")
             start = diodePadPosition
             for t in templateTrackPoints:
                 if angle != 0:
@@ -153,7 +149,7 @@ class KeyPlacer(BoardModifier):
             else:
                 # pads are not in single line, attempt routing with two segment track
                 if angle != 0:
-                    self.logger.info("Routing at {} degree angle".format(angle))
+                    self.logger.info(f"Routing at {angle} degree angle")
                     switchPadPositionR = PositionInRotatedCoordinates(
                         switchPadPosition, angle
                     )
@@ -162,9 +158,8 @@ class KeyPlacer(BoardModifier):
                     )
 
                     self.logger.debug(
-                        "In rotated coordinates: switchPadPosition: {}, diodePadPosition: {}".format(
-                            switchPadPositionR, diodePadPositionR
-                        )
+                        f"In rotated coordinates: switchPadPosition: {switchPadPositionR},"
+                        f" diodePadPosition: {diodePadPositionR}",
                     )
 
                     corner = self.CalculateCornerPositionOfSwitchDiodeRoute(
@@ -240,15 +235,13 @@ class KeyPlacer(BoardModifier):
             pointsSorted.append(switchPadPosition)
 
         reducedPoints = [p.__sub__(diodePadPosition) for p in pointsSorted]
-        self.logger.info(
-            "Detected template switch-to-diode path: {}".format(reducedPoints)
-        )
+        self.logger.info(f"Detected template switch-to-diode path: {reducedPoints}")
         return reducedPoints
 
     def Run(
         self, keyFormat, stabilizerFormat, diodeFormat, diodePosition, routeTracks=False
     ):
-        self.logger.info("Diode position: {}".format(diodePosition))
+        self.logger.info(f"Diode position: {diodePosition}")
 
         templateTracks = []
         if routeTracks:
