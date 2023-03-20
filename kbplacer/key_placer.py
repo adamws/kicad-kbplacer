@@ -393,7 +393,7 @@ class KeyPlacer(BoardModifier):
                 # we can assume that all diodes are on the same side:
                 layer = (
                     pcbnew.B_Cu
-                    if self.get_side(pad.GetParent()) == Side.BACK
+                    if self.get_side(pads[0].GetParent()) == Side.BACK
                     else pcbnew.F_Cu
                 )
                 for pos1, pos2 in zip(positions, positions[1:]):
