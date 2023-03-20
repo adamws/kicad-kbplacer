@@ -64,8 +64,9 @@ class KeyPlacer(BoardModifier):
     def get_current_key(self, key_format, stabilizer_format):
         key = self.get_footprint(key_format.format(self.__current_key))
 
-        # in case of perigoso/keyswitch-kicad-library, stabilizer holes are not part of of switch footprint and needs to be handled
-        # separately, check if there is stabilizer with id matching current key and return it
+        # in case of perigoso/keyswitch-kicad-library, stabilizer holes are not part
+        # of of switch footprint and needs to be handled separately,
+        # check if there is stabilizer with id matching current key and return it
         # stabilizer will be None if not found
         stabilizer = self.board.FindFootprintByReference(
             stabilizer_format.format(self.__current_key)
@@ -178,7 +179,8 @@ class KeyPlacer(BoardModifier):
                         diode_pad_position, switch_pad_position
                     )
 
-                # first segment: at 45 degree angle (might be in rotated coordinate system) towards switch pad
+                # first segment: at 45 degree angle
+                # (might be in rotated coordinate system) towards switch pad
                 self.add_track_segment_by_points(diode_pad_position, corner, layer)
                 # second segment: up to switch pad
                 self.add_track_segment_by_points(corner, switch_pad_position, layer)

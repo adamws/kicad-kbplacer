@@ -11,8 +11,8 @@ class TemplateCopier(BoardModifier):
         self.__route_tracks = route_tracks
 
     # Copy positions of elements and tracks from template to board.
-    # This method does not copy parts itself - parts to be positioned need to be present in board
-    # prior to calling this.
+    # This method does not copy parts itself - parts to be positioned
+    # need to be present in board prior to calling this.
     def run(self):
         footprints = self.__template.GetFootprints()
 

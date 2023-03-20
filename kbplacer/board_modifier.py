@@ -77,7 +77,8 @@ class BoardModifier:
         track_start = track.GetStart()
         track_end = track.GetEnd()
         track_net_code = track.GetNetCode()
-        # connectivity needs to be last, otherwise it will update track net name before we want it to:
+        # connectivity needs to be last,
+        # otherwise it will update track net name before we want it to:
         connectivity = self.get_connectivity()
         for f in self.board.GetFootprints():
             reference = f.GetReference()
@@ -88,7 +89,8 @@ class BoardModifier:
                     pad_name = p.GetName()
                     pad_shape = p.GetEffectiveShape()
 
-                    # track has non default netlist set so we can skip collision detection for pad of same netlist:
+                    # track has non default netlist set so we can skip collision detection
+                    # for pad of same netlist:
                     if track_net_code != 0 and track_net_code == p.GetNetCode():
                         self.logger.debug(
                             "Track collision ignored, pad {}:{} on same netlist: {}/{}".format(
@@ -97,8 +99,9 @@ class BoardModifier:
                         )
                         continue
 
-                    # if track starts or ends in pad than assume this collision is expected, with the execption of case where track
-                    # already has netlist set and it is different than pad's netlist
+                    # if track starts or ends in pad than assume this collision is expected,
+                    # with the execption of case where track already has netlist set
+                    # and it is different than pad's netlist
                     if p.HitTest(track_start) or p.HitTest(track_end):
                         if (
                             track_net_code != 0
@@ -132,7 +135,8 @@ class BoardModifier:
         # track ids to clear at the end:
         tracks_to_clear = []
         for t in self.board.GetTracks():
-            # check collision if not itself, on same layer and with different netlist (unless 'trackNetCode' is default '0' netlist):
+            # check collision if not itself, on same layer and with different netlist
+            # (unless 'trackNetCode' is default '0' netlist):
             if (
                 t.m_Uuid.__ne__(track.m_Uuid)
                 and t.IsOnLayer(track.GetLayer())
