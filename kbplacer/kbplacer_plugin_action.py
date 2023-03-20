@@ -50,34 +50,34 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
 
         dlg = KbplacerDialog(pcbFrame, "kbplacer")
         if dlg.ShowModal() == wx.ID_OK:
-            layoutPath = dlg.GetLayoutPath()
+            layoutPath = dlg.get_layout_path()
             if layoutPath:
                 with open(layoutPath, "r") as f:
                     textInput = f.read()
                 layout = json.loads(textInput)
                 self.logger.info(f"User layout: {layout}")
                 placer = KeyPlacer(self.logger, self.board, layout)
-                keyFormat = dlg.GetKeyAnnotationFormat()
-                stabilizerFormat = dlg.GetStabilizerAnnotationFormat()
-                diodeFormat = dlg.GetDiodeAnnotationFormat()
-                diodePosition = placer.GetDiodePosition(
+                keyFormat = dlg.get_key_annotation_format()
+                stabilizerFormat = dlg.get_stabilizer_annotation_format()
+                diodeFormat = dlg.get_diode_annotation_format()
+                diodePosition = placer.get_diode_position(
                     keyFormat,
                     diodeFormat,
-                    dlg.IsFirstPairUsedAsTemplate(),
+                    dlg.is_first_pair_used_as_template(),
                 )
-                placer.Run(
+                placer.run(
                     keyFormat,
                     stabilizerFormat,
                     diodeFormat,
                     diodePosition,
-                    dlg.IsTracks(),
+                    dlg.is_tracks(),
                 )
-            templatePath = dlg.GetTemplatePath()
+            templatePath = dlg.get_template_path()
             if templatePath:
                 templateCopier = TemplateCopier(
-                    self.logger, self.board, templatePath, dlg.IsTracks()
+                    self.logger, self.board, templatePath, dlg.is_tracks()
                 )
-                templateCopier.Run()
+                templateCopier.run()
 
         dlg.Destroy()
         logging.shutdown()

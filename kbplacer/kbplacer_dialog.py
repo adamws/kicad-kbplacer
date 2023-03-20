@@ -94,23 +94,23 @@ class KbplacerDialog(wx.Dialog):
         self.tracksCheckbox = tracksCheckbox
         self.templateFilePicker = templateFilePicker
 
-    def GetLayoutPath(self):
+    def get_layout_path(self):
         return self.layoutFilePicker.GetPath()
 
-    def GetKeyAnnotationFormat(self):
+    def get_key_annotation_format(self):
         return self.keyAnnotationFormat.GetValue()
 
-    def GetStabilizerAnnotationFormat(self):
+    def get_stabilizer_annotation_format(self):
         return self.stabilizerAnnotationFormat.GetValue()
 
-    def GetDiodeAnnotationFormat(self):
+    def get_diode_annotation_format(self):
         return self.diodeAnnotationFormat.GetValue()
 
-    def IsTracks(self):
+    def is_tracks(self):
         return self.tracksCheckbox.GetValue()
 
-    def IsFirstPairUsedAsTemplate(self):
+    def is_first_pair_used_as_template(self):
         return self.useFirstPairAsTemplateCheckbox.GetValue()
 
-    def GetTemplatePath(self):
+    def get_template_path(self):
         return self.templateFilePicker.GetPath()

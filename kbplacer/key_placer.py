@@ -15,7 +15,7 @@ class DiodePosition:
     side: Side
 
 
-def PositionInRotatedCoordinates(point, angle):
+def position_in_rotated_coordinates(point, angle):
     """
     Map position in xy-Cartesian coordinate system to x'y'-Cartesian which has same origin
     but axes are rotated by angle
@@ -34,8 +34,8 @@ def PositionInRotatedCoordinates(point, angle):
     return wxPoint(xr, yr)
 
 
-def PositionInCartesianCoordinates(point, angle):
-    """Performs inverse operation to PositionInRotatedCoordinates i.e.
+def position_in_cartesian_coordinates(point, angle):
+    """Performs inverse operation to position_in_rotated_coordinates i.e.
     map position in rotated (by angle) x'y'-Cartesian to xy-Cartesian
 
     :param point: A point to be mapped
@@ -61,8 +61,8 @@ class KeyPlacer(BoardModifier):
         self.currentDiode = 1
         self.referenceCoordinate = wxPoint(FromMM(25), FromMM(25))
 
-    def GetCurrentKey(self, keyFormat, stabilizerFormat):
-        key = self.GetFootprint(keyFormat.format(self.currentKey))
+    def get_current_key(self, keyFormat, stabilizerFormat):
+        key = self.get_footprint(keyFormat.format(self.currentKey))
 
         # in case of perigoso/keyswitch-kicad-library, stabilizer holes are not part of of switch footprint and needs to be handled
         # separately, check if there is stabilizer with id matching current key and return it
@@ -74,12 +74,12 @@ class KeyPlacer(BoardModifier):
 
         return key, stabilizer
 
-    def GetCurrentDiode(self, diodeFormat):
-        diode = self.GetFootprint(diodeFormat.format(self.currentDiode))
+    def get_current_diode(self, diodeFormat):
+        diode = self.get_footprint(diodeFormat.format(self.currentDiode))
         self.currentDiode += 1
         return diode
 
-    def CalculateCornerPositionOfSwitchDiodeRoute(
+    def calculate_corner_position_of_switch_diode_route(
         self, diodePadPosition, switchPadPosition
     ):
         x_diff = diodePadPosition.x - switchPadPosition.x
@@ -97,7 +97,7 @@ class KeyPlacer(BoardModifier):
                 diodePadPosition.y - y_diff,
             )
 
-    def RouteSwitchWithDiode(self, switch, diode, angle, templateTrackPoints=None):
+    def route_switch_with_diode(self, switch, diode, angle, templateTrackPoints=None):
         """Performs routing between switch and diode elements.
         Assumes col-to-row configuration where diode anode is pad number '2'.
 
@@ -114,7 +114,7 @@ class KeyPlacer(BoardModifier):
         """
         self.logger.info(f"Routing {switch.GetReference()} with {diode.GetReference()}")
 
-        layer = B_Cu if self.GetSide(diode) == Side.BACK else F_Cu
+        layer = B_Cu if self.get_side(diode) == Side.BACK else F_Cu
         switchPadPosition = switch.FindPadByNumber("2").GetPosition()
         diodePadPosition = diode.FindPadByNumber("2").GetPosition()
         if KICAD_VERSION == 7:
@@ -131,14 +131,14 @@ class KeyPlacer(BoardModifier):
             start = diodePadPosition
             for t in templateTrackPoints:
                 if angle != 0:
-                    diodePadPositionR = PositionInRotatedCoordinates(
+                    diodePadPositionR = position_in_rotated_coordinates(
                         diodePadPosition, angle
                     )
                     end = t.__add__(diodePadPositionR)
-                    end = PositionInCartesianCoordinates(end, angle)
+                    end = position_in_cartesian_coordinates(end, angle)
                 else:
                     end = t.__add__(diodePadPosition)
-                end = self.AddTrackSegmentByPoints(start, end, layer)
+                end = self.add_track_segment_by_points(start, end, layer)
                 if end:
                     start = end
         else:
@@ -146,15 +146,15 @@ class KeyPlacer(BoardModifier):
                 switchPadPosition.x == diodePadPosition.x
                 or switchPadPosition.y == diodePadPosition.y
             ):
-                self.AddTrackSegmentByPoints(diodePadPosition, switchPadPosition, layer)
+                self.add_track_segment_by_points(diodePadPosition, switchPadPosition, layer)
             else:
                 # pads are not in single line, attempt routing with two segment track
                 if angle != 0:
                     self.logger.info(f"Routing at {angle} degree angle")
-                    switchPadPositionR = PositionInRotatedCoordinates(
+                    switchPadPositionR = position_in_rotated_coordinates(
                         switchPadPosition, angle
                     )
-                    diodePadPositionR = PositionInRotatedCoordinates(
+                    diodePadPositionR = position_in_rotated_coordinates(
                         diodePadPosition, angle
                     )
 
@@ -163,46 +163,46 @@ class KeyPlacer(BoardModifier):
                         f" diodePadPosition: {diodePadPositionR}",
                     )
 
-                    corner = self.CalculateCornerPositionOfSwitchDiodeRoute(
+                    corner = self.calculate_corner_position_of_switch_diode_route(
                         diodePadPositionR, switchPadPositionR
                     )
-                    corner = PositionInCartesianCoordinates(corner, angle)
+                    corner = position_in_cartesian_coordinates(corner, angle)
                 else:
-                    corner = self.CalculateCornerPositionOfSwitchDiodeRoute(
+                    corner = self.calculate_corner_position_of_switch_diode_route(
                         diodePadPosition, switchPadPosition
                     )
 
                 # first segment: at 45 degree angle (might be in rotated coordinate system) towards switch pad
-                self.AddTrackSegmentByPoints(diodePadPosition, corner, layer)
+                self.add_track_segment_by_points(diodePadPosition, corner, layer)
                 # second segment: up to switch pad
-                self.AddTrackSegmentByPoints(corner, switchPadPosition, layer)
+                self.add_track_segment_by_points(corner, switchPadPosition, layer)
 
-    def GetDefaultDiodePosition(self):
+    def get_default_diode_position(self):
         return DiodePosition(Point(5.08, 3.03), 90.0, Side.BACK)
 
-    def GetDiodePosition(self, keyFormat, diodeFormat, isFirstPairUsedAsTemplate):
+    def get_diode_position(self, keyFormat, diodeFormat, isFirstPairUsedAsTemplate):
         if isFirstPairUsedAsTemplate:
-            key1 = self.GetFootprint(keyFormat.format(1))
-            diode1 = self.GetFootprint(diodeFormat.format(1))
-            pos1 = self.GetPosition(key1)
-            pos2 = self.GetPosition(diode1)
+            key1 = self.get_footprint(keyFormat.format(1))
+            diode1 = self.get_footprint(diodeFormat.format(1))
+            pos1 = self.get_position(key1)
+            pos2 = self.get_position(diode1)
             return DiodePosition(
                 Point(ToMM(pos2.x - pos1.x), ToMM(pos2.y - pos1.y)),
                 diode1.GetOrientationDegrees(),
-                self.GetSide(diode1),
+                self.get_side(diode1),
             )
         else:
-            return self.GetDefaultDiodePosition()
+            return self.get_default_diode_position()
 
-    def RemoveDanglingTracks(self):
-        connectivity = self.GetConnectivity()
+    def remove_dangling_tracks(self):
+        connectivity = self.get_connectivity()
         for track in self.board.GetTracks():
             if connectivity.TestTrackEndpointDangling(track):
                 self.board.RemoveNative(track)
 
-    def CheckIfDiodeRouted(self, keyFormat, diodeFormat):
-        switch = self.GetFootprint(keyFormat.format(1))
-        diode = self.GetFootprint(diodeFormat.format(1))
+    def check_if_diode_routed(self, keyFormat, diodeFormat):
+        switch = self.get_footprint(keyFormat.format(1))
+        diode = self.get_footprint(diodeFormat.format(1))
         net1 = switch.FindPadByNumber("2").GetNetname()
         net2 = diode.FindPadByNumber("2").GetNetname()
         tracks = [t for t in self.board.GetTracks() if t.GetNetname() == net1 == net2]
@@ -239,7 +239,7 @@ class KeyPlacer(BoardModifier):
         self.logger.info(f"Detected template switch-to-diode path: {reducedPoints}")
         return reducedPoints
 
-    def Run(
+    def run(
         self, keyFormat, stabilizerFormat, diodeFormat, diodePosition, routeTracks=False
     ):
         self.logger.info(f"Diode position: {diodePosition}")
@@ -248,12 +248,12 @@ class KeyPlacer(BoardModifier):
         if routeTracks:
             # check if first switch-diode pair is already routed, if yes,
             # then reuse its track shape for remaining pairs, otherwise try to use automatic 'router'
-            templateTracks = self.CheckIfDiodeRouted(keyFormat, diodeFormat)
+            templateTracks = self.check_if_diode_routed(keyFormat, diodeFormat)
 
         column_switch_pads = {}
         row_diode_pads = {}
         for key in self.layout["keys"]:
-            switchFootprint, stabilizer = self.GetCurrentKey(
+            switchFootprint, stabilizer = self.get_current_key(
                 keyFormat, stabilizerFormat
             )
 
@@ -266,24 +266,24 @@ class KeyPlacer(BoardModifier):
                 )
                 + self.referenceCoordinate
             )
-            self.SetPosition(switchFootprint, position)
-            self.ResetRotation(switchFootprint)
+            self.set_position(switchFootprint, position)
+            self.reset_rotation(switchFootprint)
 
             if stabilizer:
-                self.SetPosition(stabilizer, position)
-                self.ResetRotation(stabilizer)
+                self.set_position(stabilizer, position)
+                self.reset_rotation(stabilizer)
                 # recognize special case of ISO enter:
                 width2 = key["width2"]
                 height2 = key["height2"]
                 if width == 1.25 and height == 2 and width2 == 1.5 and height2 == 1:
                     stabilizer.SetOrientationDegrees(90)
 
-            diodeFootprint = self.GetCurrentDiode(diodeFormat)
-            self.ResetRotation(diodeFootprint)
-            self.SetSide(diodeFootprint, diodePosition.side)
+            diodeFootprint = self.get_current_diode(diodeFormat)
+            self.reset_rotation(diodeFootprint)
+            self.set_side(diodeFootprint, diodePosition.side)
             diodeFootprint.SetOrientationDegrees(diodePosition.orientation)
-            self.SetRelativePositionMM(
-                diodeFootprint, position, diodePosition.relativePosition.toList()
+            self.set_relative_position_mm(
+                diodeFootprint, position, diodePosition.relativePosition.to_list()
             )
 
             angle = key["rotation_angle"]
@@ -295,10 +295,10 @@ class KeyPlacer(BoardModifier):
                     )
                     + self.referenceCoordinate
                 )
-                self.Rotate(switchFootprint, rotationReference, angle)
+                self.rotate(switchFootprint, rotationReference, angle)
                 if stabilizer:
-                    self.Rotate(stabilizer, rotationReference, angle)
-                self.Rotate(diodeFootprint, rotationReference, angle)
+                    self.rotate(stabilizer, rotationReference, angle)
+                self.rotate(diodeFootprint, rotationReference, angle)
 
             # append pad:
             pad = switchFootprint.FindPadByNumber("1")
@@ -320,7 +320,7 @@ class KeyPlacer(BoardModifier):
                 self.logger.warning("Switch pad without recognized net name found.")
 
             if routeTracks:
-                self.RouteSwitchWithDiode(
+                self.route_switch_with_diode(
                     switchFootprint, diodeFootprint, angle, templateTracks
                 )
 
@@ -332,7 +332,7 @@ class KeyPlacer(BoardModifier):
                 for pos1, pos2 in zip(positions, positions[1:]):
                     # connect two pads together
                     if pos1.x == pos2.x:
-                        self.AddTrackSegmentByPoints(pos1, pos2, layer=F_Cu)
+                        self.add_track_segment_by_points(pos1, pos2, layer=F_Cu)
                     else:
                         # two segment track
                         y_diff = builtins.abs(pos1.y - pos2.y)
@@ -343,11 +343,11 @@ class KeyPlacer(BoardModifier):
                                 "Switch pad to far to route 2 segment track with 45 degree angles"
                             )
                         else:
-                            lastPosition = self.AddTrackSegment(
+                            lastPosition = self.add_track_segment(
                                 pos1, vector, layer=F_Cu
                             )
                             if lastPosition:
-                                self.AddTrackSegmentByPoints(
+                                self.add_track_segment_by_points(
                                     lastPosition, pos2, layer=F_Cu
                                 )
 
@@ -355,13 +355,13 @@ class KeyPlacer(BoardModifier):
                 pads = row_diode_pads[row]
                 positions = [pad.GetPosition() for pad in pads]
                 # we can assume that all diodes are on the same side:
-                layer = B_Cu if self.GetSide(pad.GetParent()) == Side.BACK else F_Cu
+                layer = B_Cu if self.get_side(pad.GetParent()) == Side.BACK else F_Cu
                 for pos1, pos2 in zip(positions, positions[1:]):
                     if pos1.y == pos2.y:
-                        self.AddTrackSegmentByPoints(pos1, pos2, layer)
+                        self.add_track_segment_by_points(pos1, pos2, layer)
                     else:
                         self.logger.warning(
                             "Automatic diode routing supported only when diodes aligned vertically"
                         )
 
-            self.RemoveDanglingTracks()
+            self.remove_dangling_tracks()

@@ -47,7 +47,7 @@ if __name__ == "__main__":
         placer = KeyPlacer(logger, board, layout)
 
         if diodePosition == "USE_CURRENT":
-            diodePosition = placer.GetDiodePosition("SW{}", "D{}", True)
+            diodePosition = placer.get_diode_position("SW{}", "D{}", True)
         elif diodePosition is not None:
             x, y, orientation, side = diodePosition.split(",")
             x, y = float(x), float(y)
@@ -55,13 +55,13 @@ if __name__ == "__main__":
             side = Side[side]
             diodePosition = DiodePosition(Point(x, y), orientation, side)
         else:
-            diodePosition = placer.GetDefaultDiodePosition()
+            diodePosition = placer.get_default_diode_position()
 
-        placer.Run("SW{}", "ST{}", "D{}", diodePosition, routeTracks)
+        placer.run("SW{}", "ST{}", "D{}", diodePosition, routeTracks)
 
     if templatePath:
         copier = TemplateCopier(logger, board, templatePath, routeTracks)
-        copier.Run()
+        copier.run()
 
     pcbnew.Refresh()
     pcbnew.SaveBoard(boardPath, board)

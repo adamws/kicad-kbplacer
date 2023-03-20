@@ -98,8 +98,8 @@ def test_track_with_pad_collision(footprint, position, side, netlist, tmpdir, re
         pad.SetNet(netcodes_map[pad_netlist])
 
     modifier = BoardModifier(logger, board)
-    modifier.SetPositionByPoints(diode, 0, 0)
-    modifier.SetSide(diode, Side.BACK)
+    modifier.set_position_by_points(diode, 0, 0)
+    modifier.set_side(diode, Side.BACK)
 
     pad_position = pad.GetPosition()
     if KICAD_VERSION == 7:
@@ -154,7 +154,7 @@ def test_track_with_pad_collision(footprint, position, side, netlist, tmpdir, re
     else:
         logger.info("Expecting no collision")
 
-    collide = modifier.TestTrackCollision(track)
+    collide = modifier.test_track_collision(track)
 
     board.Add(track)
     board.BuildListOfNets()
@@ -170,13 +170,13 @@ def add_track_segments_test(steps, tmpdir, request):
 
     modifier = BoardModifier(logger, board)
     # place footprint
-    modifier.SetPositionByPoints(f, 0, 0)
-    modifier.SetSide(f, Side.BACK)
+    modifier.set_position_by_points(f, 0, 0)
+    modifier.set_side(f, Side.BACK)
 
     start = f.FindPadByNumber("2").GetPosition()
     for step in steps:
         direction, should_succeed = step
-        start = modifier.AddTrackSegment(start, direction)
+        start = modifier.add_track_segment(start, direction)
         if should_succeed:
             assert type(start) != type(None), "Unexpected track add failure"
         else:
@@ -240,7 +240,7 @@ def test_track_with_track_collision(start, end, layer, expected, tmpdir, request
     # add track to test:
     track = add_track(board, start, end, layer)
 
-    collide = modifier.TestTrackCollision(track)
+    collide = modifier.test_track_collision(track)
 
     board.Save("{}/keyboard-before.kicad_pcb".format(tmpdir))
     generate_render(tmpdir, request)

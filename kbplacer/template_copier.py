@@ -13,12 +13,12 @@ class TemplateCopier(BoardModifier):
     # Copy positions of elements and tracks from template to board.
     # This method does not copy parts itself - parts to be positioned need to be present in board
     # prior to calling this.
-    def Run(self):
+    def run(self):
         footprints = self.template.GetFootprints()
 
         for footprint in footprints:
             reference = footprint.GetReference()
-            destinationFootprint = self.GetFootprint(reference)
+            destinationFootprint = self.get_footprint(reference)
 
             layer = footprint.GetLayerName()
             position = footprint.GetPosition()
@@ -26,7 +26,7 @@ class TemplateCopier(BoardModifier):
 
             if layer == "B.Cu" and destinationFootprint.GetLayerName() != "B.Cu":
                 destinationFootprint.Flip(destinationFootprint.GetCenter(), False)
-            self.SetPosition(destinationFootprint, position)
+            self.set_position(destinationFootprint, position)
             destinationFootprint.SetOrientation(orientation)
 
         if self.routeTracks:

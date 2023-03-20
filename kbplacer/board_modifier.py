@@ -17,7 +17,7 @@ class Point:
     x: float
     y: float
 
-    def toList(self):
+    def to_list(self):
         return [self.x, self.y]
 
 
@@ -26,11 +26,11 @@ class BoardModifier:
         self.logger = logger
         self.board = board
 
-    def GetConnectivity(self):
+    def get_connectivity(self):
         self.board.BuildConnectivity()
         return self.board.GetConnectivity()
 
-    def GetFootprint(self, reference):
+    def get_footprint(self, reference):
         self.logger.info(f"Searching for {reference} footprint")
         footprint = self.board.FindFootprintByReference(reference)
         if footprint is None:
@@ -39,7 +39,7 @@ class BoardModifier:
             raise Exception(msg)
         return footprint
 
-    def SetPosition(self, footprint, position: wxPoint):
+    def set_position(self, footprint, position: wxPoint):
         self.logger.info(
             "Setting {} footprint position: {}".format(
                 footprint.GetReference(), position
@@ -50,10 +50,10 @@ class BoardModifier:
         else:
             footprint.SetPosition(position)
 
-    def SetPositionByPoints(self, footprint, x: int, y: int):
-        self.SetPosition(footprint, wxPoint(x, y))
+    def set_position_by_points(self, footprint, x: int, y: int):
+        self.set_position(footprint, wxPoint(x, y))
 
-    def GetPosition(self, footprint):
+    def get_position(self, footprint):
         position = footprint.GetPosition()
         self.logger.info(
             "Getting {} footprint position: {}".format(
@@ -64,21 +64,21 @@ class BoardModifier:
             return wxPoint(position.x, position.y)
         return position
 
-    def SetRelativePositionMM(self, footprint, referencePoint, direction):
+    def set_relative_position_mm(self, footprint, referencePoint, direction):
         position = wxPoint(
             referencePoint.x + FromMM(direction[0]),
             referencePoint.y + FromMM(direction[1]),
         )
-        self.SetPosition(footprint, position)
+        self.set_position(footprint, position)
 
-    def TestTrackCollision(self, track):
+    def test_track_collision(self, track):
         collideList = []
         trackShape = track.GetEffectiveShape()
         trackStart = track.GetStart()
         trackEnd = track.GetEnd()
         trackNetCode = track.GetNetCode()
         # connectivity needs to be last, otherwise it will update track net name before we want it to:
-        connectivity = self.GetConnectivity()
+        connectivity = self.get_connectivity()
         for f in self.board.GetFootprints():
             reference = f.GetReference()
             hull = f.GetBoundingHull()
@@ -184,7 +184,7 @@ class BoardModifier:
                 collideList.remove(collision)
         return len(collideList) != 0
 
-    def AddTrackToBoard(self, track):
+    def add_track_to_board(self, track):
         """Add track to the board if track passes collision check.
         If track has no set netlist, it would get netlist of a pad
         or other track, on which it started or ended.
@@ -196,7 +196,7 @@ class BoardModifier:
         :param track: A track to be added to board
         :return: End position of added track or None if failed to add.
         """
-        if not self.TestTrackCollision(track):
+        if not self.test_track_collision(track):
             layerName = self.board.GetLayerName(track.GetLayer())
             start = track.GetStart()
             stop = track.GetEnd()
@@ -209,7 +209,7 @@ class BoardModifier:
             self.logger.warning("Could not add track segment due to detected collision")
             return None
 
-    def AddTrackSegmentByPoints(self, start, end, layer=B_Cu):
+    def add_track_segment_by_points(self, start, end, layer=B_Cu):
         track = PCB_TRACK(self.board)
         track.SetWidth(FromMM(0.25))
         track.SetLayer(layer)
@@ -219,16 +219,16 @@ class BoardModifier:
         else:
             track.SetStart(start)
             track.SetEnd(end)
-        return self.AddTrackToBoard(track)
+        return self.add_track_to_board(track)
 
-    def AddTrackSegment(self, start, vector, layer=B_Cu):
+    def add_track_segment(self, start, vector, layer=B_Cu):
         end = wxPoint(start.x + vector[0], start.y + vector[1])
-        return self.AddTrackSegmentByPoints(start, end, layer)
+        return self.add_track_segment_by_points(start, end, layer)
 
-    def ResetRotation(self, footprint):
+    def reset_rotation(self, footprint):
         footprint.SetOrientationDegrees(0)
 
-    def Rotate(self, footprint, rotationReference, angle):
+    def rotate(self, footprint, rotationReference, angle):
         self.logger.info(
             "Rotating {} footprint: rotationReference: {}, rotationAngle: {}".format(
                 footprint.GetReference(), rotationReference, angle
@@ -242,9 +242,9 @@ class BoardModifier:
         else:
             footprint.Rotate(rotationReference, angle * -10)
 
-    def SetSide(self, footprint, side: Side):
-        if side ^ self.GetSide(footprint):
+    def set_side(self, footprint, side: Side):
+        if side ^ self.get_side(footprint):
             footprint.Flip(footprint.GetPosition(), False)
 
-    def GetSide(self, footprint):
+    def get_side(self, footprint):
         return Side(footprint.IsFlipped())

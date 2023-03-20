@@ -109,19 +109,19 @@ def test_diode_switch_routing(position, orientation, side, expected, tmpdir, req
 
     keyPlacer = KeyPlacer(logger, board, None)
 
-    keyPlacer.SetPosition(switch, pcbnew.wxPoint(0, 0))
+    keyPlacer.set_position(switch, pcbnew.wxPoint(0, 0))
     switchPadPosition = switch.FindPadByNumber("2").GetPosition()
 
     diodePosition = pcbnew.wxPoint(
         switchPadPosition.x + pcbnew.FromMM(position[0]),
         switchPadPosition.y + pcbnew.FromMM(position[1]),
     )
-    keyPlacer.SetPosition(diode, diodePosition)
-    keyPlacer.SetSide(diode, side)
+    keyPlacer.set_position(diode, diodePosition)
+    keyPlacer.set_side(diode, side)
     diode.SetOrientationDegrees(orientation)
 
-    keyPlacer.RouteSwitchWithDiode(switch, diode, 0)
-    keyPlacer.RemoveDanglingTracks()
+    keyPlacer.route_switch_with_diode(switch, diode, 0)
+    keyPlacer.remove_dangling_tracks()
 
     board.Save("{}/keyboard-before.kicad_pcb".format(tmpdir))
     generate_render(tmpdir, request)
