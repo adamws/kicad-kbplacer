@@ -2,6 +2,7 @@ import builtins
 import math
 import re
 from dataclasses import dataclass
+from logging import Logger
 
 import pcbnew
 
@@ -15,7 +16,9 @@ class DiodePosition:
     side: Side
 
 
-def position_in_rotated_coordinates(point, angle):
+def position_in_rotated_coordinates(
+    point: pcbnew.wxPoint, angle: float
+) -> pcbnew.wxPoint:
     """
     Map position in xy-Cartesian coordinate system to x'y'-Cartesian which has same origin
     but axes are rotated by angle
@@ -34,7 +37,9 @@ def position_in_rotated_coordinates(point, angle):
     return pcbnew.wxPoint(xr, yr)
 
 
-def position_in_cartesian_coordinates(point, angle):
+def position_in_cartesian_coordinates(
+    point: pcbnew.wxPoint, angle: float
+) -> pcbnew.wxPoint:
     """Performs inverse operation to position_in_rotated_coordinates i.e.
     map position in rotated (by angle) x'y'-Cartesian to xy-Cartesian
 
@@ -53,7 +58,7 @@ def position_in_cartesian_coordinates(point, angle):
 
 
 class KeyPlacer(BoardModifier):
-    def __init__(self, logger, board, layout):
+    def __init__(self, logger: Logger, board: pcbnew.BOARD, layout) -> None:
         super().__init__(logger, board)
         self.__layout = layout
         self.__key_distance = 19050000
@@ -61,7 +66,9 @@ class KeyPlacer(BoardModifier):
         self.__current_diode = 1
         self.__reference_coordinate = pcbnew.wxPointMM(25, 25)
 
-    def get_current_key(self, key_format, stabilizer_format):
+    def get_current_key(
+        self, key_format: str, stabilizer_format: str
+    ) -> tuple[pcbnew.FOOTPRINT, pcbnew.FOOTPRINT]:
         key = self.get_footprint(key_format.format(self.__current_key))
 
         # in case of perigoso/keyswitch-kicad-library, stabilizer holes are not part
@@ -75,14 +82,14 @@ class KeyPlacer(BoardModifier):
 
         return key, stabilizer
 
-    def get_current_diode(self, diode_format):
+    def get_current_diode(self, diode_format: str) -> pcbnew.FOOTPRINT:
         diode = self.get_footprint(diode_format.format(self.__current_diode))
         self.__current_diode += 1
         return diode
 
     def calculate_corner_position_of_switch_diode_route(
-        self, diode_pad_position, switch_pad_position
-    ):
+        self, diode_pad_position: pcbnew.wxPoint, switch_pad_position: pcbnew.wxPoint
+    ) -> pcbnew.wxPoint:
         x_diff = diode_pad_position.x - switch_pad_position.x
         y_diff = diode_pad_position.y - switch_pad_position.y
         if builtins.abs(x_diff) < builtins.abs(y_diff):
@@ -98,7 +105,13 @@ class KeyPlacer(BoardModifier):
                 diode_pad_position.y - y_diff,
             )
 
-    def route_switch_with_diode(self, switch, diode, angle, template_track_points=None):
+    def route_switch_with_diode(
+        self,
+        switch: pcbnew.FOOTPRINT,
+        diode: pcbnew.FOOTPRINT,
+        angle: float,
+        template_track_points=None,
+    ) -> None:
         """Performs routing between switch and diode elements.
         Assumes col-to-row configuration where diode anode is pad number '2'.
 
@@ -185,12 +198,12 @@ class KeyPlacer(BoardModifier):
                 # second segment: up to switch pad
                 self.add_track_segment_by_points(corner, switch_pad_position, layer)
 
-    def get_default_diode_position(self):
+    def get_default_diode_position(self) -> DiodePosition:
         return DiodePosition(Point(5.08, 3.03), 90.0, Side.BACK)
 
     def get_diode_position(
-        self, key_format, diode_format, is_first_pair_used_as_template
-    ):
+        self, key_format: str, diode_format: str, is_first_pair_used_as_template: bool
+    ) -> DiodePosition:
         if is_first_pair_used_as_template:
             key1 = self.get_footprint(key_format.format(1))
             diode1 = self.get_footprint(diode_format.format(1))
@@ -204,13 +217,15 @@ class KeyPlacer(BoardModifier):
         else:
             return self.get_default_diode_position()
 
-    def remove_dangling_tracks(self):
+    def remove_dangling_tracks(self) -> None:
         connectivity = self.get_connectivity()
         for track in self.board.GetTracks():
             if connectivity.TestTrackEndpointDangling(track):
                 self.board.RemoveNative(track)
 
-    def check_if_diode_routed(self, key_format, diode_format):
+    def check_if_diode_routed(
+        self, key_format: str, diode_format: str
+    ) -> list[pcbnew.wxPoint]:
         switch = self.get_footprint(key_format.format(1))
         diode = self.get_footprint(diode_format.format(1))
         net1 = switch.FindPadByNumber("2").GetNetname()
@@ -255,12 +270,12 @@ class KeyPlacer(BoardModifier):
 
     def run(
         self,
-        key_format,
-        stabilizer_format,
-        diode_format,
-        diode_position,
+        key_format: str,
+        stabilizer_format: str,
+        diode_format: str,
+        diode_position: DiodePosition,
         route_tracks=False,
-    ):
+    ) -> None:
         self.logger.info(f"Diode position: {diode_position}")
 
         template_tracks = []

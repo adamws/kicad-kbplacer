@@ -2,7 +2,7 @@ import wx
 
 
 class KbplacerDialog(wx.Dialog):
-    def __init__(self, parent, title):
+    def __init__(self, parent, title) -> None:
         style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
         super(KbplacerDialog, self).__init__(parent, -1, title, style=style)
         row1 = wx.BoxSizer(wx.HORIZONTAL)
@@ -94,23 +94,23 @@ class KbplacerDialog(wx.Dialog):
         self.__tracks_checkbox = tracks_checkbox
         self.__template_file_picker = template_file_picker
 
-    def get_layout_path(self):
+    def get_layout_path(self) -> str:
         return self.__layout_file_picker.GetPath()
 
-    def get_key_annotation_format(self):
+    def get_key_annotation_format(self) -> str:
         return self.__key_annotation_format.GetValue()
 
-    def get_stabilizer_annotation_format(self):
+    def get_stabilizer_annotation_format(self) -> str:
         return self.__stabilizer_annotation_format.GetValue()
 
-    def get_diode_annotation_format(self):
+    def get_diode_annotation_format(self) -> str:
         return self.__diode_annotation_format.GetValue()
 
-    def is_tracks(self):
+    def is_tracks(self) -> bool:
         return self.__tracks_checkbox.GetValue()
 
-    def is_first_pair_used_as_template(self):
+    def is_first_pair_used_as_template(self) -> bool:
         return self.__use_first_pair_as_template_checkbox.GetValue()
 
-    def get_template_path(self):
+    def get_template_path(self) -> str:
         return self.__template_file_picker.GetPath()

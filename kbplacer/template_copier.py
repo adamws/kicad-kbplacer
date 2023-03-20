@@ -1,10 +1,18 @@
+from logging import Logger
+
 import pcbnew
 
 from .board_modifier import BoardModifier
 
 
 class TemplateCopier(BoardModifier):
-    def __init__(self, logger, board, template_path, route_tracks):
+    def __init__(
+        self,
+        logger: Logger,
+        board: pcbnew.BOARD,
+        template_path: str,
+        route_tracks: bool,
+    ) -> None:
         super().__init__(logger, board)
         self.__template = pcbnew.LoadBoard(template_path)
         self.__board_nets_by_name = board.GetNetsByName()
@@ -13,7 +21,7 @@ class TemplateCopier(BoardModifier):
     # Copy positions of elements and tracks from template to board.
     # This method does not copy parts itself - parts to be positioned
     # need to be present in board prior to calling this.
-    def run(self):
+    def run(self) -> None:
         footprints = self.__template.GetFootprints()
 
         for footprint in footprints:

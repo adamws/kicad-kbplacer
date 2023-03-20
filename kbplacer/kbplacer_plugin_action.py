@@ -12,12 +12,12 @@ from .template_copier import TemplateCopier
 
 
 class KbplacerPluginAction(pcbnew.ActionPlugin):
-    def defaults(self):
+    def defaults(self) -> None:
         self.name = "Keyboard placer"
         self.category = "Mechanical Keybaord Helper"
         self.description = "Auto placement for key switches and diodes"
 
-    def Initialize(self):
+    def Initialize(self) -> None:
         version = pcbnew.Version()
         if int(version.split(".")[0]) < 6:
             msg = f"KiCad version {version} is not supported"
@@ -43,7 +43,7 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
         self.logger.info("Plugin executed with KiCad version: " + version)
         self.logger.info("Plugin executed with python version: " + repr(sys.version))
 
-    def Run(self):
+    def Run(self) -> None:
         self.Initialize()
 
         pcb_frame = [x for x in wx.GetTopLevelWindows() if x.GetName() == "PcbFrame"][0]

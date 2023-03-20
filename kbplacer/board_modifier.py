@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Flag
+from logging import Logger
 
 import pcbnew
 
@@ -17,12 +18,12 @@ class Point:
     x: float
     y: float
 
-    def to_list(self):
+    def to_list(self) -> list[float]:
         return [self.x, self.y]
 
 
 class BoardModifier:
-    def __init__(self, logger, board):
+    def __init__(self, logger: Logger, board: pcbnew.BOARD) -> None:
         self.logger = logger
         self.board = board
 
@@ -30,7 +31,7 @@ class BoardModifier:
         self.board.BuildConnectivity()
         return self.board.GetConnectivity()
 
-    def get_footprint(self, reference):
+    def get_footprint(self, reference: str) -> pcbnew.FOOTPRINT:
         self.logger.info(f"Searching for {reference} footprint")
         footprint = self.board.FindFootprintByReference(reference)
         if footprint is None:
@@ -39,7 +40,9 @@ class BoardModifier:
             raise Exception(msg)
         return footprint
 
-    def set_position(self, footprint, position: pcbnew.wxPoint):
+    def set_position(
+        self, footprint: pcbnew.FOOTPRINT, position: pcbnew.wxPoint
+    ) -> None:
         self.logger.info(
             "Setting {} footprint position: {}".format(
                 footprint.GetReference(), position
@@ -50,10 +53,12 @@ class BoardModifier:
         else:
             footprint.SetPosition(position)
 
-    def set_position_by_points(self, footprint, x: int, y: int):
+    def set_position_by_points(
+        self, footprint: pcbnew.FOOTPRINT, x: int, y: int
+    ) -> None:
         self.set_position(footprint, pcbnew.wxPoint(x, y))
 
-    def get_position(self, footprint):
+    def get_position(self, footprint: pcbnew.FOOTPRINT) -> pcbnew.wxPoint:
         position = footprint.GetPosition()
         self.logger.info(
             "Getting {} footprint position: {}".format(
@@ -64,14 +69,19 @@ class BoardModifier:
             return pcbnew.wxPoint(position.x, position.y)
         return position
 
-    def set_relative_position_mm(self, footprint, reference_point, direction):
+    def set_relative_position_mm(
+        self,
+        footprint: pcbnew.FOOTPRINT,
+        reference_point: pcbnew.wxPoint,
+        direction: list[float],
+    ) -> None:
         position = pcbnew.wxPoint(
             reference_point.x + pcbnew.FromMM(direction[0]),
             reference_point.y + pcbnew.FromMM(direction[1]),
         )
         self.set_position(footprint, position)
 
-    def test_track_collision(self, track):
+    def test_track_collision(self, track: pcbnew.PCB_TRACK) -> bool:
         collide_list = []
         track_shape = track.GetEffectiveShape()
         track_start = track.GetStart()
@@ -188,7 +198,7 @@ class BoardModifier:
                 collide_list.remove(collision)
         return len(collide_list) != 0
 
-    def add_track_to_board(self, track):
+    def add_track_to_board(self, track: pcbnew.PCB_TRACK):
         """Add track to the board if track passes collision check.
         If track has no set netlist, it would get netlist of a pad
         or other track, on which it started or ended.
@@ -213,7 +223,9 @@ class BoardModifier:
             self.logger.warning("Could not add track segment due to detected collision")
             return None
 
-    def add_track_segment_by_points(self, start, end, layer=pcbnew.B_Cu):
+    def add_track_segment_by_points(
+        self, start: pcbnew.wxPoint, end: pcbnew.wxPoint, layer=pcbnew.B_Cu
+    ):
         track = pcbnew.PCB_TRACK(self.board)
         track.SetWidth(pcbnew.FromMM(0.25))
         track.SetLayer(layer)
@@ -225,14 +237,16 @@ class BoardModifier:
             track.SetEnd(end)
         return self.add_track_to_board(track)
 
-    def add_track_segment(self, start, vector, layer=pcbnew.B_Cu):
+    def add_track_segment(
+        self, start: pcbnew.wxPoint, vector: list[int], layer=pcbnew.B_Cu
+    ):
         end = pcbnew.wxPoint(start.x + vector[0], start.y + vector[1])
         return self.add_track_segment_by_points(start, end, layer)
 
-    def reset_rotation(self, footprint):
+    def reset_rotation(self, footprint: pcbnew.FOOTPRINT):
         footprint.SetOrientationDegrees(0)
 
-    def rotate(self, footprint, rotation_reference, angle):
+    def rotate(self, footprint, rotation_reference, angle) -> None:
         self.logger.info(
             "Rotating {} footprint: rotationReference: {}, rotationAngle: {}".format(
                 footprint.GetReference(), rotation_reference, angle
@@ -246,9 +260,9 @@ class BoardModifier:
         else:
             footprint.Rotate(rotation_reference, angle * -10)
 
-    def set_side(self, footprint, side: Side):
+    def set_side(self, footprint: pcbnew.FOOTPRINT, side: Side) -> None:
         if side ^ self.get_side(footprint):
             footprint.Flip(footprint.GetPosition(), False)
 
-    def get_side(self, footprint):
+    def get_side(self, footprint: pcbnew.FOOTPRINT) -> Side:
         return Side(footprint.IsFlipped())
