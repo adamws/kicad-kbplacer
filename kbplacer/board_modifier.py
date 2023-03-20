@@ -44,9 +44,7 @@ class BoardModifier:
         self, footprint: pcbnew.FOOTPRINT, position: pcbnew.wxPoint
     ) -> None:
         self.logger.info(
-            "Setting {} footprint position: {}".format(
-                footprint.GetReference(), position
-            )
+            f"Setting {footprint.GetReference()} footprint position: {position}"
         )
         if KICAD_VERSION == 7:
             footprint.SetPosition(pcbnew.VECTOR2I(position.x, position.y))
@@ -61,9 +59,7 @@ class BoardModifier:
     def get_position(self, footprint: pcbnew.FOOTPRINT) -> pcbnew.wxPoint:
         position = footprint.GetPosition()
         self.logger.info(
-            "Getting {} footprint position: {}".format(
-                footprint.GetReference(), position
-            )
+            f"Getting {footprint.GetReference()} footprint position: {position}"
         )
         if KICAD_VERSION == 7:
             return pcbnew.wxPoint(position.x, position.y)
@@ -103,9 +99,8 @@ class BoardModifier:
                     # for pad of same netlist:
                     if track_net_code != 0 and track_net_code == p.GetNetCode():
                         self.logger.debug(
-                            "Track collision ignored, pad {}:{} on same netlist: {}/{}".format(
-                                reference, pad_name, track.GetNetname(), p.GetNetname()
-                            )
+                            f"Track collision ignored, pad {reference}:{pad_name} "
+                            f"on same netlist: {track.GetNetname()}/{p.GetNetname()}"
                         )
                         continue
 
@@ -119,16 +114,12 @@ class BoardModifier:
                             and p.IsOnLayer(track.GetLayer())
                         ):
                             self.logger.debug(
-                                "Track collide with pad {}:{}".format(
-                                    reference, pad_name
-                                )
+                                f"Track collide with pad {reference}:{pad_name}"
                             )
                             collide_list.append(p)
                         else:
                             self.logger.debug(
-                                "Track collision ignored, track starts or ends in pad {}:{}".format(
-                                    reference, pad_name
-                                )
+                                f"Track collision ignored, track starts or ends in pad {reference}:{pad_name}"
                             )
                     else:
                         hit_test_result = pad_shape.Collide(
@@ -137,9 +128,7 @@ class BoardModifier:
                         on_same_layer = p.IsOnLayer(track.GetLayer())
                         if hit_test_result and on_same_layer:
                             self.logger.debug(
-                                "Track collide with pad {}:{}".format(
-                                    reference, pad_name
-                                )
+                                f"Track collide with pad {reference}:{pad_name}"
                             )
                             collide_list.append(p)
         # track ids to clear at the end:
@@ -152,6 +141,7 @@ class BoardModifier:
                 and t.IsOnLayer(track.GetLayer())
                 and (track_net_code != t.GetNetCode() or track_net_code == 0)
             ):
+                track_uuid = t.m_Uuid.AsString()
                 if (
                     track_start == t.GetStart()
                     or track_start == t.GetEnd()
@@ -159,9 +149,7 @@ class BoardModifier:
                     or track_end == t.GetEnd()
                 ):
                     self.logger.debug(
-                        "Track collision ignored, track starts or ends at the end of {} track".format(
-                            t.m_Uuid.AsString()
-                        )
+                        f"Track collision ignored, track starts or ends at the end of {track_uuid} track"
                     )
                     # ignoring one track means that we can ignore all other connected to it:
                     tracks_to_clear += [
@@ -183,17 +171,14 @@ class BoardModifier:
                     )
                     if hit_test_result:
                         self.logger.debug(
-                            "Track collide with another track: {}".format(
-                                t.m_Uuid.AsString()
-                            )
+                            f"Track collide with another track: {track_uuid}"
                         )
                         collide_list.append(t)
         for collision in list(collide_list):
             if collision.m_Uuid in tracks_to_clear:
+                collision_uuid = collision.m_Uuid.AsString()
                 self.logger.debug(
-                    "Track collision with {} removed due to connection with track which leads to it".format(
-                        collision.m_Uuid.AsString()
-                    )
+                    f"Track collision with {collision_uuid} removed due to connection with track which leads to it"
                 )
                 collide_list.remove(collision)
         return len(collide_list) != 0
@@ -246,11 +231,15 @@ class BoardModifier:
     def reset_rotation(self, footprint: pcbnew.FOOTPRINT):
         footprint.SetOrientationDegrees(0)
 
-    def rotate(self, footprint, rotation_reference, angle) -> None:
+    def rotate(
+        self,
+        footprint: pcbnew.FOOTPRINT,
+        rotation_reference: pcbnew.wxPoint,
+        angle: float,
+    ) -> None:
         self.logger.info(
-            "Rotating {} footprint: rotationReference: {}, rotationAngle: {}".format(
-                footprint.GetReference(), rotation_reference, angle
-            )
+            f"Rotating {footprint.GetReference()} footprint: "
+            f"rotationReference: {rotation_reference}, rotationAngle: {angle}"
         )
         if KICAD_VERSION == 7:
             footprint.Rotate(
