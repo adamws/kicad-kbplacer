@@ -23,11 +23,11 @@ if __name__ == "__main__":
     parser.add_argument("-t", "--template", help="Controller circuit template")
 
     args = parser.parse_args()
-    layoutPath = args.layout
-    boardPath = args.board
-    routeTracks = args.route
-    diodePosition = args.diode_position
-    templatePath = args.template
+    layout_path = args.layout
+    board_path = args.board
+    route_tracks = args.route
+    diode_position = args.diode_position
+    template_path = args.template
 
     # set up logger
     logging.basicConfig(
@@ -35,35 +35,35 @@ if __name__ == "__main__":
     )
     logger = logging.getLogger(__name__)
 
-    board = pcbnew.LoadBoard(boardPath)
+    board = pcbnew.LoadBoard(board_path)
 
-    if layoutPath:
-        with open(layoutPath, "r") as f:
-            textInput = f.read()
-            layout = json.loads(textInput)
+    if layout_path:
+        with open(layout_path, "r") as f:
+            text_input = f.read()
+            layout = json.loads(text_input)
 
         logger.info(f"User layout: {layout}")
 
         placer = KeyPlacer(logger, board, layout)
 
-        if diodePosition == "USE_CURRENT":
-            diodePosition = placer.get_diode_position("SW{}", "D{}", True)
-        elif diodePosition is not None:
-            x, y, orientation, side = diodePosition.split(",")
+        if diode_position == "USE_CURRENT":
+            diode_position = placer.get_diode_position("SW{}", "D{}", True)
+        elif diode_position is not None:
+            x, y, orientation, side = diode_position.split(",")
             x, y = float(x), float(y)
             orientation = float(orientation)
             side = Side[side]
-            diodePosition = DiodePosition(Point(x, y), orientation, side)
+            diode_position = DiodePosition(Point(x, y), orientation, side)
         else:
-            diodePosition = placer.get_default_diode_position()
+            diode_position = placer.get_default_diode_position()
 
-        placer.run("SW{}", "ST{}", "D{}", diodePosition, routeTracks)
+        placer.run("SW{}", "ST{}", "D{}", diode_position, route_tracks)
 
-    if templatePath:
-        copier = TemplateCopier(logger, board, templatePath, routeTracks)
+    if template_path:
+        copier = TemplateCopier(logger, board, template_path, route_tracks)
         copier.run()
 
     pcbnew.Refresh()
-    pcbnew.SaveBoard(boardPath, board)
+    pcbnew.SaveBoard(board_path, board)
 
     logging.shutdown()

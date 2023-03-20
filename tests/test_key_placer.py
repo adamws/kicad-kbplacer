@@ -107,21 +107,21 @@ def test_diode_switch_routing(position, orientation, side, expected, tmpdir, req
     switch = add_switch_footprint(board, request)
     diode = add_diode_footprint(board, request)
 
-    keyPlacer = KeyPlacer(logger, board, None)
+    key_placer = KeyPlacer(logger, board, None)
 
-    keyPlacer.set_position(switch, pcbnew.wxPoint(0, 0))
-    switchPadPosition = switch.FindPadByNumber("2").GetPosition()
+    key_placer.set_position(switch, pcbnew.wxPoint(0, 0))
+    switch_pad_position = switch.FindPadByNumber("2").GetPosition()
 
-    diodePosition = pcbnew.wxPoint(
-        switchPadPosition.x + pcbnew.FromMM(position[0]),
-        switchPadPosition.y + pcbnew.FromMM(position[1]),
+    diode_position = pcbnew.wxPoint(
+        switch_pad_position.x + pcbnew.FromMM(position[0]),
+        switch_pad_position.y + pcbnew.FromMM(position[1]),
     )
-    keyPlacer.set_position(diode, diodePosition)
-    keyPlacer.set_side(diode, side)
+    key_placer.set_position(diode, diode_position)
+    key_placer.set_side(diode, side)
     diode.SetOrientationDegrees(orientation)
 
-    keyPlacer.route_switch_with_diode(switch, diode, 0)
-    keyPlacer.remove_dangling_tracks()
+    key_placer.route_switch_with_diode(switch, diode, 0)
+    key_placer.remove_dangling_tracks()
 
     board.Save("{}/keyboard-before.kicad_pcb".format(tmpdir))
     generate_render(tmpdir, request)

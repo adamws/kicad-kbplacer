@@ -46,38 +46,38 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
     def Run(self):
         self.Initialize()
 
-        pcbFrame = [x for x in wx.GetTopLevelWindows() if x.GetName() == "PcbFrame"][0]
+        pcb_frame = [x for x in wx.GetTopLevelWindows() if x.GetName() == "PcbFrame"][0]
 
-        dlg = KbplacerDialog(pcbFrame, "kbplacer")
+        dlg = KbplacerDialog(pcb_frame, "kbplacer")
         if dlg.ShowModal() == wx.ID_OK:
-            layoutPath = dlg.get_layout_path()
-            if layoutPath:
-                with open(layoutPath, "r") as f:
-                    textInput = f.read()
-                layout = json.loads(textInput)
+            layout_path = dlg.get_layout_path()
+            if layout_path:
+                with open(layout_path, "r") as f:
+                    text_input = f.read()
+                layout = json.loads(text_input)
                 self.logger.info(f"User layout: {layout}")
                 placer = KeyPlacer(self.logger, self.board, layout)
-                keyFormat = dlg.get_key_annotation_format()
-                stabilizerFormat = dlg.get_stabilizer_annotation_format()
-                diodeFormat = dlg.get_diode_annotation_format()
-                diodePosition = placer.get_diode_position(
-                    keyFormat,
-                    diodeFormat,
+                key_format = dlg.get_key_annotation_format()
+                stabilizer_format = dlg.get_stabilizer_annotation_format()
+                diode_format = dlg.get_diode_annotation_format()
+                diode_position = placer.get_diode_position(
+                    key_format,
+                    diode_format,
                     dlg.is_first_pair_used_as_template(),
                 )
                 placer.run(
-                    keyFormat,
-                    stabilizerFormat,
-                    diodeFormat,
-                    diodePosition,
+                    key_format,
+                    stabilizer_format,
+                    diode_format,
+                    diode_position,
                     dlg.is_tracks(),
                 )
-            templatePath = dlg.get_template_path()
-            if templatePath:
-                templateCopier = TemplateCopier(
-                    self.logger, self.board, templatePath, dlg.is_tracks()
+            template_path = dlg.get_template_path()
+            if template_path:
+                template_copier = TemplateCopier(
+                    self.logger, self.board, template_path, dlg.is_tracks()
                 )
-                templateCopier.run()
+                template_copier.run()
 
         dlg.Destroy()
         logging.shutdown()
