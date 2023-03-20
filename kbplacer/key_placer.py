@@ -3,7 +3,7 @@ import math
 import re
 from dataclasses import dataclass
 
-from pcbnew import *
+import pcbnew
 
 from .board_modifier import KICAD_VERSION, BoardModifier, Point, Side
 
@@ -22,16 +22,16 @@ def position_in_rotated_coordinates(point, angle):
 
     :param point: A point to be mapped
     :param angle: Rotation angle (in degrees) of x'y'-Cartesian coordinates
-    :type point: wxPoint
+    :type point: pcbnew.wxPoint
     :type angle: float
     :return: Result position in x'y'-Cartesian coordinates
-    :rtype: wxPoint
+    :rtype: pcbnew.wxPoint
     """
     x, y = point.x, point.y
     angle = math.radians(angle)
     xr = (x * math.cos(angle)) + (y * math.sin(angle))
     yr = (-x * math.sin(angle)) + (y * math.cos(angle))
-    return wxPoint(xr, yr)
+    return pcbnew.wxPoint(xr, yr)
 
 
 def position_in_cartesian_coordinates(point, angle):
@@ -40,16 +40,16 @@ def position_in_cartesian_coordinates(point, angle):
 
     :param point: A point to be mapped
     :param angle: Rotation angle (in degrees) of x'y'-Cartesian coordinates
-    :type point: wxPoint
+    :type point: pcbnew.wxPoint
     :type angle: float
     :return: Result position in xy-Cartesian coordinates
-    :rtype: wxPoint
+    :rtype: pcbnew.wxPoint
     """
     xr, yr = point.x, point.y
     angle = math.radians(angle)
     x = (xr * math.cos(angle)) - (yr * math.sin(angle))
     y = (xr * math.sin(angle)) + (yr * math.cos(angle))
-    return wxPoint(x, y)
+    return pcbnew.wxPoint(x, y)
 
 
 class KeyPlacer(BoardModifier):
@@ -59,7 +59,7 @@ class KeyPlacer(BoardModifier):
         self.__key_distance = 19050000
         self.__current_key = 1
         self.__current_diode = 1
-        self.__reference_coordinate = wxPoint(FromMM(25), FromMM(25))
+        self.__reference_coordinate = pcbnew.wxPointMM(25, 25)
 
     def get_current_key(self, key_format, stabilizer_format):
         key = self.get_footprint(key_format.format(self.__current_key))
@@ -86,13 +86,13 @@ class KeyPlacer(BoardModifier):
         y_diff = diode_pad_position.y - switch_pad_position.y
         if builtins.abs(x_diff) < builtins.abs(y_diff):
             up_or_down = -1 if y_diff > 0 else 1
-            return wxPoint(
+            return pcbnew.wxPoint(
                 diode_pad_position.x - x_diff,
                 diode_pad_position.y + (up_or_down * builtins.abs(x_diff)),
             )
         else:
             left_or_right = -1 if x_diff > 0 else 1
-            return wxPoint(
+            return pcbnew.wxPoint(
                 diode_pad_position.x + (left_or_right * builtins.abs(y_diff)),
                 diode_pad_position.y - y_diff,
             )
@@ -110,16 +110,20 @@ class KeyPlacer(BoardModifier):
         :type switch: FOOTPRINT
         :type diode: FOOTPRINT
         :type angle: float
-        :type templateTrackPoints: List[wxPoint]
+        :type templateTrackPoints: List[pcbnew.wxPoint]
         """
         self.logger.info(f"Routing {switch.GetReference()} with {diode.GetReference()}")
 
-        layer = B_Cu if self.get_side(diode) == Side.BACK else F_Cu
+        layer = pcbnew.B_Cu if self.get_side(diode) == Side.BACK else pcbnew.F_Cu
         switch_pad_position = switch.FindPadByNumber("2").GetPosition()
         diode_pad_position = diode.FindPadByNumber("2").GetPosition()
         if KICAD_VERSION == 7:
-            switch_pad_position = wxPoint(switch_pad_position.x, switch_pad_position.y)
-            diode_pad_position = wxPoint(diode_pad_position.x, diode_pad_position.y)
+            switch_pad_position = pcbnew.wxPoint(
+                switch_pad_position.x, switch_pad_position.y
+            )
+            diode_pad_position = pcbnew.wxPoint(
+                diode_pad_position.x, diode_pad_position.y
+            )
 
         self.logger.debug(
             f"switchPadPosition: {switch_pad_position}, diodePadPosition: {diode_pad_position}",
@@ -191,7 +195,7 @@ class KeyPlacer(BoardModifier):
             pos1 = self.get_position(key1)
             pos2 = self.get_position(diode1)
             return DiodePosition(
-                Point(ToMM(pos2.x - pos1.x), ToMM(pos2.y - pos1.y)),
+                Point(pcbnew.ToMM(pos2.x - pos1.x), pcbnew.ToMM(pos2.y - pos1.y)),
                 diode1.GetOrientationDegrees(),
                 self.get_side(diode1),
             )
@@ -215,8 +219,12 @@ class KeyPlacer(BoardModifier):
         switch_pad_position = switch.FindPadByNumber("2").GetPosition()
         diode_pad_position = diode.FindPadByNumber("2").GetPosition()
         if KICAD_VERSION == 7:
-            switch_pad_position = wxPoint(switch_pad_position.x, switch_pad_position.y)
-            diode_pad_position = wxPoint(diode_pad_position.x, diode_pad_position.y)
+            switch_pad_position = pcbnew.wxPoint(
+                switch_pad_position.x, switch_pad_position.y
+            )
+            diode_pad_position = pcbnew.wxPoint(
+                diode_pad_position.x, diode_pad_position.y
+            )
 
         points_sorted = []
         search_point = diode_pad_position
@@ -225,8 +233,8 @@ class KeyPlacer(BoardModifier):
                 start = t.GetStart()
                 end = t.GetEnd()
                 if KICAD_VERSION == 7:
-                    start = wxPoint(start.x, start.y)
-                    end = wxPoint(end.x, end.y)
+                    start = pcbnew.wxPoint(start.x, start.y)
+                    end = pcbnew.wxPoint(end.x, end.y)
                 found_start = start.__eq__(search_point)
                 found_end = end.__eq__(search_point)
                 if found_start or found_end:
@@ -269,7 +277,7 @@ class KeyPlacer(BoardModifier):
             width = key["width"]
             height = key["height"]
             position = (
-                wxPoint(
+                pcbnew.wxPoint(
                     (self.__key_distance * key["x"])
                     + (self.__key_distance * width // 2),
                     (self.__key_distance * key["y"])
@@ -300,7 +308,7 @@ class KeyPlacer(BoardModifier):
             angle = key["rotation_angle"]
             if angle != 0:
                 rotation_reference = (
-                    wxPoint(
+                    pcbnew.wxPoint(
                         (self.__key_distance * key["rotation_x"]),
                         (self.__key_distance * key["rotation_y"]),
                     )
@@ -343,7 +351,7 @@ class KeyPlacer(BoardModifier):
                 for pos1, pos2 in zip(positions, positions[1:]):
                     # connect two pads together
                     if pos1.x == pos2.x:
-                        self.add_track_segment_by_points(pos1, pos2, layer=F_Cu)
+                        self.add_track_segment_by_points(pos1, pos2, layer=pcbnew.F_Cu)
                     else:
                         # two segment track
                         y_diff = builtins.abs(pos1.y - pos2.y)
@@ -355,18 +363,22 @@ class KeyPlacer(BoardModifier):
                             )
                         else:
                             last_position = self.add_track_segment(
-                                pos1, vector, layer=F_Cu
+                                pos1, vector, layer=pcbnew.F_Cu
                             )
                             if last_position:
                                 self.add_track_segment_by_points(
-                                    last_position, pos2, layer=F_Cu
+                                    last_position, pos2, layer=pcbnew.F_Cu
                                 )
 
             for row in row_diode_pads:
                 pads = row_diode_pads[row]
                 positions = [pad.GetPosition() for pad in pads]
                 # we can assume that all diodes are on the same side:
-                layer = B_Cu if self.get_side(pad.GetParent()) == Side.BACK else F_Cu
+                layer = (
+                    pcbnew.B_Cu
+                    if self.get_side(pad.GetParent()) == Side.BACK
+                    else pcbnew.F_Cu
+                )
                 for pos1, pos2 in zip(positions, positions[1:]):
                     if pos1.y == pos2.y:
                         self.add_track_segment_by_points(pos1, pos2, layer)

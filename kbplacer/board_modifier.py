@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from enum import Flag
 
-from pcbnew import *
+import pcbnew
 
-KICAD_VERSION = int(Version().split(".")[0])
+KICAD_VERSION = int(pcbnew.Version().split(".")[0])
 DEFAULT_CLEARANCE_MM = 0.25
 
 
@@ -39,19 +39,19 @@ class BoardModifier:
             raise Exception(msg)
         return footprint
 
-    def set_position(self, footprint, position: wxPoint):
+    def set_position(self, footprint, position: pcbnew.wxPoint):
         self.logger.info(
             "Setting {} footprint position: {}".format(
                 footprint.GetReference(), position
             )
         )
         if KICAD_VERSION == 7:
-            footprint.SetPosition(VECTOR2I(position.x, position.y))
+            footprint.SetPosition(pcbnew.VECTOR2I(position.x, position.y))
         else:
             footprint.SetPosition(position)
 
     def set_position_by_points(self, footprint, x: int, y: int):
-        self.set_position(footprint, wxPoint(x, y))
+        self.set_position(footprint, pcbnew.wxPoint(x, y))
 
     def get_position(self, footprint):
         position = footprint.GetPosition()
@@ -61,13 +61,13 @@ class BoardModifier:
             )
         )
         if KICAD_VERSION == 7:
-            return wxPoint(position.x, position.y)
+            return pcbnew.wxPoint(position.x, position.y)
         return position
 
     def set_relative_position_mm(self, footprint, reference_point, direction):
-        position = wxPoint(
-            reference_point.x + FromMM(direction[0]),
-            reference_point.y + FromMM(direction[1]),
+        position = pcbnew.wxPoint(
+            reference_point.x + pcbnew.FromMM(direction[0]),
+            reference_point.y + pcbnew.FromMM(direction[1]),
         )
         self.set_position(footprint, position)
 
@@ -119,7 +119,7 @@ class BoardModifier:
                             )
                     else:
                         hit_test_result = pad_shape.Collide(
-                            track_shape, FromMM(DEFAULT_CLEARANCE_MM)
+                            track_shape, pcbnew.FromMM(DEFAULT_CLEARANCE_MM)
                         )
                         on_same_layer = p.IsOnLayer(track.GetLayer())
                         if hit_test_result and on_same_layer:
@@ -165,7 +165,7 @@ class BoardModifier:
                             collide_list.remove(collision)
                 else:
                     hit_test_result = t.GetEffectiveShape().Collide(
-                        track_shape, FromMM(DEFAULT_CLEARANCE_MM)
+                        track_shape, pcbnew.FromMM(DEFAULT_CLEARANCE_MM)
                     )
                     if hit_test_result:
                         self.logger.debug(
@@ -209,20 +209,20 @@ class BoardModifier:
             self.logger.warning("Could not add track segment due to detected collision")
             return None
 
-    def add_track_segment_by_points(self, start, end, layer=B_Cu):
-        track = PCB_TRACK(self.board)
-        track.SetWidth(FromMM(0.25))
+    def add_track_segment_by_points(self, start, end, layer=pcbnew.B_Cu):
+        track = pcbnew.PCB_TRACK(self.board)
+        track.SetWidth(pcbnew.FromMM(0.25))
         track.SetLayer(layer)
         if KICAD_VERSION == 7:
-            track.SetStart(VECTOR2I(start.x, start.y))
-            track.SetEnd(VECTOR2I(end.x, end.y))
+            track.SetStart(pcbnew.VECTOR2I(start.x, start.y))
+            track.SetEnd(pcbnew.VECTOR2I(end.x, end.y))
         else:
             track.SetStart(start)
             track.SetEnd(end)
         return self.add_track_to_board(track)
 
-    def add_track_segment(self, start, vector, layer=B_Cu):
-        end = wxPoint(start.x + vector[0], start.y + vector[1])
+    def add_track_segment(self, start, vector, layer=pcbnew.B_Cu):
+        end = pcbnew.wxPoint(start.x + vector[0], start.y + vector[1])
         return self.add_track_segment_by_points(start, end, layer)
 
     def reset_rotation(self, footprint):
@@ -236,8 +236,8 @@ class BoardModifier:
         )
         if KICAD_VERSION == 7:
             footprint.Rotate(
-                VECTOR2I(rotation_reference.x, rotation_reference.y),
-                EDA_ANGLE(angle * -1, DEGREES_T),
+                pcbnew.VECTOR2I(rotation_reference.x, rotation_reference.y),
+                pcbnew.EDA_ANGLE(angle * -1, pcbnew.DEGREES_T),
             )
         else:
             footprint.Rotate(rotation_reference, angle * -10)

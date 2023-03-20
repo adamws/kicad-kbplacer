@@ -1,4 +1,4 @@
-from pcbnew import *
+import pcbnew
 
 from .board_modifier import BoardModifier
 
@@ -6,7 +6,7 @@ from .board_modifier import BoardModifier
 class TemplateCopier(BoardModifier):
     def __init__(self, logger, board, template_path, route_tracks):
         super().__init__(logger, board)
-        self.__template = LoadBoard(template_path)
+        self.__template = pcbnew.LoadBoard(template_path)
         self.__board_nets_by_name = board.GetNetsByName()
         self.__route_tracks = route_tracks
 
