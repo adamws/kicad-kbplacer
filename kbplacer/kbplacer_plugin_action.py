@@ -16,6 +16,8 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
         self.name = "Keyboard placer"
         self.category = "Mechanical Keybaord Helper"
         self.description = "Auto placement for key switches and diodes"
+        self.show_toolbar_button = True
+        self.icon_file_name = os.path.join(os.path.dirname(__file__), "icon.png")
 
     def Initialize(self) -> None:
         version = pcbnew.Version()
