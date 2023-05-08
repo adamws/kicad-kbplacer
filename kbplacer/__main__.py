@@ -20,6 +20,12 @@ if __name__ == "__main__":
         "-r", "--route", action="store_true", help="Enable experimental routing"
     )
     parser.add_argument("-d", "--diode-position", help="Relative diode position")
+    parser.add_argument(
+        "--key-distance",
+        default=19.05,
+        type=float,
+        help="Key 1U distance, 19.05 mm by default",
+    )
     parser.add_argument("-t", "--template", help="Controller circuit template")
 
     args = parser.parse_args()
@@ -27,6 +33,7 @@ if __name__ == "__main__":
     board_path = args.board
     route_tracks = args.route
     diode_position = args.diode_position
+    key_distance = args.key_distance
     template_path = args.template
 
     # set up logger
@@ -44,7 +51,7 @@ if __name__ == "__main__":
 
         logger.info(f"User layout: {layout}")
 
-        placer = KeyPlacer(logger, board, layout)
+        placer = KeyPlacer(logger, board, layout, key_distance)
 
         if diode_position == "USE_CURRENT":
             diode_position = placer.get_diode_position("SW{}", "D{}", True)

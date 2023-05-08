@@ -58,10 +58,13 @@ def position_in_cartesian_coordinates(
 
 
 class KeyPlacer(BoardModifier):
-    def __init__(self, logger: Logger, board: pcbnew.BOARD, layout) -> None:
+    def __init__(
+        self, logger: Logger, board: pcbnew.BOARD, layout, key_distance: float = 19.05
+    ) -> None:
         super().__init__(logger, board)
         self.__layout = layout
-        self.__key_distance = 19050000
+        self.__key_distance = pcbnew.FromMM(key_distance)
+        self.logger.debug(f"Set key 1U distance: {self.__key_distance}")
         self.__current_key = 1
         self.__current_diode = 1
         self.__reference_coordinate = pcbnew.wxPointMM(25, 25)

@@ -58,7 +58,9 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
                     text_input = f.read()
                 layout = json.loads(text_input)
                 self.logger.info(f"User layout: {layout}")
-                placer = KeyPlacer(self.logger, self.board, layout)
+                placer = KeyPlacer(
+                    self.logger, self.board, layout, dlg.get_key_distance()
+                )
                 key_format = dlg.get_key_annotation_format()
                 stabilizer_format = dlg.get_stabilizer_annotation_format()
                 diode_format = dlg.get_diode_annotation_format()

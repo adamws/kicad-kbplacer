@@ -65,12 +65,21 @@ class KbplacerDialog(wx.Dialog):
         row6.Add(use_first_pair_as_template_checkbox, 1, wx.EXPAND | wx.ALL, 5)
 
         row7 = wx.BoxSizer(wx.HORIZONTAL)
+        key_distance_label = wx.StaticText(self, -1, "Key 1U distance [mm]:")
+        row7.Add(
+            key_distance_label, 1, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5
+        )
+
+        key_distance = wx.SpinCtrlDouble(self, initial=19.05, min=0, max=100, inc=0.01)
+        row7.Add(key_distance, 1, wx.EXPAND | wx.ALL, 5)
+
+        row8 = wx.BoxSizer(wx.HORIZONTAL)
 
         text = wx.StaticText(self, -1, "Select controller circuit template:")
-        row7.Add(text, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5)
+        row8.Add(text, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5)
 
         template_file_picker = wx.FilePickerCtrl(self, -1)
-        row7.Add(template_file_picker, 1, wx.EXPAND | wx.ALL, 5)
+        row8.Add(template_file_picker, 1, wx.EXPAND | wx.ALL, 5)
 
         box = wx.BoxSizer(wx.VERTICAL)
 
@@ -81,6 +90,7 @@ class KbplacerDialog(wx.Dialog):
         box.Add(row5, 0, wx.EXPAND | wx.ALL, 5)
         box.Add(row6, 0, wx.EXPAND | wx.ALL, 5)
         box.Add(row7, 0, wx.EXPAND | wx.ALL, 5)
+        box.Add(row8, 0, wx.EXPAND | wx.ALL, 5)
 
         buttons = self.CreateButtonSizer(wx.OK | wx.CANCEL)
         box.Add(buttons, 0, wx.EXPAND | wx.ALL, 5)
@@ -92,6 +102,7 @@ class KbplacerDialog(wx.Dialog):
         self.__diode_annotation_format = diode_annotation_format
         self.__use_first_pair_as_template_checkbox = use_first_pair_as_template_checkbox
         self.__tracks_checkbox = tracks_checkbox
+        self.__key_distance = key_distance
         self.__template_file_picker = template_file_picker
 
     def get_layout_path(self) -> str:
@@ -111,6 +122,9 @@ class KbplacerDialog(wx.Dialog):
 
     def is_first_pair_used_as_template(self) -> bool:
         return self.__use_first_pair_as_template_checkbox.GetValue()
+
+    def get_key_distance(self) -> float:
+        return self.__key_distance.GetValue()
 
     def get_template_path(self) -> str:
         return self.__template_file_picker.GetPath()
