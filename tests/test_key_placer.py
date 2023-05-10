@@ -1,3 +1,4 @@
+import json
 import logging
 import pcbnew
 import pytest
@@ -22,18 +23,18 @@ except:
 logger = logging.getLogger(__name__)
 
 
-def add_diode_footprint(board, request):
+def add_diode_footprint(board, request, ref_count):
     library = get_footprints_dir(request)
     f = pcbnew.FootprintLoad(str(library), "D_SOD-323")
-    f.SetReference("D1")
+    f.SetReference(f"D{ref_count}")
     board.Add(f)
     return f
 
 
-def add_switch_footprint(board, request):
+def add_switch_footprint(board, request, ref_count):
     library = get_footprints_dir(request)
     sw = pcbnew.FootprintLoad(str(library), "SW_Cherry_MX_PCB_1.00u")
-    sw.SetReference("SW1")
+    sw.SetReference(f"SW{ref_count}")
     board.Add(sw)
     return sw
 
@@ -104,8 +105,8 @@ def test_diode_switch_routing(position, orientation, side, expected, tmpdir, req
     if expected:
         expected = [pcbnew.wxPoint(x[0], x[1]) for x in expected]
     board = pcbnew.CreateEmptyBoard()
-    switch = add_switch_footprint(board, request)
-    diode = add_diode_footprint(board, request)
+    switch = add_switch_footprint(board, request, 1)
+    diode = add_diode_footprint(board, request, 1)
 
     key_placer = KeyPlacer(logger, board, None)
 
@@ -139,3 +140,32 @@ def test_diode_switch_routing(position, orientation, side, expected, tmpdir, req
         assert len(points) == 0
     else:
         assert equal_ignore_order(points, expected)
+
+
+@pytest.mark.parametrize("key_distance", [0, 10, 19, 19.05, 22.222])
+def test_switch_distance(key_distance, tmpdir, request):
+    board = pcbnew.CreateEmptyBoard()
+
+    switches = []
+    diodes = []
+
+    for i in range(1, 5):
+        switches.append(add_switch_footprint(board, request, i))
+        diodes.append(add_diode_footprint(board, request, i))
+
+    with open(f"{request.fspath.dirname}/../examples/2x2/kle-internal.json", "r") as f:
+        text_input = f.read()
+        layout = json.loads(text_input)
+
+    key_placer = KeyPlacer(logger, board, layout, key_distance)
+    diode_position = key_placer.get_default_diode_position()
+    key_placer.run("SW{}", "", "D{}", diode_position)
+
+    board.Save("{}/keyboard-before.kicad_pcb".format(tmpdir))
+    generate_render(tmpdir, request)
+
+    positions = [key_placer.get_position(switch) for switch in switches]
+    assert positions[1] - positions[0] == pcbnew.wxPoint(pcbnew.FromMM(key_distance), 0)
+    assert positions[2] - positions[0] == pcbnew.wxPoint(0, pcbnew.FromMM(key_distance))
+    assert positions[3] - positions[2] == pcbnew.wxPoint(pcbnew.FromMM(key_distance), 0)
+    assert positions[3] - positions[1] == pcbnew.wxPoint(0, pcbnew.FromMM(key_distance))
