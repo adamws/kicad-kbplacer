@@ -142,30 +142,79 @@ def test_diode_switch_routing(position, orientation, side, expected, tmpdir, req
         assert equal_ignore_order(points, expected)
 
 
-@pytest.mark.parametrize("key_distance", [0, 10, 19, 19.05, 22.222])
-def test_switch_distance(key_distance, tmpdir, request):
-    board = pcbnew.CreateEmptyBoard()
-
-    switches = []
-    diodes = []
-
-    for i in range(1, 5):
-        switches.append(add_switch_footprint(board, request, i))
-        diodes.append(add_diode_footprint(board, request, i))
-
+def get_2x2_layout(request):
     with open(f"{request.fspath.dirname}/../examples/2x2/kle-internal.json", "r") as f:
         text_input = f.read()
-        layout = json.loads(text_input)
+        return json.loads(text_input)
+
+
+def add_2x2_nets(board):
+    net_info = board.GetNetInfo()
+    net_count = board.GetNetCount()
+    for i, n in enumerate(["COL1", "COL2", "ROW1", "ROW2"]):
+        net = pcbnew.NETINFO_ITEM(board, n, net_count + i)
+        net_info.AppendNet(net)
+        board.Add(net)
+    return board.GetNetInfo().NetsByName()
+
+
+def get_board_for_2x2_example(request):
+    board = pcbnew.CreateEmptyBoard()
+    netcodes_map = add_2x2_nets(board)
+    for i in range(1, 5):
+        switch = add_switch_footprint(board, request, i)
+        switch.FindPadByNumber("1").SetNet(netcodes_map[f"COL{i % 2 + 1}"])
+        diode = add_diode_footprint(board, request, i)
+        diode.FindPadByNumber("2").SetNet(netcodes_map[f"ROW{i // 3 + 1}"])
+    return board
+
+
+def assert_2x2_layout_switches(key_placer, key_distance):
+    switches = [key_placer.get_footprint(f"SW{i}") for i in range(1, 5)]
+    positions = [key_placer.get_position(switch) for switch in switches]
+    assert positions[0] == pcbnew.wxPointMM(25, 25) + pcbnew.wxPointMM(
+        key_distance / 2, key_distance / 2
+    )
+    assert positions[1] - positions[0] == pcbnew.wxPointMM(key_distance, 0)
+    assert positions[2] - positions[0] == pcbnew.wxPointMM(0, key_distance)
+    assert positions[3] - positions[2] == pcbnew.wxPointMM(key_distance, 0)
+    assert positions[3] - positions[1] == pcbnew.wxPointMM(0, key_distance)
+
+
+@pytest.mark.parametrize("key_distance", [0, 10, 19, 19.05, 22.222])
+def test_switch_distance(key_distance, tmpdir, request):
+    board = get_board_for_2x2_example(request)
+    layout = get_2x2_layout(request)
 
     key_placer = KeyPlacer(logger, board, layout, key_distance)
     diode_position = key_placer.get_default_diode_position()
-    key_placer.run("SW{}", "", "D{}", diode_position)
+    key_placer.run("SW{}", "", "D{}", diode_position, True)
 
     board.Save("{}/keyboard-before.kicad_pcb".format(tmpdir))
     generate_render(tmpdir, request)
 
-    positions = [key_placer.get_position(switch) for switch in switches]
-    assert positions[1] - positions[0] == pcbnew.wxPoint(pcbnew.FromMM(key_distance), 0)
-    assert positions[2] - positions[0] == pcbnew.wxPoint(0, pcbnew.FromMM(key_distance))
-    assert positions[3] - positions[2] == pcbnew.wxPoint(pcbnew.FromMM(key_distance), 0)
-    assert positions[3] - positions[1] == pcbnew.wxPoint(0, pcbnew.FromMM(key_distance))
+    assert_2x2_layout_switches(key_placer, key_distance)
+    switches = [key_placer.get_footprint(f"SW{i}") for i in range(1, 5)]
+    diodes = [key_placer.get_footprint(f"D{i}") for i in range(1, 5)]
+    for switch, diode in zip(switches, diodes):
+        p = diode_position.relative_position
+        assert key_placer.get_position(diode) == key_placer.get_position(
+            switch
+        ) + pcbnew.wxPointMM(p.x, p.y)
+
+
+def test_diode_placement_ignore(tmpdir, request):
+    board = get_board_for_2x2_example(request)
+    layout = get_2x2_layout(request)
+
+    key_placer = KeyPlacer(logger, board, layout)
+    key_placer.run("SW{}", "", "D{}", None, True)
+
+    board.Save("{}/keyboard-before.kicad_pcb".format(tmpdir))
+    generate_render(tmpdir, request)
+
+    assert_2x2_layout_switches(key_placer, 19.05)
+    diodes = [key_placer.get_footprint(f"D{i}") for i in range(1, 5)]
+    positions = [key_placer.get_position(diode) for diode in diodes]
+    for pos in positions:
+        assert pos == pcbnew.wxPoint(0, 0)

@@ -3,6 +3,7 @@ import math
 import re
 from dataclasses import dataclass
 from logging import Logger
+from typing import Union
 
 import pcbnew
 
@@ -276,7 +277,7 @@ class KeyPlacer(BoardModifier):
         key_format: str,
         stabilizer_format: str,
         diode_format: str,
-        diode_position: DiodePosition,
+        diode_position: Union[DiodePosition, None],
         route_tracks=False,
     ) -> None:
         self.logger.info(f"Diode position: {diode_position}")
@@ -317,13 +318,17 @@ class KeyPlacer(BoardModifier):
                 if width == 1.25 and height == 2 and width2 == 1.5 and height2 == 1:
                     stabilizer.SetOrientationDegrees(90)
 
-            diode_footprint = self.get_current_diode(diode_format)
-            self.reset_rotation(diode_footprint)
-            self.set_side(diode_footprint, diode_position.side)
-            diode_footprint.SetOrientationDegrees(diode_position.orientation)
-            self.set_relative_position_mm(
-                diode_footprint, position, diode_position.relative_position.to_list()
-            )
+            diode_footprint = None
+            if diode_position:
+                diode_footprint = self.get_current_diode(diode_format)
+                self.reset_rotation(diode_footprint)
+                self.set_side(diode_footprint, diode_position.side)
+                diode_footprint.SetOrientationDegrees(diode_position.orientation)
+                self.set_relative_position_mm(
+                    diode_footprint,
+                    position,
+                    diode_position.relative_position.to_list(),
+                )
 
             angle = key["rotation_angle"]
             if angle != 0:
@@ -337,7 +342,8 @@ class KeyPlacer(BoardModifier):
                 self.rotate(switch_footprint, rotation_reference, angle)
                 if stabilizer:
                     self.rotate(stabilizer, rotation_reference, angle)
-                self.rotate(diode_footprint, rotation_reference, angle)
+                if diode_footprint:
+                    self.rotate(diode_footprint, rotation_reference, angle)
 
             # append pad:
             pad = switch_footprint.FindPadByNumber("1")
@@ -348,17 +354,19 @@ class KeyPlacer(BoardModifier):
                 column_switch_pads.setdefault(column_number, []).append(pad)
             else:
                 self.logger.warning("Switch pad without recognized net name found.")
-            # append diode:
-            pad = diode_footprint.FindPadByNumber("1")
-            net_name = pad.GetNetname()
-            match = re.match(r"^ROW(\d+)$", net_name)
-            if match:
-                row_number = match.groups()[0]
-                row_diode_pads.setdefault(row_number, []).append(pad)
-            else:
-                self.logger.warning("Switch pad without recognized net name found.")
 
-            if route_tracks:
+            # append diode:
+            if diode_footprint:
+                pad = diode_footprint.FindPadByNumber("1")
+                net_name = pad.GetNetname()
+                match = re.match(r"^ROW(\d+)$", net_name)
+                if match:
+                    row_number = match.groups()[0]
+                    row_diode_pads.setdefault(row_number, []).append(pad)
+                else:
+                    self.logger.warning("Switch pad without recognized net name found.")
+
+            if route_tracks and diode_footprint:
                 self.route_switch_with_diode(
                     switch_footprint, diode_footprint, angle, template_tracks
                 )
