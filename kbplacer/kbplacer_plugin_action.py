@@ -64,11 +64,14 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
                 key_format = dlg.get_key_annotation_format()
                 stabilizer_format = dlg.get_stabilizer_annotation_format()
                 diode_format = dlg.get_diode_annotation_format()
-                diode_position = placer.get_diode_position(
-                    key_format,
-                    diode_format,
-                    dlg.is_first_pair_used_as_template(),
-                )
+                if dlg.is_diode_placement():
+                    diode_position = placer.get_diode_position(
+                        key_format,
+                        diode_format,
+                        dlg.is_first_pair_used_as_template(),
+                    )
+                else:
+                    diode_position = None
                 placer.run(
                     key_format,
                     stabilizer_format,
