@@ -26,8 +26,13 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
             raise Exception(msg)
         self.board = pcbnew.GetBoard()
 
+        board_file = self.board.GetFileName()
+        if not board_file:
+            msg = f"Could not locate .kicad_pcb file, open or create it first"
+            raise Exception(msg)
+
         # go to the project folder - so that log will be in proper place
-        os.chdir(os.path.dirname(os.path.abspath(self.board.GetFileName())))
+        os.chdir(os.path.dirname(os.path.abspath(board_file)))
 
         # Remove all handlers associated with the root logger object.
         for handler in logging.root.handlers[:]:
