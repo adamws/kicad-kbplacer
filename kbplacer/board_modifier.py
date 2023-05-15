@@ -8,6 +8,20 @@ KICAD_VERSION = int(pcbnew.Version().split(".")[0])
 DEFAULT_CLEARANCE_MM = 0.25
 
 
+def set_position(footprint: pcbnew.FOOTPRINT, position: pcbnew.wxPoint) -> None:
+    if KICAD_VERSION == 7:
+        footprint.SetPosition(pcbnew.VECTOR2I(position.x, position.y))
+    else:
+        footprint.SetPosition(position)
+
+
+def get_position(footprint: pcbnew.FOOTPRINT) -> pcbnew.wxPoint:
+    position = footprint.GetPosition()
+    if KICAD_VERSION == 7:
+        return pcbnew.wxPoint(position.x, position.y)
+    return position
+
+
 class Side(Flag):
     FRONT = False
     BACK = True
@@ -46,10 +60,7 @@ class BoardModifier:
         self.logger.info(
             f"Setting {footprint.GetReference()} footprint position: {position}"
         )
-        if KICAD_VERSION == 7:
-            footprint.SetPosition(pcbnew.VECTOR2I(position.x, position.y))
-        else:
-            footprint.SetPosition(position)
+        set_position(footprint, position)
 
     def set_position_by_points(
         self, footprint: pcbnew.FOOTPRINT, x: int, y: int
@@ -57,12 +68,10 @@ class BoardModifier:
         self.set_position(footprint, pcbnew.wxPoint(x, y))
 
     def get_position(self, footprint: pcbnew.FOOTPRINT) -> pcbnew.wxPoint:
-        position = footprint.GetPosition()
+        position = get_position(footprint)
         self.logger.info(
             f"Getting {footprint.GetReference()} footprint position: {position}"
         )
-        if KICAD_VERSION == 7:
-            return pcbnew.wxPoint(position.x, position.y)
         return position
 
     def set_relative_position_mm(
