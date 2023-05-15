@@ -241,6 +241,41 @@ def generate_render(tmpdir, request):
     new_tree.write(f"{tmpdir}/render.svg")
 
 
+def add_switch_footprint(board, request, ref_count) -> pcbnew.FOOTPRINT:
+    library = get_footprints_dir(request)
+    f = pcbnew.FootprintLoad(str(library), "SW_Cherry_MX_PCB_1.00u")
+    f.SetReference(f"SW{ref_count}")
+    board.Add(f)
+    return f
+
+
+def add_diode_footprint(board, request, ref_count) -> pcbnew.FOOTPRINT:
+    library = get_footprints_dir(request)
+    f = pcbnew.FootprintLoad(str(library), "D_SOD-323")
+    f.SetReference(f"D{ref_count}")
+    board.Add(f)
+    return f
+
+
+def get_track(board, start, end, layer):
+    track = pcbnew.PCB_TRACK(board)
+    track.SetWidth(pcbnew.FromMM(0.25))
+    track.SetLayer(layer)
+    if KICAD_VERSION == 7:
+        track.SetStart(pcbnew.VECTOR2I(start.x, start.y))
+        track.SetEnd(pcbnew.VECTOR2I(end.x, end.y))
+    else:
+        track.SetStart(start)
+        track.SetEnd(end)
+    return track
+
+
+def add_track(board, start, end, layer):
+    track = get_track(board, start, end, layer)
+    board.Add(track)
+    return track
+
+
 def to_base64(path):
     with open(path, "rb") as f:
         return base64.b64encode(f.read()).decode("utf-8")

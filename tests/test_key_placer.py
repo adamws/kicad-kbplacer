@@ -3,7 +3,7 @@ import logging
 import pcbnew
 import pytest
 
-from .conftest import generate_render, get_footprints_dir
+from .conftest import generate_render, add_switch_footprint, add_diode_footprint
 
 try:
     from kbplacer.key_placer import KeyPlacer
@@ -21,22 +21,6 @@ except:
 
 
 logger = logging.getLogger(__name__)
-
-
-def add_diode_footprint(board, request, ref_count):
-    library = get_footprints_dir(request)
-    f = pcbnew.FootprintLoad(str(library), "D_SOD-323")
-    f.SetReference(f"D{ref_count}")
-    board.Add(f)
-    return f
-
-
-def add_switch_footprint(board, request, ref_count):
-    library = get_footprints_dir(request)
-    sw = pcbnew.FootprintLoad(str(library), "SW_Cherry_MX_PCB_1.00u")
-    sw.SetReference(f"SW{ref_count}")
-    board.Add(sw)
-    return sw
 
 
 def equal_ignore_order(a, b):

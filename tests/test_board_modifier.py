@@ -3,7 +3,7 @@ import logging
 import pcbnew
 import pytest
 
-from .conftest import generate_render, get_footprints_dir, KICAD_VERSION
+from .conftest import add_track, generate_render, get_footprints_dir, KICAD_VERSION
 
 try:
     from kbplacer.board_modifier import BoardModifier, Side, DEFAULT_CLEARANCE_MM
@@ -31,25 +31,6 @@ def add_diode_footprint(board, footprint, request):
     f.SetReference("D1")
     board.Add(f)
     return f
-
-
-def get_track(board, start, end, layer):
-    track = pcbnew.PCB_TRACK(board)
-    track.SetWidth(pcbnew.FromMM(0.25))
-    track.SetLayer(layer)
-    if KICAD_VERSION == 7:
-        track.SetStart(pcbnew.VECTOR2I(start.x, start.y))
-        track.SetEnd(pcbnew.VECTOR2I(end.x, end.y))
-    else:
-        track.SetStart(start)
-        track.SetEnd(end)
-    return track
-
-
-def add_track(board, start, end, layer):
-    track = get_track(board, start, end, layer)
-    board.Add(track)
-    return track
 
 
 def add_nets(board, netnames):
