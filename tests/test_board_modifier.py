@@ -6,7 +6,8 @@ import pytest
 from .conftest import add_track, generate_render, get_footprints_dir, KICAD_VERSION
 
 try:
-    from kbplacer.board_modifier import BoardModifier, Side, DEFAULT_CLEARANCE_MM
+    from kbplacer.element_position import Side
+    from kbplacer.board_modifier import BoardModifier, DEFAULT_CLEARANCE_MM
 except:
     pass
 

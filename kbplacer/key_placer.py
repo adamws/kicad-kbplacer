@@ -3,20 +3,14 @@ from __future__ import annotations
 import builtins
 import math
 import re
-from dataclasses import dataclass
 from logging import Logger
-from typing import Union
+from typing import Optional
 
 import pcbnew
 
-from .board_modifier import KICAD_VERSION, BoardModifier, Point, Side
-
-
-@dataclass
-class DiodePosition:
-    relative_position: Point
-    orientation: float
-    side: Side
+from .board_modifier import KICAD_VERSION, BoardModifier
+from .defaults import DEFAULT_DIODE_POSITION
+from .element_position import ElementPosition, Point, Side
 
 
 def position_in_rotated_coordinates(
@@ -204,18 +198,18 @@ class KeyPlacer(BoardModifier):
                 # second segment: up to switch pad
                 self.add_track_segment_by_points(corner, switch_pad_position, layer)
 
-    def get_default_diode_position(self) -> DiodePosition:
-        return DiodePosition(Point(5.08, 3.03), 90.0, Side.BACK)
+    def get_default_diode_position(self) -> ElementPosition:
+        return DEFAULT_DIODE_POSITION
 
     def get_diode_position(
         self, key_format: str, diode_format: str, is_first_pair_used_as_template: bool
-    ) -> DiodePosition:
+    ) -> ElementPosition:
         if is_first_pair_used_as_template:
             key1 = self.get_footprint(key_format.format(1))
             diode1 = self.get_footprint(diode_format.format(1))
             pos1 = self.get_position(key1)
             pos2 = self.get_position(diode1)
-            return DiodePosition(
+            return ElementPosition(
                 Point(pcbnew.ToMM(pos2.x - pos1.x), pcbnew.ToMM(pos2.y - pos1.y)),
                 diode1.GetOrientationDegrees(),
                 self.get_side(diode1),
@@ -279,7 +273,7 @@ class KeyPlacer(BoardModifier):
         key_format: str,
         stabilizer_format: str,
         diode_format: str,
-        diode_position: Union[DiodePosition, None],
+        diode_position: Optional[ElementPosition],
         route_tracks=False,
     ) -> None:
         self.logger.info(f"Diode position: {diode_position}")

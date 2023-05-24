@@ -4,8 +4,8 @@ import logging
 
 import pcbnew
 
-from .board_modifier import Point, Side
-from .key_placer import DiodePosition, KeyPlacer
+from .element_position import ElementPosition, Point, Side
+from .key_placer import KeyPlacer
 from .template_copier import TemplateCopier
 
 if __name__ == "__main__":
@@ -62,7 +62,7 @@ if __name__ == "__main__":
             x, y = float(x), float(y)
             orientation = float(orientation)
             side = Side[side]
-            diode_position = DiodePosition(Point(x, y), orientation, side)
+            diode_position = ElementPosition(Point(x, y), orientation, side)
         else:
             diode_position = placer.get_default_diode_position()
 

@@ -7,7 +7,7 @@ from .conftest import generate_render, add_switch_footprint, add_diode_footprint
 
 try:
     from kbplacer.key_placer import KeyPlacer
-    from kbplacer.board_modifier import Side
+    from kbplacer.element_position import Side
 except:
     # satisfy import issues when running examples tests
     # in docker image on CI.

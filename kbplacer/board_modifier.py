@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from enum import Flag
+import pcbnew
 from logging import Logger
 
-import pcbnew
+from .element_position import Side
+
 
 KICAD_VERSION = int(pcbnew.Version().split(".")[0])
 DEFAULT_CLEARANCE_MM = 0.25
@@ -22,20 +22,6 @@ def get_position(footprint: pcbnew.FOOTPRINT) -> pcbnew.wxPoint:
     if KICAD_VERSION == 7:
         return pcbnew.wxPoint(position.x, position.y)
     return position
-
-
-class Side(Flag):
-    FRONT = False
-    BACK = True
-
-
-@dataclass
-class Point:
-    x: float
-    y: float
-
-    def to_list(self) -> list[float]:
-        return [self.x, self.y]
 
 
 class BoardModifier:
