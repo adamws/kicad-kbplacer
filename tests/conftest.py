@@ -25,6 +25,11 @@ def pytest_collection_modifyitems(items):
     except AttributeError:
         is_nightly = False
 
+    for i, item in enumerate(items):
+        if item.get_closest_marker("run_first"):
+            items.insert(0, items.pop(i))
+            break
+
     if is_nightly:
         for item in items:
             item.add_marker(
