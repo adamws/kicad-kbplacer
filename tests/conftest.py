@@ -32,9 +32,10 @@ def pytest_collection_modifyitems(items):
 
     if is_nightly:
         for item in items:
-            item.add_marker(
-                pytest.mark.xfail(reason="Failures on nightly version ignored")
-            )
+            if not item.get_closest_marker("no_ignore_nightly"):
+                item.add_marker(
+                    pytest.mark.xfail(reason="Failures on nightly version ignored")
+                )
 
 
 def pytest_addoption(parser):

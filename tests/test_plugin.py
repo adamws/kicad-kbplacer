@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.run_first
+@pytest.mark.no_ignore_nightly
 def test_if_plugin_loads() -> None:
     version = pcbnew.Version()
     logger.info("Plugin executed with KiCad version: " + version)
