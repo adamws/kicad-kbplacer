@@ -296,9 +296,10 @@ def pytest_runtest_makereport(item, call):
     extra = getattr(report, "extra", [])
 
     if report.when == "call" and not report.skipped:
-        tmpdir = item.funcargs["tmpdir"]
-        render_path = tmpdir / "render.svg"
-        if render_path.isfile():
-            render = svg_to_base64_html(render_path)
-            extra.append(pytest_html.extras.html(render))
+        tmpdir = item.funcargs.get("tmpdir")
+        if tmpdir:
+            render_path = tmpdir / "render.svg"
+            if render_path.isfile():
+                render = svg_to_base64_html(render_path)
+                extra.append(pytest_html.extras.html(render))
         report.extra = extra
