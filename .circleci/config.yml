@@ -31,11 +31,14 @@ jobs:
     docker:
       - image: admwscki/kicad-kbplacer-primary:7.0.5-focal
     steps: *in-docker-test-steps
-  test-windows-kicad6:
+  test-windows:
     machine:
       image: windows-server-2022-gui:current
       shell: powershell.exe -ExecutionPolicy Bypass
     resource_class: windows.medium
+    parameters:
+      kicad-version:
+        type: string
     steps:
       - checkout
       - run:
@@ -44,7 +47,7 @@ jobs:
             irm get.scoop.sh -outfile "install.ps1"
             .\install.ps1 -RunAsAdmin -ScoopDir "C:\scoop"
             scoop bucket add extras
-            scoop install kicad@6.0.11
+            scoop install kicad@<<parameters.kicad-version>>
             scoop cache rm --all
       - run:
           name: Install dependencies
@@ -127,7 +130,12 @@ workflows:
       - test-ubuntu-focal-kicad6
       - test-ubuntu-lunar-kicad7
       - test-ubuntu-focal-kicad7
-      - test-windows-kicad6
+      - test-windows:
+          name: "test-windows-kicad6"
+          kicad-version: "6.0.11"
+      - test-windows:
+          name: "test-windows-kicad7"
+          kicad-version: "7.0.5"
       - create-release:
           requires:
             - test-ubuntu-lunar-kicad6
@@ -135,6 +143,7 @@ workflows:
             - test-ubuntu-lunar-kicad7
             - test-ubuntu-focal-kicad7
             - test-windows-kicad6
+            - test-windows-kicad7
       - deploy-image:
           requires:
             - create-release
