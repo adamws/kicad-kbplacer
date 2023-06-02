@@ -3,7 +3,7 @@ version: 2.1
 jobs:
   test-linux-kicad6:
     docker:
-      - image: admwscki/kicad-kbplacer-primary:6.0-lunar
+      - image: admwscki/kicad-kbplacer-primary:6.0.11-lunar
     steps: &in-docker-test-steps
       - checkout
       - run:
@@ -21,7 +21,7 @@ jobs:
           path: tests/test-results
   test-linux-kicad7:
     docker:
-      - image: admwscki/kicad-kbplacer-primary:7.0-lunar
+      - image: admwscki/kicad-kbplacer-primary:7.0.0-lunar
     steps: *in-docker-test-steps
   test-windows-kicad6:
     machine:
