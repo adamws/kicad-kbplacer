@@ -27,6 +27,10 @@ jobs:
     docker:
       - image: admwscki/kicad-kbplacer-primary:7.0.5-lunar
     steps: *in-docker-test-steps
+  test-ubuntu-focal-kicad7:
+    docker:
+      - image: admwscki/kicad-kbplacer-primary:7.0.5-focal
+    steps: *in-docker-test-steps
   test-windows-kicad6:
     machine:
       image: windows-server-2022-gui:current
@@ -128,12 +132,14 @@ workflows:
       - test-ubuntu-lunar-kicad6
       - test-ubuntu-focal-kicad6
       - test-ubuntu-lunar-kicad7
+      - test-ubuntu-focal-kicad7
       - test-windows-kicad6
       - create-release:
           requires:
             - test-ubuntu-lunar-kicad6
             - test-ubuntu-focal-kicad6
             - test-ubuntu-lunar-kicad7
+            - test-ubuntu-focal-kicad7
             - test-windows-kicad6
       - deploy-image:
           requires:
