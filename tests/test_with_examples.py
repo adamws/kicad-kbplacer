@@ -111,7 +111,9 @@ def __get_parameters():
 
     # this special example can't be used with all option combinations, appended here:
     test_id = "2x3-rotations-custom-diode-with-track;Tracks;DiodeOption2"
-    param = pytest.param("2x3-rotations-custom-diode-with-track", True, "USE_CURRENT", id=test_id)
+    param = pytest.param(
+        "2x3-rotations-custom-diode-with-track", True, "USE_CURRENT", id=test_id
+    )
     test_params.append(param)
     return test_params
 
@@ -133,6 +135,14 @@ def test_with_examples(
     references_dir = get_references_dir(request)
     references = Path(references_dir).glob("*.svg")
     reference_files = list(references)
-    assert len(reference_files) == 6, "Reference files not found"
+    # ignore silkscreen svg when asserting results. Plugin does not do anything on those layers
+    # and maintaining them is a bit tedious, for example between 7.0.0 and 7.0.5 there is very
+    # slight difference in silkscreen digits which would be falsely detected as failure here.
+    # `generate_render` will still produce silkscreen svg to have nice images in test report but
+    # for checking result it is ignored:
+    reference_files = [
+        item for item in reference_files if "Silkscreen" not in str(item)
+    ]
+    assert len(reference_files) == 4, "Reference files not found"
     for path in reference_files:
         assert_kicad_svg(path, Path(f"{tmpdir}/{path.name}"))
