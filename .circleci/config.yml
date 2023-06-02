@@ -1,7 +1,7 @@
 version: 2.1
 
 jobs:
-  test-linux-kicad6:
+  test-ubuntu-lunar-kicad6:
     docker:
       - image: admwscki/kicad-kbplacer-primary:6.0.11-lunar
     steps: &in-docker-test-steps
@@ -19,7 +19,11 @@ jobs:
           path: tests/report.html
       - store_test_results:
           path: tests/test-results
-  test-linux-kicad7:
+  test-ubuntu-focal-kicad6:
+    docker:
+      - image: admwscki/kicad-kbplacer-primary:6.0.11-focal
+    steps: *in-docker-test-steps
+  test-ubuntu-lunar-kicad7:
     docker:
       - image: admwscki/kicad-kbplacer-primary:7.0.0-lunar
     steps: *in-docker-test-steps
@@ -121,13 +125,15 @@ jobs:
 workflows:
   main:
     jobs:
-      - test-linux-kicad6
-      - test-linux-kicad7
+      - test-ubuntu-lunar-kicad6
+      - test-ubuntu-focal-kicad6
+      - test-ubuntu-lunar-kicad7
       - test-windows-kicad6
       - create-release:
           requires:
-            - test-linux-kicad6
-            - test-linux-kicad7
+            - test-ubuntu-lunar-kicad6
+            - test-ubuntu-focal-kicad6
+            - test-ubuntu-lunar-kicad7
             - test-windows-kicad6
       - deploy-image:
           requires:
