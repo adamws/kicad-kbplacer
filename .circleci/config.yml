@@ -38,8 +38,6 @@ jobs:
     resource_class: windows.medium
     steps:
       - checkout
-      - restore_cache:
-          key: scoop-{{ .Branch }}-{{ checksum "dev-requirements.txt" }}
       - run:
           name: Install scoop and KiCad
           command: |
@@ -54,10 +52,6 @@ jobs:
             .\.circleci\scripts\use-kicad-python.ps1
             python -m pip install --upgrade pip
             pip install --no-cache-dir -r dev-requirements.txt
-      - save_cache:
-          key: scoop-{{ .Branch }}-{{ checksum "dev-requirements.txt" }}
-          paths:
-            - C:\scoop
       - run:
           name: Run tests
           command: |
