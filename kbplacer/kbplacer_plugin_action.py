@@ -6,7 +6,7 @@ import sys
 import pcbnew
 import wx
 
-from .kbplacer_dialog import KbplacerDialog
+from .kbplacer_dialog import KbplacerDialog, Position
 from .key_placer import KeyPlacer
 from .template_copier import TemplateCopier
 
@@ -70,11 +70,12 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
                 stabilizer_format = dlg.get_stabilizer_annotation_format()
                 diode_format = dlg.get_diode_annotation_format()
                 if dlg.is_diode_placement():
-                    diode_position = placer.get_diode_position(
-                        key_format,
-                        diode_format,
-                        dlg.is_first_pair_used_as_template(),
-                    )
+                    choice, diode_position = dlg.get_diode_position()
+                    if choice == Position.CURRENT_RELATIVE:
+                        diode_position = placer.get_current_relative_diode_position(
+                            key_format,
+                            diode_format,
+                        )
                 else:
                     diode_position = None
                 placer.run(

@@ -6,6 +6,7 @@ import pytest
 from .conftest import generate_render, add_switch_footprint, add_diode_footprint
 
 try:
+    from kbplacer.defaults import DEFAULT_DIODE_POSITION
     from kbplacer.key_placer import KeyPlacer
     from kbplacer.element_position import Side
 except:
@@ -171,7 +172,7 @@ def test_switch_distance(key_distance, tmpdir, request):
     layout = get_2x2_layout(request)
 
     key_placer = KeyPlacer(logger, board, layout, key_distance)
-    diode_position = key_placer.get_default_diode_position()
+    diode_position = DEFAULT_DIODE_POSITION
     key_placer.run("SW{}", "", "D{}", diode_position, True)
 
     board.Save("{}/keyboard-before.kicad_pcb".format(tmpdir))

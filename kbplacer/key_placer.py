@@ -9,7 +9,6 @@ from typing import Optional
 import pcbnew
 
 from .board_modifier import KICAD_VERSION, BoardModifier
-from .defaults import DEFAULT_DIODE_POSITION
 from .element_position import ElementPosition, Point, Side
 
 
@@ -198,24 +197,18 @@ class KeyPlacer(BoardModifier):
                 # second segment: up to switch pad
                 self.add_track_segment_by_points(corner, switch_pad_position, layer)
 
-    def get_default_diode_position(self) -> ElementPosition:
-        return DEFAULT_DIODE_POSITION
-
-    def get_diode_position(
-        self, key_format: str, diode_format: str, is_first_pair_used_as_template: bool
+    def get_current_relative_diode_position(
+        self, key_format: str, diode_format: str
     ) -> ElementPosition:
-        if is_first_pair_used_as_template:
-            key1 = self.get_footprint(key_format.format(1))
-            diode1 = self.get_footprint(diode_format.format(1))
-            pos1 = self.get_position(key1)
-            pos2 = self.get_position(diode1)
-            return ElementPosition(
-                Point(pcbnew.ToMM(pos2.x - pos1.x), pcbnew.ToMM(pos2.y - pos1.y)),
-                diode1.GetOrientationDegrees(),
-                self.get_side(diode1),
-            )
-        else:
-            return self.get_default_diode_position()
+        key1 = self.get_footprint(key_format.format(1))
+        diode1 = self.get_footprint(diode_format.format(1))
+        pos1 = self.get_position(key1)
+        pos2 = self.get_position(diode1)
+        return ElementPosition(
+            Point(pcbnew.ToMM(pos2.x - pos1.x), pcbnew.ToMM(pos2.y - pos1.y)),
+            diode1.GetOrientationDegrees(),
+            self.get_side(diode1),
+        )
 
     def remove_dangling_tracks(self) -> None:
         connectivity = self.get_connectivity()

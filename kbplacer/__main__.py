@@ -4,6 +4,7 @@ import logging
 
 import pcbnew
 
+from .defaults import DEFAULT_DIODE_POSITION
 from .element_position import ElementPosition, Point, Side
 from .key_placer import KeyPlacer
 from .template_copier import TemplateCopier
@@ -54,7 +55,7 @@ if __name__ == "__main__":
         placer = KeyPlacer(logger, board, layout, key_distance)
 
         if diode_position == "USE_CURRENT":
-            diode_position = placer.get_diode_position("SW{}", "D{}", True)
+            diode_position = placer.get_current_relative_diode_position("SW{}", "D{}")
         elif diode_position == "NONE" or diode_position == "SKIP":
             diode_position = None
         elif diode_position is not None:
@@ -64,7 +65,7 @@ if __name__ == "__main__":
             side = Side[side]
             diode_position = ElementPosition(Point(x, y), orientation, side)
         else:
-            diode_position = placer.get_default_diode_position()
+            diode_position = DEFAULT_DIODE_POSITION
 
         placer.run("SW{}", "ST{}", "D{}", diode_position, route_tracks)
 
