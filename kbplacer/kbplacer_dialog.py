@@ -71,7 +71,7 @@ class ElementPositionWidget(wx.Panel):
         super().__init__(parent)
 
         self.default = default
-        choices = [Position.CURRENT_RELATIVE, Position.CUSTOM]
+        choices = [Position.CUSTOM, Position.CURRENT_RELATIVE]
         if self.default:
             choices.insert(0, Position.DEFAULT)
 
@@ -129,13 +129,16 @@ class ElementPositionWidget(wx.Panel):
             y = str(self.default.relative_position.y)
             self.__set_coordinates(x, y)
             self.orientation.SetValue(str(self.default.orientation))
-            self.side.Select("Back")
+            if self.default.side == Side.BACK:
+                self.side.Select("Back")
+            else:
+                self.side.Select("Front")
             self.__disable_position_controls()
 
     def __set_position_to_zero_editable(self) -> None:
         self.__set_coordinates("0", "0")
         self.orientation.SetValue("0")
-        self.side.Select("Back")
+        self.side.Select("Front")
         self.__enable_position_controls()
 
     def __set_position_to_empty_non_editable(self):
@@ -212,6 +215,11 @@ class ElementSettingsWidget(wx.Panel):
 
         self.SetSizer(sizer)
 
+    def GetValue(self) -> Tuple[str, Position, Optional[ElementPosition]]:
+        annotation = self.annotation_format.GetValue()
+        position = self.position_widget.GetValue()
+        return annotation, position[0], position[1]
+
     def Enable(self):
         self.annotation_format.Enable()
         self.position_widget.Enable()
@@ -230,16 +238,14 @@ class KbplacerDialog(wx.Dialog):
 
         switch_section = self.get_switch_section()
         switch_diodes_section = self.get_switch_diodes_section()
-        # not supported yet:
-        # additional_elements_section = self.get_additional_elements_section()
+        additional_elements_section = self.get_additional_elements_section()
         misc_section = self.get_misc_section()
 
         box = wx.BoxSizer(wx.VERTICAL)
 
         box.Add(switch_section, 0, wx.EXPAND | wx.ALL, 5)
         box.Add(switch_diodes_section, 0, wx.EXPAND | wx.ALL, 5)
-        # not supported yet:
-        # box.Add(additional_elements_section, 0, wx.EXPAND | wx.ALL, 5)
+        box.Add(additional_elements_section, 0, wx.EXPAND | wx.ALL, 5)
         box.Add(misc_section, 0, wx.EXPAND | wx.ALL, 5)
 
         buttons = self.CreateButtonSizer(wx.OK | wx.CANCEL)
@@ -249,9 +255,6 @@ class KbplacerDialog(wx.Dialog):
 
     def get_switch_section(self):
         key_annotation = LabeledTextCtrl(self, "Switch annotation format:", "SW{}")
-        stabilizer_annotation = LabeledTextCtrl(
-            self, "Stabilizer annotation format:", "ST{}"
-        )
 
         layout_label = wx.StaticText(self, -1, "KLE json file:")
         layout_file_picker = wx.FilePickerCtrl(self, -1)
@@ -265,7 +268,6 @@ class KbplacerDialog(wx.Dialog):
 
         row2 = wx.BoxSizer(wx.HORIZONTAL)
         row2.Add(key_annotation, 0, wx.EXPAND | wx.ALL, 0)
-        row2.Add(stabilizer_annotation, 0, wx.EXPAND | wx.ALL, 0)
 
         row3 = wx.BoxSizer(wx.HORIZONTAL)
         row3.Add(
@@ -281,7 +283,6 @@ class KbplacerDialog(wx.Dialog):
         sizer.Add(row3, 0, wx.EXPAND | wx.ALL, 0)
 
         self.__key_annotation_format = key_annotation.text
-        self.__stabilizer_annotation_format = stabilizer_annotation.text
         self.__layout_file_picker = layout_file_picker
         self.__key_distance = key_distance
 
@@ -315,7 +316,7 @@ class KbplacerDialog(wx.Dialog):
             self.__diode_settings.Disable()
 
     def get_additional_elements_section(self):
-        additional_elements = []
+        self.__additional_elements = []
 
         scrolled_window = wx.ScrolledWindow(self)
         scrolled_window_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -335,19 +336,22 @@ class KbplacerDialog(wx.Dialog):
 
         buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        def add_element(_) -> None:
-            element_settings = ElementSettingsWidget(scrolled_window, "")
-            additional_elements.append(element_settings)
+        def add_element(annotation: str) -> None:
+            element_settings = ElementSettingsWidget(scrolled_window, annotation)
+            self.__additional_elements.append(element_settings)
             scrolled_window_sizer.Add(element_settings, 0, wx.ALIGN_LEFT, 0)
             self.Layout()
 
-        add_element(_)
+        def add_element_callback(_) -> None:
+            add_element("")
+
+        add_element("ST{}")
         add_button = wx.Button(self, label="+")
-        add_button.Bind(wx.EVT_BUTTON, add_element)
+        add_button.Bind(wx.EVT_BUTTON, add_element_callback)
 
         def remove_element(_) -> None:
             element_settings = (
-                additional_elements.pop() if additional_elements else None
+                self.__additional_elements.pop() if self.__additional_elements else None
             )
             if element_settings:
                 element_settings.Destroy()
@@ -357,8 +361,8 @@ class KbplacerDialog(wx.Dialog):
         remove_button = wx.Button(self, label="-")
         remove_button.Bind(wx.EVT_BUTTON, remove_element)
 
-        buttons_sizer.Add(add_button, 0, wx.EXPAND | wx.ALL, 0)
         buttons_sizer.Add(remove_button, 0, wx.EXPAND | wx.ALL, 0)
+        buttons_sizer.Add(add_button, 0, wx.EXPAND | wx.ALL, 0)
 
         sizer.Add(buttons_sizer, 0, wx.EXPAND | wx.ALL, 5)
 
@@ -390,12 +394,6 @@ class KbplacerDialog(wx.Dialog):
     def get_key_annotation_format(self) -> str:
         return self.__key_annotation_format.GetValue()
 
-    def get_stabilizer_annotation_format(self) -> str:
-        return self.__stabilizer_annotation_format.GetValue()
-
-    def get_diode_annotation_format(self) -> str:
-        return self.__diode_settings.annotation_format.GetValue()
-
     def is_tracks(self) -> bool:
         return self.__tracks_checkbox.GetValue()
 
@@ -408,5 +406,14 @@ class KbplacerDialog(wx.Dialog):
     def get_template_path(self) -> str:
         return self.__template_file_picker.GetPath()
 
-    def get_diode_position(self) -> Tuple[Position, Optional[ElementPosition]]:
-        return self.__diode_settings.position_widget.GetValue()
+    def get_diode_position_info(
+        self,
+    ) -> Tuple[str, Position, Optional[ElementPosition]]:
+        return self.__diode_settings.GetValue()
+
+    def get_additional_elements_info(
+        self,
+    ) -> List[Tuple[str, Position, Optional[ElementPosition]]]:
+        return [
+            e.GetValue() for e in self.__additional_elements if e.GetValue()[0] != ""
+        ]

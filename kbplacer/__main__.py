@@ -46,8 +46,8 @@ if __name__ == "__main__":
     board = pcbnew.LoadBoard(board_path)
 
     if layout_path:
-        with open(layout_path, "r") as f:
-            text_input = f.read()
+        with open(layout_path, "r") as footprint:
+            text_input = footprint.read()
             layout = json.loads(text_input)
 
         logger.info(f"User layout: {layout}")
@@ -55,7 +55,7 @@ if __name__ == "__main__":
         placer = KeyPlacer(logger, board, layout, key_distance)
 
         if diode_position == "USE_CURRENT":
-            diode_position = placer.get_current_relative_diode_position("SW{}", "D{}")
+            diode_position = placer.get_current_relative_element_position("SW{}", "D{}")
         elif diode_position == "NONE" or diode_position == "SKIP":
             diode_position = None
         elif diode_position is not None:
@@ -67,7 +67,14 @@ if __name__ == "__main__":
         else:
             diode_position = DEFAULT_DIODE_POSITION
 
-        placer.run("SW{}", "ST{}", "D{}", diode_position, route_tracks)
+        additional_elements = [("ST{}", ElementPosition(Point(0, 0), 0, Side.FRONT))]
+        placer.run(
+            "SW{}",
+            "D{}",
+            diode_position,
+            route_tracks,
+            additional_elements=additional_elements,
+        )
 
     if template_path:
         copier = TemplateCopier(logger, board, template_path, route_tracks)

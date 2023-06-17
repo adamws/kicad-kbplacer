@@ -173,7 +173,7 @@ def test_switch_distance(key_distance, tmpdir, request):
 
     key_placer = KeyPlacer(logger, board, layout, key_distance)
     diode_position = DEFAULT_DIODE_POSITION
-    key_placer.run("SW{}", "", "D{}", diode_position, True)
+    key_placer.run("SW{}", "D{}", diode_position, True)
 
     board.Save("{}/keyboard-before.kicad_pcb".format(tmpdir))
     generate_render(tmpdir, request)
@@ -193,7 +193,7 @@ def test_diode_placement_ignore(tmpdir, request):
     layout = get_2x2_layout(request)
 
     key_placer = KeyPlacer(logger, board, layout)
-    key_placer.run("SW{}", "", "D{}", None, True)
+    key_placer.run("SW{}", "D{}", None, True)
 
     board.Save("{}/keyboard-before.kicad_pcb".format(tmpdir))
     generate_render(tmpdir, request)

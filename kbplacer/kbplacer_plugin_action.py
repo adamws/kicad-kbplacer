@@ -67,23 +67,36 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
                     self.logger, self.board, layout, dlg.get_key_distance()
                 )
                 key_format = dlg.get_key_annotation_format()
-                stabilizer_format = dlg.get_stabilizer_annotation_format()
-                diode_format = dlg.get_diode_annotation_format()
+                diode_format = ""
                 if dlg.is_diode_placement():
-                    choice, diode_position = dlg.get_diode_position()
+                    diode_format, choice, diode_position = dlg.get_diode_position_info()
                     if choice == Position.CURRENT_RELATIVE:
-                        diode_position = placer.get_current_relative_diode_position(
+                        diode_position = placer.get_current_relative_element_position(
                             key_format,
                             diode_format,
                         )
                 else:
                     diode_position = None
+
+                additional_elements = dlg.get_additional_elements_info()
+                self.logger.info(f"Additional elements: {additional_elements}")
+                additional_elements_parsed = []
+
+                for e in additional_elements:
+                    element_format, choice, position = e
+                    if choice == Position.CURRENT_RELATIVE:
+                        position = placer.get_current_relative_element_position(
+                            key_format,
+                            element_format,
+                        )
+                    additional_elements_parsed.append((element_format, position))
+
                 placer.run(
                     key_format,
-                    stabilizer_format,
                     diode_format,
                     diode_position,
                     dlg.is_tracks(),
+                    additional_elements=additional_elements_parsed,
                 )
             template_path = dlg.get_template_path()
             if template_path:

@@ -4,7 +4,7 @@ import builtins
 import math
 import re
 from logging import Logger
-from typing import Optional
+from typing import List, Optional, Tuple
 
 import pcbnew
 
@@ -62,29 +62,17 @@ class KeyPlacer(BoardModifier):
         self.__key_distance = pcbnew.FromMM(key_distance)
         self.logger.debug(f"Set key 1U distance: {self.__key_distance}")
         self.__current_key = 1
-        self.__current_diode = 1
         self.__reference_coordinate = pcbnew.wxPointMM(25, 25)
 
-    def get_current_key(
-        self, key_format: str, stabilizer_format: str
-    ) -> tuple[pcbnew.FOOTPRINT, pcbnew.FOOTPRINT]:
-        key = self.get_footprint(key_format.format(self.__current_key))
+    def get_current_key(self, key_format: str) -> pcbnew.FOOTPRINT:
+        return self.get_footprint(key_format.format(self.__current_key))
 
-        # in case of perigoso/keyswitch-kicad-library, stabilizer holes are not part
-        # of of switch footprint and needs to be handled separately,
-        # check if there is stabilizer with id matching current key and return it
-        # stabilizer will be None if not found
-        stabilizer = self.board.FindFootprintByReference(
-            stabilizer_format.format(self.__current_key)
-        )
-        self.__current_key += 1
-
-        return key, stabilizer
-
-    def get_current_diode(self, diode_format: str) -> pcbnew.FOOTPRINT:
-        diode = self.get_footprint(diode_format.format(self.__current_diode))
-        self.__current_diode += 1
-        return diode
+    def get_current_footprint(self, diode_format: str) -> Optional[pcbnew.FOOTPRINT]:
+        try:
+            f = self.get_footprint(diode_format.format(self.__current_key))
+        except:
+            f = None
+        return f
 
     def calculate_corner_position_of_switch_diode_route(
         self, diode_pad_position: pcbnew.wxPoint, switch_pad_position: pcbnew.wxPoint
@@ -197,17 +185,17 @@ class KeyPlacer(BoardModifier):
                 # second segment: up to switch pad
                 self.add_track_segment_by_points(corner, switch_pad_position, layer)
 
-    def get_current_relative_diode_position(
-        self, key_format: str, diode_format: str
+    def get_current_relative_element_position(
+        self, key_format: str, element_format: str
     ) -> ElementPosition:
         key1 = self.get_footprint(key_format.format(1))
-        diode1 = self.get_footprint(diode_format.format(1))
+        element1 = self.get_footprint(element_format.format(1))
         pos1 = self.get_position(key1)
-        pos2 = self.get_position(diode1)
+        pos2 = self.get_position(element1)
         return ElementPosition(
             Point(pcbnew.ToMM(pos2.x - pos1.x), pcbnew.ToMM(pos2.y - pos1.y)),
-            diode1.GetOrientationDegrees(),
-            self.get_side(diode1),
+            element1.GetOrientationDegrees(),
+            self.get_side(element1),
         )
 
     def remove_dangling_tracks(self) -> None:
@@ -264,10 +252,10 @@ class KeyPlacer(BoardModifier):
     def run(
         self,
         key_format: str,
-        stabilizer_format: str,
         diode_format: str,
         diode_position: Optional[ElementPosition],
-        route_tracks=False,
+        route_tracks: bool = False,
+        additional_elements: Optional[List[Tuple[str, ElementPosition]]] = None,
     ) -> None:
         self.logger.info(f"Diode position: {diode_position}")
 
@@ -279,10 +267,16 @@ class KeyPlacer(BoardModifier):
 
         column_switch_pads = {}
         row_diode_pads = {}
+
+        if diode_position and diode_format:
+            diode_info = (diode_format, diode_position)
+            if additional_elements:
+                additional_elements.append(diode_info)
+            else:
+                additional_elements = [diode_info]
+
         for key in self.__layout["keys"]:
-            switch_footprint, stabilizer = self.get_current_key(
-                key_format, stabilizer_format
-            )
+            switch_footprint = self.get_current_key(key_format)
 
             width = key["width"]
             height = key["height"]
@@ -298,26 +292,19 @@ class KeyPlacer(BoardModifier):
             self.set_position(switch_footprint, position)
             self.reset_rotation(switch_footprint)
 
-            if stabilizer:
-                self.set_position(stabilizer, position)
-                self.reset_rotation(stabilizer)
-                # recognize special case of ISO enter:
-                width2 = key["width2"]
-                height2 = key["height2"]
-                if width == 1.25 and height == 2 and width2 == 1.5 and height2 == 1:
-                    stabilizer.SetOrientationDegrees(90)
-
-            diode_footprint = None
-            if diode_position:
-                diode_footprint = self.get_current_diode(diode_format)
-                self.reset_rotation(diode_footprint)
-                self.set_side(diode_footprint, diode_position.side)
-                diode_footprint.SetOrientationDegrees(diode_position.orientation)
-                self.set_relative_position_mm(
-                    diode_footprint,
-                    position,
-                    diode_position.relative_position.to_list(),
-                )
+            if additional_elements:
+                for element_info in additional_elements:
+                    annotation_format, element_position = element_info
+                    footprint = self.get_current_footprint(annotation_format)
+                    if footprint:
+                        self.reset_rotation(footprint)
+                        self.set_side(footprint, element_position.side)
+                        footprint.SetOrientationDegrees(element_position.orientation)
+                        self.set_relative_position_mm(
+                            footprint,
+                            position,
+                            element_position.relative_position.to_list(),
+                        )
 
             angle = key["rotation_angle"]
             if angle != 0:
@@ -329,10 +316,12 @@ class KeyPlacer(BoardModifier):
                     + self.__reference_coordinate
                 )
                 self.rotate(switch_footprint, rotation_reference, angle)
-                if stabilizer:
-                    self.rotate(stabilizer, rotation_reference, angle)
-                if diode_footprint:
-                    self.rotate(diode_footprint, rotation_reference, angle)
+                if additional_elements:
+                    for element_info in additional_elements:
+                        annotation_format, _ = element_info
+                        footprint = self.get_current_footprint(annotation_format)
+                        if footprint:
+                            self.rotate(footprint, rotation_reference, angle)
 
             # append pad:
             pad = switch_footprint.FindPadByNumber("1")
@@ -345,6 +334,7 @@ class KeyPlacer(BoardModifier):
                 self.logger.warning("Switch pad without recognized net name found.")
 
             # append diode:
+            diode_footprint = self.get_current_footprint(diode_format)
             if diode_footprint:
                 pad = diode_footprint.FindPadByNumber("1")
                 net_name = pad.GetNetname()
@@ -359,6 +349,8 @@ class KeyPlacer(BoardModifier):
                 self.route_switch_with_diode(
                     switch_footprint, diode_footprint, angle, template_tracks
                 )
+
+            self.__current_key += 1
 
         if route_tracks:
             # very naive routing approach, will fail in some scenarios:
