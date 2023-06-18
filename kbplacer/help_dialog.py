@@ -1,4 +1,5 @@
 import os
+import re
 import webbrowser
 import wx
 
@@ -25,7 +26,8 @@ class HelpDialog(wx.Dialog):
         self.SetSizerAndFit(box)
 
     def get_information_section(self):
-        icon_file_name = os.path.join(os.path.dirname(__file__), "icon.png")
+        source_dir = os.path.dirname(__file__)
+        icon_file_name = os.path.join(source_dir, "icon.png")
         icon = wx.Image(icon_file_name, wx.BITMAP_TYPE_ANY)
         icon_bitmap = wx.Bitmap(icon)
         static_icon_bitmap = wx.StaticBitmap(self, wx.ID_ANY, icon_bitmap)
@@ -36,7 +38,16 @@ class HelpDialog(wx.Dialog):
         name = wx.StaticText(self, -1, "KiCad Footprints Placer")
         name.SetFont(font)
 
-        version = wx.StaticText(self, -1, "Version: 0.4, release build")
+        version_file_name = os.path.join(source_dir, "version.txt")
+        version_str = "<missing>"
+        if os.path.isfile(version_file_name):
+            with open(version_file_name, "r") as f:
+                version_str = f.read()
+        if re.match(r"v\d.\d$", version_str):
+            status = "release build"
+        else:
+            status = "development build"
+        version = wx.StaticText(self, -1, f"Version: {version_str}, {status}")
 
         name_box = wx.BoxSizer(wx.HORIZONTAL)
         name_box.Add(static_icon_bitmap, 0, wx.ALL, 5)

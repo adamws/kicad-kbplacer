@@ -17,7 +17,7 @@ DIRNAME = os.path.abspath(os.path.dirname(__file__))
 ZIP_PACKAGE = f"{DIRNAME}/kicad-kbplacer.zip"
 METADATA_IN = f"{DIRNAME}/metadata.json.in"
 METADATA_OUT = f"{DIRNAME}/metadata.json"
-
+VERSION_FILE = f"{DIRNAME}/version.txt"
 
 def get_version() -> str:
     p = subprocess.Popen(
@@ -74,8 +74,9 @@ def create_package(output: str) -> None:
         images = glob.glob(f"{DIRNAME}/../kbplacer/*.png")
         for f in sources + images:
             shutil.copy(f, f"{tmpdir}/plugins")
+        shutil.copy(VERSION_FILE, f"{tmpdir}/plugins")
         shutil.copy(f"{DIRNAME}/../resources/icon.png", f"{tmpdir}/resources")
-        shutil.copy(f"{DIRNAME}/metadata.json", f"{tmpdir}")
+        shutil.copy(METADATA_OUT, f"{tmpdir}")
 
         zip_directory(tmpdir, output)
 
@@ -111,6 +112,8 @@ if __name__ == "__main__":
         template = Template(f.read())
         version = get_version()
         print(f"version: {version}")
+        with open(VERSION_FILE, "w") as f:
+            f.write(version)
         status = get_status(version)
         print(f"status: {status}")
         version_simple = get_simplified_version(version)
@@ -130,3 +133,4 @@ if __name__ == "__main__":
     print(f"intsize: {instsize}")
 
     os.remove(METADATA_OUT)
+    os.remove(VERSION_FILE)
