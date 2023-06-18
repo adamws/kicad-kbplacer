@@ -71,9 +71,15 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Install dependencies
+          command: |
+            pip install --no-cache-dir -r requirements.txt
+          working_directory: release
+      - run:
           name: Create zip package
           command: |
-            ./release/release.sh
+            python package.py
+          working_directory: release
       - store_artifacts:
           path: release/kicad-kbplacer.zip
   deploy-image:
