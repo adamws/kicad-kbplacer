@@ -6,6 +6,7 @@ from typing import List, Optional, Tuple
 
 from .defaults import DEFAULT_DIODE_POSITION
 from .element_position import ElementPosition, Point, Side
+from .help_dialog import HelpDialog
 
 
 TEXT_CTRL_EXTRA_SPACE = 25
@@ -237,7 +238,7 @@ class ElementSettingsWidget(wx.Panel):
 
 class KbplacerDialog(wx.Dialog):
     def __init__(self, parent, title) -> None:
-        style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
+        style = wx.DEFAULT_DIALOG_STYLE
         super(KbplacerDialog, self).__init__(parent, -1, title, style=style)
 
         switch_section = self.get_switch_section()
@@ -252,7 +253,12 @@ class KbplacerDialog(wx.Dialog):
         box.Add(additional_elements_section, 0, wx.EXPAND | wx.ALL, 5)
         box.Add(misc_section, 0, wx.EXPAND | wx.ALL, 5)
 
-        buttons = self.CreateButtonSizer(wx.OK | wx.CANCEL)
+        buttons = self.CreateButtonSizer(wx.OK | wx.CANCEL | wx.HELP)
+
+        help_button = wx.FindWindowById(wx.ID_HELP, self)
+        if help_button:
+            help_button.Bind(wx.EVT_BUTTON, self.on_help_button)
+
         box.Add(buttons, 0, wx.EXPAND | wx.ALL, 5)
 
         self.SetSizerAndFit(box)
@@ -391,6 +397,12 @@ class KbplacerDialog(wx.Dialog):
         self.__template_file_picker = template_file_picker
 
         return sizer
+
+    def on_help_button(self, event):
+        del event
+        help_dialog = HelpDialog()
+        help_dialog.ShowModal()
+        help_dialog.Destroy()
 
     def get_layout_path(self) -> str:
         return self.__layout_file_picker.GetPath()
