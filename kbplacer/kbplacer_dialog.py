@@ -18,17 +18,33 @@ class Position(StrEnum):
 
 
 class LabeledTextCtrl(wx.Panel):
-    def __init__(self, parent, label: str, value: str) -> None:
+    def __init__(self, parent, label: str, value: str, width: int = -1) -> None:
         super().__init__(parent)
 
+        expected_char_width = self.GetTextExtent("x").x
+        if width != -1:
+            annotation_format_size = wx.Size(
+                expected_char_width * width + TEXT_CTRL_EXTRA_SPACE, -1
+            )
+        else:
+            annotation_format_size = wx.Size(-1, -1)
+
         self.label = wx.StaticText(self, -1, label)
-        self.text = wx.TextCtrl(self, value=value)
+        self.text = wx.TextCtrl(self, value=value, size=annotation_format_size)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.label, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5)
-        sizer.Add(self.text, 0, wx.ALL, 5)
+        sizer.Add(self.label, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5)
+        sizer.Add(self.text, 0, wx.EXPAND | wx.TOP | wx.BOTTOM, 5)
 
         self.SetSizer(sizer)
+
+    def Enable(self):
+        self.label.Enable()
+        self.text.Enable()
+
+    def Disable(self):
+        self.label.Disable()
+        self.text.Disable()
 
 
 class CustomRadioBox(wx.Panel):
@@ -193,30 +209,20 @@ class ElementSettingsWidget(wx.Panel):
     ) -> None:
         super().__init__(parent)
 
-        self.expected_char_width = self.GetTextExtent("x").x
-        annotation_format_size = wx.Size(
-            self.expected_char_width * 3 + TEXT_CTRL_EXTRA_SPACE, -1
-        )
-        self.annotation_format = wx.TextCtrl(
-            self, value=default_annotation, size=annotation_format_size
+        self.annotation_format = LabeledTextCtrl(
+            self, label="Annotation format:", value=default_annotation, width=3
         )
         self.position_widget = ElementPositionWidget(self, default=default_position)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        sizer.Add(
-            wx.StaticText(self, -1, "Annotation format:"),
-            0,
-            wx.ALIGN_CENTER_VERTICAL,
-            5,
-        )
-        sizer.Add(self.annotation_format, 0, wx.EXPAND | wx.ALL, 10)
+        sizer.Add(self.annotation_format, 0, wx.EXPAND | wx.ALL, 5)
         sizer.Add(self.position_widget, 0, wx.EXPAND | wx.ALL, 5)
 
         self.SetSizer(sizer)
 
     def GetValue(self) -> Tuple[str, Position, Optional[ElementPosition]]:
-        annotation = self.annotation_format.GetValue()
+        annotation = self.annotation_format.text.GetValue()
         position = self.position_widget.GetValue()
         return annotation, position[0], position[1]
 
@@ -233,8 +239,6 @@ class KbplacerDialog(wx.Dialog):
     def __init__(self, parent, title) -> None:
         style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
         super(KbplacerDialog, self).__init__(parent, -1, title, style=style)
-
-        self.expected_char_width = self.GetTextExtent("x").x
 
         switch_section = self.get_switch_section()
         switch_diodes_section = self.get_switch_diodes_section()
@@ -263,24 +267,21 @@ class KbplacerDialog(wx.Dialog):
         key_distance = wx.SpinCtrlDouble(self, initial=19.05, min=0, max=100, inc=0.01)
 
         row1 = wx.BoxSizer(wx.HORIZONTAL)
+        row1.Add(key_annotation, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         row1.Add(layout_label, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5)
         row1.Add(layout_file_picker, 1, wx.ALL, 5)
 
         row2 = wx.BoxSizer(wx.HORIZONTAL)
-        row2.Add(key_annotation, 0, wx.EXPAND | wx.ALL, 0)
-
-        row3 = wx.BoxSizer(wx.HORIZONTAL)
-        row3.Add(
+        row2.Add(
             key_distance_label, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5
         )
-        row3.Add(key_distance, 0, wx.ALL, 5)
+        row2.Add(key_distance, 0, wx.ALL, 5)
 
         box = wx.StaticBox(self, label="Switch settings")
         sizer = wx.StaticBoxSizer(box, wx.VERTICAL)
 
         sizer.Add(row1, 0, wx.EXPAND | wx.ALL, 0)
         sizer.Add(row2, 0, wx.EXPAND | wx.ALL, 0)
-        sizer.Add(row3, 0, wx.EXPAND | wx.ALL, 0)
 
         self.__key_annotation_format = key_annotation.text
         self.__layout_file_picker = layout_file_picker
@@ -346,7 +347,9 @@ class KbplacerDialog(wx.Dialog):
             add_element("")
 
         add_element("ST{}")
-        add_button = wx.Button(self, label="+")
+
+        add_icon = wx.ArtProvider.GetBitmap(wx.ART_PLUS, wx.ART_BUTTON)
+        add_button = wx.BitmapButton(self, bitmap=add_icon)
         add_button.Bind(wx.EVT_BUTTON, add_element_callback)
 
         def remove_element(_) -> None:
@@ -358,11 +361,12 @@ class KbplacerDialog(wx.Dialog):
                 self.Layout()
             pass
 
-        remove_button = wx.Button(self, label="-")
+        remove_icon = wx.ArtProvider.GetBitmap(wx.ART_MINUS, wx.ART_BUTTON)
+        remove_button = wx.BitmapButton(self, bitmap=remove_icon)
         remove_button.Bind(wx.EVT_BUTTON, remove_element)
 
-        buttons_sizer.Add(remove_button, 0, wx.EXPAND | wx.ALL, 0)
         buttons_sizer.Add(add_button, 0, wx.EXPAND | wx.ALL, 0)
+        buttons_sizer.Add(remove_button, 0, wx.EXPAND | wx.ALL, 0)
 
         sizer.Add(buttons_sizer, 0, wx.EXPAND | wx.ALL, 5)
 
