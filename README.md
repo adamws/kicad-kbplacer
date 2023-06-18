@@ -68,8 +68,16 @@ Before | After
 --- | ---
 ![default-before](./resources/default-before.png) | ![default-after](./resources/default-after.png)
 
-To use custom diode position, manually place `D1` diode
-and run plugin with `Use first switch-diode pair as reference for relative position` option enabled.
+To use custom diode position there are two available options. Either select `Custom` in `Position` dropdown
+and define `X/Y offset`, `Orientation` and `Front` or `Back` side:
+
+  ![custom-position-example](resources/custom-position-example.png)
+
+or manually place `D1` diode to desired position in relation to first switch and run plugin with
+`Current relative` `Position` option selected.
+
+  ![current-relative-position-example](resources/current-relative-position-example.png)
+
 Remaining switch-diode pairs will be placed same as the first one.
 
 Before | After
@@ -85,11 +93,21 @@ if there is a collision, leaving elements unconnected.
 
 If first switch-diode pair is routed before plugin execution, as shown below, `kicad-kbplacer` instead of
 using it's built in routing algorithm, will copy user's track. This allow to circumvent plugin's router
-limitations.
+limitations. This is applicable only for `Current relative` `Position` option.
 
 Before | After
 --- | ---
 ![custom-with-track-before](./resources/custom-with-track-before.png) | ![custom-with-track-after](./resources/custom-with-track-after.png)
+
+#### Additional elements placement
+
+In case additional elements need to be automatically placed next to corresponding switches (for example
+stabilizer footprints if not integral part of swtich footprint, or RGB LEDs), define entries
+in `Additional elements settings` section. It behaves very simillary to switch diodes options if few exceptions:
+
+- there is no default position defined
+- when footprint not found, algorithm proceeds. There is no 1-to-1 mapping required
+- there is no track routing
 
 #### Demo project
 
