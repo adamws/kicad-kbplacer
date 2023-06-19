@@ -271,8 +271,8 @@ class ElementSettingsWidget(wx.Panel):
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        sizer.Add(self.annotation_format, 0, wx.EXPAND | wx.ALL, 5)
-        sizer.Add(self.position_widget, 0, wx.EXPAND | wx.ALL, 5)
+        sizer.Add(self.annotation_format, 0, wx.EXPAND | wx.RIGHT, 5)
+        sizer.Add(self.position_widget, 0, wx.EXPAND | wx.ALL, 0)
 
         self.SetSizer(sizer)
 
