@@ -269,8 +269,10 @@ class KbplacerDialog(wx.Dialog):
         layout_label = wx.StaticText(self, -1, "KLE json file:")
         layout_file_picker = wx.FilePickerCtrl(self, -1)
 
-        key_distance_label = wx.StaticText(self, -1, "1U distance [mm]:")
-        key_distance = wx.SpinCtrlDouble(self, initial=19.05, min=0, max=100, inc=0.01)
+        key_distance_x = wx.TextCtrl(self, value="19.05")
+        key_distance_y = wx.TextCtrl(self, value="19.05")
+
+        key_distance_label = wx.StaticText(self, -1, "X/Y 1U distance:")
 
         row1 = wx.BoxSizer(wx.HORIZONTAL)
         row1.Add(key_annotation, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
@@ -278,20 +280,21 @@ class KbplacerDialog(wx.Dialog):
         row1.Add(layout_file_picker, 1, wx.ALL, 5)
 
         row2 = wx.BoxSizer(wx.HORIZONTAL)
-        row2.Add(
-            key_distance_label, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5
-        )
-        row2.Add(key_distance, 0, wx.ALL, 5)
+        row2.Add(key_distance_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 5)
+        row2.Add(key_distance_x, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        row2.Add(wx.StaticText(self, -1, "/"), 0, wx.ALIGN_CENTER_VERTICAL, 5)
+        row2.Add(key_distance_y, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
 
         box = wx.StaticBox(self, label="Switch settings")
         sizer = wx.StaticBoxSizer(box, wx.VERTICAL)
 
-        sizer.Add(row1, 0, wx.EXPAND | wx.ALL, 0)
-        sizer.Add(row2, 0, wx.EXPAND | wx.ALL, 0)
+        sizer.Add(row1, 0, wx.EXPAND | wx.ALL, 5)
+        sizer.Add(row2, 0, wx.EXPAND | wx.ALL, 5)
 
         self.__key_annotation_format = key_annotation.text
         self.__layout_file_picker = layout_file_picker
-        self.__key_distance = key_distance
+        self.__key_distance_x = key_distance_x
+        self.__key_distance_y = key_distance_y
 
         return sizer
 
@@ -416,8 +419,10 @@ class KbplacerDialog(wx.Dialog):
     def is_diode_placement(self) -> bool:
         return self.__place_diodes_checkbox.GetValue()
 
-    def get_key_distance(self) -> float:
-        return self.__key_distance.GetValue()
+    def get_key_distance(self) -> Tuple[float, float]:
+        x = float(self.__key_distance_x.GetValue())
+        y = float(self.__key_distance_y.GetValue())
+        return x, y
 
     def get_template_path(self) -> str:
         return self.__template_file_picker.GetPath()

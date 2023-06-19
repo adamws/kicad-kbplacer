@@ -2,6 +2,7 @@ import json
 import logging
 import pcbnew
 import pytest
+from typing import Tuple
 
 from .conftest import generate_render, add_switch_footprint, add_diode_footprint
 
@@ -154,19 +155,32 @@ def get_board_for_2x2_example(request):
     return board
 
 
-def assert_2x2_layout_switches(key_placer, key_distance):
+def assert_2x2_layout_switches(key_placer, key_distance: Tuple[float, float]):
     switches = [key_placer.get_footprint(f"SW{i}") for i in range(1, 5)]
     positions = [key_placer.get_position(switch) for switch in switches]
     assert positions[0] == pcbnew.wxPointMM(25, 25) + pcbnew.wxPointMM(
-        key_distance / 2, key_distance / 2
+        key_distance[0] / 2, key_distance[1] / 2
     )
-    assert positions[1] - positions[0] == pcbnew.wxPointMM(key_distance, 0)
-    assert positions[2] - positions[0] == pcbnew.wxPointMM(0, key_distance)
-    assert positions[3] - positions[2] == pcbnew.wxPointMM(key_distance, 0)
-    assert positions[3] - positions[1] == pcbnew.wxPointMM(0, key_distance)
+    assert positions[1] - positions[0] == pcbnew.wxPointMM(key_distance[0], 0)
+    assert positions[2] - positions[0] == pcbnew.wxPointMM(0, key_distance[1])
+    assert positions[3] - positions[2] == pcbnew.wxPointMM(key_distance[0], 0)
+    assert positions[3] - positions[1] == pcbnew.wxPointMM(0, key_distance[1])
 
 
-@pytest.mark.parametrize("key_distance", [0, 10, 19, 19.05, 22.222])
+@pytest.mark.parametrize(
+    "key_distance",
+    [
+        (0, 0),
+        (10, 10),
+        (19, 19),
+        (19.05, 19.05),
+        (22.222, 22.222),
+        (0, 10),
+        (10, 0),
+        (18, 17),
+        (18, 19),
+    ],
+)
 def test_switch_distance(key_distance, tmpdir, request):
     board = get_board_for_2x2_example(request)
     layout = get_2x2_layout(request)
@@ -198,7 +212,7 @@ def test_diode_placement_ignore(tmpdir, request):
     board.Save("{}/keyboard-before.kicad_pcb".format(tmpdir))
     generate_render(tmpdir, request)
 
-    assert_2x2_layout_switches(key_placer, 19.05)
+    assert_2x2_layout_switches(key_placer, (19.05, 19.05))
     diodes = [key_placer.get_footprint(f"D{i}") for i in range(1, 5)]
     positions = [key_placer.get_position(diode) for diode in diodes]
     for pos in positions:

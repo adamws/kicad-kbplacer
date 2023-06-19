@@ -55,12 +55,19 @@ def position_in_cartesian_coordinates(
 
 class KeyPlacer(BoardModifier):
     def __init__(
-        self, logger: Logger, board: pcbnew.BOARD, layout, key_distance: float = 19.05
+        self,
+        logger: Logger,
+        board: pcbnew.BOARD,
+        layout,
+        key_distance: Tuple[float, float] = (19.05, 19.05),
     ) -> None:
         super().__init__(logger, board)
         self.__layout = layout
-        self.__key_distance = pcbnew.FromMM(key_distance)
-        self.logger.debug(f"Set key 1U distance: {self.__key_distance}")
+        self.__key_distance_x = pcbnew.FromMM(key_distance[0])
+        self.__key_distance_y = pcbnew.FromMM(key_distance[1])
+        self.logger.debug(
+            f"Set key 1U distance: {self.__key_distance_x}/{self.__key_distance_y}"
+        )
         self.__current_key = 1
         self.__reference_coordinate = pcbnew.wxPointMM(25, 25)
 
@@ -282,10 +289,10 @@ class KeyPlacer(BoardModifier):
             height = key["height"]
             position = (
                 pcbnew.wxPoint(
-                    (self.__key_distance * key["x"])
-                    + (self.__key_distance * width // 2),
-                    (self.__key_distance * key["y"])
-                    + (self.__key_distance * height // 2),
+                    (self.__key_distance_x * key["x"])
+                    + (self.__key_distance_x * width // 2),
+                    (self.__key_distance_y * key["y"])
+                    + (self.__key_distance_y * height // 2),
                 )
                 + self.__reference_coordinate
             )
@@ -310,8 +317,8 @@ class KeyPlacer(BoardModifier):
             if angle != 0:
                 rotation_reference = (
                     pcbnew.wxPoint(
-                        (self.__key_distance * key["rotation_x"]),
-                        (self.__key_distance * key["rotation_y"]),
+                        (self.__key_distance_x * key["rotation_x"]),
+                        (self.__key_distance_y * key["rotation_y"]),
                     )
                     + self.__reference_coordinate
                 )
