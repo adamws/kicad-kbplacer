@@ -90,7 +90,7 @@ jobs:
       - run:
           name: Setup environment variables
           command: |
-            echo 'export TAG="0.4.${CIRCLE_SHA1}"' >> "$BASH_ENV"
+            echo 'export TAG="0.5.${CIRCLE_SHA1}"' >> "$BASH_ENV"
             echo 'export IMAGE_NAME="kicad-kbplacer"' >> "$BASH_ENV"
       - run:
           name: Build and test docker image
