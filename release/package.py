@@ -21,7 +21,7 @@ VERSION_FILE = f"{DIRNAME}/version.txt"
 
 def get_version() -> str:
     p = subprocess.Popen(
-        ["git", "describe", "--long", "--tags", "--dirty", "--always"],
+        ["git", "describe", "--tags", "--dirty", "--always"],
         cwd=DIRNAME,
         stdout=subprocess.PIPE,
     )
