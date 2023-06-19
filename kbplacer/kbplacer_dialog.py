@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import string
 import wx
 from enum import StrEnum
 from typing import List, Optional, Tuple
@@ -16,6 +17,53 @@ class Position(StrEnum):
     DEFAULT = "Default"
     CURRENT_RELATIVE = "Current relative"
     CUSTOM = "Custom"
+
+
+class FloatValidator(wx.Validator):
+    def __init__(self) -> None:
+        wx.Validator.__init__(self)
+        self.Bind(wx.EVT_CHAR, self.OnChar)
+
+    def Clone(self) -> FloatValidator:
+        return FloatValidator()
+
+    def Validate(self, _):
+        text_ctrl = self.GetWindow()
+        if not text_ctrl.IsEnabled():
+            return True
+
+        text = text_ctrl.GetValue()
+        try:
+            float(text)
+            return True
+        except ValueError:
+            # this should never happen since there is on EVT_CHAR filtering:
+            wx.MessageBox(f"Invalid float value: {text}!", "Error")
+            text_ctrl.SetFocus()
+            return False
+
+    def TransferToWindow(self):
+        return True
+
+    def TransferFromWindow(self):
+        return True
+
+    def OnChar(self, event):
+        keycode = int(event.GetKeyCode())
+        if (
+            keycode == wx.WXK_BACK
+            or keycode == wx.WXK_LEFT
+            or keycode == wx.WXK_RIGHT
+            or keycode == wx.WXK_NUMPAD_LEFT
+            or keycode == wx.WXK_NUMPAD_RIGHT
+        ):
+            event.Skip()
+        else:
+            text_ctrl = self.GetWindow()
+            text = text_ctrl.GetValue()
+            key = chr(keycode)
+            if key in string.digits or key == "-" or (key == "." and "." not in text):
+                event.Skip()
 
 
 class LabeledTextCtrl(wx.Panel):
@@ -97,9 +145,15 @@ class ElementPositionWidget(wx.Panel):
 
         expected_char_width = self.GetTextExtent("x").x
         expected_size = wx.Size(5 * expected_char_width + TEXT_CTRL_EXTRA_SPACE, -1)
-        self.x = wx.TextCtrl(self, value="", size=expected_size)
-        self.y = wx.TextCtrl(self, value="", size=expected_size)
-        self.orientation = wx.TextCtrl(self, value="", size=expected_size)
+        self.x = wx.TextCtrl(
+            self, value="", size=expected_size, validator=FloatValidator()
+        )
+        self.y = wx.TextCtrl(
+            self, value="", size=expected_size, validator=FloatValidator()
+        )
+        self.orientation = wx.TextCtrl(
+            self, value="", size=expected_size, validator=FloatValidator()
+        )
         self.side = CustomRadioBox(self, choices=["Front", "Back"])
 
         self.__set_initial_state(choices[0])
@@ -269,8 +323,8 @@ class KbplacerDialog(wx.Dialog):
         layout_label = wx.StaticText(self, -1, "KLE json file:")
         layout_file_picker = wx.FilePickerCtrl(self, -1)
 
-        key_distance_x = wx.TextCtrl(self, value="19.05")
-        key_distance_y = wx.TextCtrl(self, value="19.05")
+        key_distance_x = wx.TextCtrl(self, value="19.05", validator=FloatValidator())
+        key_distance_y = wx.TextCtrl(self, value="19.05", validator=FloatValidator())
 
         key_distance_label = wx.StaticText(self, -1, "X/Y 1U distance:")
 
