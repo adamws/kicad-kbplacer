@@ -34,8 +34,6 @@ In order to work with latest version of plugin, checkout this repository and cop
 content of `kbplacer` directory to one of the KiCad's plugin search paths.
 For more details see [this](https://dev-docs.kicad.org/en/python/pcbnew/) guide.
 
-For KiCad 5.1 compatible version see tag [v0.1](https://github.com/adamws/kicad-kbplacer/tree/v0.1)
-
 ## How to use?
 
 ### Direct usage
