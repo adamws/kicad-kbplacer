@@ -35,7 +35,7 @@ class HelpDialog(wx.Dialog):
         font = wx.Font(
             12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD
         )
-        name = wx.StaticText(self, -1, "KiCad Footprints Placer")
+        name = wx.StaticText(self, -1, "Keyboard Footprints Placer")
         name.SetFont(font)
 
         version_file_name = os.path.join(source_dir, "version.txt")
