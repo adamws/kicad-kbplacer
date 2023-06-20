@@ -7,6 +7,8 @@
 [![Coverage Status](https://coveralls.io/repos/github/adamws/kicad-kbplacer/badge.svg?branch=master)](https://coveralls.io/github/adamws/kicad-kbplacer?branch=master)
 [![Weblate](https://hosted.weblate.org/widgets/kicad-kbplacer/-/master-source/svg-badge.svg)](https://hosted.weblate.org/engage/kicad-kbplacer/)
 
+Branch for nightly kicad tests, one commit ahead of master to prevent same commit status.
+
 KiCad plugin for mechanical keyboard design. It features automatic key placement and routing
 based on popular layout descriptions from [keyboard-layout-editor](http://www.keyboard-layout-editor.com/)
 and [ergogen](https://github.com/ergogen/ergogen).
