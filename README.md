@@ -100,8 +100,8 @@ Before | After
 #### Additional elements placement
 
 In case additional elements need to be automatically placed next to corresponding switches (for example
-stabilizer footprints if not integral part of swtich footprint, or RGB LEDs), define entries
-in `Additional elements settings` section. It behaves very simillary to switch diodes options if few exceptions:
+stabilizer footprints if not integral part of switch footprint, or RGB LEDs), define entries
+in `Additional elements settings` section. It behaves very similarly to switch diodes options with few exceptions:
 
 - there is no default position defined
 - when footprint not found, algorithm proceeds. There is no 1-to-1 mapping required
