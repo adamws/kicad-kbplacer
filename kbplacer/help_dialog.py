@@ -65,7 +65,9 @@ class HelpDialog(wx.Dialog):
         report_bug_button = wx.Button(self, label="Report Bug")
 
         def on_report_bug(_) -> None:
-            webbrowser.open("https://github.com/adamws/kicad-kbplacer/issues/new")
+            webbrowser.open(
+                "https://github.com/adamws/kicad-kbplacer/issues/new?template=bug_report.md&title="
+            )
 
         report_bug_button.Bind(wx.EVT_BUTTON, on_report_bug)
 
