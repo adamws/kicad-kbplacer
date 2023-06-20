@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import string
 import wx
-from enum import StrEnum
+from enum import Enum
 from typing import List, Optional, Tuple
 
 from .defaults import DEFAULT_DIODE_POSITION
@@ -13,10 +13,13 @@ from .help_dialog import HelpDialog
 TEXT_CTRL_EXTRA_SPACE = 25
 
 
-class Position(StrEnum):
+class Position(str, Enum):
     DEFAULT = "Default"
     CURRENT_RELATIVE = "Current relative"
     CUSTOM = "Custom"
+
+    def __str__(self) -> str:
+        return self.value
 
 
 class FloatValidator(wx.Validator):
