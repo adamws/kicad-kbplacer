@@ -77,6 +77,14 @@ jobs:
           working_directory: release
       - store_artifacts:
           path: release/output
+      - add_ssh_keys:
+          fingerprints:
+            - "d0:4f:c2:dd:e2:fe:9c:25:33:57:3e:fd:09:bd:9e:5c"
+      - run:
+          name: Deploy repository to github pages
+          command: |
+            ./deploy.sh
+          working_directory: release
   deploy-image:
     machine:
       image: ubuntu-2204:2022.10.2
