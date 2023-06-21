@@ -1,6 +1,7 @@
 import glob
 import hashlib
 import io
+import json
 import os
 import re
 import shutil
@@ -8,16 +9,27 @@ import subprocess
 import tempfile
 import zipfile
 
-from jinja2 import Template
+from datetime import datetime
+from typing import TypedDict
 
 
 READ_SIZE = 65536
 
 DIRNAME = os.path.abspath(os.path.dirname(__file__))
-ZIP_PACKAGE = f"{DIRNAME}/kicad-kbplacer.zip"
-METADATA_IN = f"{DIRNAME}/metadata.json.in"
-METADATA_OUT = f"{DIRNAME}/metadata.json"
-VERSION_FILE = f"{DIRNAME}/version.txt"
+PLUGIN_NAME = "kicad-kbplacer"
+
+
+class JsonMetadata(TypedDict):
+    sha256: str
+    update_time_utc: str
+    update_timestamp: int
+
+
+class PackageMetadata(TypedDict):
+    download_sha256: str
+    download_size: int
+    install_size: int
+
 
 def get_version() -> str:
     p = subprocess.Popen(
@@ -66,7 +78,15 @@ def zip_directory(directory, output_zip) -> None:
                 zipf.write(file_path, os.path.relpath(file_path, directory))
 
 
-def create_package(output: str) -> None:
+def create_resources_package(identifier: str, output: str) -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        dst = f"{tmpdir}/{identifier}"
+        os.makedirs(dst)
+        shutil.copy(f"{DIRNAME}/../resources/icon.png", dst)
+        zip_directory(tmpdir, output)
+
+
+def create_plugin_package(version, metadata, output: str) -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         os.makedirs(f"{tmpdir}/plugins")
         os.makedirs(f"{tmpdir}/resources")
@@ -74,14 +94,17 @@ def create_package(output: str) -> None:
         images = glob.glob(f"{DIRNAME}/../kbplacer/*.png")
         for f in sources + images:
             shutil.copy(f, f"{tmpdir}/plugins")
-        shutil.copy(VERSION_FILE, f"{tmpdir}/plugins")
         shutil.copy(f"{DIRNAME}/../resources/icon.png", f"{tmpdir}/resources")
-        shutil.copy(METADATA_OUT, f"{tmpdir}")
+
+        with open(f"{tmpdir}/plugins/version.txt", "w") as f:
+            f.write(version)
+        with open(f"{tmpdir}/metadata.json", "w", encoding="utf-8") as f:
+            json.dump(metadata, f, indent=4)
 
         zip_directory(tmpdir, output)
 
 
-def print_zip_contents(zip_path):
+def print_zip_contents(zip_path) -> None:
     with zipfile.ZipFile(zip_path, "r") as zip_ref:
         print(f"Contents of '{zip_path}':")
         for file_name in zip_ref.namelist():
@@ -98,39 +121,98 @@ def getsha256(filename) -> str:
     return hash.hexdigest()
 
 
-def get_stats(filename):
-    instsize = 0
+def get_package_metadata(filename) -> PackageMetadata:
+    install_size = 0
     z = zipfile.ZipFile(filename, "r")
     for entry in z.infolist():
         if not entry.is_dir():
-            instsize += entry.file_size
-    return getsha256(filename), os.path.getsize(filename), instsize
+            install_size += entry.file_size
+    return {
+        "download_sha256": getsha256(filename),
+        "download_size": os.path.getsize(filename),
+        "install_size": install_size,
+    }
+
+
+def get_json_metadata(filename) -> JsonMetadata:
+    mtime = os.path.getmtime(filename)
+    dt = datetime.fromtimestamp(mtime)
+    return {
+        "sha256": getsha256(filename),
+        "update_time_utc": dt.strftime("%Y-%m-%d %H:%M:%S"),
+        "update_timestamp": int(mtime),
+    }
 
 
 if __name__ == "__main__":
-    with open(METADATA_IN) as f:
-        template = Template(f.read())
-        version = get_version()
-        print(f"version: {version}")
-        with open(VERSION_FILE, "w") as f:
-            f.write(version)
-        status = get_status(version)
-        print(f"status: {status}")
-        version_simple = get_simplified_version(version)
-        print(f"version_simple: {version_simple}")
-        template.stream(version=version_simple, status=status).dump(METADATA_OUT)
+    version = get_version()
+    status = get_status(version)
+    version_simple = get_simplified_version(version)
 
-    create_package(ZIP_PACKAGE)
+    print(f"version: {version}")
+    print(f"status: {status}")
+    print(f"version_simple: {version_simple}")
 
-    print("")
-    print_zip_contents(ZIP_PACKAGE)
+    repository_url = "https://adamws.github.io/kicad-kbplacer"
+    author = {
+        "contact": {"web": "https://adamws.github.io"},
+        "name": "adamws",
+    }
 
-    print("")
-    print("Calculate package metadata:")
-    sha, size, instsize = get_stats(ZIP_PACKAGE)
-    print(f"sha: {sha}")
-    print(f"size: {size}")
-    print(f"intsize: {instsize}")
+    metadata = {
+        "$schema": "https://go.kicad.org/pcm/schemas/v1",
+        "name": "Keyboard footprints placer",
+        "description": "Plugin for mechanical keyboard design",
+        "description_full": (
+            "Plugin for mechanical keyboard design.\n"
+            "It features automatic key placement based on popular layout description from www.keyboard-layout-editor.com"
+        ),
+        "identifier": "com.github.adamws.kicad-kbplacer",
+        "type": "plugin",
+        "author": author,
+        "license": "GPL-3.0",
+        "resources": {"homepage": repository_url},
+        "tags": ["keyboard"],
+        "versions": [
+            {
+                "version": version_simple,
+                "status": status,
+                "kicad_version": "6.0",
+            }
+        ],
+    }
 
-    os.remove(METADATA_OUT)
-    os.remove(VERSION_FILE)
+    output_dir = f"{DIRNAME}/output"
+    shutil.rmtree(output_dir, ignore_errors=True)
+    os.makedirs(output_dir)
+
+    plugin_package = f"{output_dir}/{PLUGIN_NAME}.zip"
+    create_plugin_package(version, metadata, plugin_package)
+    print_zip_contents(plugin_package)
+
+    package_version = metadata["versions"][0]
+    package_version["download_url"] = f"{repository_url}/{PLUGIN_NAME}.zip"
+    package_version.update(get_package_metadata(plugin_package))
+    print(f"package details: {package_version}")
+
+    packages = {"packages": [metadata]}
+
+    packages_out = f"{output_dir}/packages.json"
+    with open(packages_out, "w", encoding="utf-8") as f:
+        json.dump(packages, f, indent=4)
+
+    resources_package = f"{output_dir}/resources.zip"
+    create_resources_package(metadata["identifier"], resources_package)
+
+    repository = {
+        "$schema": "https://gitlab.com/kicad/code/kicad/-/raw/master/kicad/pcm/schemas/pcm.v1.schema.json#/definitions/Repository",
+        "maintainer": author,
+        "name": f"{PLUGIN_NAME} development repository",
+        "packages": {"url": f"{repository_url}/packages.json"},
+        "resources": {"url": f"{repository_url}/resources.zip"},
+    }
+
+    repository["packages"].update(get_json_metadata(packages_out))
+    repository["resources"].update(get_json_metadata(resources_package))
+    with open(f"{output_dir}/repository.json", "w", encoding="utf-8") as f:
+        json.dump(repository, f, indent=4)
