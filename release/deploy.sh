@@ -17,7 +17,7 @@ if [ -z "$(git status --porcelain)" ]; then
 fi
 
 mkdir .circleci
-wget https://raw.githubusercontent.com/adamws/kicad-kbplacer/develop/.circleci/ghpages-config.yml -O .circleci/config.yml
+wget https://raw.githubusercontent.com/adamws/kicad-kbplacer/master/.circleci/ghpages-config.yml -O .circleci/config.yml
 touch .nojekyll
 
 echo "==> Start deploying"
