@@ -26,11 +26,14 @@ Some examples can be found in [examples](./examples) directory.
 
 ## Installation
 
-To install release version of this plugin, use KiCad's `Plugin and Content Manager` (available since version KiCad 6.0).
+To install release version of this plugin, use KiCad's `Plugin and Content Manager`
+and select `Keyboard footprints placer` from official plugin repository.
 
 ![pcm](resources/pcm.png)
 
-In order to work with latest version of plugin, checkout this repository and copy (or link)
+To install development version, see how to use [custom plugin repository](./docs/custom_repository.md).
+
+For development activities, it is recommended to checkout this repository and copy (or link)
 content of `kbplacer` directory to one of the KiCad's plugin search paths.
 For more details see [this](https://dev-docs.kicad.org/en/python/pcbnew/) guide.
 
