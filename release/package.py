@@ -235,6 +235,8 @@ if __name__ == "__main__":
         <p>Packages: <a href="{repository_url}/packages.json">packages.json</a></p>
         <p>Plugin: <a href="{repository_url}/{PLUGIN_NAME}.zip">{PLUGIN_NAME}.zip</a> version {version}</p>
         <p>Resources: <a href="{repository_url}/resources.zip">resources.zip</a></p>
+        <br>
+        <p>Go back to <a href="https://github.com/adamws/kicad-kbplacer">project site</a></p>
       </body>
     </html>
     """
