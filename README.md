@@ -34,6 +34,12 @@ In order to work with latest version of plugin, checkout this repository and cop
 content of `kbplacer` directory to one of the KiCad's plugin search paths.
 For more details see [this](https://dev-docs.kicad.org/en/python/pcbnew/) guide.
 
+After installation, plugin can be started by clicking plugin icon on the toolbar:
+
+![plugin-icon-on-toolbar](resources/plugin-icon-on-toolbar.png)
+
+or selecting it from `Tools -> External Plugins` menu.
+
 ## How to use?
 
 ### Direct usage
@@ -120,6 +126,22 @@ This plugin is part of my another project. See [keyboard-tools](https://github.c
 
 ## Troubleshooting
 
-- See stacktrace
-- See created `kbplacer.log` file (in PCB directory)
+### Plugin does not load
+
+If plugin does not appear on the `Tools -> External Plugins` menu and its icon is missing on toolbar,
+launch python scripting console `Tools -> Scripting Console` and type:
+
+```
+import pcbnew
+pcbnew.GetWizardsBackTrace()
+```
+
+This should return backtrace with an information about the fault. Include this information in bug report.
+
+### Plugin misbehaves or crashes
+
+- Read stacktrace in error po-pup
+- See `kbplacer.log` file, created in PCB directory
+
+For bug reports please use [this template](https://github.com/adamws/kicad-kbplacer/issues/new?template=bug_report.md).
 
