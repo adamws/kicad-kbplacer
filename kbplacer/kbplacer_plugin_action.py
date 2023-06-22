@@ -14,7 +14,7 @@ from .template_copier import TemplateCopier
 class KbplacerPluginAction(pcbnew.ActionPlugin):
     def defaults(self) -> None:
         self.name = "Keyboard placer"
-        self.category = "Mechanical Keybaord Helper"
+        self.category = "Mechanical Keyboard Helper"
         self.description = "Auto placement for key switches and diodes"
         self.show_toolbar_button = True
         self.icon_file_name = os.path.join(os.path.dirname(__file__), "icon.png")
