@@ -10,6 +10,7 @@ import tempfile
 import zipfile
 
 from datetime import datetime
+from textwrap import dedent
 from typing import TypedDict
 
 
@@ -216,3 +217,27 @@ if __name__ == "__main__":
     repository["resources"].update(get_json_metadata(resources_package))
     with open(f"{output_dir}/repository.json", "w", encoding="utf-8") as f:
         json.dump(repository, f, indent=4)
+
+    css: str = "p {margin: 0;}"
+    html_index_template: str = f"""\
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>kicad-kbplacer repository</title>
+        <link rel="icon" href="data:,">
+        <style>{css}</style>
+      </head>
+      <body>
+        <p>Add <i>{repository_url}/repository.json</i> to KiCad's repository list to install these files with PCM:</p>
+        <p>Repository: <a href="{repository_url}/repository.json">repository.json</a></p>
+        <p>Packages: <a href="{repository_url}/packages.json">packages.json</a></p>
+        <p>Plugin: <a href="{repository_url}/{PLUGIN_NAME}.zip">{PLUGIN_NAME}.zip</a> version {version}</p>
+        <p>Resources: <a href="{repository_url}/resources.zip">resources.zip</a></p>
+      </body>
+    </html>
+    """
+
+    with open(f"{output_dir}/index.html", "w") as f:
+        f.write(dedent(html_index_template))
