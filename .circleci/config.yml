@@ -79,10 +79,9 @@ jobs:
           path: release/output
       - when: # run only on master or tag
           condition:
-            and:
-              - or:
-                - << pipeline.git.tag >>
-                - equal: [ master, << pipeline.git.branch >> ]
+            or:
+              - << pipeline.git.tag >>
+              - equal: [ master, << pipeline.git.branch >> ]
           steps:
             - add_ssh_keys:
                 fingerprints:
