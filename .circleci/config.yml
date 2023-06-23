@@ -99,8 +99,13 @@ jobs:
       - run:
           name: Setup environment variables
           command: |
-            echo 'export TAG="0.5.${CIRCLE_SHA1}"' >> "$BASH_ENV"
-            echo 'export IMAGE_NAME="kicad-kbplacer"' >> "$BASH_ENV"
+            if [ -z "$GIT_TAG" ]; then
+              echo "export TAG=0.5-circleci" >> $BASH_ENV
+            else
+              # tag branch, cut 'v' prefix (only v prefixed tags should trigger this job)
+              echo "export TAG=$(echo $GIT_TAG | cut -c 2-)" >> $BASH_ENV
+            fi
+            echo "export IMAGE_NAME=kicad-kbplacer" >> $BASH_ENV
       - run:
           name: Build and test docker image
           command: |
@@ -110,9 +115,11 @@ jobs:
               -w /kicad/tests admwscki/$IMAGE_NAME:$TAG \
               /bin/bash -c \
               "pip3 install -r dev-requirements.txt && /kicad/.local/bin/pytest -c /dev/null --test-plugin-installation -k test_with_examples"
-      - when:
+      - when: # run only on master or tag
           condition:
-            equal: [ master, << pipeline.git.branch >> ]
+            or:
+              - << pipeline.git.tag >>
+              - equal: [ master, << pipeline.git.branch >> ]
           steps:
             - run:
                 name: Push docker image
@@ -162,6 +169,9 @@ workflows:
       - deploy-image:
           requires:
             - create-release
+          filters:
+            tags:
+              only: /^v[0-9]+(\.[0-9]+)*$/
   nightly:
     triggers:
       - schedule:
