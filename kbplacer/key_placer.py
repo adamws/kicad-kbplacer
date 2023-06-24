@@ -259,26 +259,26 @@ class KeyPlacer(BoardModifier):
     def run(
         self,
         key_format: str,
-        diode_format: str,
-        diode_position: Optional[ElementPosition],
+        diode_info: Optional[Tuple[str, ElementPosition]],
         route_tracks: bool = False,
         additional_elements: Optional[List[Tuple[str, ElementPosition]]] = None,
     ) -> None:
-        self.logger.info(f"Diode position: {diode_position}")
-
+        diode_format = ""
         template_tracks = []
-        if route_tracks:
-            # check if first switch-diode pair is already routed, if yes,
-            # then reuse its track shape for remaining pairs, otherwise try to use automatic 'router'
-            template_tracks = self.check_if_diode_routed(key_format, diode_format)
-
         column_switch_pads = {}
         row_diode_pads = {}
 
-        if diode_position and diode_format:
-            diode_info = (diode_format, diode_position)
+        if diode_info:
+            self.logger.info(f"Diode info: {diode_info}")
+
+            diode_format = diode_info[0]
+            if route_tracks:
+                # check if first switch-diode pair is already routed, if yes,
+                # then reuse its track shape for remaining pairs, otherwise try to use automatic 'router'
+                template_tracks = self.check_if_diode_routed(key_format, diode_format)
+
             if additional_elements:
-                additional_elements.append(diode_info)
+                additional_elements = [diode_info] + additional_elements
             else:
                 additional_elements = [diode_info]
 

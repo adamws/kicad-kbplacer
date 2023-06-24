@@ -75,8 +75,12 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
                             key_format,
                             diode_format,
                         )
+                    if diode_position:
+                        diode_info = (diode_format, diode_position)
+                    else:
+                        diode_info = None
                 else:
-                    diode_position = None
+                    diode_info = None
 
                 additional_elements = dlg.get_additional_elements_info()
                 self.logger.info(f"Additional elements: {additional_elements}")
@@ -93,8 +97,7 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
 
                 placer.run(
                     key_format,
-                    diode_format,
-                    diode_position,
+                    diode_info,
                     dlg.is_tracks(),
                     additional_elements=additional_elements_parsed,
                 )

@@ -136,13 +136,13 @@ if __name__ == "__main__":
         placer = KeyPlacer(logger, board, layout, key_distance)
 
         if diode[1] == PositionOption.CURRENT_RELATIVE:
-            diode_position = placer.get_current_relative_element_position(
+            diode_data = placer.get_current_relative_element_position(
                 "SW{}", diode[0]
             )
         elif diode[1] == PositionOption.DEFAULT:
-            diode_position = DEFAULT_DIODE_POSITION
+            diode_data = DEFAULT_DIODE_POSITION
         elif diode[1] == PositionOption.CUSTOM:
-            diode_position = diode[2]
+            diode_data = diode[2]
         else:
             msg = f"Unsupported position option found: {diode[1]}"
             raise ValueError(msg)
@@ -150,8 +150,7 @@ if __name__ == "__main__":
         additional_elements = [("ST{}", ElementPosition(Point(0, 0), 0, Side.FRONT))]
         placer.run(
             "SW{}",
-            diode[0],
-            diode_position,
+            (diode[0], diode_data),
             route_tracks,
             additional_elements=additional_elements,
         )
