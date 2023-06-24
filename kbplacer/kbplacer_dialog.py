@@ -2,24 +2,14 @@ from __future__ import annotations
 
 import string
 import wx
-from enum import Enum
 from typing import List, Optional, Tuple
 
 from .defaults import DEFAULT_DIODE_POSITION
-from .element_position import ElementPosition, Point, Side
+from .element_position import ElementPosition, Point, PositionOption, Side
 from .help_dialog import HelpDialog
 
 
 TEXT_CTRL_EXTRA_SPACE = 25
-
-
-class Position(str, Enum):
-    DEFAULT = "Default"
-    CURRENT_RELATIVE = "Current relative"
-    CUSTOM = "Custom"
-
-    def __str__(self) -> str:
-        return self.value
 
 
 class FloatValidator(wx.Validator):
@@ -139,9 +129,9 @@ class ElementPositionWidget(wx.Panel):
         super().__init__(parent)
 
         self.default = default
-        choices = [Position.CUSTOM, Position.CURRENT_RELATIVE]
+        choices = [PositionOption.CUSTOM, PositionOption.CURRENT_RELATIVE]
         if self.default:
-            choices.insert(0, Position.DEFAULT)
+            choices.insert(0, PositionOption.DEFAULT)
 
         self.dropdown = wx.ComboBox(self, choices=choices, style=wx.CB_DROPDOWN)
         self.dropdown.Bind(wx.EVT_COMBOBOX, self.__on_position_choice_change)
@@ -187,15 +177,15 @@ class ElementPositionWidget(wx.Panel):
         self.__set_position_by_choice(choice)
 
     def __set_position_by_choice(self, choice: str) -> None:
-        if choice == Position.DEFAULT:
+        if choice == PositionOption.DEFAULT:
             self.__set_position_to_default()
-        elif choice == Position.CURRENT_RELATIVE:
+        elif choice == PositionOption.CURRENT_RELATIVE:
             self.__set_position_to_empty_non_editable()
-        elif choice == Position.CUSTOM:
+        elif choice == PositionOption.CUSTOM:
             self.__set_position_to_zero_editable()
         else:
             raise ValueError
-        self.choice = Position(choice)
+        self.choice = PositionOption(choice)
 
     def __set_position_to_default(self) -> None:
         if self.default:
@@ -237,8 +227,11 @@ class ElementPositionWidget(wx.Panel):
         self.orientation.Disable()
         self.side.Disable()
 
-    def GetValue(self) -> Tuple[Position, Optional[ElementPosition]]:
-        if self.choice == Position.DEFAULT or self.choice == Position.CUSTOM:
+    def GetValue(self) -> Tuple[PositionOption, Optional[ElementPosition]]:
+        if (
+            self.choice == PositionOption.DEFAULT
+            or self.choice == PositionOption.CUSTOM
+        ):
             x = float(self.x.GetValue())
             y = float(self.y.GetValue())
             orientation = float(self.orientation.GetValue())
@@ -279,7 +272,7 @@ class ElementSettingsWidget(wx.Panel):
 
         self.SetSizer(sizer)
 
-    def GetValue(self) -> Tuple[str, Position, Optional[ElementPosition]]:
+    def GetValue(self) -> Tuple[str, PositionOption, Optional[ElementPosition]]:
         annotation = self.annotation_format.text.GetValue()
         position = self.position_widget.GetValue()
         return annotation, position[0], position[1]
@@ -486,12 +479,12 @@ class KbplacerDialog(wx.Dialog):
 
     def get_diode_position_info(
         self,
-    ) -> Tuple[str, Position, Optional[ElementPosition]]:
+    ) -> Tuple[str, PositionOption, Optional[ElementPosition]]:
         return self.__diode_settings.GetValue()
 
     def get_additional_elements_info(
         self,
-    ) -> List[Tuple[str, Position, Optional[ElementPosition]]]:
+    ) -> List[Tuple[str, PositionOption, Optional[ElementPosition]]]:
         return [
             e.GetValue() for e in self.__additional_elements if e.GetValue()[0] != ""
         ]

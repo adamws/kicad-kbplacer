@@ -29,7 +29,7 @@ def run_kbplacer_process(tmpdir, route, diode_position, workdir, package_name):
     if route:
         kbplacer_args.append("--route")
     if diode_position:
-        kbplacer_args.append("--diode-position")
+        kbplacer_args.append("--diode")
         kbplacer_args.append(diode_position)
 
     p = subprocess.Popen(
@@ -100,7 +100,7 @@ def assert_kicad_svg(expected: Path, actual: Path):
 def __get_parameters():
     examples = ["2x2", "3x2-sizes", "2x3-rotations", "1x4-rotations-90-step"]
     route_options = {"NoTracks": False, "Tracks": True}
-    diode_options = {"DefaultDiode": None, "DiodeOption1": "0,4.5,0,BACK"}
+    diode_options = {"DefaultDiode": None, "DiodeOption1": "D{} CUSTOM 0 4.5 0 BACK"}
     test_params = []
     for example in examples:
         for route_option_name, route_option in route_options.items():
@@ -112,7 +112,7 @@ def __get_parameters():
     # this special example can't be used with all option combinations, appended here:
     test_id = "2x3-rotations-custom-diode-with-track;Tracks;DiodeOption2"
     param = pytest.param(
-        "2x3-rotations-custom-diode-with-track", True, "USE_CURRENT", id=test_id
+        "2x3-rotations-custom-diode-with-track", True, "D{} CURRENT_RELATIVE", id=test_id
     )
     test_params.append(param)
     return test_params
