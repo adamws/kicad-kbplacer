@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum, Flag
+from typing import Optional
 
 
 class Side(Flag):
@@ -50,3 +51,10 @@ class PositionOption(str, Enum):
             return PositionOption(value)
         msg = f"'{name}' is not valid Position"
         raise ValueError(msg)
+
+
+@dataclass
+class ElementInfo:
+    annotation_format: str
+    position_option: PositionOption
+    position: Optional[ElementPosition]

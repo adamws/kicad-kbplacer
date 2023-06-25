@@ -6,7 +6,7 @@ import sys
 import pcbnew
 import wx
 
-from .kbplacer_dialog import KbplacerDialog, PositionOption
+from .kbplacer_dialog import KbplacerDialog
 from .key_placer import KeyPlacer
 from .template_copier import TemplateCopier
 
@@ -62,44 +62,18 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
                 with open(layout_path, "r") as f:
                     text_input = f.read()
                 layout = json.loads(text_input)
-                self.logger.info(f"User layout: {layout}")
                 placer = KeyPlacer(
                     self.logger, self.board, layout, dlg.get_key_distance()
                 )
                 key_format = dlg.get_key_annotation_format()
-                diode_format = ""
-                if dlg.is_diode_placement():
-                    diode_format, choice, diode_position = dlg.get_diode_position_info()
-                    if choice == PositionOption.CURRENT_RELATIVE:
-                        diode_position = placer.get_current_relative_element_position(
-                            key_format,
-                            diode_format,
-                        )
-                    if diode_position:
-                        diode_info = (diode_format, diode_position)
-                    else:
-                        diode_info = None
-                else:
-                    diode_info = None
-
+                diode_info = dlg.get_diode_position_info()
                 additional_elements = dlg.get_additional_elements_info()
-                self.logger.info(f"Additional elements: {additional_elements}")
-                additional_elements_parsed = []
-
-                for e in additional_elements:
-                    element_format, choice, position = e
-                    if choice == PositionOption.CURRENT_RELATIVE:
-                        position = placer.get_current_relative_element_position(
-                            key_format,
-                            element_format,
-                        )
-                    additional_elements_parsed.append((element_format, position))
 
                 placer.run(
                     key_format,
                     diode_info,
                     dlg.is_tracks(),
-                    additional_elements=additional_elements_parsed,
+                    additional_elements=additional_elements,
                 )
             template_path = dlg.get_template_path()
             if template_path:

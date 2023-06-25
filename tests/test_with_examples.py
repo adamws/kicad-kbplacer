@@ -112,7 +112,10 @@ def __get_parameters():
     # this special example can't be used with all option combinations, appended here:
     test_id = "2x3-rotations-custom-diode-with-track;Tracks;DiodeOption2"
     param = pytest.param(
-        "2x3-rotations-custom-diode-with-track", True, "D{} CURRENT_RELATIVE", id=test_id
+        "2x3-rotations-custom-diode-with-track",
+        True,
+        "D{} CURRENT_RELATIVE",
+        id=test_id,
     )
     test_params.append(param)
     return test_params

@@ -9,7 +9,7 @@ from .conftest import generate_render, add_switch_footprint, add_diode_footprint
 try:
     from kbplacer.defaults import DEFAULT_DIODE_POSITION
     from kbplacer.key_placer import KeyPlacer
-    from kbplacer.element_position import Side
+    from kbplacer.element_position import ElementInfo, PositionOption, Side
 except:
     # satisfy import issues when running examples tests
     # in docker image on CI.
@@ -187,7 +187,9 @@ def test_switch_distance(key_distance, tmpdir, request):
 
     key_placer = KeyPlacer(logger, board, layout, key_distance)
     diode_position = DEFAULT_DIODE_POSITION
-    key_placer.run("SW{}", ("D{}", diode_position), True)
+    key_placer.run(
+        "SW{}", ElementInfo("D{}", PositionOption.DEFAULT, diode_position), True
+    )
 
     board.Save("{}/keyboard-before.kicad_pcb".format(tmpdir))
     generate_render(tmpdir, request)

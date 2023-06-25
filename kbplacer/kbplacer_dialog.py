@@ -5,7 +5,7 @@ import wx
 from typing import List, Optional, Tuple
 
 from .defaults import DEFAULT_DIODE_POSITION
-from .element_position import ElementPosition, Point, PositionOption, Side
+from .element_position import ElementInfo, ElementPosition, Point, PositionOption, Side
 from .help_dialog import HelpDialog
 
 
@@ -272,10 +272,10 @@ class ElementSettingsWidget(wx.Panel):
 
         self.SetSizer(sizer)
 
-    def GetValue(self) -> Tuple[str, PositionOption, Optional[ElementPosition]]:
+    def GetValue(self) -> ElementInfo:
         annotation = self.annotation_format.text.GetValue()
         position = self.position_widget.GetValue()
-        return annotation, position[0], position[1]
+        return ElementInfo(annotation, position[0], position[1])
 
     def Enable(self):
         self.annotation_format.Enable()
@@ -466,9 +466,6 @@ class KbplacerDialog(wx.Dialog):
     def is_tracks(self) -> bool:
         return self.__tracks_checkbox.GetValue()
 
-    def is_diode_placement(self) -> bool:
-        return self.__place_diodes_checkbox.GetValue()
-
     def get_key_distance(self) -> Tuple[float, float]:
         x = float(self.__key_distance_x.GetValue())
         y = float(self.__key_distance_y.GetValue())
@@ -479,12 +476,17 @@ class KbplacerDialog(wx.Dialog):
 
     def get_diode_position_info(
         self,
-    ) -> Tuple[str, PositionOption, Optional[ElementPosition]]:
-        return self.__diode_settings.GetValue()
+    ) -> Optional[ElementInfo]:
+        if self.__place_diodes_checkbox.GetValue():
+            return self.__diode_settings.GetValue()
+        else:
+            return None
 
     def get_additional_elements_info(
         self,
-    ) -> List[Tuple[str, PositionOption, Optional[ElementPosition]]]:
+    ) -> List[ElementInfo]:
         return [
-            e.GetValue() for e in self.__additional_elements if e.GetValue()[0] != ""
+            e.GetValue()
+            for e in self.__additional_elements
+            if e.GetValue().annotation_format != ""
         ]

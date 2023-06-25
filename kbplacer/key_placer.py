@@ -9,7 +9,7 @@ from typing import List, Optional, Tuple
 import pcbnew
 
 from .board_modifier import KICAD_VERSION, BoardModifier
-from .element_position import ElementPosition, Point, Side
+from .element_position import ElementInfo, ElementPosition, Point, PositionOption, Side
 
 
 def position_in_rotated_coordinates(
@@ -62,6 +62,8 @@ class KeyPlacer(BoardModifier):
         key_distance: Tuple[float, float] = (19.05, 19.05),
     ) -> None:
         super().__init__(logger, board)
+
+        self.logger.info(f"User layout: {layout}")
         self.__layout = layout
         self.__key_distance_x = pcbnew.FromMM(key_distance[0])
         self.__key_distance_y = pcbnew.FromMM(key_distance[1])
@@ -259,9 +261,9 @@ class KeyPlacer(BoardModifier):
     def run(
         self,
         key_format: str,
-        diode_info: Optional[Tuple[str, ElementPosition]],
+        diode_info: Optional[ElementInfo],
         route_tracks: bool = False,
-        additional_elements: Optional[List[Tuple[str, ElementPosition]]] = None,
+        additional_elements: Optional[List[ElementInfo]] = None,
     ) -> None:
         diode_format = ""
         template_tracks = []
@@ -270,17 +272,26 @@ class KeyPlacer(BoardModifier):
 
         if diode_info:
             self.logger.info(f"Diode info: {diode_info}")
-
-            diode_format = diode_info[0]
+            diode_format = diode_info.annotation_format
             if route_tracks:
                 # check if first switch-diode pair is already routed, if yes,
                 # then reuse its track shape for remaining pairs, otherwise try to use automatic 'router'
                 template_tracks = self.check_if_diode_routed(key_format, diode_format)
 
-            if additional_elements:
-                additional_elements = [diode_info] + additional_elements
-            else:
-                additional_elements = [diode_info]
+        if additional_elements:
+            self.logger.info(f"Additional elements info: {additional_elements}")
+        else:
+            additional_elements = []
+
+        if diode_info:
+            additional_elements = [diode_info] + additional_elements
+
+        for element_info in additional_elements:
+            if element_info.position_option == PositionOption.CURRENT_RELATIVE:
+                position = self.get_current_relative_element_position(
+                    key_format, element_info.annotation_format
+                )
+                element_info.position = position
 
         for key in self.__layout["keys"]:
             switch_footprint = self.get_current_key(key_format)
@@ -299,19 +310,19 @@ class KeyPlacer(BoardModifier):
             self.set_position(switch_footprint, position)
             self.reset_rotation(switch_footprint)
 
-            if additional_elements:
-                for element_info in additional_elements:
-                    annotation_format, element_position = element_info
-                    footprint = self.get_current_footprint(annotation_format)
-                    if footprint:
-                        self.reset_rotation(footprint)
-                        self.set_side(footprint, element_position.side)
-                        footprint.SetOrientationDegrees(element_position.orientation)
-                        self.set_relative_position_mm(
-                            footprint,
-                            position,
-                            element_position.relative_position.to_list(),
-                        )
+            for element_info in additional_elements:
+                annotation_format = element_info.annotation_format
+                element_position = element_info.position
+                footprint = self.get_current_footprint(annotation_format)
+                if footprint and element_position:
+                    self.reset_rotation(footprint)
+                    self.set_side(footprint, element_position.side)
+                    footprint.SetOrientationDegrees(element_position.orientation)
+                    self.set_relative_position_mm(
+                        footprint,
+                        position,
+                        element_position.relative_position.to_list(),
+                    )
 
             angle = key["rotation_angle"]
             if angle != 0:
@@ -325,7 +336,7 @@ class KeyPlacer(BoardModifier):
                 self.rotate(switch_footprint, rotation_reference, angle)
                 if additional_elements:
                     for element_info in additional_elements:
-                        annotation_format, _ = element_info
+                        annotation_format = element_info.annotation_format
                         footprint = self.get_current_footprint(annotation_format)
                         if footprint:
                             self.rotate(footprint, rotation_reference, angle)

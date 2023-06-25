@@ -3,10 +3,10 @@ import json
 import logging
 import pcbnew
 
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 from .defaults import DEFAULT_DIODE_POSITION
-from .element_position import ElementPosition, Point, PositionOption, Side
+from .element_position import ElementInfo, ElementPosition, Point, PositionOption, Side
 from .key_placer import KeyPlacer
 from .template_copier import TemplateCopier
 
@@ -53,7 +53,7 @@ class ElementInfoAction(argparse.Action):
                         Point(floats[0], floats[1]), floats[2], side
                     )
 
-            value: Tuple[str, PositionOption, Optional[ElementPosition]] = (
+            value: ElementInfo = ElementInfo(
                 annotation,
                 option,
                 position,
@@ -90,7 +90,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-d",
         "--diode",
-        default=("D{}", PositionOption.DEFAULT, None),
+        default=ElementInfo("D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION),
         action=ElementInfoAction,
         help=(
             "Diode information, space separated value of ANNOTATION POSITION_OPTION [POSITION].\n"
@@ -131,26 +131,18 @@ if __name__ == "__main__":
             text_input = footprint.read()
             layout = json.loads(text_input)
 
-        logger.info(f"User layout: {layout}")
+        additional_elements: List[ElementInfo] = [
+            ElementInfo(
+                "ST{}",
+                PositionOption.CUSTOM,
+                ElementPosition(Point(0, 0), 0, Side.FRONT),
+            )
+        ]
 
         placer = KeyPlacer(logger, board, layout, key_distance)
-
-        if diode[1] == PositionOption.CURRENT_RELATIVE:
-            diode_data = placer.get_current_relative_element_position(
-                "SW{}", diode[0]
-            )
-        elif diode[1] == PositionOption.DEFAULT:
-            diode_data = DEFAULT_DIODE_POSITION
-        elif diode[1] == PositionOption.CUSTOM:
-            diode_data = diode[2]
-        else:
-            msg = f"Unsupported position option found: {diode[1]}"
-            raise ValueError(msg)
-
-        additional_elements = [("ST{}", ElementPosition(Point(0, 0), 0, Side.FRONT))]
         placer.run(
             "SW{}",
-            (diode[0], diode_data),
+            diode,
             route_tracks,
             additional_elements=additional_elements,
         )
