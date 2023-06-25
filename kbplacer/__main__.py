@@ -101,16 +101,29 @@ if __name__ == "__main__":
         description="Keyboard's key autoplacer",
         formatter_class=argparse.RawTextHelpFormatter,
     )
-    parser.add_argument(
+    subparsers = parser.add_subparsers(dest="mode", help="Selects operation mode")
+    parser_cli = subparsers.add_parser(
+        "cli",
+        help="Run in command-line mode",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+    parser_gui = subparsers.add_parser(
+        "gui",
+        help="Run in graphical mode",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+
+    for p in [parser_cli, parser_gui]:
+        p.add_argument(
+            "-b", "--board", required=True, help=".kicad_pcb file to be processed"
+        )
+    parser_cli.add_argument(
         "-l", "--layout", required=True, help="json layout definition file"
     )
-    parser.add_argument(
-        "-b", "--board", required=True, help=".kicad_pcb file to be processed"
-    )
-    parser.add_argument(
+    parser_cli.add_argument(
         "-r", "--route", action="store_true", help="Enable experimental routing"
     )
-    parser.add_argument(
+    parser_cli.add_argument(
         "-d",
         "--diode",
         default=ElementInfo("D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION),
@@ -126,9 +139,15 @@ if __name__ == "__main__":
             "equal 'D{} DEFAULT' by default"
         ),
     )
-    parser.add_argument(
+    parser_cli.add_argument(
         "--additional-elements",
-        default=[ElementInfo("ST{}", PositionOption.CUSTOM, ElementPosition(Point(0, 0), 0, Side.FRONT))],
+        default=[
+            ElementInfo(
+                "ST{}",
+                PositionOption.CUSTOM,
+                ElementPosition(Point(0, 0), 0, Side.FRONT),
+            )
+        ],
         action=ElementInfoListAction,
         help=(
             "Additional elements information, ';' separated list of ELEMENT_INFO values\n"
@@ -141,22 +160,41 @@ if __name__ == "__main__":
             "equal 'ST{} CUSTOM 0 0 0 FRONT' by default"
         ),
     )
-    parser.add_argument(
+    parser_cli.add_argument(
         "--key-distance",
         default=(19.05, 19.05),
         action=XYAction,
         help="X and Y key 1U distance in mm, as two space separated numeric values, 19.05 19.05 by default",
     )
-    parser.add_argument("-t", "--template", help="Controller circuit template")
+    parser_cli.add_argument("-t", "--template", help="Controller circuit template")
 
     args = parser.parse_args()
-    layout_path = args.layout
-    board_path = args.board
-    route_tracks = args.route
-    diode = args.diode
-    additional_elements = args.additional_elements
-    key_distance = args.key_distance
-    template_path = args.template
+
+    if args.mode == "cli":
+        layout_path = args.layout
+        board_path = args.board
+        route_tracks = args.route
+        diode = args.diode
+        additional_elements = args.additional_elements
+        key_distance = args.key_distance
+        template_path = args.template
+    else:
+        # gui mode, other user input would raise exception on argument parsing
+        import wx
+        from .kbplacer_dialog import KbplacerDialog
+
+        _ = wx.App()
+        dlg = KbplacerDialog(None, "kbplacer")
+        if dlg.ShowModal() == wx.ID_OK:
+            layout_path = dlg.get_layout_path()
+            board_path = args.board
+            route_tracks = dlg.is_tracks()
+            diode = dlg.get_diode_position_info()
+            additional_elements = dlg.get_additional_elements_info()
+            key_distance = dlg.get_key_distance()
+            template_path = dlg.get_template_path()
+        else:
+            exit(0)
 
     # set up logger
     logging.basicConfig(

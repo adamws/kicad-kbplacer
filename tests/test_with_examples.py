@@ -21,6 +21,7 @@ def run_kbplacer_process(tmpdir, route, diode_position, workdir, package_name):
         "python3",
         "-m",
         package_name,
+        "cli",
         "-l",
         layout_file,
         "-b",
