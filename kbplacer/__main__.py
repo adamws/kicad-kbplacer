@@ -3,7 +3,7 @@ import json
 import logging
 import pcbnew
 
-from typing import List, Optional, Tuple
+from typing import List
 
 from .defaults import DEFAULT_DIODE_POSITION
 from .element_position import ElementInfo, ElementPosition, Point, PositionOption, Side
@@ -13,6 +13,13 @@ from .template_copier import TemplateCopier
 
 class ElementInfoAction(argparse.Action):
     def __call__(self, parser, namespace, values: str, option_string=None) -> None:
+        try:
+            value: ElementInfo = self.parse(values, option_string)
+        except ValueError as e:
+            raise argparse.ArgumentTypeError(str(e))
+        setattr(namespace, self.dest, value)
+
+    def parse(self, values: str, option_string) -> ElementInfo:
         tokens: list[str] = values.split()
         err = ""
         if len(tokens) != 2 and len(tokens) != 6:
@@ -23,7 +30,7 @@ class ElementInfoAction(argparse.Action):
             if annotation.count("{}") != 1:
                 err = (
                     f"'{annotation}' invalid annotation specifier, "
-                    "it must contain eqactly one '{}' placeholder."
+                    "it must contain exactly one '{}' placeholder."
                 )
                 raise ValueError(err)
 
@@ -35,7 +42,7 @@ class ElementInfoAction(argparse.Action):
                     and option != PositionOption.DEFAULT
                 ):
                     err = (
-                        f"{option_string} positon option needs to be equal CURRENT_RELATIVE or DEFAULT "
+                        f"{option_string} position option needs to be equal CURRENT_RELATIVE or DEFAULT "
                         "if position details not provided"
                     )
                     raise ValueError(err)
@@ -58,7 +65,23 @@ class ElementInfoAction(argparse.Action):
                 option,
                 position,
             )
-            setattr(namespace, self.dest, value)
+            return value
+
+
+class ElementInfoListAction(ElementInfoAction):
+    def __call__(self, parser, namespace, values: str, option_string=None) -> None:
+        try:
+            if "DEFAULT" in values:
+                msg = f"{option_string} does not support DEFAULT position"
+                raise ValueError(msg)
+            value: List[ElementInfo] = []
+            tokens: list[str] = values.split(";")
+            for token in tokens:
+                element_info: ElementInfo = super().parse(token.strip(), option_string)
+                value.append(element_info)
+        except ValueError as e:
+            raise argparse.ArgumentTypeError(str(e))
+        setattr(namespace, self.dest, value)
 
 
 class XYAction(argparse.Action):
@@ -94,12 +117,28 @@ if __name__ == "__main__":
         action=ElementInfoAction,
         help=(
             "Diode information, space separated value of ANNOTATION POSITION_OPTION [POSITION].\n"
-            "Avaiable POSITION_OPTION choices: DEFAULT, CURRENT_RELATIVE and CUSTOM\n"
-            "When DEFAULT of CURRENT_RELATIVE, then POSITION needs to be ommited,\n"
-            "when CUSTOM then POSITION is space separated value of X Y ORIENTATION FRONT|BACK\n"
+            "Available POSITION_OPTION choices: DEFAULT, CURRENT_RELATIVE and CUSTOM\n"
+            "When DEFAULT or CURRENT_RELATIVE, then POSITION needs to be omitted,\n"
+            "when CUSTOM, then POSITION is space separated value of X Y ORIENTATION FRONT|BACK\n"
             "for example:\n"
-            "\tD{} DEFAULT\n"
-            "\tD{} CUSTOM 5 -4.5 90 BACK"
+            "\tD{} CURRENT_RELATIVE\n"
+            "\tD{} CUSTOM 5 -4.5 90 BACK\n"
+            "equal 'D{} DEFAULT' by default"
+        ),
+    )
+    parser.add_argument(
+        "--additional-elements",
+        default=[ElementInfo("ST{}", PositionOption.CUSTOM, ElementPosition(Point(0, 0), 0, Side.FRONT))],
+        action=ElementInfoListAction,
+        help=(
+            "Additional elements information, ';' separated list of ELEMENT_INFO values\n"
+            "where ELEMENT_INFO is space separated value of ANNOTATION POSITION_OPTION POSITION.\n"
+            "Available POSITION_OPTION choices: CURRENT_RELATIVE and CUSTOM\n"
+            "When CURRENT_RELATIVE, then POSITION needs to be omitted,\n"
+            "when CUSTOM, then POSITION is space separated value of X Y ORIENTATION FRONT|BACK\n"
+            "for example:\n"
+            "\tST{} CUSTOM 0 0 180 BACK;LED{} CURRENT_RELATIVE\n"
+            "equal 'ST{} CUSTOM 0 0 0 FRONT' by default"
         ),
     )
     parser.add_argument(
@@ -115,6 +154,7 @@ if __name__ == "__main__":
     board_path = args.board
     route_tracks = args.route
     diode = args.diode
+    additional_elements = args.additional_elements
     key_distance = args.key_distance
     template_path = args.template
 
@@ -130,14 +170,6 @@ if __name__ == "__main__":
         with open(layout_path, "r") as footprint:
             text_input = footprint.read()
             layout = json.loads(text_input)
-
-        additional_elements: List[ElementInfo] = [
-            ElementInfo(
-                "ST{}",
-                PositionOption.CUSTOM,
-                ElementPosition(Point(0, 0), 0, Side.FRONT),
-            )
-        ]
 
         placer = KeyPlacer(logger, board, layout, key_distance)
         placer.run(
