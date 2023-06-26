@@ -7,6 +7,7 @@ RUN apt-get update \
       ca-certificates \
       git \
       gzip \
+      imagemagick \
       libmagickwand-dev \
       python3-pip \
       software-properties-common \
@@ -14,6 +15,7 @@ RUN apt-get update \
       tar \
       unzip \
       wget \
+      xvfb \
   && rm -rf /var/lib/apt/lists/*
 
 RUN add-apt-repository --yes ppa:kicad/kicad-6.0-releases \

@@ -7,12 +7,14 @@ RUN apt-get update \
       ca-certificates \
       git \
       gzip \
+      imagemagick \
       python3-pip \
       software-properties-common \
       ssh \
       tar \
       unzip \
       wget \
+      xvfb \
   && rm -rf /var/lib/apt/lists/*
 
 RUN find / -type f -name "EXTERNALLY-MANAGED" -exec rm {} \;
