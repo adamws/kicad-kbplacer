@@ -1,5 +1,6 @@
 import base64
 import logging
+import mimetypes
 import os
 import pcbnew
 import pytest
@@ -195,7 +196,7 @@ def generate_render(tmpdir, request):
         if name in plot_layers:
             plot_plan.append((name, i))
 
-    for (layer_name, layer_id) in plot_plan:
+    for layer_name, layer_id in plot_plan:
         plot_control.SetLayer(layer_id)
         if KICAD_VERSION == 7:
             plot_control.OpenPlotfile(layer_name, pcbnew.PLOT_FORMAT_SVG)
@@ -288,11 +289,10 @@ def to_base64(path):
         return base64.b64encode(f.read()).decode("utf-8")
 
 
-def svg_to_base64_html(path):
+def image_to_base64_html(path):
     b64 = to_base64(path)
-    return '<div class="image"><img src="data:image/svg+xml;base64,{}"></div>'.format(
-        b64
-    )
+    mime = mimetypes.guess_type(path)
+    return '<div class="image"><img src="data:{};base64,{}"></div>'.format(mime[0], b64)
 
 
 @pytest.hookimpl(hookwrapper=True)
@@ -306,7 +306,9 @@ def pytest_runtest_makereport(item, call):
         tmpdir = item.funcargs.get("tmpdir")
         if tmpdir:
             render_path = tmpdir / "render.svg"
-            if render_path.isfile():
-                render = svg_to_base64_html(render_path)
-                extra.append(pytest_html.extras.html(render))
+            screenshot_path = tmpdir / "screenshot.png"
+            for f in [render_path, screenshot_path]:
+                if f.isfile():
+                    render = image_to_base64_html(f)
+                    extra.append(pytest_html.extras.html(render))
         report.extra = extra
