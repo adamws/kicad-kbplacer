@@ -23,7 +23,7 @@ class LinuxVirtualScreenManager:
         self.display.stop()
         return False
 
-    def screenshot(self, path):
+    def screenshot(self, window_name, path):
         try:
             img = self.display.waitgrab(timeout=5)
             img.save(path)
@@ -40,10 +40,10 @@ class HostScreenManager:
     def __exit__(self, *exc):
         return False
 
-    def screenshot(self, path):
+    def screenshot(self, window_name, path):
         try:
             time.sleep(1)
-            window_handle = find_window("kbplacer")
+            window_handle = find_window(window_name)
             window_rect = get_window_position(window_handle)
             img = ImageGrab.grab()
             if window_rect:
@@ -80,6 +80,15 @@ def get_window_position(window_handle):
         return None
 
 
+def run_process(args, workdir):
+    return subprocess.Popen(
+        args,
+        cwd=workdir,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+
 def run_kbplacer_process(workdir, package_name):
     kbplacer_args = [
         "python3",
@@ -89,15 +98,7 @@ def run_kbplacer_process(workdir, package_name):
         "-b",
         "",  # board path is required but it is not important in this test
     ]
-
-    p = subprocess.Popen(
-        kbplacer_args,
-        cwd=workdir,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-
-    return p
+    return run_process(kbplacer_args, workdir)
 
 
 def is_xvfb_avaiable() -> bool:
@@ -129,7 +130,7 @@ def screen_manager():
         pytest.skip(f"Platform '{sys.platform}' is not supported")
 
 
-def test_gui(tmpdir, workdir, package_name, screen_manager) -> None:
+def run_gui_test(tmpdir, screen_manager, window_name, gui_callback) -> None:
     is_ok = True
     # for some reason, it occasionally may fail with
     # 'wxEntryStart failed, unable to initialize wxWidgets!' error, most likely
@@ -138,9 +139,8 @@ def test_gui(tmpdir, workdir, package_name, screen_manager) -> None:
     max_attempts = 3
     for i in range(0, max_attempts):
         with screen_manager as mgr:
-            p = run_kbplacer_process(workdir, package_name)
-            is_ok = mgr.screenshot(f"{tmpdir}/screenshot.png")
-
+            p = gui_callback()
+            is_ok = mgr.screenshot(window_name, f"{tmpdir}/screenshot.png")
             try:
                 outs, errs = p.communicate(timeout=1)
             except subprocess.TimeoutExpired:
@@ -155,3 +155,19 @@ def test_gui(tmpdir, workdir, package_name, screen_manager) -> None:
                 logger.info(f"Failed to get screenshot, attempt {i+1}/{max_attempts}")
 
     assert is_ok
+
+
+def test_gui(tmpdir, workdir, package_name, screen_manager) -> None:
+    def _callback():
+        return run_kbplacer_process(workdir, package_name)
+
+    run_gui_test(tmpdir, screen_manager, "kbplacer", _callback)
+
+
+def test_help_dialog(tmpdir, workdir, package_name, screen_manager) -> None:
+    def _callback():
+        return run_process(
+            ["python3", workdir / package_name / "help_dialog.py"], workdir
+        )
+
+    run_gui_test(tmpdir, screen_manager, "kbplacer help", _callback)

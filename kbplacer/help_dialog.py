@@ -6,7 +6,7 @@ import wx
 
 class HelpDialog(wx.Dialog):
     def __init__(self):
-        super().__init__(None, title="Help Dialog")
+        super().__init__(None, title="kbplacer help")
 
         information_section = self.get_information_section()
         actions_section = self.get_actions_section()
@@ -136,3 +136,10 @@ class HelpDialog(wx.Dialog):
 
         box.Add(help_message, 0, wx.EXPAND | wx.ALL, 5)
         return box
+
+
+if __name__ == "__main__":
+    _ = wx.App()
+    dlg = HelpDialog()
+    dlg.ShowModal()
+
