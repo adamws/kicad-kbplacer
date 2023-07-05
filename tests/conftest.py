@@ -1,11 +1,14 @@
 import base64
+import ctypes
 import logging
 import mimetypes
 import os
 import pcbnew
 import pytest
 import shutil
+import sys
 import svgpathtools
+import time
 
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -68,6 +71,21 @@ def package_name(request):
     if request.config.getoption("--test-plugin-installation"):
         return "com_github_adamws_kicad-kbplacer"
     return "kbplacer"
+
+
+@pytest.fixture(autouse=True, scope="session")
+def prepare_ci_machine():
+    # when running on CircleCI's Windows machine, there is annoying notification po-up opened
+    # which may obstruct tested plugin window when GUI testing. When running on Windows and CI,
+    # simulate single 'ESC' press to close notification. Do this once before testing starts.
+    if "CIRCLECI" in os.environ and sys.platform == "win32":
+        VK_ESCAPE = 0x1B
+        KEYEVENTF_EXTENDEDKEY = 0x0001
+        KEYEVENTF_KEYUP = 0x0002
+        user32 = ctypes.windll.user32
+        user32.keybd_event(VK_ESCAPE, 0, KEYEVENTF_EXTENDEDKEY, 0)
+        time.sleep(0.1)
+        user32.keybd_event(VK_ESCAPE, 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0)
 
 
 @pytest.fixture(autouse=True, scope="session")
