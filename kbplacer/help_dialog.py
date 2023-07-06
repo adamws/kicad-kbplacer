@@ -86,15 +86,17 @@ class HelpDialog(wx.Dialog):
     def get_help_section(self):
         box = wx.BoxSizer(wx.VERTICAL)
         help_message = wx.TextCtrl(
-            self, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_AUTO_URL
+            self, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_AUTO_URL | wx.HSCROLL
         )
 
         bold_font = wx.Font(wx.FontInfo().Bold())
         bold_attr = wx.TextAttr(wx.BLACK)
         bold_attr.SetFont(bold_font)
 
+        regular_font = wx.Font(wx.FontInfo())
         normal_attr = wx.TextAttr(wx.BLACK)
         normal_attr.SetFont(wx.Font(wx.FontInfo()))
+        normal_attr.SetFont(regular_font)
 
         help_message.SetDefaultStyle(bold_attr)
         help_message.AppendText("Description\n\n")
@@ -102,7 +104,7 @@ class HelpDialog(wx.Dialog):
         help_message.SetDefaultStyle(normal_attr)
         help_message.AppendText(
             "Plugin for mechanical keyboard design. "
-            "It features automatic key placement based on popular layout description "
+            "It features automatic key placement \nbased on popular layout description "
             "from "
         )
         help_message.SetDefaultStyle(wx.TextAttr(wx.BLUE))
@@ -130,9 +132,20 @@ class HelpDialog(wx.Dialog):
         help_message.SetDefaultStyle(wx.TextAttr(wx.BLUE))
         help_message.AppendText("https://geekhack.org/index.php?topic=106059.0")
 
-        font = help_message.GetFont()
-        line_height = help_message.GetCharHeight()
-        help_message.SetMinSize((80 * font.GetPixelSize()[0], 10 * line_height))
+        dc = wx.ScreenDC()
+        dc.SetFont(regular_font)
+
+        number_of_lines = help_message.GetNumberOfLines()
+        size = (0, 0)
+        for i in range(0, number_of_lines):
+            line = help_message.GetLineText(i)
+            size_new = dc.GetTextExtent(line)
+            if size_new[0] > size[0]:
+                size = size_new
+
+        margin = 20
+        size = (size[0] + margin, size[1] * number_of_lines + margin)
+        help_message.SetMinSize(size)
 
         box.Add(help_message, 0, wx.EXPAND | wx.ALL, 5)
         return box
@@ -142,4 +155,3 @@ if __name__ == "__main__":
     _ = wx.App()
     dlg = HelpDialog()
     dlg.ShowModal()
-
