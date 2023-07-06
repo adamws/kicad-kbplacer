@@ -90,10 +90,10 @@ class HelpDialog(wx.Dialog):
         )
 
         bold_font = wx.Font(wx.FontInfo().Bold())
-        bold_attr = wx.TextAttr()
+        bold_attr = wx.TextAttr(wx.BLACK)
         bold_attr.SetFont(bold_font)
 
-        normal_attr = wx.TextAttr()
+        normal_attr = wx.TextAttr(wx.BLACK)
         normal_attr.SetFont(wx.Font(wx.FontInfo()))
 
         help_message.SetDefaultStyle(bold_attr)
