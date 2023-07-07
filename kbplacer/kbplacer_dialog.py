@@ -3,6 +3,7 @@ from __future__ import annotations
 import string
 import wx
 from typing import List, Optional, Tuple
+from wx.lib.embeddedimage import PyEmbeddedImage
 
 from .defaults import DEFAULT_DIODE_POSITION
 from .element_position import ElementInfo, ElementPosition, Point, PositionOption, Side
@@ -407,7 +408,11 @@ class KbplacerDialog(wx.Dialog):
 
         add_element("ST{}")
 
-        add_icon = wx.ArtProvider.GetBitmap(wx.ART_PLUS, wx.ART_BUTTON)
+        add_icon = PyEmbeddedImage(
+            b"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhkiAAAACtJ"
+            b"REFUOI1jYKAx+A/FOAETpTaMGsDAwAil8YY0Pv0Uu4AQGE0H9DCAYgAADfAFFDV6vY8AAAAA"
+            b"SUVORK5CYII="
+        ).GetBitmap()
         add_button = wx.BitmapButton(self, bitmap=add_icon)
         add_button.Bind(wx.EVT_BUTTON, add_element_callback)
 
@@ -418,9 +423,11 @@ class KbplacerDialog(wx.Dialog):
             if element_settings:
                 element_settings.Destroy()
                 self.Layout()
-            pass
 
-        remove_icon = wx.ArtProvider.GetBitmap(wx.ART_MINUS, wx.ART_BUTTON)
+        remove_icon = PyEmbeddedImage(
+            b"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhkiAAAABtJ"
+            b"REFUOI1jYBgFwwAwQun/5OpnopZLRsGQBgBLTwEEpzJYVwAAAABJRU5ErkJggg=="
+        ).GetBitmap()
         remove_button = wx.BitmapButton(self, bitmap=remove_icon)
         remove_button.Bind(wx.EVT_BUTTON, remove_element)
 
