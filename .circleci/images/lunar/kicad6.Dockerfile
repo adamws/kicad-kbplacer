@@ -8,6 +8,7 @@ RUN apt-get update \
       git \
       gzip \
       imagemagick \
+      librsvg2-2 \
       locales \
       python3-pip \
       software-properties-common \
