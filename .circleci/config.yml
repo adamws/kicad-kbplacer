@@ -25,11 +25,11 @@ jobs:
     steps: *in-docker-test-steps
   test-ubuntu-lunar-kicad7:
     docker:
-      - image: admwscki/kicad-kbplacer-primary:7.0.5-lunar
+      - image: admwscki/kicad-kbplacer-primary:7.0.6-lunar
     steps: *in-docker-test-steps
   test-ubuntu-focal-kicad7:
     docker:
-      - image: admwscki/kicad-kbplacer-primary:7.0.5-focal
+      - image: admwscki/kicad-kbplacer-primary:7.0.6-focal
     steps: *in-docker-test-steps
   test-windows:
     machine:
