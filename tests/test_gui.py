@@ -147,8 +147,11 @@ def run_gui_test(tmpdir, screen_manager, window_name, gui_callback) -> None:
                 p.kill()
                 outs, errs = p.communicate()
 
-            logger.info(outs)
-            logger.info(errs)
+            outs = outs.decode("utf-8")
+            errs = errs.decode("utf-8")
+            assert(outs == "")
+            assert(errs == "")
+
             if is_ok:
                 break
             else:
