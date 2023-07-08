@@ -179,7 +179,7 @@ if __name__ == "__main__":
         key_distance = args.key_distance
         template_path = args.template
     else:
-        # gui mode, other user input would raise exception on argument parsing
+        # this must be gui mode (as other arguments would raise exception)
         import wx
         from .kbplacer_dialog import KbplacerDialog
 
