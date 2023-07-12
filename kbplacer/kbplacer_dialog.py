@@ -61,7 +61,14 @@ class FloatValidator(wx.Validator):
 
 
 class LabeledTextCtrl(wx.Panel):
-    def __init__(self, parent, label: str, value: str, width: int = -1) -> None:
+    def __init__(
+        self,
+        parent,
+        label: str,
+        value: str,
+        width: int = -1,
+        validator: wx.Validator = wx.DefaultValidator,
+    ) -> None:
         super().__init__(parent)
 
         expected_char_width = self.GetTextExtent("x").x
@@ -73,7 +80,9 @@ class LabeledTextCtrl(wx.Panel):
             annotation_format_size = wx.Size(-1, -1)
 
         self.label = wx.StaticText(self, -1, label)
-        self.text = wx.TextCtrl(self, value=value, size=annotation_format_size)
+        self.text = wx.TextCtrl(
+            self, value=value, size=annotation_format_size, validator=validator
+        )
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.label, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5)
@@ -137,17 +146,16 @@ class ElementPositionWidget(wx.Panel):
         self.dropdown = wx.ComboBox(self, choices=choices, style=wx.CB_DROPDOWN)
         self.dropdown.Bind(wx.EVT_COMBOBOX, self.__on_position_choice_change)
 
-        expected_char_width = self.GetTextExtent("x").x
-        expected_size = wx.Size(5 * expected_char_width + TEXT_CTRL_EXTRA_SPACE, -1)
-        self.x = wx.TextCtrl(
-            self, value="", size=expected_size, validator=FloatValidator()
+        self.x = LabeledTextCtrl(
+            self, "Offset X:", value="", width=5, validator=FloatValidator()
         )
-        self.y = wx.TextCtrl(
-            self, value="", size=expected_size, validator=FloatValidator()
+        self.y = LabeledTextCtrl(
+            self, "Y:", value="", width=5, validator=FloatValidator()
         )
-        self.orientation = wx.TextCtrl(
-            self, value="", size=expected_size, validator=FloatValidator()
+        self.orientation = LabeledTextCtrl(
+            self, "Orientation:", value="", width=5, validator=FloatValidator()
         )
+        self.side_label = wx.StaticText(self, -1, "Side:")
         self.side = CustomRadioBox(self, choices=["Front", "Back"])
 
         self.__set_initial_state(choices[0])
@@ -155,16 +163,10 @@ class ElementPositionWidget(wx.Panel):
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(wx.StaticText(self, -1, "Position:"), 0, wx.ALIGN_CENTER_VERTICAL, 5)
         sizer.Add(self.dropdown, 1, wx.EXPAND | wx.ALL, 5)
-        sizer.Add(
-            wx.StaticText(self, -1, "X/Y offset:"), 0, wx.ALIGN_CENTER_VERTICAL, 5
-        )
         sizer.Add(self.x, 0, wx.EXPAND | wx.ALL, 5)
-        sizer.Add(wx.StaticText(self, -1, "/"), 0, wx.ALIGN_CENTER_VERTICAL, 5)
         sizer.Add(self.y, 0, wx.EXPAND | wx.ALL, 5)
-        sizer.Add(
-            wx.StaticText(self, -1, "Orientation:"), 0, wx.ALIGN_CENTER_VERTICAL, 5
-        )
         sizer.Add(self.orientation, 0, wx.EXPAND | wx.ALL, 5)
+        sizer.Add(self.side_label, 0, wx.ALIGN_CENTER_VERTICAL, 5)
         sizer.Add(self.side, 0, wx.EXPAND | wx.ALL, 5)
 
         self.SetSizer(sizer)
@@ -193,7 +195,7 @@ class ElementPositionWidget(wx.Panel):
             x = str(self.default.relative_position.x)
             y = str(self.default.relative_position.y)
             self.__set_coordinates(x, y)
-            self.orientation.SetValue(str(self.default.orientation))
+            self.orientation.text.SetValue(str(self.default.orientation))
             if self.default.side == Side.BACK:
                 self.side.Select("Back")
             else:
@@ -202,30 +204,32 @@ class ElementPositionWidget(wx.Panel):
 
     def __set_position_to_zero_editable(self) -> None:
         self.__set_coordinates("0", "0")
-        self.orientation.SetValue("0")
+        self.orientation.text.SetValue("0")
         self.side.Select("Front")
         self.__enable_position_controls()
 
     def __set_position_to_empty_non_editable(self):
         self.__set_coordinates("-", "-")
-        self.orientation.SetValue("-")
+        self.orientation.text.SetValue("-")
         self.side.Clear()
         self.__disable_position_controls()
 
     def __set_coordinates(self, x: str, y: str):
-        self.x.SetValue(x)
-        self.y.SetValue(y)
+        self.x.text.SetValue(x)
+        self.y.text.SetValue(y)
 
     def __enable_position_controls(self):
         self.x.Enable()
         self.y.Enable()
         self.orientation.Enable()
+        self.side_label.Enable()
         self.side.Enable()
 
     def __disable_position_controls(self):
         self.x.Disable()
         self.y.Disable()
         self.orientation.Disable()
+        self.side_label.Disable()
         self.side.Disable()
 
     def GetValue(self) -> Tuple[PositionOption, Optional[ElementPosition]]:
@@ -233,9 +237,9 @@ class ElementPositionWidget(wx.Panel):
             self.choice == PositionOption.DEFAULT
             or self.choice == PositionOption.CUSTOM
         ):
-            x = float(self.x.GetValue())
-            y = float(self.y.GetValue())
-            orientation = float(self.orientation.GetValue())
+            x = float(self.x.text.GetValue())
+            y = float(self.y.text.GetValue())
+            orientation = float(self.orientation.text.GetValue())
             side_str = self.side.GetValue()
             return self.choice, ElementPosition(
                 Point(x, y), orientation, Side(side_str == "Back")
@@ -262,7 +266,7 @@ class ElementSettingsWidget(wx.Panel):
         super().__init__(parent)
 
         self.annotation_format = LabeledTextCtrl(
-            self, label="Annotation format:", value=default_annotation, width=3
+            self, label="Footprint Annotation:", value=default_annotation, width=3
         )
         self.position_widget = ElementPositionWidget(self, default=default_position)
 
@@ -315,42 +319,35 @@ class KbplacerDialog(wx.Dialog):
         self.SetSizerAndFit(box)
 
     def get_switch_section(self):
-        key_annotation = LabeledTextCtrl(self, "Switch annotation format:", "SW{}")
+        key_annotation = LabeledTextCtrl(self, "Footprint Annotation:", "SW{}")
 
         layout_label = wx.StaticText(self, -1, "KLE json file:")
         layout_file_picker = wx.FilePickerCtrl(self, -1)
 
-        key_distance_x = wx.TextCtrl(self, value="19.05", validator=FloatValidator())
-        key_distance_y = wx.TextCtrl(self, value="19.05", validator=FloatValidator())
-
-        key_distance_label = wx.StaticText(self, -1, "X/Y 1U distance:")
-
-        row1 = wx.BoxSizer(wx.HORIZONTAL)
-        row1.Add(key_annotation, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
-        row1.Add(layout_label, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5)
-        row1.Add(layout_file_picker, 1, wx.ALL, 5)
-
-        row2 = wx.BoxSizer(wx.HORIZONTAL)
-        row2.Add(key_distance_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 5)
-        row2.Add(key_distance_x, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
-        row2.Add(wx.StaticText(self, -1, "/"), 0, wx.ALIGN_CENTER_VERTICAL, 5)
-        row2.Add(key_distance_y, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        key_distance_x = LabeledTextCtrl(
+            self, "Step X:", value="19.05", width=5, validator=FloatValidator()
+        )
+        key_distance_y = LabeledTextCtrl(
+            self, "Step Y:", value="19.05", width=5, validator=FloatValidator()
+        )
 
         box = wx.StaticBox(self, label="Switch settings")
-        sizer = wx.StaticBoxSizer(box, wx.VERTICAL)
-
-        sizer.Add(row1, 0, wx.EXPAND | wx.ALL, 5)
-        sizer.Add(row2, 0, wx.EXPAND | wx.ALL, 5)
+        sizer = wx.StaticBoxSizer(box, wx.HORIZONTAL)
+        sizer.Add(key_annotation, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        sizer.Add(layout_label, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5)
+        sizer.Add(layout_file_picker, 1, wx.ALL, 5)
+        sizer.Add(key_distance_x, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        sizer.Add(key_distance_y, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
 
         self.__key_annotation_format = key_annotation.text
         self.__layout_file_picker = layout_file_picker
-        self.__key_distance_x = key_distance_x
-        self.__key_distance_y = key_distance_y
+        self.__key_distance_x = key_distance_x.text
+        self.__key_distance_y = key_distance_y.text
 
         return sizer
 
     def get_switch_diodes_section(self):
-        place_diodes_checkbox = wx.CheckBox(self, label="Enable placement")
+        place_diodes_checkbox = wx.CheckBox(self, label="Allow autoplacement")
         place_diodes_checkbox.SetValue(True)
         place_diodes_checkbox.Bind(wx.EVT_CHECKBOX, self.on_diode_place_checkbox)
 
@@ -439,7 +436,7 @@ class KbplacerDialog(wx.Dialog):
         return sizer
 
     def get_misc_section(self):
-        tracks_checkbox = wx.CheckBox(self, label="Add tracks")
+        tracks_checkbox = wx.CheckBox(self, label="Route tracks")
         tracks_checkbox.SetValue(True)
 
         template_label = wx.StaticText(self, -1, "Controller circuit template:")
