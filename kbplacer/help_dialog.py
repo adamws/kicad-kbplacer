@@ -4,9 +4,18 @@ import webbrowser
 import wx
 
 
+wx_ = wx.GetTranslation
+
+
 class HelpDialog(wx.Dialog):
-    def __init__(self):
-        super().__init__(None, title="kbplacer help")
+    def __init__(self, parent) -> None:
+        super(HelpDialog, self).__init__(parent, -1, "kbplacer help")
+
+        # inherit translations from parent:
+        if parent:
+            self._ = parent._
+        else:
+            self._ = lambda x: x
 
         information_section = self.get_information_section()
         actions_section = self.get_actions_section()
@@ -39,15 +48,15 @@ class HelpDialog(wx.Dialog):
         name.SetFont(font)
 
         version_file_name = os.path.join(source_dir, "version.txt")
-        version_str = "<missing>"
+        version_str = self._("<missing>")
         if os.path.isfile(version_file_name):
             with open(version_file_name, "r") as f:
                 version_str = f.read()
-        if re.match(r"v\d.\d$", version_str):
-            status = "release build"
+        if not re.match(r"v\d.\d$", version_str):
+            status = ", " + self._("development build")
         else:
-            status = "development build"
-        version = wx.StaticText(self, -1, f"Version: {version_str}, {status}")
+            status = ""
+        version = wx.StaticText(self, -1, wx_("Version") + f": {version_str}{status}")
 
         name_box = wx.BoxSizer(wx.HORIZONTAL)
         name_box.Add(static_icon_bitmap, 0, wx.ALL, 5)
@@ -62,7 +71,7 @@ class HelpDialog(wx.Dialog):
     def get_actions_section(self):
         box = wx.BoxSizer(wx.VERTICAL)
 
-        report_bug_button = wx.Button(self, label="Report Bug")
+        report_bug_button = wx.Button(self, label=wx_("Report Bug"))
 
         def on_report_bug(_) -> None:
             webbrowser.open(
@@ -71,7 +80,7 @@ class HelpDialog(wx.Dialog):
 
         report_bug_button.Bind(wx.EVT_BUTTON, on_report_bug)
 
-        donate_button = wx.Button(self, label="Donate")
+        donate_button = wx.Button(self, label=wx_("Donate"))
 
         def on_donate(_) -> None:
             webbrowser.open("https://ko-fi.com/adamws")
@@ -99,13 +108,16 @@ class HelpDialog(wx.Dialog):
         normal_attr.SetFont(regular_font)
 
         help_message.SetDefaultStyle(bold_attr)
-        help_message.AppendText("Description\n\n")
+        help_message.AppendText(wx_("Description"))
+        help_message.AppendText("\n\n")
 
         help_message.SetDefaultStyle(normal_attr)
         help_message.AppendText(
-            "Plugin for mechanical keyboard design. "
-            "It features automatic key placement \nbased on popular layout description "
-            "from "
+            self._(
+                "Plugin for mechanical keyboard design. "
+                "It features automatic key placement \nbased on popular layout description "
+                "from "
+            )
         )
         help_message.SetDefaultStyle(wx.TextAttr(wx.BLUE))
         help_message.AppendText("www.keyboard-layout-editor.com")
@@ -118,16 +130,18 @@ class HelpDialog(wx.Dialog):
         help_message.Bind(wx.EVT_TEXT_URL, on_open_url)
 
         help_message.SetDefaultStyle(bold_attr)
-        help_message.AppendText("\n\nHelp\n\n")
+        help_message.AppendText("\n\n")
+        help_message.AppendText(wx_("Help"))
+        help_message.AppendText("\n\n")
 
         help_message.SetDefaultStyle(normal_attr)
-        help_message.AppendText(" \u2022 Project website - ")
+        help_message.AppendText(" \u2022 " + self._("Project website - "))
 
         help_message.SetDefaultStyle(wx.TextAttr(wx.BLUE))
         help_message.AppendText("https://github.com/adamws/kicad-kbplacer")
 
         help_message.SetDefaultStyle(normal_attr)
-        help_message.AppendText("\n \u2022 Geekhack forum thread - ")
+        help_message.AppendText("\n \u2022 " + self._("Geekhack forum thread - "))
 
         help_message.SetDefaultStyle(wx.TextAttr(wx.BLUE))
         help_message.AppendText("https://geekhack.org/index.php?topic=106059.0")
@@ -153,5 +167,5 @@ class HelpDialog(wx.Dialog):
 
 if __name__ == "__main__":
     _ = wx.App()
-    dlg = HelpDialog()
+    dlg = HelpDialog(None)
     dlg.ShowModal()

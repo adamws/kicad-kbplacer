@@ -1,3 +1,4 @@
+import argparse
 import glob
 import hashlib
 import io
@@ -10,6 +11,7 @@ import tempfile
 import zipfile
 
 from datetime import datetime
+from pathlib import Path
 from textwrap import dedent
 from typing import TypedDict
 
@@ -71,6 +73,25 @@ def get_status(version: str) -> str:
         return "development"
 
 
+def generate_translations(locale_directory):
+    print("Generate translations:")
+    po_files = glob.glob(f"{DIRNAME}/../translation/pofiles/*.po")
+    for f in po_files:
+        lang_name = Path(f).stem
+        dst = f"{locale_directory}/{lang_name}/LC_MESSAGES"
+        os.makedirs(dst)
+        print(f"\t{lang_name}", end="")
+        res = subprocess.run(
+            ["msgfmt", "--statistics", f, "-o", f"{dst}/kbplacer.mo"],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        msgfmt_output = res.stdout.decode("utf-8").strip()
+        status = "ok" if res.returncode == 0 else "nok"
+        print(f": {status}: {msgfmt_output}")
+
+
 def zip_directory(directory, output_zip) -> None:
     with zipfile.ZipFile(output_zip, "w", zipfile.ZIP_DEFLATED) as zipf:
         for root, _, files in os.walk(directory):
@@ -89,13 +110,17 @@ def create_resources_package(identifier: str, output: str) -> None:
 
 def create_plugin_package(version, metadata, output: str) -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
-        os.makedirs(f"{tmpdir}/plugins")
+        plugin_dst_dir = f"{tmpdir}/plugins"
+        locale_dir = f"{plugin_dst_dir}/locale"
+        os.makedirs(plugin_dst_dir)
+        os.makedirs(locale_dir)
         os.makedirs(f"{tmpdir}/resources")
         sources = glob.glob(f"{DIRNAME}/../kbplacer/*.py")
         images = glob.glob(f"{DIRNAME}/../kbplacer/*.png")
         for f in sources + images:
-            shutil.copy(f, f"{tmpdir}/plugins")
+            shutil.copy(f, plugin_dst_dir)
         shutil.copy(f"{DIRNAME}/../resources/icon.png", f"{tmpdir}/resources")
+        generate_translations(locale_dir)
 
         with open(f"{tmpdir}/plugins/version.txt", "w") as f:
             f.write(version)
@@ -145,7 +170,7 @@ def get_json_metadata(filename) -> JsonMetadata:
     }
 
 
-if __name__ == "__main__":
+def build_repository(output_dir: str):
     version = get_version()
     status = get_status(version)
     version_simple = get_simplified_version(version)
@@ -182,10 +207,6 @@ if __name__ == "__main__":
             }
         ],
     }
-
-    output_dir = f"{DIRNAME}/output"
-    shutil.rmtree(output_dir, ignore_errors=True)
-    os.makedirs(output_dir)
 
     plugin_package = f"{output_dir}/{PLUGIN_NAME}.zip"
     create_plugin_package(version, metadata, plugin_package)
@@ -243,3 +264,46 @@ if __name__ == "__main__":
 
     with open(f"{output_dir}/index.html", "w") as f:
         f.write(dedent(html_index_template))
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Plugin packaging utilities",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        default=Path(f"{DIRNAME}/output"),
+        type=Path,
+        help="Output directory path",
+    )
+    parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="Override output directory if already exists",
+    )
+    parser.add_argument(
+        "--translate-only",
+        action="store_true",
+        help="Run only .mo translation files generation",
+    )
+
+    args = parser.parse_args()
+
+    output_dir = args.output
+    force = args.force
+    translate_only = args.translate_only
+
+    if force:
+        shutil.rmtree(output_dir, ignore_errors=True)
+    elif output_dir.is_dir():
+        print(f"Output directory '{output_dir}' already exists, exiting...")
+        exit(1)
+
+    os.makedirs(output_dir)
+
+    if translate_only:
+        generate_translations(output_dir)
+    else:
+        build_repository(output_dir)

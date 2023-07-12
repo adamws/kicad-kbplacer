@@ -71,6 +71,10 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Install dependencies
+          command: |
+            sudo apt-get update && sudo apt-get install -y gettext
+      - run:
           name: Create zip package and repository
           command: |
             python package.py

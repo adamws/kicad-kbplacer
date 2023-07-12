@@ -1,0 +1,51 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"POT-Creation-Date: 2023-07-14 20:04+0200\n"
+"PO-Revision-Date: 2023-07-12 21:58+0200\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: pl\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: pygettext.py 1.5\n"
+"X-Generator: Poedit 3.3.2\n"
+
+msgid "<missing>"
+msgstr "<brak>"
+
+msgid "development build"
+msgstr "kompilacja deweloperska"
+
+msgid ""
+"Plugin for mechanical keyboard design. It features automatic key placement \n"
+"based on popular layout description from "
+msgstr ""
+"Wtyczka ułatwiająca projektowanie klawiatur mechanicznych. Pozwala na "
+"automatyczne \n"
+"rozmieszczanie przycisków na podstawie konfiguracji z "
+
+msgid "Project website - "
+msgstr "Witryna projektu - "
+
+msgid "Geekhack forum thread - "
+msgstr "Wątek na forum Geekhack - "
+
+msgid "Keyboard layout file:"
+msgstr "Plik układu klawiatury:"
+
+msgid "Switch settings"
+msgstr "Ustawiania przełączników"
+
+msgid "Switch diodes settings"
+msgstr "Ustawienia diód przełączników"
+
+msgid "Additional elements settings"
+msgstr "Ustawienia elementów dodatkowych"
+
+msgid "Controller circuit template file:"
+msgstr "Plik szablonu obwodu kontrolera:"
+
+msgid "Other settings"
+msgstr "Pozostałe ustawiania"

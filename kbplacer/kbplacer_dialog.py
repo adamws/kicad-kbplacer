@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import gettext
+import logging
+import os
 import string
 import wx
 from typing import List, Optional, Tuple
@@ -10,7 +13,31 @@ from .element_position import ElementInfo, ElementPosition, Point, PositionOptio
 from .help_dialog import HelpDialog
 
 
+logger = logging.getLogger(__name__)
 TEXT_CTRL_EXTRA_SPACE = 25
+
+# Most of the phrases used in this plugin are already in use in KiCad.
+# It means that we get translations for free using `wx.GetTranslation`.
+# All strings translated with 'wx_' are expected to be a part of KiCad's translation files.
+# All remaining will be translated with another custom mechanism or will remain default.
+wx_ = wx.GetTranslation
+
+# Currently there is no elegant way to check which language is loaded by KiCad.
+# This feature has been requested here: https://gitlab.com/kicad/code/kicad/-/issues/10573
+# Until then, use workaroud - request translation with wx_ and use result in lookup table:
+KICAD_TRANSLATIONS_LOOKUP = {"Set Language": "en", "Ustaw język": "pl"}
+
+
+def get_current_kicad_language():
+    return KICAD_TRANSLATIONS_LOOKUP.get(wx_("Set Language"), "en")
+
+
+def get_plugin_translator(lang: str = "en"):
+    localedir = os.path.join(os.path.dirname(__file__), "locale")
+    trans = gettext.translation(
+        "kbplacer", localedir=localedir, languages=(lang,), fallback=True
+    )
+    return trans.gettext
 
 
 class FloatValidator(wx.Validator):
@@ -147,21 +174,26 @@ class ElementPositionWidget(wx.Panel):
         self.dropdown.Bind(wx.EVT_COMBOBOX, self.__on_position_choice_change)
 
         self.x = LabeledTextCtrl(
-            self, "Offset X:", value="", width=5, validator=FloatValidator()
+            self, wx_("Offset X:"), value="", width=5, validator=FloatValidator()
         )
         self.y = LabeledTextCtrl(
-            self, "Y:", value="", width=5, validator=FloatValidator()
+            self, wx_("Y:"), value="", width=5, validator=FloatValidator()
         )
         self.orientation = LabeledTextCtrl(
-            self, "Orientation:", value="", width=5, validator=FloatValidator()
+            self, wx_("Orientation:"), value="", width=5, validator=FloatValidator()
         )
-        self.side_label = wx.StaticText(self, -1, "Side:")
-        self.side = CustomRadioBox(self, choices=["Front", "Back"])
+        self.side_label = wx.StaticText(self, -1, wx_("Side:"))
+        self.side = CustomRadioBox(self, choices=[wx_("Front"), wx_("Back")])
 
         self.__set_initial_state(choices[0])
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(wx.StaticText(self, -1, "Position:"), 0, wx.ALIGN_CENTER_VERTICAL, 5)
+        sizer.Add(
+            wx.StaticText(self, -1, wx_("Position") + ":"),
+            0,
+            wx.ALIGN_CENTER_VERTICAL,
+            5,
+        )
         sizer.Add(self.dropdown, 1, wx.EXPAND | wx.ALL, 5)
         sizer.Add(self.x, 0, wx.EXPAND | wx.ALL, 5)
         sizer.Add(self.y, 0, wx.EXPAND | wx.ALL, 5)
@@ -197,15 +229,15 @@ class ElementPositionWidget(wx.Panel):
             self.__set_coordinates(x, y)
             self.orientation.text.SetValue(str(self.default.orientation))
             if self.default.side == Side.BACK:
-                self.side.Select("Back")
+                self.side.Select(wx_("Back"))
             else:
-                self.side.Select("Front")
+                self.side.Select(wx_("Front"))
             self.__disable_position_controls()
 
     def __set_position_to_zero_editable(self) -> None:
         self.__set_coordinates("0", "0")
         self.orientation.text.SetValue("0")
-        self.side.Select("Front")
+        self.side.Select(wx_("Front"))
         self.__enable_position_controls()
 
     def __set_position_to_empty_non_editable(self):
@@ -242,7 +274,7 @@ class ElementPositionWidget(wx.Panel):
             orientation = float(self.orientation.text.GetValue())
             side_str = self.side.GetValue()
             return self.choice, ElementPosition(
-                Point(x, y), orientation, Side(side_str == "Back")
+                Point(x, y), orientation, Side(side_str == wx_("Back"))
             )
         else:
             return self.choice, None
@@ -266,7 +298,10 @@ class ElementSettingsWidget(wx.Panel):
         super().__init__(parent)
 
         self.annotation_format = LabeledTextCtrl(
-            self, label="Footprint Annotation:", value=default_annotation, width=3
+            self,
+            label=wx_("Footprint Annotation") + ":",
+            value=default_annotation,
+            width=3,
         )
         self.position_widget = ElementPositionWidget(self, default=default_position)
 
@@ -296,6 +331,10 @@ class KbplacerDialog(wx.Dialog):
         style = wx.DEFAULT_DIALOG_STYLE
         super(KbplacerDialog, self).__init__(parent, -1, title, style=style)
 
+        language = get_current_kicad_language()
+        logger.info(f"Language: {language}")
+        self._ = get_plugin_translator(language)
+
         switch_section = self.get_switch_section()
         switch_diodes_section = self.get_switch_diodes_section()
         additional_elements_section = self.get_additional_elements_section()
@@ -319,19 +358,21 @@ class KbplacerDialog(wx.Dialog):
         self.SetSizerAndFit(box)
 
     def get_switch_section(self):
-        key_annotation = LabeledTextCtrl(self, "Footprint Annotation:", "SW{}")
+        key_annotation = LabeledTextCtrl(
+            self, wx_("Footprint Annotation") + ":", "SW{}"
+        )
 
-        layout_label = wx.StaticText(self, -1, "KLE json file:")
+        layout_label = wx.StaticText(self, -1, self._("Keyboard layout file:"))
         layout_file_picker = wx.FilePickerCtrl(self, -1)
 
         key_distance_x = LabeledTextCtrl(
-            self, "Step X:", value="19.05", width=5, validator=FloatValidator()
+            self, wx_("Step X:"), value="19.05", width=5, validator=FloatValidator()
         )
         key_distance_y = LabeledTextCtrl(
-            self, "Step Y:", value="19.05", width=5, validator=FloatValidator()
+            self, wx_("Step Y:"), value="19.05", width=5, validator=FloatValidator()
         )
 
-        box = wx.StaticBox(self, label="Switch settings")
+        box = wx.StaticBox(self, label=self._("Switch settings"))
         sizer = wx.StaticBoxSizer(box, wx.HORIZONTAL)
         sizer.Add(key_annotation, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer.Add(layout_label, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5)
@@ -347,7 +388,7 @@ class KbplacerDialog(wx.Dialog):
         return sizer
 
     def get_switch_diodes_section(self):
-        place_diodes_checkbox = wx.CheckBox(self, label="Allow autoplacement")
+        place_diodes_checkbox = wx.CheckBox(self, label=wx_("Allow autoplacement"))
         place_diodes_checkbox.SetValue(True)
         place_diodes_checkbox.Bind(wx.EVT_CHECKBOX, self.on_diode_place_checkbox)
 
@@ -355,7 +396,7 @@ class KbplacerDialog(wx.Dialog):
             self, "D{}", default_position=DEFAULT_DIODE_POSITION
         )
 
-        box = wx.StaticBox(self, label="Switch diodes settings")
+        box = wx.StaticBox(self, label=self._("Switch diodes settings"))
         sizer = wx.StaticBoxSizer(box, wx.VERTICAL)
         sizer.Add(place_diodes_checkbox, 0, wx.EXPAND | wx.ALL, 5)
         # weird border value to make it aligned with 'additional_elements_section':
@@ -384,7 +425,7 @@ class KbplacerDialog(wx.Dialog):
         scrolled_window.SetVirtualSize((virtual_width, virtual_height))
         scrolled_window.SetScrollRate(0, 10)
 
-        box = wx.StaticBox(self, label="Additional elements settings")
+        box = wx.StaticBox(self, label=self._("Additional elements settings"))
         sizer = wx.StaticBoxSizer(box, wx.VERTICAL)
 
         sizer.Add(scrolled_window, 1, wx.EXPAND | wx.ALL, 10)
@@ -436,13 +477,15 @@ class KbplacerDialog(wx.Dialog):
         return sizer
 
     def get_misc_section(self):
-        tracks_checkbox = wx.CheckBox(self, label="Route tracks")
+        tracks_checkbox = wx.CheckBox(self, label=wx_("Route tracks"))
         tracks_checkbox.SetValue(True)
 
-        template_label = wx.StaticText(self, -1, "Controller circuit template:")
+        template_label = wx.StaticText(
+            self, -1, self._("Controller circuit template file:")
+        )
         template_file_picker = wx.FilePickerCtrl(self, -1)
 
-        box = wx.StaticBox(self, label="Other settings")
+        box = wx.StaticBox(self, label=self._("Other settings"))
         sizer = wx.StaticBoxSizer(box, wx.HORIZONTAL)
 
         sizer.Add(tracks_checkbox, 0, wx.EXPAND | wx.ALL, 5)
@@ -457,7 +500,7 @@ class KbplacerDialog(wx.Dialog):
 
     def on_help_button(self, event):
         del event
-        help_dialog = HelpDialog()
+        help_dialog = HelpDialog(self)
         help_dialog.ShowModal()
         help_dialog.Destroy()
 
