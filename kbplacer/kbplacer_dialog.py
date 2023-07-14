@@ -182,6 +182,15 @@ class ElementPositionWidget(wx.Panel):
         self.dropdown = wx.ComboBox(self, choices=choices, style=wx.CB_DROPDOWN)
         self.dropdown.Bind(wx.EVT_COMBOBOX, self.__on_position_choice_change)
 
+        dropdown_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        dropdown_sizer.Add(
+            wx.StaticText(self, -1, wx_("Position") + ":"),
+            0,
+            wx.RIGHT | wx.ALIGN_CENTER_VERTICAL,
+            5,
+        )
+        dropdown_sizer.Add(self.dropdown, 0, wx.EXPAND | wx.TOP | wx.BOTTOM, 5)
+
         self.x = LabeledTextCtrl(
             self, wx_("Offset X:"), value="", width=5, validator=FloatValidator()
         )
@@ -197,17 +206,11 @@ class ElementPositionWidget(wx.Panel):
         self.__set_initial_state(choices[0])
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(
-            wx.StaticText(self, -1, wx_("Position") + ":"),
-            0,
-            wx.ALIGN_CENTER_VERTICAL,
-            5,
-        )
-        sizer.Add(self.dropdown, 1, wx.EXPAND | wx.ALL, 5)
+        sizer.Add(dropdown_sizer, 0, wx.EXPAND | wx.ALL, 5)
         sizer.Add(self.x, 0, wx.EXPAND | wx.ALL, 5)
         sizer.Add(self.y, 0, wx.EXPAND | wx.ALL, 5)
         sizer.Add(self.orientation, 0, wx.EXPAND | wx.ALL, 5)
-        sizer.Add(self.side_label, 0, wx.ALIGN_CENTER_VERTICAL, 5)
+        sizer.Add(self.side_label, 0, wx.LEFT | wx.ALIGN_CENTER_VERTICAL, 5)
         sizer.Add(self.side, 0, wx.EXPAND | wx.ALL, 5)
 
         self.SetSizer(sizer)
@@ -316,7 +319,9 @@ class ElementSettingsWidget(wx.Panel):
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        sizer.Add(self.annotation_format, 0, wx.EXPAND | wx.RIGHT, 5)
+        sizer.Add(
+            self.annotation_format, 0, wx.EXPAND | wx.TOP | wx.BOTTOM | wx.RIGHT, 5
+        )
         sizer.Add(self.position_widget, 0, wx.EXPAND | wx.ALL, 0)
 
         self.SetSizer(sizer)
