@@ -43,8 +43,7 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
             level=logging.DEBUG,
             filename="kbplacer.log",
             filemode="w",
-            format="%(asctime)s %(name)s %(lineno)d: %(message)s",
-            datefmt="%H:%M:%S",
+            format="[%(filename)s:%(lineno)d]: %(message)s",
         )
         self.logger = logging.getLogger(__name__)
         self.logger.info("Plugin executed with KiCad version: " + version)
