@@ -4,6 +4,7 @@ import gettext
 import logging
 import os
 import string
+import sys
 import wx
 from typing import List, Optional, Tuple
 from wx.lib.embeddedimage import PyEmbeddedImage
@@ -145,9 +146,11 @@ class CustomRadioBox(wx.Panel):
         self.none_button = wx.RadioButton(self, label="")
         self.none_button.Hide()
 
+        # on linux, use negative border because otherwise it looks too spaced out
+        space = 0 if sys.platform == "win32" else -2
         sizer = wx.BoxSizer(wx.VERTICAL)
         for radio_button in self.radio_buttons.values():
-            sizer.Add(radio_button, 0, wx.ALL, -2)
+            sizer.Add(radio_button, 0, wx.TOP | wx.BOTTOM, space)
 
         self.SetSizer(sizer)
 
