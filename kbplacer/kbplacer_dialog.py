@@ -83,7 +83,13 @@ class FloatValidator(wx.Validator):
             text_ctrl = self.GetWindow()
             text = text_ctrl.GetValue()
             key = chr(keycode)
-            if key in string.digits or key == "-" or (key == "." and "." not in text):
+            if (
+                # allow only digits or single '-' when as first character
+                # or single '.' if not as first character
+                key in string.digits
+                or (key == "-" and text == "")
+                or (key == "." and "." not in text and text != "")
+            ):
                 event.Skip()
 
 
