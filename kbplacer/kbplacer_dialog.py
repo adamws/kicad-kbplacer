@@ -377,7 +377,9 @@ class KbplacerDialog(wx.Dialog):
         )
 
         layout_label = wx.StaticText(self, -1, self._("Keyboard layout file:"))
-        layout_file_picker = wx.FilePickerCtrl(self, -1)
+        layout_file_picker = wx.FilePickerCtrl(
+            self, -1, wildcard="JSON files (*.json)|*.json|All files (*)|*"
+        )
 
         key_distance_x = LabeledTextCtrl(
             self, wx_("Step X:"), value="19.05", width=5, validator=FloatValidator()
@@ -497,7 +499,11 @@ class KbplacerDialog(wx.Dialog):
         template_label = wx.StaticText(
             self, -1, self._("Controller circuit template file:")
         )
-        template_file_picker = wx.FilePickerCtrl(self, -1)
+        template_file_picker = wx.FilePickerCtrl(
+            self,
+            -1,
+            wildcard="KiCad printed circuit board files (*.kicad_pcb)|*.kicad_pcb",
+        )
 
         box = wx.StaticBox(self, label=self._("Other settings"))
         sizer = wx.StaticBoxSizer(box, wx.HORIZONTAL)
