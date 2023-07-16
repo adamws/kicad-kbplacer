@@ -144,7 +144,7 @@ This should return backtrace with an information about the fault. Include this i
 
 ### Plugin misbehaves or crashes
 
-- Read stacktrace in error po-pup
+- Read stacktrace in error pop-up
 - See `kbplacer.log` file, created in PCB directory
 
 For bug reports please use [this template](https://github.com/adamws/kicad-kbplacer/issues/new?template=bug_report.md).
