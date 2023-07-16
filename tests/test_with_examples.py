@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 
 from pathlib import Path
 from xmldiff import actions, main
-from .conftest import generate_render, get_references_dir
+from .conftest import generate_render, KICAD_VERSION
 
 
 logger = logging.getLogger(__name__)
@@ -120,6 +120,20 @@ def __get_parameters():
     )
     test_params.append(param)
     return test_params
+
+
+def get_references_dir(request):
+    test_dir = Path(request.module.__file__).parent
+    _, test_parameters = request.node.name.split("[")
+    example_name, route_option, diode_option = test_parameters[:-1].split(";")
+    kicad_dir = "kicad7" if KICAD_VERSION == 7 else "kicad6"
+    references_dir = (
+        test_dir
+        / "data/examples-references"
+        / kicad_dir
+        / f"{example_name}/{route_option}-{diode_option}"
+    )
+    return references_dir
 
 
 @pytest.mark.parametrize("example,route,diode_position", __get_parameters())

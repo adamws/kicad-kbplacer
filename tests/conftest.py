@@ -97,22 +97,6 @@ def prepare_kicad_config(request):
         shutil.copy("./colors/user.json", colors_path)
 
 
-def get_references_dir(request):
-    test_dir = Path(request.module.__file__).parent
-    test_name, test_parameters = request.node.name.split("[")
-    example_name, route_option, diode_option = test_parameters[:-1].split(";")
-    kicad_dir = "kicad7" if KICAD_VERSION == 7 else "kicad6"
-    references_dir = (
-        test_dir
-        / "data"
-        / test_name
-        / kicad_dir
-        / example_name
-        / f"{route_option}-{diode_option}"
-    )
-    return references_dir
-
-
 def get_footprints_dir(request):
     test_dir = Path(request.module.__file__).parent
     footprints_dir = test_dir / "data/footprints/tests.pretty"
