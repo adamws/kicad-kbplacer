@@ -136,8 +136,7 @@ If plugin does not appear on the `Tools -> External Plugins` menu and its icon i
 launch python scripting console `Tools -> Scripting Console` and type:
 
 ```
-import pcbnew
-pcbnew.GetWizardsBackTrace()
+import pcbnew; pcbnew.GetWizardsBackTrace()
 ```
 
 This should return backtrace with an information about the fault. Include this information in bug report.
