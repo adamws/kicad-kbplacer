@@ -2,10 +2,7 @@
   "meta": {
     "author": "",
     "backcolor": "#eeeeee",
-    "background": {
-      "name": "",
-      "style": ""
-    },
+    "background": null,
     "name": "",
     "notes": "",
     "radii": "",
