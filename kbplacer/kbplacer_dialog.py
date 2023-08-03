@@ -26,7 +26,14 @@ wx_ = wx.GetTranslation
 # Currently there is no elegant way to check which language is loaded by KiCad.
 # This feature has been requested here: https://gitlab.com/kicad/code/kicad/-/issues/10573
 # Until then, use workaroud - request translation with wx_ and use result in lookup table:
-KICAD_TRANSLATIONS_LOOKUP = {"Set Language": "en", "Ustaw język": "pl"}
+KICAD_TRANSLATIONS_LOOKUP = {
+    "Set Language": "en",
+    "Ustaw język": "pl",
+    "Sprache": "de",
+    "Seleccionar idioma": "es",
+    "言語設定": "ja",
+    "設定語言": "zh_CN",
+}
 
 
 def get_current_kicad_language():

@@ -16,7 +16,8 @@ find $SOURCE_DIR -name '*.py' |
 
 sed -i '/^#/d' $CUR_DIR/kbplacer.pot
 
-LANGUAGES="en pl"
+#Read file without comment and empty lines
+LANGUAGES=$(cat $CUR_DIR/pofiles/LINGUAS | grep -v '^#' | grep -v '^\s*$')
 
 update_po() {
   if [ "$1" = "en" ] ; then
