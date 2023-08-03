@@ -209,8 +209,9 @@ if __name__ == "__main__":
             text_input = footprint.read()
             layout = json.loads(text_input)
 
-        placer = KeyPlacer(logger, board, layout, key_distance)
+        placer = KeyPlacer(logger, board, key_distance)
         placer.run(
+            layout,
             "SW{}",
             diode,
             route_tracks,

@@ -61,14 +61,13 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
                 with open(layout_path, "r") as f:
                     text_input = f.read()
                 layout = json.loads(text_input)
-                placer = KeyPlacer(
-                    self.logger, self.board, layout, dlg.get_key_distance()
-                )
+                placer = KeyPlacer(self.logger, self.board, dlg.get_key_distance())
                 key_format = dlg.get_key_annotation_format()
                 diode_info = dlg.get_diode_position_info()
                 additional_elements = dlg.get_additional_elements_info()
 
                 placer.run(
+                    layout,
                     key_format,
                     diode_info,
                     dlg.is_tracks(),

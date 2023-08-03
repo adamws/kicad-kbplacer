@@ -13,10 +13,9 @@ from .conftest import generate_render, KICAD_VERSION
 logger = logging.getLogger(__name__)
 
 
-def run_kbplacer_process(tmpdir, route, diode_position, workdir, package_name):
-    layout_file = "{}/kle-internal.json".format(tmpdir)
-    pcb_path = "{}/keyboard-before.kicad_pcb".format(tmpdir)
-
+def run_kbplacer_process(
+    route, diode_position, workdir, package_name, layout_file, pcb_path
+):
     kbplacer_args = [
         "python3",
         "-m",
@@ -106,26 +105,33 @@ def __get_parameters():
     for example in examples:
         for route_option_name, route_option in route_options.items():
             for diode_option_name, diode_option in diode_options.items():
-                test_id = f"{example};{route_option_name};{diode_option_name}"
-                param = pytest.param(example, route_option, diode_option, id=test_id)
-                test_params.append(param)
+                for layout_type in ["RAW", "INTERNAL"]:
+                    test_id = f"{example};{route_option_name};{diode_option_name};{layout_type}"
+                    param = pytest.param(
+                        example, route_option, diode_option, layout_type, id=test_id
+                    )
+                    test_params.append(param)
 
     # this special example can't be used with all option combinations, appended here:
-    test_id = "2x3-rotations-custom-diode-with-track;Tracks;DiodeOption2"
-    param = pytest.param(
-        "2x3-rotations-custom-diode-with-track",
-        True,
-        "D{} CURRENT_RELATIVE",
-        id=test_id,
-    )
-    test_params.append(param)
+    for layout_type in ["RAW", "INTERNAL"]:
+        test_id = (
+            f"2x3-rotations-custom-diode-with-track;Tracks;DiodeOption2;{layout_type}"
+        )
+        param = pytest.param(
+            "2x3-rotations-custom-diode-with-track",
+            True,
+            "D{} CURRENT_RELATIVE",
+            layout_type,
+            id=test_id,
+        )
+        test_params.append(param)
     return test_params
 
 
 def get_references_dir(request):
     test_dir = Path(request.module.__file__).parent
     _, test_parameters = request.node.name.split("[")
-    example_name, route_option, diode_option = test_parameters[:-1].split(";")
+    example_name, route_option, diode_option, _ = test_parameters[:-1].split(";")
     kicad_dir = "kicad7" if KICAD_VERSION == 7 else "kicad6"
     references_dir = (
         test_dir
@@ -136,17 +142,26 @@ def get_references_dir(request):
     return references_dir
 
 
-@pytest.mark.parametrize("example,route,diode_position", __get_parameters())
+@pytest.mark.parametrize("example,route,diode_position,layout_type", __get_parameters())
 def test_with_examples(
-    example, route, diode_position, tmpdir, request, workdir, package_name
-):
+    example, route, diode_position, layout_type, tmpdir, request, workdir, package_name
+) -> None:
     test_dir = request.fspath.dirname
 
-    source_dir = "{}/../examples/{}".format(test_dir, example)
-    shutil.copy("{}/keyboard-before.kicad_pcb".format(source_dir), tmpdir)
-    shutil.copy("{}/kle-internal.json".format(source_dir), tmpdir)
+    source_dir = f"{test_dir}/../examples/{example}"
+    layout_file = "kle.json" if layout_type == "RAW" else "kle-internal.json"
+    for filename in ["keyboard-before.kicad_pcb", layout_file]:
+        shutil.copy(f"{source_dir}/{filename}", tmpdir)
 
-    run_kbplacer_process(tmpdir, route, diode_position, workdir, package_name)
+    pcb_path = f"{tmpdir}/keyboard-before.kicad_pcb"
+    run_kbplacer_process(
+        route,
+        diode_position,
+        workdir,
+        package_name,
+        f"{tmpdir}/{layout_file}",
+        pcb_path,
+    )
 
     generate_render(tmpdir, request)
 

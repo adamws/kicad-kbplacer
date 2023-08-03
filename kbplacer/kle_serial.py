@@ -76,8 +76,7 @@ class Keyboard:
     keys: List[Key] = field(default_factory=list)
 
     @classmethod
-    def from_json(cls, string: str) -> Keyboard:
-        data: dict = json.loads(string)
+    def from_json(cls, data: dict) -> Keyboard:
         if isinstance(data["meta"], dict):
             data["meta"] = KeyboardMetadata(**data["meta"])
         if isinstance(data["keys"], list):
@@ -141,6 +140,10 @@ def parse(layout) -> Keyboard:
     metadata: KeyboardMetadata = KeyboardMetadata()
     rows: List[Any] = layout
     current: Key = Key()
+
+    if len(rows) == 0:
+        msg = "Expected at least one row of keys"
+        raise RuntimeError(msg)
 
     keys = []
     cluster = {"x": 0, "y": 0}
@@ -262,6 +265,19 @@ def parse(layout) -> Keyboard:
             raise RuntimeError(msg)
 
     return Keyboard(meta=metadata, keys=keys)
+
+
+def get_keyboard(layout: dict) -> Keyboard:
+    try:
+        return parse(layout)
+    except Exception:
+        pass
+    try:
+        return Keyboard.from_json(layout)
+    except Exception:
+        pass
+    msg = "Unable to get keyboard layout"
+    raise RuntimeError(msg)
 
 
 if __name__ == "__main__":

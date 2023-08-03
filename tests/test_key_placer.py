@@ -94,7 +94,7 @@ def test_diode_switch_routing(position, orientation, side, expected, tmpdir, req
     switch = add_switch_footprint(board, request, 1)
     diode = add_diode_footprint(board, request, 1)
 
-    key_placer = KeyPlacer(logger, board, None)
+    key_placer = KeyPlacer(logger, board)
 
     key_placer.set_position(switch, pcbnew.wxPoint(0, 0))
     switch_pad_position = switch.FindPadByNumber("2").GetPosition()
@@ -185,10 +185,10 @@ def test_switch_distance(key_distance, tmpdir, request):
     board = get_board_for_2x2_example(request)
     layout = get_2x2_layout(request)
 
-    key_placer = KeyPlacer(logger, board, layout, key_distance)
+    key_placer = KeyPlacer(logger, board, key_distance)
     diode_position = DEFAULT_DIODE_POSITION
     key_placer.run(
-        "SW{}", ElementInfo("D{}", PositionOption.DEFAULT, diode_position), True
+        layout, "SW{}", ElementInfo("D{}", PositionOption.DEFAULT, diode_position), True
     )
 
     board.Save("{}/keyboard-before.kicad_pcb".format(tmpdir))
@@ -208,8 +208,8 @@ def test_diode_placement_ignore(tmpdir, request):
     board = get_board_for_2x2_example(request)
     layout = get_2x2_layout(request)
 
-    key_placer = KeyPlacer(logger, board, layout)
-    key_placer.run("SW{}", None, True)
+    key_placer = KeyPlacer(logger, board)
+    key_placer.run(layout, "SW{}", None, True)
 
     board.Save("{}/keyboard-before.kicad_pcb".format(tmpdir))
     generate_render(tmpdir, request)
@@ -219,3 +219,12 @@ def test_diode_placement_ignore(tmpdir, request):
     positions = [key_placer.get_position(diode) for diode in diodes]
     for pos in positions:
         assert pos == pcbnew.wxPoint(0, 0)
+
+
+def test_placer_invalid_layout(request):
+    board = get_board_for_2x2_example(request)
+
+    key_placer = KeyPlacer(logger, board)
+
+    with pytest.raises(RuntimeError):
+        key_placer.run({}, "SW{}", None, True)

@@ -35,14 +35,62 @@ def test_labels(layout, expected) -> None:
     assert result.keys[0].labels == expected
 
 
+def test_if_produces_valid_json() -> None:
+    result = parse([["x"]])
+    assert (
+        result.to_json() == '{"meta": '
+        '{"author": "", "backcolor": "#eeeeee", "background": null, "name": "", '
+        '"notes": "", "radii": "", "switchBrand": "", "switchMount": "", "switchType": ""}, '
+        '"keys": [{"color": "#cccccc", "labels": ["x"], "textColor": [], "textSize": [], '
+        '"default": {"textColor": "#000000", "textSize": 3}, "x": 0, "y": 0, "width": 1, '
+        '"height": 1, "x2": 0, "y2": 0, "width2": 1, "height2": 1, "rotation_x": 0, '
+        '"rotation_y": 0, "rotation_angle": 0, "decal": false, "ghost": false, "stepped": false, '
+        '"nub": false, "profile": "", "sm": "", "sb": "", "st": ""}]}'
+    )
+
+
+def __get_invalid_parse_parameters():
+    test_params = []
+    test_params.append(pytest.param([], id="empty-list"))
+    test_params.append(pytest.param({}, id="empty-dict"))
+    test_params.append(pytest.param("", id="empty-string"))
+    test_params.append(pytest.param('[["x"]]', id="some-string"))
+    test_params.append(pytest.param(["", ""], id="list-of-unexpected-type"))
+    test_params.append(pytest.param([{}, {}], id="list-with-wrong-dict-position"))
+    test_params.append(pytest.param([[], {}], id="list-with-wrong-dict-position-2"))
+    return test_params
+
+
+@pytest.mark.parametrize("input_object", __get_invalid_parse_parameters())
+def test_parse_invalid_schema(input_object) -> None:
+    with pytest.raises(RuntimeError):
+        parse(input_object)
+
+
+def test_parse_invalid_key_rotation() -> None:
+    with pytest.raises(RuntimeError):
+        # Rotation can only be specified on the first key in the row
+        layout = [["0", {"r": 15, "rx": 1, "ry": 2}, "1"]]
+        parse(layout)
+
+
+def test_keyboard_from_invalid_type() -> None:
+    with pytest.raises(TypeError):
+        Keyboard.from_json("{}")
+
+
+def test_keyboard_from_invalid_schema() -> None:
+    with pytest.raises(KeyError):
+        Keyboard.from_json({})
+
+
 def get_reference(path: str):
-    reference_dict = {}
     reference: Keyboard = None
     with open(path, "r") as f:
         layout: str = f.read()
         reference_dict = json.loads(layout)
-        reference: Keyboard = Keyboard.from_json(layout)
-        return reference, reference_dict
+        reference: Keyboard = Keyboard.from_json(reference_dict)
+        return reference
 
 
 def __get_parameters():
@@ -80,10 +128,9 @@ def __get_parameters():
 def test_with_references(layout_file, reference_file, request) -> None:
     test_dir = request.fspath.dirname
 
-    reference, reference_dict = get_reference(Path(test_dir) / reference_file)
+    reference = get_reference(Path(test_dir) / reference_file)
 
     with open(Path(test_dir) / layout_file, "r") as f:
         layout = json.load(f)
         result = parse(layout)
         assert result == reference
-        assert json.loads(result.to_json()) == reference_dict

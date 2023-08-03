@@ -10,6 +10,7 @@ import pcbnew
 
 from .board_modifier import KICAD_VERSION, BoardModifier
 from .element_position import ElementInfo, ElementPosition, Point, PositionOption, Side
+from .kle_serial import get_keyboard
 
 
 def position_in_rotated_coordinates(
@@ -58,13 +59,10 @@ class KeyPlacer(BoardModifier):
         self,
         logger: Logger,
         board: pcbnew.BOARD,
-        layout,
         key_distance: Tuple[float, float] = (19.05, 19.05),
     ) -> None:
         super().__init__(logger, board)
 
-        self.logger.info(f"User layout: {layout}")
-        self.__layout = layout
         self.__key_distance_x = pcbnew.FromMM(key_distance[0])
         self.__key_distance_y = pcbnew.FromMM(key_distance[1])
         self.logger.debug(
@@ -258,8 +256,10 @@ class KeyPlacer(BoardModifier):
         self.logger.info(f"Detected template switch-to-diode path: {reduced_points}")
         return reduced_points
 
+
     def run(
         self,
+        layout: dict,
         key_format: str,
         diode_info: Optional[ElementInfo],
         route_tracks: bool = False,
@@ -269,6 +269,9 @@ class KeyPlacer(BoardModifier):
         template_tracks = []
         column_switch_pads = {}
         row_diode_pads = {}
+
+        self.logger.info(f"User layout: {layout}")
+        keyboard = get_keyboard(layout)
 
         if diode_info:
             self.logger.info(f"Diode info: {diode_info}")
@@ -293,16 +296,21 @@ class KeyPlacer(BoardModifier):
                 )
                 element_info.position = position
 
-        for key in self.__layout["keys"]:
+        if type(self.__key_distance_x) != int or type(self.__key_distance_y) != int:
+            # this should never happen, add check to satisfy type hints
+            msg = "Unsupported key_distance type"
+            raise RuntimeError(msg)
+
+        for key in keyboard.keys:
             switch_footprint = self.get_current_key(key_format)
 
-            width = key["width"]
-            height = key["height"]
+            width = key.width
+            height = key.height
             position = (
                 pcbnew.wxPoint(
-                    (self.__key_distance_x * key["x"])
+                    (self.__key_distance_x * key.x)
                     + (self.__key_distance_x * width // 2),
-                    (self.__key_distance_y * key["y"])
+                    (self.__key_distance_y * key.y)
                     + (self.__key_distance_y * height // 2),
                 )
                 + self.__reference_coordinate
@@ -324,12 +332,12 @@ class KeyPlacer(BoardModifier):
                         element_position.relative_position.to_list(),
                     )
 
-            angle = key["rotation_angle"]
+            angle = key.rotation_angle
             if angle != 0:
                 rotation_reference = (
                     pcbnew.wxPoint(
-                        (self.__key_distance_x * key["rotation_x"]),
-                        (self.__key_distance_y * key["rotation_y"]),
+                        (self.__key_distance_x * key.rotation_x),
+                        (self.__key_distance_y * key.rotation_y),
                     )
                     + self.__reference_coordinate
                 )

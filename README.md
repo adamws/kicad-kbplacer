@@ -56,12 +56,20 @@ or selecting it from `Tools -> External Plugins` menu.
   ![schematic-example](resources/schematic-example.png)
 
 - Create new PCB and load netlist
-- Obtain [kle-serial](https://github.com/ijprest/kle-serial) compatible layout
-  json file (**note**: this is not json which can be downloaded directly from [keyboard-layout-editor](http://www.keyboard-layout-editor.com/)
-  website. Expected json format can be seen in `examples` directory.
+- Obtain json layout file from [keyboard-layout-editor](http://www.keyboard-layout-editor.com/)
+  <details>
+  <summary>Details</summary>
 
-  For conversion you can use [https://adamws.github.io/kle-serial](https://adamws.github.io/kle-serial/)
-  or [keyboard-tools.xyz/kle-converter](http://keyboard-tools.xyz/kle-converter)
+    ![kle-download](resources/kle-download.png)
+
+    - Plugin supports internal [kle-serial](https://github.com/ijprest/kle-serial) layout files.
+      Detection of layout format will be done automatically.
+      Conversion between layout downloaded from keyboard-layout-editor and its internal form
+      can be done with [https://adamws.github.io/kle-serial](https://adamws.github.io/kle-serial/)
+      or [keyboard-tools.xyz/kle-converter](http://keyboard-tools.xyz/kle-converter)
+
+  </details>
+
 - Run `kicad-kbplacer` plugin
 - Select json layout file and plugin options and click OK.
 
