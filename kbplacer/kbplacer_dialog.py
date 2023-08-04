@@ -67,8 +67,10 @@ class FloatValidator(wx.Validator):
             float(text)
             return True
         except ValueError:
-            # this should never happen since there is on EVT_CHAR filtering:
-            wx.MessageBox(f"Invalid float value: {text}!", "Error")
+            # this can happen when value is empty, equal '-', '.', or '-.',
+            # other invalid values should not be allowed by 'OnChar' filtering
+            name = text_ctrl.GetName()
+            wx.MessageBox(f"Invalid '{name}' float value: '{text}'!", "Error")
             text_ctrl.SetFocus()
             return False
 
@@ -79,9 +81,12 @@ class FloatValidator(wx.Validator):
         return True
 
     def OnChar(self, event):
+        text_ctrl = self.GetWindow()
+        current_position = text_ctrl.GetInsertionPoint()
         keycode = int(event.GetKeyCode())
         if (
             keycode == wx.WXK_BACK
+            or keycode == wx.WXK_DELETE
             or keycode == wx.WXK_LEFT
             or keycode == wx.WXK_RIGHT
             or keycode == wx.WXK_NUMPAD_LEFT
@@ -93,11 +98,12 @@ class FloatValidator(wx.Validator):
             text = text_ctrl.GetValue()
             key = chr(keycode)
             if (
-                # allow only digits or single '-' when as first character
-                # or single '.' if not as first character
+                # allow only digits
+                # or single '-' when as first character
+                # or single '.'
                 key in string.digits
-                or (key == "-" and text == "")
-                or (key == "." and "." not in text and text != "")
+                or (key == "-" and "-" not in text and current_position == 0)
+                or (key == "." and "." not in text)
             ):
                 event.Skip()
 
@@ -123,7 +129,11 @@ class LabeledTextCtrl(wx.Panel):
 
         self.label = wx.StaticText(self, -1, label)
         self.text = wx.TextCtrl(
-            self, value=value, size=annotation_format_size, validator=validator
+            self,
+            value=value,
+            size=annotation_format_size,
+            validator=validator,
+            name=label.strip(":"),
         )
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
