@@ -389,14 +389,26 @@ class KbplacerDialog(wx.Dialog):
 
         self.SetSizerAndFit(box)
 
+    def __get_file_picker(self, *args, **kwargs):
+        file_picker = wx.FilePickerCtrl(*args, **kwargs)
+        file_picker.SetTextCtrlGrowable(True)
+        file_picker.Bind(
+            wx.EVT_FILEPICKER_CHANGED,
+            lambda _: file_picker.GetTextCtrl().SetInsertionPointEnd(),
+        )
+        return file_picker
+
     def get_switch_section(self):
         key_annotation = LabeledTextCtrl(
             self, wx_("Footprint Annotation") + ":", "SW{}"
         )
 
         layout_label = wx.StaticText(self, -1, self._("Keyboard layout file:"))
-        layout_file_picker = wx.FilePickerCtrl(
-            self, -1, wildcard="JSON files (*.json)|*.json|All files (*)|*"
+        layout_picker = self.__get_file_picker(
+            self,
+            -1,
+            wildcard="JSON files (*.json)|*.json|All files (*)|*",
+            style=wx.FLP_USE_TEXTCTRL,
         )
 
         key_distance_x = LabeledTextCtrl(
@@ -410,12 +422,12 @@ class KbplacerDialog(wx.Dialog):
         sizer = wx.StaticBoxSizer(box, wx.HORIZONTAL)
         sizer.Add(key_annotation, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer.Add(layout_label, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5)
-        sizer.Add(layout_file_picker, 1, wx.ALL, 5)
+        sizer.Add(layout_picker, 1, wx.ALL, 5)
         sizer.Add(key_distance_x, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer.Add(key_distance_y, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
 
         self.__key_annotation_format = key_annotation.text
-        self.__layout_file_picker = layout_file_picker
+        self.__layout_picker = layout_picker
         self.__key_distance_x = key_distance_x.text
         self.__key_distance_y = key_distance_y.text
 
@@ -517,10 +529,11 @@ class KbplacerDialog(wx.Dialog):
         template_label = wx.StaticText(
             self, -1, self._("Controller circuit template file:")
         )
-        template_file_picker = wx.FilePickerCtrl(
+        template_picker = self.__get_file_picker(
             self,
             -1,
             wildcard="KiCad printed circuit board files (*.kicad_pcb)|*.kicad_pcb",
+            style=wx.FLP_USE_TEXTCTRL,
         )
 
         box = wx.StaticBox(self, label=self._("Other settings"))
@@ -529,10 +542,10 @@ class KbplacerDialog(wx.Dialog):
         sizer.Add(tracks_checkbox, 0, wx.EXPAND | wx.ALL, 5)
         sizer.Add(wx.StaticLine(self, style=wx.LI_VERTICAL), 0, wx.EXPAND | wx.ALL, 5)
         sizer.Add(template_label, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5)
-        sizer.Add(template_file_picker, 1, wx.EXPAND | wx.ALL, 5)
+        sizer.Add(template_picker, 1, wx.EXPAND | wx.ALL, 5)
 
         self.__tracks_checkbox = tracks_checkbox
-        self.__template_file_picker = template_file_picker
+        self.__template_picker = template_picker
 
         return sizer
 
@@ -543,7 +556,7 @@ class KbplacerDialog(wx.Dialog):
         help_dialog.Destroy()
 
     def get_layout_path(self) -> str:
-        return self.__layout_file_picker.GetPath()
+        return self.__layout_picker.GetPath()
 
     def get_key_annotation_format(self) -> str:
         return self.__key_annotation_format.GetValue()
@@ -557,7 +570,7 @@ class KbplacerDialog(wx.Dialog):
         return x, y
 
     def get_template_path(self) -> str:
-        return self.__template_file_picker.GetPath()
+        return self.__template_picker.GetPath()
 
     def get_diode_position_info(
         self,
