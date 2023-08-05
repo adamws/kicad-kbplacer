@@ -19,7 +19,7 @@ TRACK_END = pcbnew.wxPointMM(19.05, 5)
 
 
 def prepare_source_board(tmpdir, request) -> str:
-    source_board_path = "{}/source.kicad_pcb".format(tmpdir)
+    source_board_path = f"{tmpdir}/source.kicad_pcb"
     source_board = pcbnew.CreateEmptyBoard()
 
     for i in range(0, 2):
@@ -50,7 +50,7 @@ def test_template_copy(copy_tracks, tmpdir, request):
 
     TemplateCopier(logger, target_board, source_board_path, copy_tracks).run()
 
-    target_board.Save("{}/keyboard-before.kicad_pcb".format(tmpdir))
+    target_board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
     generate_render(tmpdir, request)
 
     for i, f in enumerate(footprints):

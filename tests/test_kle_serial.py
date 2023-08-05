@@ -50,8 +50,7 @@ def test_if_produces_valid_json() -> None:
 
 
 def __get_invalid_parse_parameters():
-    test_params = []
-    test_params.append(pytest.param([], id="empty-list"))
+    test_params = [pytest.param([], id="empty-list")]
     test_params.append(pytest.param({}, id="empty-dict"))
     test_params.append(pytest.param("", id="empty-string"))
     test_params.append(pytest.param('[["x"]]', id="some-string"))

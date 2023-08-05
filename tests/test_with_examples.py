@@ -57,8 +57,8 @@ def assert_group(expected: ET.ElementTree, actual: ET.ElementTree):
             logger.info(d)
         assert False, "Difference probably found"
 
-    if edit_script and not all(
-        [type(node) == actions.MoveNode for node in edit_script]
+    if edit_script and any(
+        type(node) != actions.MoveNode for node in edit_script
     ):
         logger.info("Difference found")
         diff = difflib.unified_diff(expected.splitlines(), actual.splitlines())
@@ -75,7 +75,7 @@ def assert_group(expected: ET.ElementTree, actual: ET.ElementTree):
                 logger.info("'textLength' attribute is allowed to be different")
                 differences.remove(node)
 
-        assert len(differences) == 0, "Not allowd differences found"
+        assert not differences, "Not allowd differences found"
     else:
         logger.info("No differences found")
 
@@ -133,13 +133,12 @@ def get_references_dir(request):
     _, test_parameters = request.node.name.split("[")
     example_name, route_option, diode_option, _ = test_parameters[:-1].split(";")
     kicad_dir = "kicad7" if KICAD_VERSION == 7 else "kicad6"
-    references_dir = (
+    return (
         test_dir
         / "data/examples-references"
         / kicad_dir
         / f"{example_name}/{route_option}-{diode_option}"
     )
-    return references_dir
 
 
 @pytest.mark.parametrize("example,route,diode_position,layout_type", __get_parameters())

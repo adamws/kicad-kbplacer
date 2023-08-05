@@ -22,7 +22,7 @@ class ElementInfoAction(argparse.Action):
     def parse(self, values: str, option_string) -> ElementInfo:
         tokens: list[str] = values.split()
         err = ""
-        if len(tokens) != 2 and len(tokens) != 6:
+        if len(tokens) not in [2, 6]:
             err = f"{option_string} invalid format."
             raise ValueError(err)
         else:
@@ -37,28 +37,27 @@ class ElementInfoAction(argparse.Action):
             option = PositionOption.get(tokens[1])
             position = None
             if len(tokens) == 2:
-                if (
-                    option != PositionOption.CURRENT_RELATIVE
-                    and option != PositionOption.DEFAULT
-                ):
+                if option not in [
+                    PositionOption.CURRENT_RELATIVE,
+                    PositionOption.DEFAULT,
+                ]:
                     err = (
                         f"{option_string} position option needs to be equal CURRENT_RELATIVE or DEFAULT "
                         "if position details not provided"
                     )
                     raise ValueError(err)
+            elif option != PositionOption.CUSTOM:
+                err = (
+                    f"{option_string} position option needs to be equal CUSTOM "
+                    "when providing position details"
+                )
+                raise ValueError(err)
             else:
-                if option != PositionOption.CUSTOM:
-                    err = (
-                        f"{option_string} position option needs to be equal CUSTOM "
-                        "when providing position details"
-                    )
-                    raise ValueError(err)
-                else:
-                    floats = tuple(map(float, tokens[2:5]))
-                    side = Side.get(tokens[5])
-                    position = ElementPosition(
-                        Point(floats[0], floats[1]), floats[2], side
-                    )
+                floats = tuple(map(float, tokens[2:5]))
+                side = Side.get(tokens[5])
+                position = ElementPosition(
+                    Point(floats[0], floats[1]), floats[2], side
+                )
 
             value: ElementInfo = ElementInfo(
                 annotation,

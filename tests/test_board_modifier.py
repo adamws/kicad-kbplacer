@@ -49,8 +49,8 @@ def pointMM(x, y):
 
 def __get_parameters():
     examples = ["D_SOD-323", "D_DO-34_SOD68_P7.62mm_Horizontal"]
-    positions = [e for e in TrackToElementPosition]
-    sides = [e for e in TrackSide]
+    positions = list(TrackToElementPosition)
+    sides = list(TrackSide)
     netlists = [("", ""), ("", "n1"), ("n1", ""), ("n1", "n1"), ("n1", "n2")]
     test_params = []
     for example in examples:
@@ -68,7 +68,7 @@ def test_track_with_pad_collision(footprint, position, side, netlist, tmpdir, re
     netnames = [n for n in netlist if n != ""]
     add_nets(board, netnames)
 
-    logger.info(f"Board nets:")
+    logger.info("Board nets:")
     netcodes_map = board.GetNetInfo().NetsByName()
     for v in netcodes_map.itervalues():
         logger.info(f"Net: {v.GetNetCode()}:{v.GetNetname()}")
@@ -119,14 +119,13 @@ def test_track_with_pad_collision(footprint, position, side, netlist, tmpdir, re
 
     if not pad.IsOnLayer(track.GetLayer()) or position == TrackToElementPosition.APART:
         expected_collision_result = False
+    elif track_netlist and track_netlist == pad_netlist:
+        # same non '0' netlist never colide
+        expected_collision_result = False
+    elif track_netlist == "" and position == TrackToElementPosition.STARTS_AT:
+        expected_collision_result = False
     else:
-        if track_netlist and track_netlist == pad_netlist:
-            # same non '0' netlist never colide
-            expected_collision_result = False
-        elif track_netlist == "" and position == TrackToElementPosition.STARTS_AT:
-            expected_collision_result = False
-        else:
-            expected_collision_result = True
+        expected_collision_result = True
 
     pad_netlist_str = pad_netlist if pad_netlist else "''"
     track_netlist_str = track_netlist if track_netlist else "''"
@@ -140,7 +139,7 @@ def test_track_with_pad_collision(footprint, position, side, netlist, tmpdir, re
 
     board.Add(track)
     board.BuildListOfNets()
-    board.Save("{}/keyboard-before.kicad_pcb".format(tmpdir))
+    board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
     generate_render(tmpdir, request)
 
     assert collide == expected_collision_result, "Unexpected track collision result"
@@ -164,16 +163,12 @@ def add_track_segments_test(steps, tmpdir, request):
         else:
             assert type(start) == type(None), "Unexpected track success"
 
-    board.Save("{}/keyboard-before.kicad_pcb".format(tmpdir))
+    board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
     generate_render(tmpdir, request)
 
 
 def test_track_with_track_collision_close_to_footprint(tmpdir, request):
-    steps = []
-    # adding track which starts at pad but is so short it barely
-    # reaches out of it meaning that next track starting there might
-    # be incorrectly detected as colliding with pad
-    steps.append((pcbnew.wxPoint(-pcbnew.FromMM(0.4), 0), True))
+    steps = [(pcbnew.wxPoint(-pcbnew.FromMM(0.4), 0), True)]
     steps.append((pcbnew.wxPoint(0, pcbnew.FromMM(1)), True))
     add_track_segments_test(steps, tmpdir, request)
 
@@ -181,12 +176,7 @@ def test_track_with_track_collision_close_to_footprint(tmpdir, request):
 def test_track_with_track_collision_close_to_footprints_one_good_one_bad(
     tmpdir, request
 ):
-    steps = []
-    # same as 'test_track_with_track_collision_close_to_footprint' but second segment
-    # instead going down (where there is nothing to collide with), it goes to left and
-    # reaches second pad of diode which should be detected as collision,
-    # hence segment should not be added
-    steps.append((pcbnew.wxPoint(-pcbnew.FromMM(0.4), 0), True))
+    steps = [(pcbnew.wxPoint(-pcbnew.FromMM(0.4), 0), True)]
     steps.append((pcbnew.wxPoint(-pcbnew.FromMM(5), 0), False))
     add_track_segments_test(steps, tmpdir, request)
 
@@ -194,10 +184,7 @@ def test_track_with_track_collision_close_to_footprints_one_good_one_bad(
 def test_track_with_track_collision_close_to_footprint_many_small_tracks(
     tmpdir, request
 ):
-    steps = []
-    # kind of ridiculous example but all tracks here should succeed, such
-    # scenario should never happen under normal circumstances
-    steps.append((pcbnew.wxPoint(-pcbnew.FromMM(0.4), 0), True))
+    steps = [(pcbnew.wxPoint(-pcbnew.FromMM(0.4), 0), True)]
     steps.append((pcbnew.wxPoint(0, -pcbnew.FromMM(0.4)), True))
     steps.append((pcbnew.wxPoint(pcbnew.FromMM(0.4), 0), True))
     steps.append((pcbnew.wxPoint(0, pcbnew.FromMM(0.4)), True))
@@ -224,6 +211,6 @@ def test_track_with_track_collision(start, end, layer, expected, tmpdir, request
 
     collide = modifier.test_track_collision(track)
 
-    board.Save("{}/keyboard-before.kicad_pcb".format(tmpdir))
+    board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
     generate_render(tmpdir, request)
     assert collide == expected, "Unexpected track collision result"

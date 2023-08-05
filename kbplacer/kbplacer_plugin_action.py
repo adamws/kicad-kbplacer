@@ -28,7 +28,7 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
 
         board_file = self.board.GetFileName()
         if not board_file:
-            msg = f"Could not locate .kicad_pcb file, open or create it first"
+            msg = "Could not locate .kicad_pcb file, open or create it first"
             raise Exception(msg)
 
         # go to the project folder - so that log will be in proper place
@@ -46,8 +46,8 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
             format="[%(filename)s:%(lineno)d]: %(message)s",
         )
         self.logger = logging.getLogger(__name__)
-        self.logger.info("Plugin executed with KiCad version: " + version)
-        self.logger.info("Plugin executed with python version: " + repr(sys.version))
+        self.logger.info(f"Plugin executed with KiCad version: {version}")
+        self.logger.info(f"Plugin executed with python version: {repr(sys.version)}")
 
     def Run(self) -> None:
         self.Initialize()
@@ -56,8 +56,7 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
 
         dlg = KbplacerDialog(pcb_frame, "kbplacer")
         if dlg.ShowModal() == wx.ID_OK:
-            layout_path = dlg.get_layout_path()
-            if layout_path:
+            if layout_path := dlg.get_layout_path():
                 with open(layout_path, "r") as f:
                     text_input = f.read()
                 layout = json.loads(text_input)
@@ -73,8 +72,7 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
                     dlg.is_tracks(),
                     additional_elements=additional_elements,
                 )
-            template_path = dlg.get_template_path()
-            if template_path:
+            if template_path := dlg.get_template_path():
                 template_copier = TemplateCopier(
                     self.logger, self.board, template_path, dlg.is_tracks()
                 )

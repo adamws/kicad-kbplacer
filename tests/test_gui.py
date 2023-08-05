@@ -56,28 +56,26 @@ class HostScreenManager:
 
 
 def find_window(name):
-    if sys.platform == "win32":
-        user32 = ctypes.windll.user32
-        return user32.FindWindowW(None, name)
-    else:
+    if sys.platform != "win32":
         return None
+    user32 = ctypes.windll.user32
+    return user32.FindWindowW(None, name)
 
 
 def get_window_position(window_handle):
-    if sys.platform == "win32":
-        dwmapi = ctypes.windll.dwmapi
-        # based on https://stackoverflow.com/a/67137723
-        rect = RECT()
-        DMWA_EXTENDED_FRAME_BOUNDS = 9
-        dwmapi.DwmGetWindowAttribute(
-            HWND(window_handle),
-            DWORD(DMWA_EXTENDED_FRAME_BOUNDS),
-            ctypes.byref(rect),
-            ctypes.sizeof(rect),
-        )
-        return (rect.left, rect.top, rect.right, rect.bottom)
-    else:
+    if sys.platform != "win32":
         return None
+    dwmapi = ctypes.windll.dwmapi
+    # based on https://stackoverflow.com/a/67137723
+    rect = RECT()
+    DMWA_EXTENDED_FRAME_BOUNDS = 9
+    dwmapi.DwmGetWindowAttribute(
+        HWND(window_handle),
+        DWORD(DMWA_EXTENDED_FRAME_BOUNDS),
+        ctypes.byref(rect),
+        ctypes.sizeof(rect),
+    )
+    return (rect.left, rect.top, rect.right, rect.bottom)
 
 
 def run_process(args, workdir):

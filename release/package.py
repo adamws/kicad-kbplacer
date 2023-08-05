@@ -67,10 +67,7 @@ def get_simplified_version(version) -> str:
 
 def get_status(version: str) -> str:
     pattern = r"v\d.\d$"
-    if re.match(pattern, version):
-        return "stable"
-    else:
-        return "development"
+    return "stable" if re.match(pattern, version) else "development"
 
 
 def generate_translations(locale_directory):
@@ -140,19 +137,16 @@ def print_zip_contents(zip_path) -> None:
 def getsha256(filename) -> str:
     hash = hashlib.sha256()
     with io.open(filename, "rb") as f:
-        data = f.read(READ_SIZE)
-        while data:
+        while data := f.read(READ_SIZE):
             hash.update(data)
-            data = f.read(READ_SIZE)
     return hash.hexdigest()
 
 
 def get_package_metadata(filename) -> PackageMetadata:
-    install_size = 0
     z = zipfile.ZipFile(filename, "r")
-    for entry in z.infolist():
-        if not entry.is_dir():
-            install_size += entry.file_size
+    install_size = sum(
+        entry.file_size for entry in z.infolist() if not entry.is_dir()
+    )
     return {
         "download_sha256": getsha256(filename),
         "download_size": os.path.getsize(filename),

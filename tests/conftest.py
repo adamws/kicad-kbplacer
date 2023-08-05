@@ -91,23 +91,22 @@ def prepare_ci_machine():
 @pytest.fixture(autouse=True, scope="session")
 def prepare_kicad_config(request):
     config_path = pcbnew.SETTINGS_MANAGER.GetUserSettingsPath()
-    colors_path = config_path + "/colors"
+    colors_path = f"{config_path}/colors"
     os.makedirs(colors_path, exist_ok=True)
-    if not os.path.exists(colors_path + "/user.json"):
+    if not os.path.exists(f"{colors_path}/user.json"):
         shutil.copy("./colors/user.json", colors_path)
 
 
 def get_footprints_dir(request):
     test_dir = Path(request.module.__file__).parent
-    footprints_dir = test_dir / "data/footprints/tests.pretty"
-    return footprints_dir
+    return test_dir / "data/footprints/tests.pretty"
 
 
 def merge_bbox(left: Box, right: Box) -> Box:
     """
     Merge bounding boxes in format (xmin, xmax, ymin, ymax)
     """
-    return tuple([f(l, r) for l, r, f in zip(left, right, [min, max, min, max])])
+    return tuple(f(l, r) for l, r, f in zip(left, right, [min, max, min, max]))
 
 
 def shrink_svg(svg: ET.ElementTree, margin: int = 0) -> None:
@@ -123,18 +122,18 @@ def shrink_svg(svg: ET.ElementTree, margin: int = 0) -> None:
     for x in paths:
         bbox = merge_bbox(bbox, x.bbox())
     bbox = list(bbox)
-    bbox[0] -= int(margin)
-    bbox[1] += int(margin)
-    bbox[2] -= int(margin)
-    bbox[3] += int(margin)
+    bbox[0] -= margin
+    bbox[1] += margin
+    bbox[2] -= margin
+    bbox[3] += margin
 
     root.set(
         "viewBox",
-        "{} {} {} {}".format(bbox[0], bbox[2], bbox[1] - bbox[0], bbox[3] - bbox[2]),
+        f"{bbox[0]} {bbox[2]} {bbox[1] - bbox[0]} {bbox[3] - bbox[2]}",
     )
 
-    root.set("width", str(float((bbox[1] - bbox[0]))) + "mm")
-    root.set("height", str(float((bbox[3] - bbox[2]))) + "mm")
+    root.set("width", f"{float(bbox[1] - bbox[0])}mm")
+    root.set("height", f"{float(bbox[3] - bbox[2])}mm")
 
 
 def remove_empty_groups(root):
@@ -155,7 +154,7 @@ def remove_tags(root, name):
 # and https://gitlab.com/kicad/code/kicad/-/blob/master/demos/python_scripts_examples/plot_board.py
 def generate_render(tmpdir, request):
     project_name = "keyboard-before"
-    pcb_path = "{}/{}.kicad_pcb".format(tmpdir, project_name)
+    pcb_path = f"{tmpdir}/{project_name}.kicad_pcb"
     board = pcbnew.LoadBoard(pcb_path)
 
     plot_layers = [
@@ -224,7 +223,7 @@ def generate_render(tmpdir, request):
         references_dir = get_references_dir(request)
         references_dir.mkdir(parents=True, exist_ok=True)
 
-        for i, (layer_name, _) in enumerate(plot_plan):
+        for layer_name, _ in plot_plan:
             if "Silkscreen" not in layer_name:
                 filepath = os.path.join(tmpdir, f"{layer_name}.svg")
                 shutil.copy(filepath, references_dir)
@@ -294,7 +293,7 @@ def to_base64(path):
 def image_to_base64_html(path):
     b64 = to_base64(path)
     mime = mimetypes.guess_type(path)
-    return '<div class="image"><img src="data:{};base64,{}"></div>'.format(mime[0], b64)
+    return f'<div class="image"><img src="data:{mime[0]};base64,{b64}"></div>'
 
 
 @pytest.hookimpl(hookwrapper=True)
@@ -305,8 +304,7 @@ def pytest_runtest_makereport(item, call):
     extra = getattr(report, "extra", [])
 
     if report.when == "call" and not report.skipped:
-        tmpdir = item.funcargs.get("tmpdir")
-        if tmpdir:
+        if tmpdir := item.funcargs.get("tmpdir"):
             render_path = tmpdir / "render.svg"
             screenshot_path = tmpdir / "screenshot.png"
             for f in [render_path, screenshot_path]:

@@ -79,13 +79,13 @@ class FloatValidator(wx.Validator):
 
     def OnChar(self, event):
         keycode = int(event.GetKeyCode())
-        if (
-            keycode == wx.WXK_BACK
-            or keycode == wx.WXK_LEFT
-            or keycode == wx.WXK_RIGHT
-            or keycode == wx.WXK_NUMPAD_LEFT
-            or keycode == wx.WXK_NUMPAD_RIGHT
-        ):
+        if keycode in [
+            wx.WXK_BACK,
+            wx.WXK_LEFT,
+            wx.WXK_RIGHT,
+            wx.WXK_NUMPAD_LEFT,
+            wx.WXK_NUMPAD_RIGHT,
+        ]:
             event.Skip()
         else:
             text_ctrl = self.GetWindow()
@@ -168,13 +168,11 @@ class CustomRadioBox(wx.Panel):
         self.none_button.SetValue(True)
 
     def GetValue(self) -> Optional[str]:
-        if self.none_button.GetValue():
-            return None
-        else:
+        if not self.none_button.GetValue():
             for choice, button in self.radio_buttons.items():
                 if button.GetValue():
                     return choice
-            return None
+        return None
 
 
 class ElementPositionWidget(wx.Panel):
@@ -284,19 +282,15 @@ class ElementPositionWidget(wx.Panel):
         self.side.Disable()
 
     def GetValue(self) -> Tuple[PositionOption, Optional[ElementPosition]]:
-        if (
-            self.choice == PositionOption.DEFAULT
-            or self.choice == PositionOption.CUSTOM
-        ):
-            x = float(self.x.text.GetValue())
-            y = float(self.y.text.GetValue())
-            orientation = float(self.orientation.text.GetValue())
-            side_str = self.side.GetValue()
-            return self.choice, ElementPosition(
-                Point(x, y), orientation, Side(side_str == wx_("Back"))
-            )
-        else:
+        if self.choice not in [PositionOption.DEFAULT, PositionOption.CUSTOM]:
             return self.choice, None
+        x = float(self.x.text.GetValue())
+        y = float(self.y.text.GetValue())
+        orientation = float(self.orientation.text.GetValue())
+        side_str = self.side.GetValue()
+        return self.choice, ElementPosition(
+            Point(x, y), orientation, Side(side_str == wx_("Back"))
+        )
 
     def Enable(self):
         self.dropdown.Enable()
@@ -370,8 +364,7 @@ class KbplacerDialog(wx.Dialog):
 
         buttons = self.CreateButtonSizer(wx.OK | wx.CANCEL | wx.HELP)
 
-        help_button = wx.FindWindowById(wx.ID_HELP, self)
-        if help_button:
+        if help_button := wx.FindWindowById(wx.ID_HELP, self):
             help_button.Bind(wx.EVT_BUTTON, self.on_help_button)
 
         box.Add(buttons, 0, wx.EXPAND | wx.ALL, 5)
@@ -431,8 +424,7 @@ class KbplacerDialog(wx.Dialog):
         return sizer
 
     def on_diode_place_checkbox(self, event):
-        is_checked = event.GetEventObject().IsChecked()
-        if is_checked:
+        if is_checked := event.GetEventObject().IsChecked():
             self.__diode_settings.Enable()
         else:
             self.__diode_settings.Disable()

@@ -12,11 +12,7 @@ class HelpDialog(wx.Dialog):
         super(HelpDialog, self).__init__(parent, -1, "kbplacer help")
 
         # inherit translations from parent:
-        if parent:
-            self._ = parent._
-        else:
-            self._ = lambda x: x
-
+        self._ = parent._ if parent else (lambda x: x)
         information_section = self.get_information_section()
         actions_section = self.get_actions_section()
         help_section = self.get_help_section()
