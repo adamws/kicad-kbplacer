@@ -12,15 +12,15 @@ based on popular layout description from [keyboard-layout-editor](http://www.key
 All PCB's for mechanical keyboards shares common properties which creates great
 opportunity for scripting. Although this project does not aim to provide
 complete automatic PCB generation tool it speeds up development process
-by reducing tedious element placement task.
+by reducing tedious element placement and routing tasks.
 
 ## Features
 
 - [x] Automatic keys and diodes placement
-- [x] Support for different annotation schemes
-- [x] Basic track routing
 - [x] Key rotation support
+- [x] Basic track routing
 - [x] User selectable diode position in relation to key position
+- [x] Configurable additional elements placement
 
 ![demo](resources/demo.gif)
 

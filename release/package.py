@@ -72,14 +72,19 @@ def get_status(version: str) -> str:
 
 def generate_translations(locale_directory):
     print("Generate translations:")
-    po_files = glob.glob(f"{DIRNAME}/../translation/pofiles/*.po")
-    for f in po_files:
-        lang_name = Path(f).stem
-        dst = f"{locale_directory}/{lang_name}/LC_MESSAGES"
+    install_languages = []
+    with open(f"{DIRNAME}/../translation/pofiles/LINGUAS_INSTALL") as f:
+        languages = f.readlines()
+        install_languages = [
+            lang.strip() for lang in languages if not lang.startswith("#")
+        ]
+    for lang in install_languages:
+        po_file = f"{DIRNAME}/../translation/pofiles/{lang}.po"
+        dst = f"{locale_directory}/{lang}/LC_MESSAGES"
         os.makedirs(dst)
-        print(f"\t{lang_name}", end="")
+        print(f"\t{lang}", end="")
         res = subprocess.run(
-            ["msgfmt", "--statistics", f, "-o", f"{dst}/kbplacer.mo"],
+            ["msgfmt", "--statistics", po_file, "-o", f"{dst}/kbplacer.mo"],
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
