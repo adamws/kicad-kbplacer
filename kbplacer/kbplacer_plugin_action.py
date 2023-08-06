@@ -1,14 +1,27 @@
+from __future__ import annotations
+
 import json
 import logging
 import os
-import sys
-
 import pcbnew
+import sys
 import wx
+from typing import Any, Tuple
 
 from .kbplacer_dialog import KbplacerDialog
 from .key_placer import KeyPlacer
 from .template_copier import TemplateCopier
+
+
+def load_window_state(filepath: str) -> Tuple[Any, bool]:
+    with open(filepath, "r") as f:
+        for line in f:
+            if "GUI state:" in line:
+                try:
+                    return json.loads(line[line.find("{") :]), False
+                except:
+                    return None, True
+    return None, False
 
 
 class KbplacerPluginAction(pcbnew.ActionPlugin):
@@ -43,10 +56,19 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
         for handler in logging.root.handlers[:]:
             logging.root.removeHandler(handler)
 
+        self.window_state = None
+        self.window_state_error = False
+        log_file = "kbplacer.log"
+
+        # if log file already exist (from previous plugin run),
+        # try to get window state from it
+        if os.path.isfile(log_file):
+            self.window_state, self.window_state_error = load_window_state(log_file)
+
         # set up logger
         logging.basicConfig(
             level=logging.DEBUG,
-            filename="kbplacer.log",
+            filename=log_file,
             filemode="w",
             format="[%(filename)s:%(lineno)d]: %(message)s",
         )
@@ -59,18 +81,27 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
 
         pcb_frame = [x for x in wx.GetTopLevelWindows() if x.GetName() == "PcbFrame"][0]
 
-        dlg = KbplacerDialog(pcb_frame, "kbplacer")
+        if self.window_state_error:
+            self.logger.info(
+                "Found corrupted cached window state, skipping state restoration"
+            )
+            self.window_state = None
+
+        dlg = KbplacerDialog(pcb_frame, "kbplacer", initial_state=self.window_state)
         if dlg.ShowModal() == wx.ID_OK:
+            gui_state = dlg.get_window_state()
+            self.logger.info(f"GUI state: {gui_state}")
+
             layout_path = dlg.get_layout_path()
             if layout_path:
                 with open(layout_path, "r") as f:
                     text_input = f.read()
                 layout = json.loads(text_input)
-                placer = KeyPlacer(self.logger, self.board, dlg.get_key_distance())
                 key_format = dlg.get_key_annotation_format()
                 diode_info = dlg.get_diode_position_info()
                 additional_elements = dlg.get_additional_elements_info()
 
+                placer = KeyPlacer(self.logger, self.board, dlg.get_key_distance())
                 placer.run(
                     layout,
                     key_format,
@@ -84,6 +115,9 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
                     self.logger, self.board, template_path, dlg.is_tracks()
                 )
                 template_copier.run()
+        else:
+            gui_state = dlg.get_window_state()
+            self.logger.info(f"GUI state: {gui_state}")
 
         dlg.Destroy()
         logging.shutdown()
