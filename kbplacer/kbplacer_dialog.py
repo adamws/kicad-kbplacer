@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import gettext
+import json
 import logging
 import os
 import string
@@ -9,7 +10,7 @@ import wx
 from typing import List, Optional, Tuple
 from wx.lib.embeddedimage import PyEmbeddedImage
 
-from .defaults import DEFAULT_DIODE_POSITION
+from .defaults import DEFAULT_DIODE_POSITION, ZERO_POSITION
 from .element_position import ElementInfo, ElementPosition, Point, PositionOption, Side
 from .help_dialog import HelpDialog
 
@@ -189,10 +190,16 @@ class CustomRadioBox(wx.Panel):
 
 
 class ElementPositionWidget(wx.Panel):
-    def __init__(self, parent, default: Optional[ElementPosition] = None) -> None:
+    def __init__(
+        self,
+        parent,
+        initial_choice: PositionOption,
+        initial_position: Optional[ElementPosition] = None,
+        default_position: Optional[ElementPosition] = None,
+    ) -> None:
         super().__init__(parent)
 
-        self.default = default
+        self.default = default_position
         choices = [PositionOption.CUSTOM, PositionOption.CURRENT_RELATIVE]
         if self.default:
             choices.insert(0, PositionOption.DEFAULT)
@@ -221,7 +228,9 @@ class ElementPositionWidget(wx.Panel):
         self.side_label = wx.StaticText(self, -1, wx_("Side:"))
         self.side = CustomRadioBox(self, choices=[wx_("Front"), wx_("Back")])
 
-        self.__set_initial_state(choices[0])
+        self.__set_initial_state(initial_choice)
+        if initial_position and initial_choice == PositionOption.CUSTOM:
+            self.__set_position(initial_position)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(dropdown_sizer, 0, wx.EXPAND | wx.ALL, 5)
@@ -252,33 +261,46 @@ class ElementPositionWidget(wx.Panel):
             raise ValueError
         self.choice = PositionOption(choice)
 
+    def __set_position(self, position: ElementPosition) -> None:
+        self.__set_coordinates(
+            str(position.relative_position.x), str(position.relative_position.y)
+        )
+        self.__set_orientation(str(position.orientation))
+        self.__set_side(position.side)
+
     def __set_position_to_default(self) -> None:
         if self.default:
             x = str(self.default.relative_position.x)
             y = str(self.default.relative_position.y)
             self.__set_coordinates(x, y)
-            self.orientation.text.SetValue(str(self.default.orientation))
-            if self.default.side == Side.BACK:
-                self.side.Select(wx_("Back"))
-            else:
-                self.side.Select(wx_("Front"))
+            self.__set_orientation(str(self.default.orientation))
+            self.__set_side(self.default.side)
             self.__disable_position_controls()
 
     def __set_position_to_zero_editable(self) -> None:
         self.__set_coordinates("0", "0")
-        self.orientation.text.SetValue("0")
-        self.side.Select(wx_("Front"))
+        self.__set_orientation("0")
+        self.__set_side(Side.FRONT)
         self.__enable_position_controls()
 
-    def __set_position_to_empty_non_editable(self):
+    def __set_position_to_empty_non_editable(self) -> None:
         self.__set_coordinates("-", "-")
-        self.orientation.text.SetValue("-")
+        self.__set_orientation("-")
         self.side.Clear()
         self.__disable_position_controls()
 
-    def __set_coordinates(self, x: str, y: str):
+    def __set_coordinates(self, x: str, y: str) -> None:
         self.x.text.SetValue(x)
         self.y.text.SetValue(y)
+
+    def __set_orientation(self, orientation: str) -> None:
+        self.orientation.text.SetValue(orientation)
+
+    def __set_side(self, side: Side) -> None:
+        if side == Side.BACK:
+            self.side.Select(wx_("Back"))
+        else:
+            self.side.Select(wx_("Front"))
 
     def __enable_position_controls(self):
         self.x.Enable()
@@ -311,18 +333,19 @@ class ElementPositionWidget(wx.Panel):
 
     def Enable(self):
         self.dropdown.Enable()
-        self.__set_position_by_choice(self.dropdown.GetValue())
+        if self.dropdown.GetValue() == PositionOption.CUSTOM:
+            self.__enable_position_controls()
 
     def Disable(self):
-        self.__disable_position_controls()
         self.dropdown.Disable()
+        self.__disable_position_controls()
 
 
 class ElementSettingsWidget(wx.Panel):
     def __init__(
         self,
         parent,
-        default_annotation: str,
+        element_info: ElementInfo,
         default_position: Optional[ElementPosition] = None,
     ) -> None:
         super().__init__(parent)
@@ -330,10 +353,15 @@ class ElementSettingsWidget(wx.Panel):
         self.annotation_format = LabeledTextCtrl(
             self,
             label=wx_("Footprint Annotation") + ":",
-            value=default_annotation,
+            value=element_info.annotation_format,
             width=3,
         )
-        self.position_widget = ElementPositionWidget(self, default=default_position)
+        self.position_widget = ElementPositionWidget(
+            self,
+            element_info.position_option,
+            element_info.position,
+            default_position=default_position,
+        )
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -359,7 +387,7 @@ class ElementSettingsWidget(wx.Panel):
 
 
 class KbplacerDialog(wx.Dialog):
-    def __init__(self, parent, title) -> None:
+    def __init__(self, parent, title, initial_state: Optional[dict] = None) -> None:
         style = wx.DEFAULT_DIALOG_STYLE
         super(KbplacerDialog, self).__init__(parent, -1, title, style=style)
 
@@ -367,12 +395,36 @@ class KbplacerDialog(wx.Dialog):
         logger.info(f"Language: {language}")
         self._ = get_plugin_translator(language)
 
-        switch_section = self.get_switch_section()
-        switch_diodes_section = self.get_switch_diodes_section()
-        additional_elements_section = self.get_additional_elements_section()
-        misc_section = self.get_misc_section()
+        def __get_params(name) -> dict:
+            return initial_state.get(name, {}) if initial_state else {}
 
-        box = wx.BoxSizer(wx.VERTICAL)
+        params: dict = __get_params("switch_section")
+        switch_section: wx.Sizer = self.get_switch_section(**params)
+
+        params: dict = __get_params("switch_diodes_section")
+        if "element_info" in params:
+            try:
+                params["element_info"] = ElementInfo.from_dict(params["element_info"])
+            except:
+                params = {}
+        switch_diodes_section: wx.Sizer = self.get_switch_diodes_section(**params)
+
+        params: dict = __get_params("additional_elements")
+        if "elements_info" in params:
+            try:
+                params["elements_info"] = [
+                    ElementInfo.from_dict(v) for v in params["elements_info"]
+                ]
+            except:
+                params = {}
+        additional_elements_section: wx.Sizer = self.get_additional_elements_section(
+            **params
+        )
+
+        params: dict = __get_params("misc_section")
+        misc_section: wx.Sizer = self.get_misc_section(**params)
+
+        box: wx.Sizer = wx.BoxSizer(wx.VERTICAL)
 
         box.Add(switch_section, 0, wx.EXPAND | wx.ALL, 5)
         box.Add(switch_diodes_section, 0, wx.EXPAND | wx.ALL, 5)
@@ -398,9 +450,15 @@ class KbplacerDialog(wx.Dialog):
         )
         return file_picker
 
-    def get_switch_section(self):
+    def get_switch_section(
+        self,
+        annotation: str = "SW{}",
+        layout_path: str = "",
+        x_distance: str = "19.05",
+        y_distance: str = "19.05",
+    ) -> wx.Sizer:
         key_annotation = LabeledTextCtrl(
-            self, wx_("Footprint Annotation") + ":", "SW{}"
+            self, wx_("Footprint Annotation") + ":", annotation
         )
 
         layout_label = wx.StaticText(self, -1, self._("Keyboard layout file:"))
@@ -410,12 +468,14 @@ class KbplacerDialog(wx.Dialog):
             wildcard="JSON files (*.json)|*.json|All files (*)|*",
             style=wx.FLP_USE_TEXTCTRL,
         )
+        if layout_path:
+            layout_picker.SetPath(layout_path)
 
         key_distance_x = LabeledTextCtrl(
-            self, wx_("Step X:"), value="19.05", width=5, validator=FloatValidator()
+            self, wx_("Step X:"), value=x_distance, width=5, validator=FloatValidator()
         )
         key_distance_y = LabeledTextCtrl(
-            self, wx_("Step Y:"), value="19.05", width=5, validator=FloatValidator()
+            self, wx_("Step Y:"), value=y_distance, width=5, validator=FloatValidator()
         )
 
         box = wx.StaticBox(self, label=self._("Switch settings"))
@@ -433,13 +493,21 @@ class KbplacerDialog(wx.Dialog):
 
         return sizer
 
-    def get_switch_diodes_section(self):
+    def get_switch_diodes_section(
+        self,
+        enable: bool = True,
+        element_info: ElementInfo = ElementInfo(
+            "D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION
+        ),
+    ) -> wx.Sizer:
         place_diodes_checkbox = wx.CheckBox(self, label=wx_("Allow autoplacement"))
-        place_diodes_checkbox.SetValue(True)
+        place_diodes_checkbox.SetValue(enable)
         place_diodes_checkbox.Bind(wx.EVT_CHECKBOX, self.on_diode_place_checkbox)
 
         diode_settings = ElementSettingsWidget(
-            self, "D{}", default_position=DEFAULT_DIODE_POSITION
+            self,
+            element_info,
+            default_position=DEFAULT_DIODE_POSITION,
         )
 
         box = wx.StaticBox(self, label=self._("Switch diodes settings"))
@@ -451,16 +519,26 @@ class KbplacerDialog(wx.Dialog):
         self.__place_diodes_checkbox = place_diodes_checkbox
         self.__diode_settings = diode_settings
 
+        self.__enable_diode_settings(enable)
+
         return sizer
 
-    def on_diode_place_checkbox(self, event):
-        is_checked = event.GetEventObject().IsChecked()
-        if is_checked:
+    def __enable_diode_settings(self, enable):
+        if enable:
             self.__diode_settings.Enable()
         else:
             self.__diode_settings.Disable()
 
-    def get_additional_elements_section(self):
+    def on_diode_place_checkbox(self, event):
+        is_checked = event.GetEventObject().IsChecked()
+        self.__enable_diode_settings(is_checked)
+
+    def get_additional_elements_section(
+        self,
+        elements_info: List[ElementInfo] = [
+            ElementInfo("ST{}", PositionOption.CUSTOM, ZERO_POSITION)
+        ],
+    ) -> wx.Sizer:
         self.__additional_elements = []
 
         scrolled_window = wx.ScrolledWindow(self)
@@ -481,16 +559,17 @@ class KbplacerDialog(wx.Dialog):
 
         buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        def add_element(annotation: str) -> None:
-            element_settings = ElementSettingsWidget(scrolled_window, annotation)
+        def add_element(element_info: ElementInfo) -> None:
+            element_settings = ElementSettingsWidget(scrolled_window, element_info)
             self.__additional_elements.append(element_settings)
             scrolled_window_sizer.Add(element_settings, 0, wx.ALIGN_LEFT, 0)
             self.Layout()
 
         def add_element_callback(_) -> None:
-            add_element("")
+            add_element(ElementInfo("", PositionOption.CUSTOM, ZERO_POSITION))
 
-        add_element("ST{}")
+        for element_info in elements_info:
+            add_element(element_info)
 
         add_icon = PyEmbeddedImage(
             b"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhkiAAAACtJ"
@@ -522,9 +601,11 @@ class KbplacerDialog(wx.Dialog):
 
         return sizer
 
-    def get_misc_section(self):
+    def get_misc_section(
+        self, route_tracks: bool = True, template_path: str = ""
+    ) -> wx.Sizer:
         tracks_checkbox = wx.CheckBox(self, label=wx_("Route tracks"))
-        tracks_checkbox.SetValue(True)
+        tracks_checkbox.SetValue(route_tracks)
 
         template_label = wx.StaticText(
             self, -1, self._("Controller circuit template file:")
@@ -535,6 +616,8 @@ class KbplacerDialog(wx.Dialog):
             wildcard="KiCad printed circuit board files (*.kicad_pcb)|*.kicad_pcb",
             style=wx.FLP_USE_TEXTCTRL,
         )
+        if template_path:
+            template_picker.SetPath(template_path)
 
         box = wx.StaticBox(self, label=self._("Other settings"))
         sizer = wx.StaticBoxSizer(box, wx.HORIZONTAL)
@@ -588,3 +671,49 @@ class KbplacerDialog(wx.Dialog):
             for e in self.__additional_elements
             if e.GetValue().annotation_format != ""
         ]
+
+    def get_window_state(self):
+        window_state = {
+            "switch_section": {
+                "annotation": self.get_key_annotation_format(),
+                "layout_path": self.get_layout_path(),
+                "x_distance": self.__key_distance_x.GetValue(),
+                "y_distance": self.__key_distance_y.GetValue(),
+            },
+            "switch_diodes_section": {
+                "enable": self.__place_diodes_checkbox.GetValue(),
+                "element_info": self.__diode_settings.GetValue().to_dict(),
+            },
+            "additional_elements": {
+                "elements_info": [
+                    e.GetValue().to_dict() for e in self.__additional_elements
+                ],
+            },
+            "misc_section": {
+                "route_tracks": self.is_tracks(),
+                "template_path": self.get_template_path(),
+            },
+        }
+        return json.dumps(window_state, indent=None)
+
+
+# used for tests
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="dialog test")
+    parser.add_argument(
+        "-i", "--initial-state", default="{}", help="Initial gui state"
+    )
+    parser.add_argument(
+        "-o", "--output-dir", required=True, help="Directory for output files"
+    )
+    args = parser.parse_args()
+
+    initial_state = json.loads(args.initial_state)
+    _ = wx.App()
+    dlg = KbplacerDialog(None, "kbplacer", initial_state=initial_state)
+    with open(f"{args.output_dir}/window_state.json", "w") as f:
+        f.write(dlg.get_window_state())
+
+    dlg.ShowModal()
