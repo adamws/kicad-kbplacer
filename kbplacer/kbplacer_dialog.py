@@ -470,6 +470,7 @@ class KbplacerDialog(wx.Dialog):
         )
         if layout_path:
             layout_picker.SetPath(layout_path)
+            layout_picker.GetTextCtrl().SetInsertionPointEnd()
 
         key_distance_x = LabeledTextCtrl(
             self, wx_("Step X:"), value=x_distance, width=5, validator=FloatValidator()
@@ -618,6 +619,7 @@ class KbplacerDialog(wx.Dialog):
         )
         if template_path:
             template_picker.SetPath(template_path)
+            template_picker.GetTextCtrl().SetInsertionPointEnd()
 
         box = wx.StaticBox(self, label=self._("Other settings"))
         sizer = wx.StaticBoxSizer(box, wx.HORIZONTAL)
