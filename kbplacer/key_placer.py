@@ -263,7 +263,7 @@ class KeyPlacer(BoardModifier):
         key_format: str,
         diode_info: Optional[ElementInfo],
         route_tracks: bool = False,
-        additional_elements: Optional[List[ElementInfo]] = None,
+        additional_elements: List[ElementInfo] = [],
     ) -> None:
         diode_format = ""
         template_tracks = []
@@ -280,11 +280,6 @@ class KeyPlacer(BoardModifier):
                 # check if first switch-diode pair is already routed, if yes,
                 # then reuse its track shape for remaining pairs, otherwise try to use automatic 'router'
                 template_tracks = self.check_if_diode_routed(key_format, diode_format)
-
-        if additional_elements:
-            self.logger.info(f"Additional elements info: {additional_elements}")
-        else:
-            additional_elements = []
 
         if diode_info:
             additional_elements = [diode_info] + additional_elements
