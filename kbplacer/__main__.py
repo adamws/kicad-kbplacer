@@ -5,7 +5,7 @@ import pcbnew
 
 from typing import List
 
-from .defaults import DEFAULT_DIODE_POSITION
+from .defaults import DEFAULT_DIODE_POSITION, ZERO_POSITION
 from .element_position import ElementInfo, ElementPosition, Point, PositionOption, Side
 from .key_placer import KeyPlacer
 from .template_copier import TemplateCopier
@@ -145,7 +145,7 @@ if __name__ == "__main__":
             ElementInfo(
                 "ST{}",
                 PositionOption.CUSTOM,
-                ElementPosition(Point(0, 0), 0, Side.FRONT),
+                ZERO_POSITION,
             )
         ],
         action=ElementInfoListAction,
