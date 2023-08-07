@@ -180,13 +180,11 @@ class CustomRadioBox(wx.Panel):
         self.none_button.SetValue(True)
 
     def GetValue(self) -> Optional[str]:
-        if self.none_button.GetValue():
-            return None
-        else:
+        if not self.none_button.GetValue():
             for choice, button in self.radio_buttons.items():
                 if button.GetValue():
                     return choice
-            return None
+        return None
 
 
 class ElementPositionWidget(wx.Panel):
