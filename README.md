@@ -129,7 +129,7 @@ in `Additional elements settings` section. It behaves very similarly to switch d
 #### Demo project
 
 For example demo project see `demo` directory. This project contains 4x4 switch matrix with
-already generated layout json file (`kle_internal.json`) in expected by plugin format.
+layout json files in raw (`kle.json`) and internal (`kle_internal.json`) formats.
 It requires [keyswitch-kicad-library](https://github.com/perigoso/keyswitch-kicad-library) to be installed.
 Use this project to validate plugin installation.
 
