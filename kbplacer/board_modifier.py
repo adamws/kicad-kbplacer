@@ -86,8 +86,7 @@ class BoardModifier:
         for f in self.board.GetFootprints():
             reference = f.GetReference()
             hull = f.GetBoundingHull()
-            hit_test_result = hull.Collide(track_shape)
-            if hit_test_result:
+            if hit_test_result := hull.Collide(track_shape):
                 for p in f.Pads():
                     pad_name = p.GetName()
                     pad_shape = p.GetEffectiveShape()
@@ -162,15 +161,11 @@ class BoardModifier:
                                 "Pad collision removed due to connection with track which leads to that pad"
                             )
                             collide_list.remove(collision)
-                else:
-                    hit_test_result = t.GetEffectiveShape().Collide(
-                        track_shape, pcbnew.FromMM(DEFAULT_CLEARANCE_MM)
-                    )
-                    if hit_test_result:
-                        self.logger.debug(
-                            f"Track collide with another track: {track_uuid}"
-                        )
-                        collide_list.append(t)
+                elif hit_test_result := t.GetEffectiveShape().Collide(
+                    track_shape, pcbnew.FromMM(DEFAULT_CLEARANCE_MM)
+                ):
+                    self.logger.debug(f"Track collide with another track: {track_uuid}")
+                    collide_list.append(t)
         for collision in list(collide_list):
             if collision.m_Uuid in tracks_to_clear:
                 collision_uuid = collision.m_Uuid.AsString()

@@ -145,10 +145,8 @@ def print_zip_contents(zip_path) -> None:
 def getsha256(filename) -> str:
     hash = hashlib.sha256()
     with io.open(filename, "rb") as f:
-        data = f.read(READ_SIZE)
-        while data:
+        while data := f.read(READ_SIZE):
             hash.update(data)
-            data = f.read(READ_SIZE)
     return hash.hexdigest()
 
 

@@ -150,8 +150,7 @@ class KeyPlacer(BoardModifier):
                     end = position_in_cartesian_coordinates(end, angle)
                 else:
                     end = t.__add__(diode_pad_position)
-                end = self.add_track_segment_by_points(start, end, layer)
-                if end:
+                if end := self.add_track_segment_by_points(start, end, layer):
                     start = end
         else:
             if (
@@ -256,7 +255,6 @@ class KeyPlacer(BoardModifier):
         self.logger.info(f"Detected template switch-to-diode path: {reduced_points}")
         return reduced_points
 
-
     def run(
         self,
         layout: dict,
@@ -340,15 +338,13 @@ class KeyPlacer(BoardModifier):
                 if additional_elements:
                     for element_info in additional_elements:
                         annotation_format = element_info.annotation_format
-                        footprint = self.get_current_footprint(annotation_format)
-                        if footprint:
+                        if footprint := self.get_current_footprint(annotation_format):
                             self.rotate(footprint, rotation_reference, angle)
 
             # append pad:
             pad = switch_footprint.FindPadByNumber("1")
             net_name = pad.GetNetname()
-            match = re.match(r"^COL(\d+)$", net_name)
-            if match:
+            if match := re.match(r"^COL(\d+)$", net_name):
                 column_number = match.groups()[0]
                 column_switch_pads.setdefault(column_number, []).append(pad)
             else:
@@ -359,8 +355,7 @@ class KeyPlacer(BoardModifier):
             if diode_footprint:
                 pad = diode_footprint.FindPadByNumber("1")
                 net_name = pad.GetNetname()
-                match = re.match(r"^ROW(\d+)$", net_name)
-                if match:
+                if match := re.match(r"^ROW(\d+)$", net_name):
                     row_number = match.groups()[0]
                     row_diode_pads.setdefault(row_number, []).append(pad)
                 else:
@@ -391,14 +386,12 @@ class KeyPlacer(BoardModifier):
                             self.logger.warning(
                                 "Switch pad to far to route 2 segment track with 45 degree angles"
                             )
-                        else:
-                            last_position = self.add_track_segment(
-                                pos1, vector, layer=pcbnew.F_Cu
+                        elif last_position := self.add_track_segment(
+                            pos1, vector, layer=pcbnew.F_Cu
+                        ):
+                            self.add_track_segment_by_points(
+                                last_position, pos2, layer=pcbnew.F_Cu
                             )
-                            if last_position:
-                                self.add_track_segment_by_points(
-                                    last_position, pos2, layer=pcbnew.F_Cu
-                                )
 
             for row in row_diode_pads:
                 pads = row_diode_pads[row]

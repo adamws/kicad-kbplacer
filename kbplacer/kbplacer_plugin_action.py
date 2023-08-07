@@ -92,8 +92,7 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
             gui_state = dlg.get_window_state()
             self.logger.info(f"GUI state: {gui_state}")
 
-            layout_path = dlg.get_layout_path()
-            if layout_path:
+            if layout_path := dlg.get_layout_path():
                 with open(layout_path, "r") as f:
                     text_input = f.read()
                 layout = json.loads(text_input)
@@ -109,8 +108,7 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
                     dlg.is_tracks(),
                     additional_elements=additional_elements,
                 )
-            template_path = dlg.get_template_path()
-            if template_path:
+            if template_path := dlg.get_template_path():
                 template_copier = TemplateCopier(
                     self.logger, self.board, template_path, dlg.is_tracks()
                 )

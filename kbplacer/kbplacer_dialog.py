@@ -433,8 +433,7 @@ class KbplacerDialog(wx.Dialog):
 
         buttons = self.CreateButtonSizer(wx.OK | wx.CANCEL | wx.HELP)
 
-        help_button = wx.FindWindowById(wx.ID_HELP, self)
-        if help_button:
+        if help_button := wx.FindWindowById(wx.ID_HELP, self):
             help_button.Bind(wx.EVT_BUTTON, self.on_help_button)
 
         box.Add(buttons, 0, wx.EXPAND | wx.ALL, 5)

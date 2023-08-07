@@ -305,8 +305,7 @@ def pytest_runtest_makereport(item, call):
     extra = getattr(report, "extra", [])
 
     if report.when == "call" and not report.skipped:
-        tmpdir = item.funcargs.get("tmpdir")
-        if tmpdir:
+        if tmpdir := item.funcargs.get("tmpdir"):
             render_path = tmpdir / "render.svg"
             screenshot_path = tmpdir / "screenshot.png"
             for f in [render_path, screenshot_path]:
