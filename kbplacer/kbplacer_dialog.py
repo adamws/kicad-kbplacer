@@ -317,19 +317,15 @@ class ElementPositionWidget(wx.Panel):
         self.side.Disable()
 
     def GetValue(self) -> Tuple[PositionOption, Optional[ElementPosition]]:
-        if (
-            self.choice == PositionOption.DEFAULT
-            or self.choice == PositionOption.CUSTOM
-        ):
-            x = float(self.x.text.GetValue())
-            y = float(self.y.text.GetValue())
-            orientation = float(self.orientation.text.GetValue())
-            side_str = self.side.GetValue()
-            return self.choice, ElementPosition(
-                Point(x, y), orientation, Side(side_str == wx_("Back"))
-            )
-        else:
+        if self.choice not in [PositionOption.DEFAULT, PositionOption.CUSTOM]:
             return self.choice, None
+        x = float(self.x.text.GetValue())
+        y = float(self.y.text.GetValue())
+        orientation = float(self.orientation.text.GetValue())
+        side_str = self.side.GetValue()
+        return self.choice, ElementPosition(
+            Point(x, y), orientation, Side(side_str == wx_("Back"))
+        )
 
     def Enable(self):
         self.dropdown.Enable()
