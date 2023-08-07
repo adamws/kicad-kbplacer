@@ -3,10 +3,11 @@ from __future__ import annotations
 import json
 import logging
 import os
-import pcbnew
 import sys
-import wx
 from typing import Any, Tuple
+
+import pcbnew
+import wx
 
 from .kbplacer_dialog import KbplacerDialog
 from .key_placer import KeyPlacer

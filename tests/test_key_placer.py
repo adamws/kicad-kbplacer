@@ -1,15 +1,16 @@
 import json
 import logging
-import pcbnew
-import pytest
 from typing import Tuple
 
-from .conftest import generate_render, add_switch_footprint, add_diode_footprint
+import pcbnew
+import pytest
+
+from .conftest import add_diode_footprint, add_switch_footprint, generate_render
 
 try:
     from kbplacer.defaults import DEFAULT_DIODE_POSITION
-    from kbplacer.key_placer import KeyPlacer
     from kbplacer.element_position import ElementInfo, PositionOption, Side
+    from kbplacer.key_placer import KeyPlacer
 except:
     # satisfy import issues when running examples tests
     # in docker image on CI.

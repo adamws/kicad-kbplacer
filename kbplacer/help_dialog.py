@@ -1,8 +1,8 @@
 import os
 import re
 import webbrowser
-import wx
 
+import wx
 
 wx_ = wx.GetTranslation
 

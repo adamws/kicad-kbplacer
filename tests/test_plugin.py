@@ -1,11 +1,10 @@
 import logging
 import os
 import sys
-import pcbnew
-import pytest
-
 from pathlib import Path
 
+import pcbnew
+import pytest
 
 logger = logging.getLogger(__name__)
 

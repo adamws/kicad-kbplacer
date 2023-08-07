@@ -1,14 +1,14 @@
 import difflib
 import logging
-import pytest
 import shutil
 import subprocess
 import xml.etree.ElementTree as ET
-
 from pathlib import Path
-from xmldiff import actions, main
-from .conftest import generate_render, KICAD_VERSION
 
+import pytest
+from xmldiff import actions, main
+
+from .conftest import KICAD_VERSION, generate_render
 
 logger = logging.getLogger(__name__)
 

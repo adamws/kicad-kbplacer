@@ -1,9 +1,9 @@
 import argparse
 import json
 import logging
-import pcbnew
-
 from typing import List
+
+import pcbnew
 
 from .defaults import DEFAULT_DIODE_POSITION, ZERO_POSITION
 from .element_position import ElementInfo, ElementPosition, Point, PositionOption, Side
@@ -178,6 +178,7 @@ if __name__ == "__main__":
     else:
         # this must be gui mode (as other arguments would raise exception)
         import wx
+
         from .kbplacer_dialog import KbplacerDialog
 
         _ = wx.App()

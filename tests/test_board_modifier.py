@@ -1,13 +1,14 @@
 import enum
 import logging
+
 import pcbnew
 import pytest
 
-from .conftest import add_track, generate_render, get_footprints_dir, KICAD_VERSION
+from .conftest import KICAD_VERSION, add_track, generate_render, get_footprints_dir
 
 try:
+    from kbplacer.board_modifier import DEFAULT_CLEARANCE_MM, BoardModifier
     from kbplacer.element_position import Side
-    from kbplacer.board_modifier import BoardModifier, DEFAULT_CLEARANCE_MM
 except:
     pass
 

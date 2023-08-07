@@ -1,16 +1,15 @@
-import ctypes
 import copy
+import ctypes
 import json
 import logging
-import pytest
 import subprocess
 import sys
 import time
+from ctypes.wintypes import DWORD, HWND, RECT
 
-from ctypes.wintypes import HWND, DWORD, RECT
-from pyvirtualdisplay.smartdisplay import DisplayTimeoutError, SmartDisplay
+import pytest
 from PIL import ImageGrab
-
+from pyvirtualdisplay.smartdisplay import DisplayTimeoutError, SmartDisplay
 
 logger = logging.getLogger(__name__)
 

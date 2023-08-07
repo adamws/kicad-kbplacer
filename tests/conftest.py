@@ -3,17 +3,16 @@ import ctypes
 import logging
 import mimetypes
 import os
-import pcbnew
-import pytest
 import shutil
 import sys
-import svgpathtools
 import time
-
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Callable, Tuple, Union
+from typing import Tuple, Union
 
+import pcbnew
+import pytest
+import svgpathtools
 
 Numeric = Union[int, float]
 Box = Tuple[Numeric, Numeric, Numeric, Numeric]

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import pcbnew
 from logging import Logger
 
-from .element_position import Side
+import pcbnew
 
+from .element_position import Side
 
 KICAD_VERSION = int(pcbnew.Version().split(".")[0])
 DEFAULT_CLEARANCE_MM = 0.25

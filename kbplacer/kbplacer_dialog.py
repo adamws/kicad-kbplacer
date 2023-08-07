@@ -6,14 +6,14 @@ import logging
 import os
 import string
 import sys
-import wx
 from typing import List, Optional, Tuple
+
+import wx
 from wx.lib.embeddedimage import PyEmbeddedImage
 
 from .defaults import DEFAULT_DIODE_POSITION, ZERO_POSITION
 from .element_position import ElementInfo, ElementPosition, Point, PositionOption, Side
 from .help_dialog import HelpDialog
-
 
 logger = logging.getLogger(__name__)
 TEXT_CTRL_EXTRA_SPACE = 25

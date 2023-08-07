@@ -1,10 +1,10 @@
 import json
-import pytest
-
 from pathlib import Path
 
+import pytest
+
 try:
-    from kbplacer.kle_serial import parse, Keyboard
+    from kbplacer.kle_serial import Keyboard, parse
 except:
     pass
 

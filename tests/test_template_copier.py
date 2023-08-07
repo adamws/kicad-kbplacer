@@ -1,8 +1,9 @@
 import logging
+
 import pcbnew
 import pytest
 
-from .conftest import generate_render, add_switch_footprint, add_track
+from .conftest import add_switch_footprint, add_track, generate_render
 
 try:
     from kbplacer.board_modifier import get_position, set_position
