@@ -46,7 +46,7 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
 
         board_file = self.board.GetFileName()
         if not board_file:
-            msg = f"Could not locate .kicad_pcb file, open or create it first"
+            msg = "Could not locate .kicad_pcb file, open or create it first"
             raise Exception(msg)
 
         # go to the project folder - so that log will be in proper place
@@ -73,8 +73,8 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
             format="[%(filename)s:%(lineno)d]: %(message)s",
         )
         self.logger = logging.getLogger(__name__)
-        self.logger.info("Plugin executed with KiCad version: " + version)
-        self.logger.info("Plugin executed with python version: " + repr(sys.version))
+        self.logger.info(f"Plugin executed with KiCad version: {version}")
+        self.logger.info(f"Plugin executed with python version: {repr(sys.version)}")
 
     def Run(self) -> None:
         self.Initialize()

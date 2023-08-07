@@ -91,9 +91,9 @@ def prepare_ci_machine():
 @pytest.fixture(autouse=True, scope="session")
 def prepare_kicad_config(request):
     config_path = pcbnew.SETTINGS_MANAGER.GetUserSettingsPath()
-    colors_path = config_path + "/colors"
+    colors_path = f"{config_path}/colors"
     os.makedirs(colors_path, exist_ok=True)
-    if not os.path.exists(colors_path + "/user.json"):
+    if not os.path.exists(f"{colors_path}/user.json"):
         shutil.copy("./colors/user.json", colors_path)
 
 
@@ -130,11 +130,11 @@ def shrink_svg(svg: ET.ElementTree, margin: int = 0) -> None:
 
     root.set(
         "viewBox",
-        "{} {} {} {}".format(bbox[0], bbox[2], bbox[1] - bbox[0], bbox[3] - bbox[2]),
+        f"{bbox[0]} {bbox[2]} {bbox[1] - bbox[0]} {bbox[3] - bbox[2]}",
     )
 
-    root.set("width", str(float((bbox[1] - bbox[0]))) + "mm")
-    root.set("height", str(float((bbox[3] - bbox[2]))) + "mm")
+    root.set("width", f"{float(bbox[1] - bbox[0])}mm")
+    root.set("height", f"{float(bbox[3] - bbox[2])}mm")
 
 
 def remove_empty_groups(root):
@@ -155,7 +155,7 @@ def remove_tags(root, name):
 # and https://gitlab.com/kicad/code/kicad/-/blob/master/demos/python_scripts_examples/plot_board.py
 def generate_render(tmpdir, request):
     project_name = "keyboard-before"
-    pcb_path = "{}/{}.kicad_pcb".format(tmpdir, project_name)
+    pcb_path = f"{tmpdir}/{project_name}.kicad_pcb"
     board = pcbnew.LoadBoard(pcb_path)
 
     plot_layers = [
@@ -294,7 +294,7 @@ def to_base64(path):
 def image_to_base64_html(path):
     b64 = to_base64(path)
     mime = mimetypes.guess_type(path)
-    return '<div class="image"><img src="data:{};base64,{}"></div>'.format(mime[0], b64)
+    return f'<div class="image"><img src="data:{mime[0]};base64,{b64}"></div>'
 
 
 @pytest.hookimpl(hookwrapper=True)

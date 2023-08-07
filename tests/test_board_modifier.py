@@ -68,7 +68,7 @@ def test_track_with_pad_collision(footprint, position, side, netlist, tmpdir, re
     netnames = [n for n in netlist if n != ""]
     add_nets(board, netnames)
 
-    logger.info(f"Board nets:")
+    logger.info("Board nets:")
     netcodes_map = board.GetNetInfo().NetsByName()
     for v in netcodes_map.itervalues():
         logger.info(f"Net: {v.GetNetCode()}:{v.GetNetname()}")
@@ -140,7 +140,7 @@ def test_track_with_pad_collision(footprint, position, side, netlist, tmpdir, re
 
     board.Add(track)
     board.BuildListOfNets()
-    board.Save("{}/keyboard-before.kicad_pcb".format(tmpdir))
+    board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
     generate_render(tmpdir, request)
 
     assert collide == expected_collision_result, "Unexpected track collision result"
@@ -164,7 +164,7 @@ def add_track_segments_test(steps, tmpdir, request):
         else:
             assert type(start) == type(None), "Unexpected track success"
 
-    board.Save("{}/keyboard-before.kicad_pcb".format(tmpdir))
+    board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
     generate_render(tmpdir, request)
 
 
@@ -224,6 +224,6 @@ def test_track_with_track_collision(start, end, layer, expected, tmpdir, request
 
     collide = modifier.test_track_collision(track)
 
-    board.Save("{}/keyboard-before.kicad_pcb".format(tmpdir))
+    board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
     generate_render(tmpdir, request)
     assert collide == expected, "Unexpected track collision result"

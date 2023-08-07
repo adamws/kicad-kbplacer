@@ -110,7 +110,7 @@ def test_diode_switch_routing(position, orientation, side, expected, tmpdir, req
     key_placer.route_switch_with_diode(switch, diode, 0)
     key_placer.remove_dangling_tracks()
 
-    board.Save("{}/keyboard-before.kicad_pcb".format(tmpdir))
+    board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
     generate_render(tmpdir, request)
 
     points = []
@@ -191,7 +191,7 @@ def test_switch_distance(key_distance, tmpdir, request):
         layout, "SW{}", ElementInfo("D{}", PositionOption.DEFAULT, diode_position), True
     )
 
-    board.Save("{}/keyboard-before.kicad_pcb".format(tmpdir))
+    board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
     generate_render(tmpdir, request)
 
     assert_2x2_layout_switches(key_placer, key_distance)
@@ -211,7 +211,7 @@ def test_diode_placement_ignore(tmpdir, request):
     key_placer = KeyPlacer(logger, board)
     key_placer.run(layout, "SW{}", None, True)
 
-    board.Save("{}/keyboard-before.kicad_pcb".format(tmpdir))
+    board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
     generate_render(tmpdir, request)
 
     assert_2x2_layout_switches(key_placer, (19.05, 19.05))
