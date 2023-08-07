@@ -148,11 +148,10 @@ def getsha256(filename) -> str:
 
 
 def get_package_metadata(filename) -> PackageMetadata:
-    install_size = 0
     z = zipfile.ZipFile(filename, "r")
-    for entry in z.infolist():
-        if not entry.is_dir():
-            install_size += entry.file_size
+    install_size = sum(
+        entry.file_size for entry in z.infolist() if not entry.is_dir()
+    )
     return {
         "download_sha256": getsha256(filename),
         "download_size": os.path.getsize(filename),
