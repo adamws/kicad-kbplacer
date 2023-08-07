@@ -17,8 +17,8 @@ def position_in_rotated_coordinates(
     point: pcbnew.wxPoint, angle: float
 ) -> pcbnew.wxPoint:
     """
-    Map position in xy-Cartesian coordinate system to x'y'-Cartesian which has same origin
-    but axes are rotated by angle
+    Map position in xy-Cartesian coordinate system to x'y'-Cartesian which
+    has same origin but axes are rotated by angle
 
     :param point: A point to be mapped
     :param angle: Rotation angle (in degrees) of x'y'-Cartesian coordinates
@@ -111,9 +111,12 @@ class KeyPlacer(BoardModifier):
 
         :param switch: Switch footprint to be routed.
         :param diode: Diode footprint to be routed.
-        :param angle: Rotation angle (in degrees) of switch footprint (diode rotation is assumed to be the same)
-        :param templateTrackPoints: List of positions (relative to diode pad position) of track corners connecting switch and diode.
-                                    Does not support vias, will be routed on the layer of the diode.
+        :param angle: Rotation angle (in degrees) of switch footprint
+                      (diode rotation is assumed to be the same)
+        :param templateTrackPoints: List of positions (relative to diode pad position)
+                                    of track corners connecting switch and diode.
+                                    Does not support vias, will be routed on the layer
+                                    of the diode.
                                     If None, use automatic routing algorithm.
         :type switch: FOOTPRINT
         :type diode: FOOTPRINT
@@ -134,7 +137,8 @@ class KeyPlacer(BoardModifier):
             )
 
         self.logger.debug(
-            f"switchPadPosition: {switch_pad_position}, diodePadPosition: {diode_pad_position}",
+            f"switchPadPosition: {switch_pad_position}, "
+            f"diodePadPosition: {diode_pad_position}",
         )
 
         if template_track_points:
@@ -171,8 +175,9 @@ class KeyPlacer(BoardModifier):
                 )
 
                 self.logger.debug(
-                    f"In rotated coordinates: switchPadPosition: {switch_pad_position_r},"
-                    f" diodePadPosition: {diode_pad_position_r}",
+                    "In rotated coordinates: "
+                    f"switchPadPosition: {switch_pad_position_r}, "
+                    f"diodePadPosition: {diode_pad_position_r}",
                 )
 
                 corner = self.calculate_corner_position_of_switch_diode_route(
@@ -218,7 +223,8 @@ class KeyPlacer(BoardModifier):
         net2 = diode.FindPadByNumber("2").GetNetname()
         tracks = [t for t in self.board.GetTracks() if t.GetNetname() == net1 == net2]
 
-        # convert tracks to list of vectors which will be used by `AddTrackSegmentByPoints`
+        # convert tracks to list of vectors which will be used
+        # by `AddTrackSegmentByPoints`
         switch_pad_position = switch.FindPadByNumber("2").GetPosition()
         diode_pad_position = diode.FindPadByNumber("2").GetPosition()
         if KICAD_VERSION == 7:
@@ -275,7 +281,8 @@ class KeyPlacer(BoardModifier):
             diode_format = diode_info.annotation_format
             if route_tracks:
                 # check if first switch-diode pair is already routed, if yes,
-                # then reuse its track shape for remaining pairs, otherwise try to use automatic 'router'
+                # then reuse its track shape for remaining pairs,
+                # otherwise try to use automatic 'router'
                 template_tracks = self.check_if_diode_routed(key_format, diode_format)
 
         if diode_info:
@@ -382,7 +389,8 @@ class KeyPlacer(BoardModifier):
                         vector = [0, (y_diff - x_diff)]
                         if vector[1] <= 0:
                             self.logger.warning(
-                                "Switch pad to far to route 2 segment track with 45 degree angles"
+                                "Switch pad to far to route 2 segment track "
+                                "with 45 degree angles"
                             )
                         elif last_position := self.add_track_segment(
                             pos1, vector, layer=pcbnew.F_Cu
@@ -405,7 +413,8 @@ class KeyPlacer(BoardModifier):
                         self.add_track_segment_by_points(pos1, pos2, layer)
                     else:
                         self.logger.warning(
-                            "Automatic diode routing supported only when diodes aligned vertically"
+                            "Automatic diode routing supported only when "
+                            "diodes aligned vertically"
                         )
 
             self.remove_dangling_tracks()

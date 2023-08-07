@@ -40,15 +40,17 @@ class TemplateCopier(BoardModifier):
         if self.__route_tracks:
             tracks = self.__template.GetTracks()
             for track in tracks:
-                # clone track but remap netinfo because net codes in template might be different.
-                # use net names for remmaping (names in template and bourd under modification must match)
+                # Clone track but remap netinfo because net codes in template
+                # might be different. Use net names for remapping
+                # (names in template and board under modification must match)
                 clone = track.Duplicate()
                 net_name = clone.GetNetname()
                 net_code = clone.GetNetCode()
                 net_info_in_board = self.__board_nets_by_name[net_name]
                 self.logger.info(
                     f"Cloning track from template: {net_name}:{net_code}"
-                    f"-> {net_info_in_board.GetNetname()}:{net_info_in_board.GetNetCode()}",
+                    f"-> {net_info_in_board.GetNetname()}:"
+                    f"{net_info_in_board.GetNetCode()}",
                 )
                 clone.SetNet(net_info_in_board)
                 self.board.Add(clone)

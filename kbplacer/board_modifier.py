@@ -91,8 +91,8 @@ class BoardModifier:
                     pad_name = p.GetName()
                     pad_shape = p.GetEffectiveShape()
 
-                    # track has non default netlist set so we can skip collision detection
-                    # for pad of same netlist:
+                    # track has non default netlist set so we can skip
+                    # collision detection for pad of same netlist:
                     if track_net_code != 0 and track_net_code == p.GetNetCode():
                         self.logger.debug(
                             f"Track collision ignored, pad {reference}:{pad_name} "
@@ -100,9 +100,10 @@ class BoardModifier:
                         )
                         continue
 
-                    # if track starts or ends in pad than assume this collision is expected,
-                    # with the execption of case where track already has netlist set
-                    # and it is different than pad's netlist
+                    # if track starts or ends in pad then assume that
+                    # this collision is expected, with the exception of case
+                    # where track already has netlist set and it is different
+                    # than pad's netlist
                     if p.HitTest(track_start) or p.HitTest(track_end):
                         if (
                             track_net_code != 0
@@ -115,7 +116,8 @@ class BoardModifier:
                             collide_list.append(p)
                         else:
                             self.logger.debug(
-                                f"Track collision ignored, track starts or ends in pad {reference}:{pad_name}"
+                                "Track collision ignored, track starts or ends "
+                                f"in pad {reference}:{pad_name}"
                             )
                     else:
                         hit_test_result = pad_shape.Collide(
@@ -145,9 +147,11 @@ class BoardModifier:
                     or track_end == t.GetEnd()
                 ):
                     self.logger.debug(
-                        f"Track collision ignored, track starts or ends at the end of {track_uuid} track"
+                        "Track collision ignored, track starts or ends "
+                        f"at the end of {track_uuid} track"
                     )
-                    # ignoring one track means that we can ignore all other connected to it:
+                    # ignoring one track means that we can ignore
+                    # all other connected to it:
                     tracks_to_clear += [
                         x.m_Uuid for x in connectivity.GetConnectedTracks(t)
                     ]
@@ -158,7 +162,8 @@ class BoardModifier:
                     for collision in list(collide_list):
                         if collision.m_Uuid in connected_pads_ids:
                             self.logger.debug(
-                                "Pad collision removed due to connection with track which leads to that pad"
+                                "Pad collision removed due to connection with track "
+                                "which leads to that pad"
                             )
                             collide_list.remove(collision)
                 elif hit_test_result := t.GetEffectiveShape().Collide(
@@ -170,7 +175,8 @@ class BoardModifier:
             if collision.m_Uuid in tracks_to_clear:
                 collision_uuid = collision.m_Uuid.AsString()
                 self.logger.debug(
-                    f"Track collision with {collision_uuid} removed due to connection with track which leads to it"
+                    f"Track collision with {collision_uuid} removed due to "
+                    "connection with track which leads to it"
                 )
                 collide_list.remove(collision)
         return len(collide_list) != 0

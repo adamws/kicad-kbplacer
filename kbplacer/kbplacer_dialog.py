@@ -20,14 +20,17 @@ TEXT_CTRL_EXTRA_SPACE = 25
 
 # Most of the phrases used in this plugin are already in use in KiCad.
 # It means that we get translations for free using `wx.GetTranslation`.
-# All strings translated with 'wx_' are expected to be a part of KiCad's translation files.
-# All remaining will be translated with another custom mechanism or will remain default.
+# All strings translated with 'wx_' are expected to be a part of
+# KiCad's translation files. All remaining will be translated with
+# another custom mechanism or will remain default.
 wx_ = wx.GetTranslation
 
 # Currently there is no elegant way to check which language is loaded by KiCad.
-# This feature has been requested here: https://gitlab.com/kicad/code/kicad/-/issues/10573
-# Until then, use workaroud - request translation with wx_ and use result in lookup table.
-# This lookup should contain all installed languages defined in translation/pofiles/LINGUAS_INSTALL.
+# This feature has been requested here:
+#   https://gitlab.com/kicad/code/kicad/-/issues/10573
+# Until then, use workaroud - request translation with wx_ and use result
+# in lookup table. This lookup should contain all installed languages defined
+# in translation/pofiles/LINGUAS_INSTALL.
 KICAD_TRANSLATIONS_LOOKUP = {
     "Set Language": "en",
     "Ustaw język": "pl",

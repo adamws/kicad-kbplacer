@@ -42,8 +42,8 @@ class ElementInfoAction(argparse.Action):
                     PositionOption.DEFAULT,
                 ]:
                     err = (
-                        f"{option_string} position option needs to be equal CURRENT_RELATIVE or DEFAULT "
-                        "if position details not provided"
+                        f"{option_string} position option needs to be equal "
+                        "CURRENT_RELATIVE or DEFAULT if position details not provided"
                     )
                     raise ValueError(err)
             elif option != PositionOption.CUSTOM:
@@ -86,7 +86,10 @@ class XYAction(argparse.Action):
         try:
             value = tuple(map(float, values.split()))
             if len(value) != 2:
-                msg = f"{option_string} must be exactly two numeric values separated by a space."
+                msg = (
+                    f"{option_string} must be exactly two numeric values "
+                    "separated by a space."
+                )
                 raise ValueError(msg)
         except ValueError as e:
             raise argparse.ArgumentTypeError(str(e))
@@ -126,8 +129,8 @@ if __name__ == "__main__":
         default=ElementInfo("D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION),
         action=ElementInfoAction,
         help=(
-            "Diode information, space separated value of ANNOTATION POSITION_OPTION [POSITION].\n"
-            "Available POSITION_OPTION choices: DEFAULT, CURRENT_RELATIVE and CUSTOM\n"
+            "Diode information, space separated value of ANNOTATION OPTION [POSITION]\n"
+            "Available OPTION choices: DEFAULT, CURRENT_RELATIVE and CUSTOM\n"
             "When DEFAULT or CURRENT_RELATIVE, then POSITION needs to be omitted,\n"
             "when CUSTOM, then POSITION is space separated value of X Y ORIENTATION FRONT|BACK\n"
             "for example:\n"
@@ -147,9 +150,9 @@ if __name__ == "__main__":
         ],
         action=ElementInfoListAction,
         help=(
-            "Additional elements information, ';' separated list of ELEMENT_INFO values\n"
-            "where ELEMENT_INFO is space separated value of ANNOTATION POSITION_OPTION POSITION.\n"
-            "Available POSITION_OPTION choices: CURRENT_RELATIVE and CUSTOM\n"
+            "List of ';' separated additional elements ELEMENT_INFO values\n"
+            "ELEMENT_INFO is space separated value of ANNOTATION OPTION POSITION\n"
+            "Available OPTION choices: CURRENT_RELATIVE and CUSTOM\n"
             "When CURRENT_RELATIVE, then POSITION needs to be omitted,\n"
             "when CUSTOM, then POSITION is space separated value of X Y ORIENTATION FRONT|BACK\n"
             "for example:\n"
@@ -161,7 +164,10 @@ if __name__ == "__main__":
         "--key-distance",
         default=(19.05, 19.05),
         action=XYAction,
-        help="X and Y key 1U distance in mm, as two space separated numeric values, 19.05 19.05 by default",
+        help=(
+            "X and Y key 1U distance in mm, as two space separated numeric values, "
+            "19.05 19.05 by default"
+        ),
     )
     parser_cli.add_argument("-t", "--template", help="Controller circuit template")
 

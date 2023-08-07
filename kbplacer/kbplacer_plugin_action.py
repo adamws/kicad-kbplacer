@@ -39,7 +39,8 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
             msg = f"KiCad version {version} is not supported"
             raise Exception(msg)
         if sys.version_info < (3, 8):
-            version_str = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+            vinfo = sys.version_info
+            version_str = f"{vinfo.major}.{vinfo.minor}.{vinfo.micro}"
             msg = f"Python {version_str} is not supported"
             raise Exception(msg)
 

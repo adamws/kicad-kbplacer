@@ -111,8 +111,8 @@ class HelpDialog(wx.Dialog):
         help_message.AppendText(
             self._(
                 "Plugin for mechanical keyboard design. "
-                "It features automatic key placement \nbased on popular layout description "
-                "from "
+                "It features automatic key placement \nbased on popular "
+                "layout description from "
             )
         )
         help_message.SetDefaultStyle(wx.TextAttr(wx.BLUE))
