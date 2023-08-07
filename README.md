@@ -1,4 +1,4 @@
-# kicad-kbplacer
+# ![icon](resources/icon-github.png) kicad-kbplacer
 
 ![Downloads](https://img.shields.io/github/downloads/adamws/kicad-kbplacer/total)
 [![CircleCI](https://circleci.com/gh/adamws/kicad-kbplacer.svg?style=shield)](https://circleci.com/gh/adamws/kicad-kbplacer/tree/master)
