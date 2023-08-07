@@ -133,13 +133,12 @@ def get_references_dir(request):
     _, test_parameters = request.node.name.split("[")
     example_name, route_option, diode_option, _ = test_parameters[:-1].split(";")
     kicad_dir = "kicad7" if KICAD_VERSION == 7 else "kicad6"
-    references_dir = (
+    return (
         test_dir
         / "data/examples-references"
         / kicad_dir
         / f"{example_name}/{route_option}-{diode_option}"
     )
-    return references_dir
 
 
 @pytest.mark.parametrize("example,route,diode_position,layout_type", __get_parameters())

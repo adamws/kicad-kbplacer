@@ -99,8 +99,7 @@ def prepare_kicad_config(request):
 
 def get_footprints_dir(request):
     test_dir = Path(request.module.__file__).parent
-    footprints_dir = test_dir / "data/footprints/tests.pretty"
-    return footprints_dir
+    return test_dir / "data/footprints/tests.pretty"
 
 
 def merge_bbox(left: Box, right: Box) -> Box:
