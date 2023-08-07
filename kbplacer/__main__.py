@@ -46,19 +46,16 @@ class ElementInfoAction(argparse.Action):
                         "if position details not provided"
                     )
                     raise ValueError(err)
+            elif option != PositionOption.CUSTOM:
+                err = (
+                    f"{option_string} position option needs to be equal CUSTOM "
+                    "when providing position details"
+                )
+                raise ValueError(err)
             else:
-                if option != PositionOption.CUSTOM:
-                    err = (
-                        f"{option_string} position option needs to be equal CUSTOM "
-                        "when providing position details"
-                    )
-                    raise ValueError(err)
-                else:
-                    floats = tuple(map(float, tokens[2:5]))
-                    side = Side.get(tokens[5])
-                    position = ElementPosition(
-                        Point(floats[0], floats[1]), floats[2], side
-                    )
+                floats = tuple(map(float, tokens[2:5]))
+                side = Side.get(tokens[5])
+                position = ElementPosition(Point(floats[0], floats[1]), floats[2], side)
 
             value: ElementInfo = ElementInfo(
                 annotation,

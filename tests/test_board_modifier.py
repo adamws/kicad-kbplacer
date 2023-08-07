@@ -119,14 +119,13 @@ def test_track_with_pad_collision(footprint, position, side, netlist, tmpdir, re
 
     if not pad.IsOnLayer(track.GetLayer()) or position == TrackToElementPosition.APART:
         expected_collision_result = False
+    elif track_netlist and track_netlist == pad_netlist:
+        # same non '0' netlist never colide
+        expected_collision_result = False
+    elif track_netlist == "" and position == TrackToElementPosition.STARTS_AT:
+        expected_collision_result = False
     else:
-        if track_netlist and track_netlist == pad_netlist:
-            # same non '0' netlist never colide
-            expected_collision_result = False
-        elif track_netlist == "" and position == TrackToElementPosition.STARTS_AT:
-            expected_collision_result = False
-        else:
-            expected_collision_result = True
+        expected_collision_result = True
 
     pad_netlist_str = pad_netlist if pad_netlist else "''"
     track_netlist_str = track_netlist if track_netlist else "''"

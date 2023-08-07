@@ -152,44 +152,43 @@ class KeyPlacer(BoardModifier):
                     end = t.__add__(diode_pad_position)
                 if end := self.add_track_segment_by_points(start, end, layer):
                     start = end
+        elif (
+            switch_pad_position.x == diode_pad_position.x
+            or switch_pad_position.y == diode_pad_position.y
+        ):
+            self.add_track_segment_by_points(
+                diode_pad_position, switch_pad_position, layer
+            )
         else:
-            if (
-                switch_pad_position.x == diode_pad_position.x
-                or switch_pad_position.y == diode_pad_position.y
-            ):
-                self.add_track_segment_by_points(
-                    diode_pad_position, switch_pad_position, layer
+            # pads are not in single line, attempt routing with two segment track
+            if angle != 0:
+                self.logger.info(f"Routing at {angle} degree angle")
+                switch_pad_position_r = position_in_rotated_coordinates(
+                    switch_pad_position, angle
                 )
+                diode_pad_position_r = position_in_rotated_coordinates(
+                    diode_pad_position, angle
+                )
+
+                self.logger.debug(
+                    f"In rotated coordinates: switchPadPosition: {switch_pad_position_r},"
+                    f" diodePadPosition: {diode_pad_position_r}",
+                )
+
+                corner = self.calculate_corner_position_of_switch_diode_route(
+                    diode_pad_position_r, switch_pad_position_r
+                )
+                corner = position_in_cartesian_coordinates(corner, angle)
             else:
-                # pads are not in single line, attempt routing with two segment track
-                if angle != 0:
-                    self.logger.info(f"Routing at {angle} degree angle")
-                    switch_pad_position_r = position_in_rotated_coordinates(
-                        switch_pad_position, angle
-                    )
-                    diode_pad_position_r = position_in_rotated_coordinates(
-                        diode_pad_position, angle
-                    )
+                corner = self.calculate_corner_position_of_switch_diode_route(
+                    diode_pad_position, switch_pad_position
+                )
 
-                    self.logger.debug(
-                        f"In rotated coordinates: switchPadPosition: {switch_pad_position_r},"
-                        f" diodePadPosition: {diode_pad_position_r}",
-                    )
-
-                    corner = self.calculate_corner_position_of_switch_diode_route(
-                        diode_pad_position_r, switch_pad_position_r
-                    )
-                    corner = position_in_cartesian_coordinates(corner, angle)
-                else:
-                    corner = self.calculate_corner_position_of_switch_diode_route(
-                        diode_pad_position, switch_pad_position
-                    )
-
-                # first segment: at 45 degree angle
-                # (might be in rotated coordinate system) towards switch pad
-                self.add_track_segment_by_points(diode_pad_position, corner, layer)
-                # second segment: up to switch pad
-                self.add_track_segment_by_points(corner, switch_pad_position, layer)
+            # first segment: at 45 degree angle
+            # (might be in rotated coordinate system) towards switch pad
+            self.add_track_segment_by_points(diode_pad_position, corner, layer)
+            # second segment: up to switch pad
+            self.add_track_segment_by_points(corner, switch_pad_position, layer)
 
     def get_current_relative_element_position(
         self, key_format: str, element_format: str
