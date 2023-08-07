@@ -75,7 +75,7 @@ def assert_group(expected: ET.ElementTree, actual: ET.ElementTree):
                 logger.info("'textLength' attribute is allowed to be different")
                 differences.remove(node)
 
-        assert len(differences) == 0, "Not allowd differences found"
+        assert not differences, "Not allowd differences found"
     else:
         logger.info("No differences found")
 

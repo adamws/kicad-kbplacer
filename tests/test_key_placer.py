@@ -122,8 +122,8 @@ def test_diode_switch_routing(position, orientation, side, expected, tmpdir, req
         if end not in points:
             points.append(end)
 
-    if expected == None:
-        assert len(points) == 0
+    if expected is None:
+        assert not points
     else:
         assert equal_ignore_order(points, expected)
 

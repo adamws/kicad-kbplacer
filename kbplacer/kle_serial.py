@@ -141,7 +141,7 @@ def parse(layout) -> Keyboard:
     rows: List[Any] = layout
     current: Key = Key()
 
-    if len(rows) == 0:
+    if not rows:
         msg = "Expected at least one row of keys"
         raise RuntimeError(msg)
 

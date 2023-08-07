@@ -246,7 +246,7 @@ class KeyPlacer(BoardModifier):
                     tracks.remove(t)
                     self.board.RemoveNative(t)
                     break
-        if len(points_sorted) != 0:
+        if points_sorted:
             points_sorted.pop(0)
             points_sorted.append(switch_pad_position)
 
