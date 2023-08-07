@@ -67,10 +67,7 @@ def get_simplified_version(version) -> str:
 
 def get_status(version: str) -> str:
     pattern = r"v\d.\d$"
-    if re.match(pattern, version):
-        return "stable"
-    else:
-        return "development"
+    return "stable" if re.match(pattern, version) else "development"
 
 
 def generate_translations(locale_directory):
