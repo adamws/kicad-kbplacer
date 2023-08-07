@@ -1,2 +1,22 @@
 __pycache__/
 kbplacer/locale/
+
+# Unit test / coverage reports
+.coverage
+.coverage.*
+.pytest_cache/
+tests/report.html
+
+# Environments
+.env
+.venv
+
+# KiCad temporary files
+*.bak
+*.kicad_pcb-bak
+*.kicad_sch-bak
+*.sch-bak
+_autosave-*
+*-save.pro
+*-save.kicad_pcb
+fp-info-cache
