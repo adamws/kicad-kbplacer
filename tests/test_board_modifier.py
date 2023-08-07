@@ -49,8 +49,8 @@ def pointMM(x, y):
 
 def __get_parameters():
     examples = ["D_SOD-323", "D_DO-34_SOD68_P7.62mm_Horizontal"]
-    positions = [e for e in TrackToElementPosition]
-    sides = [e for e in TrackSide]
+    positions = list(TrackToElementPosition)
+    sides = list(TrackSide)
     netlists = [("", ""), ("", "n1"), ("n1", ""), ("n1", "n1"), ("n1", "n2")]
     test_params = []
     for example in examples:
