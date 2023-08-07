@@ -703,9 +703,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="dialog test")
-    parser.add_argument(
-        "-i", "--initial-state", default="{}", help="Initial gui state"
-    )
+    parser.add_argument("-i", "--initial-state", default="{}", help="Initial gui state")
     parser.add_argument(
         "-o", "--output-dir", required=True, help="Directory for output files"
     )
