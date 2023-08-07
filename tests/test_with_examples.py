@@ -57,9 +57,7 @@ def assert_group(expected: ET.ElementTree, actual: ET.ElementTree):
             logger.info(d)
         assert False, "Difference probably found"
 
-    if edit_script and not all(
-        [type(node) == actions.MoveNode for node in edit_script]
-    ):
+    if edit_script and any(type(node) != actions.MoveNode for node in edit_script):
         logger.info("Difference found")
         diff = difflib.unified_diff(expected.splitlines(), actual.splitlines())
         for d in diff:
