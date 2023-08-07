@@ -231,7 +231,7 @@ class KeyPlacer(BoardModifier):
 
         points_sorted = []
         search_point = diode_pad_position
-        for i in range(0, len(tracks) + 1):
+        for _ in range(0, len(tracks) + 1):
             for t in list(tracks):
                 start = t.GetStart()
                 end = t.GetEnd()
@@ -369,8 +369,7 @@ class KeyPlacer(BoardModifier):
 
         if route_tracks:
             # very naive routing approach, will fail in some scenarios:
-            for column in column_switch_pads:
-                pads = column_switch_pads[column]
+            for pads in column_switch_pads.values():
                 positions = [pad.GetPosition() for pad in pads]
                 for pos1, pos2 in zip(positions, positions[1:]):
                     # connect two pads together

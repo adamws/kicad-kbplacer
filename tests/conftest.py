@@ -223,7 +223,7 @@ def generate_render(tmpdir, request):
         references_dir = get_references_dir(request)
         references_dir.mkdir(parents=True, exist_ok=True)
 
-        for i, (layer_name, _) in enumerate(plot_plan):
+        for layer_name, _ in plot_plan:
             if "Silkscreen" not in layer_name:
                 filepath = os.path.join(tmpdir, f"{layer_name}.svg")
                 shutil.copy(filepath, references_dir)
