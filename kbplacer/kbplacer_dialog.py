@@ -85,14 +85,14 @@ class FloatValidator(wx.Validator):
         text_ctrl = self.GetWindow()
         current_position = text_ctrl.GetInsertionPoint()
         keycode = int(event.GetKeyCode())
-        if (
-            keycode == wx.WXK_BACK
-            or keycode == wx.WXK_DELETE
-            or keycode == wx.WXK_LEFT
-            or keycode == wx.WXK_RIGHT
-            or keycode == wx.WXK_NUMPAD_LEFT
-            or keycode == wx.WXK_NUMPAD_RIGHT
-        ):
+        if keycode in [
+            wx.WXK_BACK,
+            wx.WXK_DELETE,
+            wx.WXK_LEFT,
+            wx.WXK_RIGHT,
+            wx.WXK_NUMPAD_LEFT,
+            wx.WXK_NUMPAD_RIGHT,
+        ]:
             event.Skip()
         else:
             text_ctrl = self.GetWindow()
