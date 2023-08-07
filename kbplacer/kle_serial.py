@@ -80,9 +80,7 @@ class Keyboard:
         if isinstance(data["meta"], dict):
             data["meta"] = KeyboardMetadata(**data["meta"])
         if isinstance(data["keys"], list):
-            keys: List[Key] = []
-            for key in data["keys"]:
-                keys.append(Key(**key))
+            keys: List[Key] = [Key(**key) for key in data["keys"]]
             data["keys"] = keys
         return cls(**data)
 
