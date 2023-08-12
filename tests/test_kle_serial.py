@@ -9,6 +9,12 @@ except:
     pass
 
 
+def __minify(string: str) -> str:
+    for ch in ["\n", " "]:
+        string = string.replace(ch, "")
+    return string
+
+
 # single key layouts with various labels:
 @pytest.mark.parametrize(
     # fmt: off
@@ -33,6 +39,40 @@ except:
 def test_labels(layout, expected) -> None:
     result = parse(layout)
     assert result.keys[0].labels == expected
+    # check if reverse operation works as well:
+    assert [json.loads(result.to_kle())] == layout
+
+
+@pytest.mark.parametrize(
+    # fmt: off
+    "layout,expected_labels,expected_text_size",
+    [
+        ([[{"fa":[6]},"x"]],         [          "x"], [               6]),
+        ([[{"a":5,"fa":[6]},"x"]],   [     None,"x"], [          None,6]),
+        ([[{"fa":[0,0,6]},"\n\nx"]], [None,None,"x"], [     None,None,6]),
+        ([[{"f2":6},"\nx"]],    (6 * [None]) + ["x"], (6 * [None]) + [6]),
+    ],
+    # fmt: on
+)
+def test_labels_text_size(layout, expected_labels, expected_text_size) -> None:
+    result = parse(layout)
+    assert result.keys[0].labels == expected_labels
+    assert result.keys[0].textSize == expected_text_size
+    # check if reverse operation works as well:
+    assert [json.loads(result.to_kle())] == layout
+
+
+def test_labels_colors() -> None:
+    # fmt: off
+    layout = [[
+        {"t": "#ff0000\n\n\n\n\n\n\n\n\n\n#0018ff"},"x\n\n\n\n\n\n\n\n\n\nx",
+        {"t": "#ff0000\n\n\n\n\n\n\n\n\n#736827"},"x\n\n\n\n\n\n\n\n\nx",
+        {"t": "#210e0e\n\n\n\n\n\n\n\n\n#736827"},"x\n\n\n\n\n\n\n\n\nx\nx",
+        {"t": "#000000\n\n\n\n\n\n\n\n\n#a80000"},"x\n\n\n\n\n\n\n\n\nx\nx",
+    ]]
+    # fmt: on
+    result = parse(layout)
+    assert [json.loads(result.to_kle())] == layout
 
 
 def test_if_produces_valid_json() -> None:
@@ -76,21 +116,19 @@ def test_parse_invalid_key_rotation() -> None:
 
 def test_keyboard_from_invalid_type() -> None:
     with pytest.raises(TypeError):
-        Keyboard.from_json("{}")
+        Keyboard.from_json("{}")  # type: ignore
 
 
 def test_keyboard_from_invalid_schema() -> None:
     with pytest.raises(KeyError):
-        Keyboard.from_json({})
+        Keyboard.from_json({})  # type: ignore
 
 
 def get_reference(path: str):
-    reference: Keyboard = None
     with open(path, "r") as f:
         layout: str = f.read()
         reference_dict = json.loads(layout)
-        reference: Keyboard = Keyboard.from_json(reference_dict)
-        return reference
+        return Keyboard.from_json(reference_dict)
 
 
 def __get_parameters():
@@ -134,3 +172,8 @@ def test_with_references(layout_file, reference_file, request) -> None:
         layout = json.load(f)
         result = parse(layout)
         assert result == reference
+
+        f.seek(0)
+        kle_result = json.loads("[" + __minify(result.to_kle()) + "]")
+        expected = json.loads(__minify(f.read()))
+        assert kle_result == expected
