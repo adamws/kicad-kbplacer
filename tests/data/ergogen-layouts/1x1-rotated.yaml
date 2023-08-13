@@ -1,0 +1,14 @@
+points:
+  zones:
+    matrix:
+      key:
+        padding: U
+        spread: U
+        width: U
+        height: U
+      columns:
+        pinky:
+          key:
+            rotate: 15
+      rows:
+        bottom:

@@ -5,7 +5,7 @@ import copy
 import json
 import pprint
 from dataclasses import asdict, dataclass, field, fields
-from typing import Any, List, Optional, Tuple, Type
+from typing import Any, List, Optional, Tuple, Type, Union
 
 DEFAULT_KEY_COLOR = "#cccccc"
 DEFAULT_TEXT_COLOR = "#000000"
@@ -331,7 +331,7 @@ def cleanup_key(key: Key):
         setattr(key, attribute_name, attribute)
 
 
-def parse(layout) -> Keyboard:
+def parse_kle(layout) -> Keyboard:
     if not isinstance(layout, list):
         msg = "Expected an list of objects"
         raise RuntimeError(msg)
@@ -466,9 +466,103 @@ def parse(layout) -> Keyboard:
     return Keyboard(meta=metadata, keys=keys)
 
 
+def parse_ergogen_points(layout: dict) -> Keyboard:
+    if not isinstance(layout, dict):
+        msg = "Expected an object with nested objects"
+        raise RuntimeError(msg)
+    if not layout:
+        msg = "Expected non-empty object"
+        raise RuntimeError(msg)
+
+    metadata: KeyboardMetadata = KeyboardMetadata()
+    keys = []
+
+    # in ergogen terminology, 'padding' is vertical space between each key
+    # and 'spread' is horizontal space between each key. These values are defined
+    # in 'meta' object for each 'point' (key). Let's assume that these values are
+    # the same for all of them (which I don't know if it is actually true)
+    padding = None
+    spread = None
+
+    # at the end of parsing will need to fix key order, kle starts from top,
+    # ergogen from bottom
+    # store topmost, leftmost key index while iterating, it will be used later
+    topmost_leftmost = [0, 0]
+
+    def __int(value: float) -> Union[int, float]:
+        return int(value) if int(value) == value else value
+
+    for item in layout.values():
+        if not "meta" in item:
+            msg = "Item needs to have meta defined"
+            raise RuntimeError(msg)
+
+        meta = item["meta"]
+
+        # read key spacing only once, assume that it does not change
+        if not padding and not spread:
+            if "padding" not in meta or "spread" not in meta:
+                msg = "Unable to determine key spacing"
+                raise RuntimeError(msg)
+            padding = meta["padding"]
+            spread = meta["spread"]
+
+        key = Key()
+
+        # kle expresses distances (positions) with 1U, need to normalize
+        # ergogen uses key center for position, kle uses key left top corner, need to adjust position by size
+        key.x = __int(item["x"] / spread)
+        key.y = __int(item["y"] / padding)
+        key.width = __int(meta["width"] / spread)
+        key.height = __int(meta["height"] / spread)
+
+        # non-custom key shapes (like ISO enter) not supported:
+        key.width2 = key.width
+        key.height2 = key.height
+
+        if key.y > topmost_leftmost[1] or (
+            key.y == topmost_leftmost[1] and key.x <= topmost_leftmost[0]
+        ):
+            topmost_leftmost = [key.x, key.y]
+
+        # kle and ergogen rotate in opposite directions
+        key.rotation_angle = -1 * item["r"]
+
+        keys.append(key)
+
+    # do some cleanup to be kle compatible
+    # adjust coordinates
+    for key in keys:
+        # reverse top-bottom
+        key.y = abs(key.y - topmost_leftmost[1])
+        # move position from key center (ergogen) to top left corner (kle)
+        key.x = key.x - key.width / 2
+        key.y = key.y - key.height / 2
+    # move out of negative positions
+    min_x = min(keys, key=lambda k: k.x).x
+    if min_x >= 0:
+        min_x = 0
+
+    min_y = min(keys, key=lambda k: k.y).y
+    if min_y >= 0:
+        min_y = 0
+
+    for key in keys:
+        key.x = key.x - min_x
+        key.y = key.y - min_y
+        # rotation is always expressed in relation to key center
+        key.rotation_x = key.x + key.width / 2 if key.rotation_angle else 0
+        key.rotation_y = key.y + key.height / 2 if key.rotation_angle else 0
+
+    # and sort (topmost leftmost first)
+    keys = sorted(keys, key=lambda k: [k.y, k.x])
+
+    return Keyboard(meta=metadata, keys=keys)
+
+
 def get_keyboard(layout: dict) -> Keyboard:
     try:
-        return parse(layout)
+        return parse_kle(layout)
     except Exception:
         pass
     try:
@@ -486,10 +580,17 @@ if __name__ == "__main__":
         "-inform",
         required=False,
         default="RAW",
-        choices=["RAW", "INTERNAL"],
+        choices=["KLE_RAW", "KLE_INTERNAL", "ERGOGEN_INTERNAL"],
         help="Specifies the input format",
     )
-    parser.add_argument("-out", required=False, help="Result json file")
+    parser.add_argument("-out", required=False, help="Result file")
+    parser.add_argument(
+        "-outform",
+        required=False,
+        default="KLE_INTERNAL",
+        choices=["KLE_RAW", "KLE_INTERNAL"],
+        help="Specifies the output format",
+    )
     parser.add_argument(
         "-text", required=False, action="store_true", help="Print result"
     )
@@ -497,30 +598,46 @@ if __name__ == "__main__":
     args = parser.parse_args()
     input_path = getattr(args, "in")
     input_format = args.inform
-    result_path = getattr(args, "out")
+    output_path = getattr(args, "out")
+    output_format = args.outform
     print_result = args.text
+
+    if input_format == output_format:
+        print("Output format equal input format, nothing to do...")
+        exit(1)
 
     with open(input_path, "r") as f:
         text_input = f.read()
         layout = json.loads(text_input)
 
-        if "RAW" == input_format:
-            result = parse(layout)
+        result = ""
+        if input_format == "KLE_RAW":  # convert to KLE_INTERNAL
+            result = parse_kle(layout)
             result = json.loads(result.to_json())
             if print_result:
                 pprint.pprint(result)
-        else:
+        elif input_format == "KLE_INTERNAL":  # convert to KLE_RAW
             keyboard = Keyboard.from_json(layout)
             result = keyboard.to_kle()
-            if print_result:
-                print(result)
-
-        if result_path:
+            print(result)
             # 'to_kle' returns 'raw data' string which can be copy pasted
             # to keyboard-layout-editor, to make json out of it we need
             # to wrap it in list. Then it can be uploaded as JSON.
-            if "INTERNAL" == input_format:
+            result = "[" + result + "]"
+            result = json.loads(result)
+        else:  # ERGOGEN convert to KLE_RAW or KLE_INTERNAL
+            result = parse_ergogen_points(layout)
+            if output_format == "KLE_INTERNAL":
+                result = json.loads(result.to_json())
+                if print_result:
+                    pprint.pprint(result)
+            else:
+                result = result.to_kle()
+                if print_result:
+                    print(result)
                 result = "[" + result + "]"
                 result = json.loads(result)
-            with open(result_path, "w") as f:
+
+        if output_path:
+            with open(output_path, "w") as f:
                 json.dump(result, f, indent=4)

@@ -1,0 +1,226 @@
+{
+  "matrix_pinky_bottom": {
+    "x": 0,
+    "y": 0,
+    "r": 0,
+    "meta": {
+      "stagger": 0,
+      "spread": 19.05,
+      "splay": 0,
+      "origin": [
+        0,
+        0
+      ],
+      "orient": 0,
+      "shift": [
+        0,
+        0
+      ],
+      "rotate": 0,
+      "adjust": {},
+      "width": 19.05,
+      "height": 19.05,
+      "padding": 19.05,
+      "autobind": 10,
+      "skip": false,
+      "asym": "both",
+      "colrow": "pinky_bottom",
+      "name": "matrix_pinky_bottom",
+      "zone": {
+        "key": {
+          "padding": "U",
+          "spread": "U"
+        },
+        "columns": {
+          "pinky": null,
+          "ring": null
+        },
+        "rows": {
+          "bottom": {},
+          "home": {}
+        },
+        "name": "matrix"
+      },
+      "col": {
+        "rows": {},
+        "key": {},
+        "name": "pinky"
+      },
+      "row": "bottom",
+      "bind": [
+        10,
+        10,
+        0,
+        0
+      ]
+    }
+  },
+  "matrix_pinky_home": {
+    "x": 0,
+    "y": 19.05,
+    "r": 0,
+    "meta": {
+      "stagger": 0,
+      "spread": 19.05,
+      "splay": 0,
+      "origin": [
+        0,
+        0
+      ],
+      "orient": 0,
+      "shift": [
+        0,
+        0
+      ],
+      "rotate": 0,
+      "adjust": {},
+      "width": 19.05,
+      "height": 19.05,
+      "padding": 19.05,
+      "autobind": 10,
+      "skip": false,
+      "asym": "both",
+      "colrow": "pinky_home",
+      "name": "matrix_pinky_home",
+      "zone": {
+        "key": {
+          "padding": "U",
+          "spread": "U"
+        },
+        "columns": {
+          "pinky": null,
+          "ring": null
+        },
+        "rows": {
+          "bottom": {},
+          "home": {}
+        },
+        "name": "matrix"
+      },
+      "col": {
+        "rows": {},
+        "key": {},
+        "name": "pinky"
+      },
+      "row": "home",
+      "bind": [
+        0,
+        10,
+        10,
+        0
+      ]
+    }
+  },
+  "matrix_ring_bottom": {
+    "x": 19.05,
+    "y": 0,
+    "r": 0,
+    "meta": {
+      "stagger": 0,
+      "spread": 19.05,
+      "splay": 0,
+      "origin": [
+        0,
+        0
+      ],
+      "orient": 0,
+      "shift": [
+        0,
+        0
+      ],
+      "rotate": 0,
+      "adjust": {},
+      "width": 19.05,
+      "height": 19.05,
+      "padding": 19.05,
+      "autobind": 10,
+      "skip": false,
+      "asym": "both",
+      "colrow": "ring_bottom",
+      "name": "matrix_ring_bottom",
+      "zone": {
+        "key": {
+          "padding": "U",
+          "spread": "U"
+        },
+        "columns": {
+          "pinky": null,
+          "ring": null
+        },
+        "rows": {
+          "bottom": {},
+          "home": {}
+        },
+        "name": "matrix"
+      },
+      "col": {
+        "rows": {},
+        "key": {},
+        "name": "ring"
+      },
+      "row": "bottom",
+      "bind": [
+        10,
+        0,
+        0,
+        10
+      ]
+    }
+  },
+  "matrix_ring_home": {
+    "x": 19.05,
+    "y": 19.05,
+    "r": 0,
+    "meta": {
+      "stagger": 0,
+      "spread": 19.05,
+      "splay": 0,
+      "origin": [
+        0,
+        0
+      ],
+      "orient": 0,
+      "shift": [
+        0,
+        0
+      ],
+      "rotate": 0,
+      "adjust": {},
+      "width": 19.05,
+      "height": 19.05,
+      "padding": 19.05,
+      "autobind": 10,
+      "skip": false,
+      "asym": "both",
+      "colrow": "ring_home",
+      "name": "matrix_ring_home",
+      "zone": {
+        "key": {
+          "padding": "U",
+          "spread": "U"
+        },
+        "columns": {
+          "pinky": null,
+          "ring": null
+        },
+        "rows": {
+          "bottom": {},
+          "home": {}
+        },
+        "name": "matrix"
+      },
+      "col": {
+        "rows": {},
+        "key": {},
+        "name": "ring"
+      },
+      "row": "home",
+      "bind": [
+        0,
+        0,
+        10,
+        10
+      ]
+    }
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "matrix_pinky_bottom": {
+    "x": 0,
+    "y": 0,
+    "r": 15,
+    "meta": {
+      "stagger": 0,
+      "spread": 19.05,
+      "splay": 0,
+      "origin": [
+        0,
+        0
+      ],
+      "orient": 0,
+      "shift": [
+        0,
+        0
+      ],
+      "rotate": 15,
+      "adjust": {},
+      "width": 19.05,
+      "height": 19.05,
+      "padding": 19.05,
+      "autobind": 10,
+      "skip": false,
+      "asym": "both",
+      "colrow": "pinky_bottom",
+      "name": "matrix_pinky_bottom",
+      "zone": {
+        "key": {
+          "padding": "U",
+          "spread": "U",
+          "width": "U",
+          "height": "U"
+        },
+        "columns": {
+          "pinky": {
+            "key": {
+              "rotate": 15
+            },
+            "rows": {},
+            "name": "pinky"
+          }
+        },
+        "rows": {
+          "bottom": {}
+        },
+        "name": "matrix"
+      },
+      "col": {
+        "key": {
+          "rotate": 15
+        },
+        "rows": {},
+        "name": "pinky"
+      },
+      "row": "bottom",
+      "bind": [
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  }
+}

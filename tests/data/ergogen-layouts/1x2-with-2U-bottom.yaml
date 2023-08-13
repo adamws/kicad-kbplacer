@@ -1,0 +1,14 @@
+points:
+  zones:
+    matrix:
+      key:
+        padding: U
+        spread: U
+        width: U
+        height: U
+      columns:
+        pinky:
+      rows:
+        bottom:
+          width: 2U
+        home:

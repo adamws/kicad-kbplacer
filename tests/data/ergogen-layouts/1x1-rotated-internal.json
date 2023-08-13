@@ -1,0 +1,44 @@
+{
+  "meta": {
+    "author": "",
+    "backcolor": "#eeeeee",
+    "background": null,
+    "name": "",
+    "notes": "",
+    "radii": "",
+    "switchBrand": "",
+    "switchMount": "",
+    "switchType": ""
+  },
+  "keys": [
+    {
+      "color": "#cccccc",
+      "labels": [],
+      "textColor": [],
+      "textSize": [],
+      "default": {
+        "textColor": "#000000",
+        "textSize": 3
+      },
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1,
+      "x2": 0,
+      "y2": 0,
+      "width2": 1,
+      "height2": 1,
+      "rotation_x": 0.5,
+      "rotation_y": 0.5,
+      "rotation_angle": -15,
+      "decal": false,
+      "ghost": false,
+      "stepped": false,
+      "nub": false,
+      "profile": "",
+      "sm": "",
+      "sb": "",
+      "st": ""
+    }
+  ]
+}

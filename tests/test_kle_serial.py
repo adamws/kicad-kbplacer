@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 try:
-    from kbplacer.kle_serial import Keyboard, parse
+    from kbplacer.kle_serial import Keyboard, parse_ergogen_points, parse_kle
 except:
     pass
 
@@ -37,7 +37,7 @@ def __minify(string: str) -> str:
     # fmt: on
 )
 def test_labels(layout, expected) -> None:
-    result = parse(layout)
+    result = parse_kle(layout)
     assert result.keys[0].labels == expected
     # check if reverse operation works as well:
     assert [json.loads(result.to_kle())] == layout
@@ -55,7 +55,7 @@ def test_labels(layout, expected) -> None:
     # fmt: on
 )
 def test_labels_text_size(layout, expected_labels, expected_text_size) -> None:
-    result = parse(layout)
+    result = parse_kle(layout)
     assert result.keys[0].labels == expected_labels
     assert result.keys[0].textSize == expected_text_size
     # check if reverse operation works as well:
@@ -71,7 +71,7 @@ def test_labels_colors() -> None:
         {"t": "#000000\n\n\n\n\n\n\n\n\n#a80000"},"x\n\n\n\n\n\n\n\n\nx\nx",
     ]]
     # fmt: on
-    result = parse(layout)
+    result = parse_kle(layout)
     assert [json.loads(result.to_kle())] == layout
 
 
@@ -86,7 +86,7 @@ def test_float_accuracy() -> None:
         '[{"y":-0.65,"x":1},"S",{"x":1},"F"]]'
     )
     layout = json.loads(atreus)
-    result = parse(layout)
+    result = parse_kle(layout)
     positions = [(key.x, key.y) for key in result.keys]
     expected_positions = [
         (3, -0.1),  # E
@@ -105,7 +105,7 @@ def test_float_accuracy() -> None:
 
 
 def test_if_produces_valid_json() -> None:
-    result = parse([["x"]])
+    result = parse_kle([["x"]])
     assert (
         result.to_json() == '{"meta": '
         '{"author": "", "backcolor": "#eeeeee", "background": null, "name": "", '
@@ -131,16 +131,16 @@ def __get_invalid_parse_parameters():
 
 
 @pytest.mark.parametrize("input_object", __get_invalid_parse_parameters())
-def test_parse_invalid_schema(input_object) -> None:
+def test_parse_kle_invalid_schema(input_object) -> None:
     with pytest.raises(RuntimeError):
-        parse(input_object)
+        parse_kle(input_object)
 
 
-def test_parse_invalid_key_rotation() -> None:
+def test_parse_kle_invalid_key_rotation() -> None:
     with pytest.raises(RuntimeError):
         # Rotation can only be specified on the first key in the row
         layout = [["0", {"r": 15, "rx": 1, "ry": 2}, "1"]]
-        parse(layout)
+        parse_kle(layout)
 
 
 def test_keyboard_from_invalid_type() -> None:
@@ -153,7 +153,7 @@ def test_keyboard_from_invalid_schema() -> None:
         Keyboard.from_json({})  # type: ignore
 
 
-def get_reference(path: str):
+def get_reference(path: Path):
     with open(path, "r") as f:
         layout: str = f.read()
         reference_dict = json.loads(layout)
@@ -192,17 +192,32 @@ def __get_parameters():
 
 
 @pytest.mark.parametrize("layout_file,reference_file", __get_parameters())
-def test_with_references(layout_file, reference_file, request) -> None:
+def test_with_kle_references(layout_file, reference_file, request) -> None:
     test_dir = request.fspath.dirname
 
     reference = get_reference(Path(test_dir) / reference_file)
 
     with open(Path(test_dir) / layout_file, "r") as f:
         layout = json.load(f)
-        result = parse(layout)
+        result = parse_kle(layout)
         assert result == reference
 
         f.seek(0)
         kle_result = json.loads("[" + __minify(result.to_kle()) + "]")
         expected = json.loads(__minify(f.read()))
         assert kle_result == expected
+
+
+@pytest.mark.parametrize("example", ["2x2", "1x2-with-2U-bottom", "1x1-rotated"])
+def test_with_ergogen(example, request) -> None:
+    test_dir = request.fspath.dirname
+
+    reference = get_reference(
+        Path(test_dir) / f"data/ergogen-layouts/{example}-internal.json"
+    )
+
+    # very simple example layout
+    with open(Path(test_dir) / f"data/ergogen-layouts/{example}.json", "r") as f:
+        layout = json.load(f)
+        result = parse_ergogen_points(layout)
+        assert result == reference
