@@ -6,12 +6,13 @@ import pcbnew
 
 from .element_position import Side
 
-KICAD_VERSION = int(pcbnew.Version().split(".")[0])
+# remove pre-release and build numbers (if present) and split to major-minor-patch tuple
+KICAD_VERSION = tuple(map(int, ((pcbnew.Version().split("+")[0]).split("-")[0]).split(".")))
 DEFAULT_CLEARANCE_MM = 0.25
 
 
 def set_position(footprint: pcbnew.FOOTPRINT, position: pcbnew.wxPoint) -> None:
-    if KICAD_VERSION == 7:
+    if KICAD_VERSION >= (7, 0, 0):
         footprint.SetPosition(pcbnew.VECTOR2I(position.x, position.y))
     else:
         footprint.SetPosition(position)
@@ -19,7 +20,7 @@ def set_position(footprint: pcbnew.FOOTPRINT, position: pcbnew.wxPoint) -> None:
 
 def get_position(footprint: pcbnew.FOOTPRINT) -> pcbnew.wxPoint:
     position = footprint.GetPosition()
-    if KICAD_VERSION == 7:
+    if KICAD_VERSION >= (7, 0, 0):
         return pcbnew.wxPoint(position.x, position.y)
     return position
 
@@ -212,7 +213,7 @@ class BoardModifier:
         track = pcbnew.PCB_TRACK(self.board)
         track.SetWidth(pcbnew.FromMM(0.25))
         track.SetLayer(layer)
-        if KICAD_VERSION == 7:
+        if KICAD_VERSION >= (7, 0, 0):
             track.SetStart(pcbnew.VECTOR2I(start.x, start.y))
             track.SetEnd(pcbnew.VECTOR2I(end.x, end.y))
         else:
@@ -239,7 +240,7 @@ class BoardModifier:
             f"Rotating {footprint.GetReference()} footprint: "
             f"rotationReference: {rotation_reference}, rotationAngle: {angle}"
         )
-        if KICAD_VERSION == 7:
+        if KICAD_VERSION >= (7, 0, 0):
             footprint.Rotate(
                 pcbnew.VECTOR2I(rotation_reference.x, rotation_reference.y),
                 pcbnew.EDA_ANGLE(angle * -1, pcbnew.DEGREES_T),

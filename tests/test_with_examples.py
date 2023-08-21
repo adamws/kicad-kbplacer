@@ -130,7 +130,7 @@ def get_references_dir(request):
     test_dir = Path(request.module.__file__).parent
     _, test_parameters = request.node.name.split("[")
     example_name, route_option, diode_option, _ = test_parameters[:-1].split(";")
-    kicad_dir = "kicad7" if KICAD_VERSION == 7 else "kicad6"
+    kicad_dir = "kicad7" if KICAD_VERSION >= (7, 0, 0) else "kicad6"
     return (
         test_dir
         / "data/examples-references"

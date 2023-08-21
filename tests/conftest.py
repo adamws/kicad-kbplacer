@@ -18,7 +18,8 @@ Numeric = Union[int, float]
 Box = Tuple[Numeric, Numeric, Numeric, Numeric]
 
 
-KICAD_VERSION = int(pcbnew.Version().split(".")[0])
+# remove pre-release and build numbers (if present) and split to major-minor-patch tuple
+KICAD_VERSION = tuple(map(int, ((pcbnew.Version().split("+")[0]).split("-")[0]).split(".")))
 logger = logging.getLogger(__name__)
 
 
@@ -181,7 +182,7 @@ def generate_render(tmpdir, request):
     plot_options.SetPlotReference(True)
     plot_options.SetPlotValue(True)
     plot_options.SetPlotInvisibleText(False)
-    if KICAD_VERSION == 7:
+    if KICAD_VERSION >= (7, 0, 0):
         plot_options.SetDrillMarksType(pcbnew.DRILL_MARKS_NO_DRILL_SHAPE)
         plot_options.SetSvgPrecision(aPrecision=1)
     else:
@@ -198,7 +199,7 @@ def generate_render(tmpdir, request):
 
     for layer_name, layer_id in plot_plan:
         plot_control.SetLayer(layer_id)
-        if KICAD_VERSION == 7:
+        if KICAD_VERSION >= (7, 0, 0):
             plot_control.OpenPlotfile(layer_name, pcbnew.PLOT_FORMAT_SVG)
         else:
             plot_control.OpenPlotfile(
@@ -269,7 +270,7 @@ def get_track(board, start, end, layer):
     track = pcbnew.PCB_TRACK(board)
     track.SetWidth(pcbnew.FromMM(0.25))
     track.SetLayer(layer)
-    if KICAD_VERSION == 7:
+    if KICAD_VERSION >= (7, 0, 0):
         track.SetStart(pcbnew.VECTOR2I(start.x, start.y))
         track.SetEnd(pcbnew.VECTOR2I(end.x, end.y))
     else:

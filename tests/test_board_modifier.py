@@ -85,7 +85,7 @@ def test_track_with_pad_collision(footprint, position, side, netlist, tmpdir, re
     modifier.set_side(diode, Side.BACK)
 
     pad_position = pad.GetPosition()
-    if KICAD_VERSION == 7:
+    if KICAD_VERSION >= (7, 0, 0):
         pad_position = pcbnew.wxPoint(pad_position.x, pad_position.y)
 
     # create track to test

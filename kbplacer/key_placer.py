@@ -128,7 +128,7 @@ class KeyPlacer(BoardModifier):
         layer = pcbnew.B_Cu if self.get_side(diode) == Side.BACK else pcbnew.F_Cu
         switch_pad_position = switch.FindPadByNumber("2").GetPosition()
         diode_pad_position = diode.FindPadByNumber("2").GetPosition()
-        if KICAD_VERSION == 7:
+        if KICAD_VERSION >= (7, 0, 0):
             switch_pad_position = pcbnew.wxPoint(
                 switch_pad_position.x, switch_pad_position.y
             )
@@ -210,8 +210,14 @@ class KeyPlacer(BoardModifier):
 
     def remove_dangling_tracks(self) -> None:
         connectivity = self.get_connectivity()
+
+        def _is_dangling(track):
+            if KICAD_VERSION >= (7, 0, 7):
+                return connectivity.TestTrackEndpointDangling(track, False)
+            return connectivity.TestTrackEndpointDangling(track)
+
         for track in self.board.GetTracks():
-            if connectivity.TestTrackEndpointDangling(track):
+            if _is_dangling(track):
                 self.board.RemoveNative(track)
 
     def check_if_diode_routed(
@@ -227,7 +233,7 @@ class KeyPlacer(BoardModifier):
         # by `AddTrackSegmentByPoints`
         switch_pad_position = switch.FindPadByNumber("2").GetPosition()
         diode_pad_position = diode.FindPadByNumber("2").GetPosition()
-        if KICAD_VERSION == 7:
+        if KICAD_VERSION >= (7, 0, 0):
             switch_pad_position = pcbnew.wxPoint(
                 switch_pad_position.x, switch_pad_position.y
             )
@@ -241,7 +247,7 @@ class KeyPlacer(BoardModifier):
             for t in list(tracks):
                 start = t.GetStart()
                 end = t.GetEnd()
-                if KICAD_VERSION == 7:
+                if KICAD_VERSION >= (7, 0, 0):
                     start = pcbnew.wxPoint(start.x, start.y)
                     end = pcbnew.wxPoint(end.x, end.y)
                 found_start = start.__eq__(search_point)
