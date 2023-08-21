@@ -76,6 +76,11 @@ class Key:
     def __post_init__(self: Key) -> None:
         if isinstance(self.default, dict):
             self.default = KeyDefault(**self.default)
+        for field in self.__dataclass_fields__:
+            value = getattr(self, field)
+            if isinstance(value, float):
+                new_val = round(value, 6)
+                setattr(self, field, new_val)
 
 
 @dataclass
@@ -144,6 +149,8 @@ class Keyboard:
             props: dict[str, Any] = {}
 
             def add_prop(name: str, value: Any, default: Any) -> Any:
+                if isinstance(value, float):
+                    value = round(value, 6)
                 if value != default:
                     props[name] = value
                 return value
@@ -167,7 +174,7 @@ class Keyboard:
                 new_row = True
 
             if new_row:
-                current.y += 1
+                current.y = round(current.y + 1, 6)
                 # 'y' is reset if either 'rx' or 'ry' are changed
                 if key.rotation_y != cluster["ry"] or key.rotation_x != cluster["rx"]:
                     current.y = key.rotation_y
@@ -186,8 +193,10 @@ class Keyboard:
             current.rotation_x = add_prop("rx", key.rotation_x, current.rotation_x)
             current.rotation_y = add_prop("ry", key.rotation_y, current.rotation_y)
 
-            current.x += add_prop("x", key.x - current.x, 0) + key.width
-            current.y += add_prop("y", key.y - current.y, 0)
+            x_offset = add_prop("x", round(key.x - current.x, 6), 0)
+            y_offset = add_prop("y", round(key.y - current.y, 6), 0)
+            current.x = round(current.x + key.width + x_offset, 6)
+            current.y = round(current.y + y_offset, 6)
 
             current.color = add_prop("c", key.color, current.color)
             if text_color := reorder_items_kle(key.textColor, alignment):
@@ -223,7 +232,6 @@ class Keyboard:
                     )
                     current.textSize = []
                 else:
-                    # todo: handle f2 optimization
                     if optimize := not text_size[0]:
                         optimize = all(x == text_size[1] for x in text_size[2:])
                     if optimize:
@@ -359,7 +367,7 @@ def parse(layout) -> Keyboard:
 
                     keys.append(new_key)
 
-                    current.x += current.width
+                    current.x = round(current.x + current.width, 6)
                     current.width = 1
                     current.height = 1
                     current.x2 = 0
@@ -409,9 +417,9 @@ def parse(layout) -> Keyboard:
                             current.default.textColor = split[0]
                         current.textColor = reorder_items(split, align)
                     if "x" in item:
-                        current.x += item["x"]
+                        current.x = round(current.x + item["x"], 6)
                     if "y" in item:
-                        current.y += item["y"]
+                        current.y = round(current.y + item["y"], 6)
                     if "w" in item:
                         current.width = item["w"]
                         current.width2 = item["w"]
@@ -445,7 +453,7 @@ def parse(layout) -> Keyboard:
                     raise RuntimeError(msg)
 
             # end of the row:
-            current.y += 1
+            current.y = round(current.y + 1, 6)
             current.x = current.rotation_x
         elif isinstance(row, dict) and r == 0:
             field_set = {f.name for f in fields(KeyboardMetadata) if f.init}

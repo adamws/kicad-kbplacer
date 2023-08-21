@@ -75,6 +75,35 @@ def test_labels_colors() -> None:
     assert [json.loads(result.to_kle())] == layout
 
 
+def test_float_accuracy() -> None:
+    # few first keys from atreus preset
+    atreus = (
+        '[[{"r":10,"rx":1,"y":-0.1,"x":2},"E"],'
+        '[{"y":-0.65,"x":1},"W",{"x":1},"R"],'
+        '[{"y":-0.75},"Q"],'
+        '[{"y":-0.9,"x":4},"T"],'
+        '[{"y":-0.7,"x":2},"D"],'
+        '[{"y":-0.65,"x":1},"S",{"x":1},"F"]]'
+    )
+    layout = json.loads(atreus)
+    result = parse(layout)
+    positions = [(key.x, key.y) for key in result.keys]
+    expected_positions = [
+        (3, -0.1),  # E
+        (2, 0.25),  # W
+        (4, 0.25),  # R
+        (1, 0.50),  # Q
+        (5, 0.60),  # T
+        (3, 0.90),  # D - without rounding in parser this would be
+        #                 incorrectly set to (3, 0.9000000000000001)
+        #                 accuracy of 6 digit is more than enough and looks cleaner in
+        #                 json files
+        (2, 1.25),  # S
+        (4, 1.25),  # F
+    ]
+    assert positions == expected_positions
+
+
 def test_if_produces_valid_json() -> None:
     result = parse([["x"]])
     assert (
