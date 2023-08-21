@@ -23,13 +23,21 @@ jobs:
     docker:
       - image: admwscki/kicad-kbplacer-primary:6.0.11-focal
     steps: *in-docker-test-steps
-  test-ubuntu-lunar-kicad7:
+  test-ubuntu-lunar-kicad7-0-6:
     docker:
       - image: admwscki/kicad-kbplacer-primary:7.0.6-lunar
     steps: *in-docker-test-steps
-  test-ubuntu-focal-kicad7:
+  test-ubuntu-focal-kicad7-0-6:
     docker:
       - image: admwscki/kicad-kbplacer-primary:7.0.6-focal
+    steps: *in-docker-test-steps
+  test-ubuntu-lunar-kicad7-0-7:
+    docker:
+      - image: admwscki/kicad-kbplacer-primary:7.0.7-lunar
+    steps: *in-docker-test-steps
+  test-ubuntu-focal-kicad7-0-7:
+    docker:
+      - image: admwscki/kicad-kbplacer-primary:7.0.7-focal
     steps: *in-docker-test-steps
   test-windows:
     machine:
@@ -154,8 +162,10 @@ workflows:
     jobs:
       - test-ubuntu-lunar-kicad6
       - test-ubuntu-focal-kicad6
-      - test-ubuntu-lunar-kicad7
-      - test-ubuntu-focal-kicad7
+      - test-ubuntu-lunar-kicad7-0-6
+      - test-ubuntu-focal-kicad7-0-6
+      - test-ubuntu-lunar-kicad7-0-7
+      - test-ubuntu-focal-kicad7-0-7
       - test-windows:
           name: "test-windows-kicad6"
           kicad-version: "6.0.11"
@@ -166,8 +176,10 @@ workflows:
           requires:
             - test-ubuntu-lunar-kicad6
             - test-ubuntu-focal-kicad6
-            - test-ubuntu-lunar-kicad7
-            - test-ubuntu-focal-kicad7
+            - test-ubuntu-lunar-kicad7-0-6
+            - test-ubuntu-focal-kicad7-0-6
+            - test-ubuntu-lunar-kicad7-0-7
+            - test-ubuntu-focal-kicad7-0-7
             - test-windows-kicad6
             - test-windows-kicad7
       - deploy-image:
