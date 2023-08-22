@@ -569,6 +569,10 @@ def get_keyboard(layout: dict) -> Keyboard:
         return Keyboard.from_json(layout)
     except Exception:
         pass
+    try:
+        return parse_ergogen_points(layout)
+    except Exception:
+        pass
     msg = "Unable to get keyboard layout"
     raise RuntimeError(msg)
 

@@ -5,7 +5,8 @@
 [![Weblate](https://hosted.weblate.org/widgets/kicad-kbplacer/-/master-source/svg-badge.svg)](https://hosted.weblate.org/engage/kicad-kbplacer/)
 
 KiCad plugin for mechanical keyboard design. It features automatic key placement
-based on popular layout description from [keyboard-layout-editor](http://www.keyboard-layout-editor.com/)
+based on popular layout descriptions from [keyboard-layout-editor](http://www.keyboard-layout-editor.com/)
+and [ergogen](https://github.com/ergogen/ergogen).
 
 ## Motivation
 
@@ -21,6 +22,8 @@ by reducing tedious element placement and routing tasks.
 - [x] Basic track routing
 - [x] User selectable diode position in relation to key position
 - [x] Configurable additional elements placement
+
+:warning: Ergogen support is new experimental feature and it has not been tested extensively
 
 ![demo](resources/demo.gif)
 
@@ -57,17 +60,34 @@ or selecting it from `Tools -> External Plugins` menu.
   ![schematic-example](resources/schematic-example.png)
 
 - Create new PCB and load netlist
-- Obtain json layout file from [keyboard-layout-editor](http://www.keyboard-layout-editor.com/)
+- Obtain json layout file from [keyboard-layout-editor](http://www.keyboard-layout-editor.com/) or
+  convert [ergogen](https://github.com/ergogen/ergogen) points file to json
+
   <details>
-  <summary>Details</summary>
+  <summary>keyboard-layout-editor details</summary>
 
     ![kle-download](resources/kle-download.png)
 
-    - Plugin supports internal [kle-serial](https://github.com/ijprest/kle-serial) layout files.
-      Detection of layout format will be done automatically.
-      Conversion between layout downloaded from keyboard-layout-editor and its internal form
-      can be done with [https://adamws.github.io/kle-serial](https://adamws.github.io/kle-serial/)
-      or [keyboard-tools.xyz/kle-converter](http://keyboard-tools.xyz/kle-converter)
+    Plugin supports internal [kle-serial](https://github.com/ijprest/kle-serial) layout files.
+    Detection of layout format will be done automatically.
+    Conversion between layout downloaded from keyboard-layout-editor and its internal form
+    can be done with [https://adamws.github.io/kle-serial](https://adamws.github.io/kle-serial/)
+    or [keyboard-tools.xyz/kle-converter](http://keyboard-tools.xyz/kle-converter)
+
+  </details>
+
+  <details>
+  <summary>ergogen details</summary>
+
+    - open your design in https://ergogen.cache.works/ and download `points.yaml`
+
+      ![ergogen-points](resources/ergogen-points.png)
+
+    - convert `yaml` to `json` (this operation is not integrated with `kicad-kbplacer` source
+      because it would require installation of third-party `pyyaml` package and there is no
+      good way to manage plugin dependencies yet)
+      - you can use online converter, for example https://jsonformatter.org/yaml-to-json
+    - converted file should be automatically recognized in next steps
 
   </details>
 
