@@ -111,11 +111,11 @@ jobs:
       - run:
           name: Setup environment variables
           command: |
-            if [ -z "$GIT_TAG" ]; then
+            if [ -z "$CIRCLE_TAG" ]; then
               echo "export TAG=0.6-circleci" >> $BASH_ENV
             else
               # tag branch, cut 'v' prefix (only v prefixed tags should trigger this job)
-              echo "export TAG=$(echo $GIT_TAG | cut -c 2-)" >> $BASH_ENV
+              echo "export TAG=$(echo $CIRCLE_TAG | cut -c 2-)" >> $BASH_ENV
             fi
             echo "export IMAGE_NAME=kicad-kbplacer" >> $BASH_ENV
       - run:
