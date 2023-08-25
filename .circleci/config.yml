@@ -73,7 +73,7 @@ jobs:
           path: tests/report.html
       - store_test_results:
           path: tests/test-results
-  create-release:
+  create-pcm-release:
     docker:
       - image: cimg/python:3.11
     steps:
@@ -103,6 +103,29 @@ jobs:
                 command: |
                   ./deploy.sh
                 working_directory: release
+  create-pypi-release:
+    docker:
+      - image: cimg/python:3.11
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            pip install hatch==1.7.0
+      - run:
+          name: Create distribution archive
+          command: |
+            sed -i "s|](resources|](https://raw.githubusercontent.com/adamws/kicad-kbplacer/master/resources|g" README.md
+            python -m hatch -v build -t sdist
+      - run:
+          name: Sanity check result package
+          command: |
+            python -m venv .env
+            . .env/bin/activate
+            pip install dist/kbplacer*.tar.gz
+            python -c 'from kbplacer.kle_serial import parse_kle; print(parse_kle([["",""]]))'
+      - store_artifacts:
+          path: dist
   deploy-image:
     machine:
       image: ubuntu-2204:2022.10.2
@@ -172,8 +195,8 @@ workflows:
       - test-windows:
           name: "test-windows-kicad7"
           kicad-version: "7.0.5"
-      - create-release:
-          requires:
+      - create-pcm-release:
+          requires: &required-tests
             - test-ubuntu-lunar-kicad6
             - test-ubuntu-focal-kicad6
             - test-ubuntu-lunar-kicad7-0-6
@@ -182,12 +205,14 @@ workflows:
             - test-ubuntu-focal-kicad7-0-7
             - test-windows-kicad6
             - test-windows-kicad7
+      - create-pypi-release:
+          requires: *required-tests
       - deploy-image:
           requires:
-            - create-release
-  release:
+            - create-pcm-release
+  kicad-release:
     jobs:
-      - create-release:
+      - create-pcm-release:
           filters:
             tags:
               only: /^v[0-9]+(\.[0-9]+)*$/
@@ -195,7 +220,7 @@ workflows:
               ignore: /.*/
       - deploy-image:
           requires:
-            - create-release
+            - create-pcm-release
           filters:
             tags:
               only: /^v[0-9]+(\.[0-9]+)*$/

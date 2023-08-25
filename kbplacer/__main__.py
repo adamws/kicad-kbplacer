@@ -96,7 +96,7 @@ class XYAction(argparse.Action):
         setattr(namespace, self.dest, value)
 
 
-if __name__ == "__main__":
+def app():
     parser = argparse.ArgumentParser(
         description="Keyboard's key autoplacer",
         formatter_class=argparse.RawTextHelpFormatter,
@@ -233,3 +233,7 @@ if __name__ == "__main__":
     pcbnew.SaveBoard(board_path, board)
 
     logging.shutdown()
+
+
+if __name__ == "__main__":
+    app()

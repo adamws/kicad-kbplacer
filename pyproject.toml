@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling>=1.18"]
+build-backend = "hatchling.build"
+
+[project]
+name = "kbplacer"
+version = "0.6"
+authors = [
+  { name="adamws", email="adamws@users.noreply.github.com" },
+]
+description = "KiCad plugin for automatic keyboard's key placement"
+keywords = ["kicad"]
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Manufacturing",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+  "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/adamws/kicad-kbplacer"
+"Bug Tracker" = "https://github.com/adamws/kicad-kbplacer/issues"
+
+[project.scripts]
+kbplacer = "kbplacer.__main__:app"
+
+[tool.hatch]
+build.targets.sdist.include = [
+  "kbplacer/*.py"
+]
+build.targets.sdist.exclude = [
+  "kbplacer/kbplacer_plugin_action.py"
+]
