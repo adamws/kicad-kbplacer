@@ -103,7 +103,7 @@ footprints combinations.
 
 Before | After
 --- | ---
-![default-before](./resources/default-before.png) | ![default-after](./resources/default-after.png)
+![default-before](resources/default-before.png) | ![default-after](resources/default-after.png)
 
 To use custom diode position there are two available options. Either select `Custom` in `Position` dropdown
 and define `X/Y offset`, `Orientation` and `Front` or `Back` side:
@@ -119,7 +119,7 @@ Remaining switch-diode pairs will be placed same as the first one.
 
 Before | After
 --- | ---
-![custom-before](./resources/custom-before.png) | ![custom-after](./resources/custom-after.png)
+![custom-before](resources/custom-before.png) | ![custom-after](resources/custom-after.png)
 
 Some custom diodes positions may be to difficult for router algorithm.
 In the above example it managed to connect diodes to switches but failed to connect diodes together.
@@ -134,7 +134,7 @@ limitations. This is applicable only for `Current relative` `Position` option.
 
 Before | After
 --- | ---
-![custom-with-track-before](./resources/custom-with-track-before.png) | ![custom-with-track-after](./resources/custom-with-track-after.png)
+![custom-with-track-before](resources/custom-with-track-before.png) | ![custom-with-track-after](resources/custom-with-track-after.png)
 
 #### Additional elements placement
 
