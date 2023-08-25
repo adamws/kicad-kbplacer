@@ -115,7 +115,6 @@ jobs:
       - run:
           name: Create distribution archive
           command: |
-            sed -i "s|](resources|](https://raw.githubusercontent.com/adamws/kicad-kbplacer/master/resources|g" README.md
             python -m hatch -v build -t sdist
       - run:
           name: Sanity check result package
