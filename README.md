@@ -2,6 +2,7 @@
 
 ![Downloads](https://img.shields.io/github/downloads/adamws/kicad-kbplacer/total)
 [![CircleCI](https://circleci.com/gh/adamws/kicad-kbplacer.svg?style=shield)](https://circleci.com/gh/adamws/kicad-kbplacer/tree/master)
+[![PyPI](https://img.shields.io/pypi/v/kbplacer?color=44CC11)](https://pypi.org/project/kbplacer/)
 [![Weblate](https://hosted.weblate.org/widgets/kicad-kbplacer/-/master-source/svg-badge.svg)](https://hosted.weblate.org/engage/kicad-kbplacer/)
 
 KiCad plugin for mechanical keyboard design. It features automatic key placement
@@ -23,7 +24,8 @@ by reducing tedious element placement and routing tasks.
 - [x] User selectable diode position in relation to key position
 - [x] Configurable additional elements placement
 
-:warning: Ergogen support is new experimental feature and it has not been tested extensively
+> [!WARNING]
+> Ergogen support is new experimental feature and it has not been tested extensively
 
 ![demo](resources/demo.gif)
 
@@ -96,6 +98,16 @@ or selecting it from `Tools -> External Plugins` menu.
 
   ![plugin-gui](resources/plugin-gui.png)
 
+It is also possible to run this plugin from command line. Execute
+following command (in the directory where plugin is installed) to get more details:
+
+```
+python -m com_github_adamws_kicad-kbplacer cli --help
+```
+
+> [!IMPORTANT]
+> On windows, use python bundled with KiCad
+
 #### Diode placement and routing
 
 By default diodes are placed like shown below. This placement may not work for all switch and diode
@@ -153,9 +165,21 @@ layout json files in raw (`kle.json`) and internal (`kle_internal.json`) formats
 It requires [keyswitch-kicad-library](https://github.com/perigoso/keyswitch-kicad-library) to be installed.
 Use this project to validate plugin installation.
 
+### As python package
+
+For advanced users who want to integrate `kbplacer` with other tools or automate it's usage
+there is a [pypi package](https://pypi.org/project/kbplacer/).
+For example, it may be used for parsing raw KLE data to it's internal form:
+
+``` python
+from kbplacer.kle_serial import parse_kle
+keyboard = parse_kle([["", ""]])
+print(f"This keyboard has only {len(keyboard.keys)} keys")
+```
+
 ### As a service
 
-This plugin is part of my another project. See [keyboard-tools](https://github.com/adamws/keyboard-tools)
+This plugin is part of my another project. See [keyboard-tools](https://github.com/adamws/keyboard-tools) for more details.
 
 ## Troubleshooting
 
