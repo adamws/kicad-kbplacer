@@ -173,7 +173,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if args.mode == "cli":
+    if not args.mode:
+        parser.print_help()
+        exit(0)
+    elif args.mode == "cli":
         layout_path = args.layout
         board_path = args.board
         route_tracks = args.route
