@@ -1,4 +1,0 @@
-select = ["ANN", "E", "F", "I", "N", "PL", "W"]
-
-[per-file-ignores]
-"kbplacer/kbplacer_plugin_action.py" = ["N802"]

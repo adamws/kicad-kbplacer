@@ -42,3 +42,9 @@ fragments = [
   { text = "KiCad plugin for mechanical keyboard design.\n" },
   { text = "https://github.com/adamws/kicad-kbplacer" },
 ]
+
+[tool.ruff]
+select = ["ANN", "E", "F", "I", "N", "PL", "W"]
+
+[tool.ruff.per-file-ignores]
+"kbplacer/kbplacer_plugin_action.py" = ["N802"]
