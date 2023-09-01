@@ -1,25 +1,22 @@
 import argparse
-import glob
 import hashlib
 import io
 import json
+import glob
 import os
-import re
 import shutil
-import subprocess
+import sys
 import tempfile
 import zipfile
-
 from datetime import datetime
 from pathlib import Path
 from textwrap import dedent
 from typing import TypedDict
 
-
 READ_SIZE = 65536
 
 DIRNAME = os.path.abspath(os.path.dirname(__file__))
-PLUGIN_NAME = "kicad-kbplacer"
+PLUGIN_NAME = "kbplacer"
 
 
 class JsonMetadata(TypedDict):
@@ -32,66 +29,6 @@ class PackageMetadata(TypedDict):
     download_sha256: str
     download_size: int
     install_size: int
-
-
-def get_version() -> str:
-    p = subprocess.Popen(
-        ["git", "describe", "--tags", "--dirty", "--always"],
-        cwd=DIRNAME,
-        stdout=subprocess.PIPE,
-    )
-    output = p.communicate()[0]
-    if p.returncode != 0:
-        raise Exception("Failed to get git version")
-    output = output.decode("utf-8").strip()
-    return output
-
-
-def get_simplified_version(version) -> str:
-    # version in metadata needs to match simplified format where git digest and 'dirty'
-    # status would not match. This function converts version to simple form:
-    version_simple = ""
-    dot_count = 0
-    for char in re.sub(r"[^\d.]", "", version.replace("-", ".")):
-        if char == ".":
-            dot_count += 1
-            if dot_count > 2:
-                continue
-        version_simple += char
-    sections = version_simple.split(".")
-    last_section = sections[-1][:6]
-    sections[-1] = last_section
-    version_simple = ".".join(sections)
-    return version_simple
-
-
-def get_status(version: str) -> str:
-    pattern = r"v\d.\d$"
-    return "stable" if re.match(pattern, version) else "development"
-
-
-def generate_translations(locale_directory):
-    print("Generate translations:")
-    install_languages = []
-    with open(f"{DIRNAME}/../translation/pofiles/LINGUAS_INSTALL") as f:
-        languages = f.readlines()
-        install_languages = [
-            lang.strip() for lang in languages if not lang.startswith("#")
-        ]
-    for lang in install_languages:
-        po_file = f"{DIRNAME}/../translation/pofiles/{lang}.po"
-        dst = f"{locale_directory}/{lang}/LC_MESSAGES"
-        os.makedirs(dst)
-        print(f"\t{lang}", end="")
-        res = subprocess.run(
-            ["msgfmt", "--statistics", po_file, "-o", f"{dst}/kbplacer.mo"],
-            check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-        )
-        msgfmt_output = res.stdout.decode("utf-8").strip()
-        status = "ok" if res.returncode == 0 else "nok"
-        print(f": {status}: {msgfmt_output}")
 
 
 def zip_directory(directory, output_zip) -> None:
@@ -110,35 +47,6 @@ def create_resources_package(identifier: str, output: str) -> None:
         zip_directory(tmpdir, output)
 
 
-def create_plugin_package(version, metadata, output: str) -> None:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        plugin_dst_dir = f"{tmpdir}/plugins"
-        locale_dir = f"{plugin_dst_dir}/locale"
-        os.makedirs(plugin_dst_dir)
-        os.makedirs(locale_dir)
-        os.makedirs(f"{tmpdir}/resources")
-        sources = glob.glob(f"{DIRNAME}/../kbplacer/*.py")
-        images = glob.glob(f"{DIRNAME}/../kbplacer/*.png")
-        for f in sources + images:
-            shutil.copy(f, plugin_dst_dir)
-        shutil.copy(f"{DIRNAME}/../resources/icon.png", f"{tmpdir}/resources")
-        generate_translations(locale_dir)
-
-        with open(f"{tmpdir}/plugins/version.txt", "w") as f:
-            f.write(version)
-        with open(f"{tmpdir}/metadata.json", "w", encoding="utf-8") as f:
-            json.dump(metadata, f, indent=4)
-
-        zip_directory(tmpdir, output)
-
-
-def print_zip_contents(zip_path) -> None:
-    with zipfile.ZipFile(zip_path, "r") as zip_ref:
-        print(f"Contents of '{zip_path}':")
-        for file_name in zip_ref.namelist():
-            print(file_name)
-
-
 def getsha256(filename) -> str:
     hash = hashlib.sha256()
     with io.open(filename, "rb") as f:
@@ -149,9 +57,7 @@ def getsha256(filename) -> str:
 
 def get_package_metadata(filename) -> PackageMetadata:
     z = zipfile.ZipFile(filename, "r")
-    install_size = sum(
-        entry.file_size for entry in z.infolist() if not entry.is_dir()
-    )
+    install_size = sum(entry.file_size for entry in z.infolist() if not entry.is_dir())
     return {
         "download_sha256": getsha256(filename),
         "download_size": os.path.getsize(filename),
@@ -169,52 +75,20 @@ def get_json_metadata(filename) -> JsonMetadata:
     }
 
 
-def build_repository(output_dir: str):
-    version = get_version()
-    status = get_status(version)
-    version_simple = get_simplified_version(version)
+def build_repository(input_dir: str, output_dir: str):
+    package = glob.glob(f"{input_dir}/*.zip")[0]
+    package_name = Path(package).name
+    shutil.copy(
+        f"{package}", f"{output_dir}/"
+    )
 
-    print(f"version: {version}")
-    print(f"status: {status}")
-    print(f"version_simple: {version_simple}")
+    with open(f"{input_dir}/metadata.json", "r") as f:
+        metadata = json.load(f)
 
     repository_url = "https://adamws.github.io/kicad-kbplacer"
-    author = {
-        "contact": {"web": "https://adamws.github.io"},
-        "name": "adamws",
-    }
-
-    metadata = {
-        "$schema": "https://go.kicad.org/pcm/schemas/v1",
-        "name": "Keyboard footprints placer",
-        "description": "Plugin for mechanical keyboard design",
-        "description_full": (
-            "Plugin for mechanical keyboard design.\n"
-            "It features automatic key placement based on popular layout description from www.keyboard-layout-editor.com"
-        ),
-        "identifier": "com.github.adamws.kicad-kbplacer",
-        "type": "plugin",
-        "author": author,
-        "license": "GPL-3.0",
-        "resources": {"homepage": repository_url},
-        "tags": ["keyboard"],
-        "versions": [
-            {
-                "version": version_simple,
-                "status": status,
-                "kicad_version": "6.0",
-            }
-        ],
-    }
-
-    plugin_package = f"{output_dir}/{PLUGIN_NAME}.zip"
-    create_plugin_package(version, metadata, plugin_package)
-    print_zip_contents(plugin_package)
 
     package_version = metadata["versions"][0]
-    package_version["download_url"] = f"{repository_url}/{PLUGIN_NAME}.zip"
-    package_version.update(get_package_metadata(plugin_package))
-    print(f"package details: {package_version}")
+    package_version["download_url"] = f"{repository_url}/{package_name}"
 
     packages = {"packages": [metadata]}
 
@@ -227,7 +101,7 @@ def build_repository(output_dir: str):
 
     repository = {
         "$schema": "https://gitlab.com/kicad/code/kicad/-/raw/master/kicad/pcm/schemas/pcm.v1.schema.json#/definitions/Repository",
-        "maintainer": author,
+        "maintainer": metadata["author"],
         "name": f"{PLUGIN_NAME} development repository",
         "packages": {"url": f"{repository_url}/packages.json"},
         "resources": {"url": f"{repository_url}/resources.zip"},
@@ -253,7 +127,7 @@ def build_repository(output_dir: str):
         <p>Add <i>{repository_url}/repository.json</i> to KiCad's repository list to install these files with PCM:</p>
         <p>Repository: <a href="{repository_url}/repository.json">repository.json</a></p>
         <p>Packages: <a href="{repository_url}/packages.json">packages.json</a></p>
-        <p>Plugin: <a href="{repository_url}/{PLUGIN_NAME}.zip">{PLUGIN_NAME}.zip</a> version {version}</p>
+        <p>Plugin: <a href="{repository_url}/{package_name}">{package_name}</a></p>
         <p>Resources: <a href="{repository_url}/resources.zip">resources.zip</a></p>
         <br>
         <p>Go back to <a href="https://github.com/adamws/kicad-kbplacer">project site</a></p>
@@ -270,6 +144,13 @@ if __name__ == "__main__":
         description="Plugin packaging utilities",
     )
     parser.add_argument(
+        "-i",
+        "--input",
+        default=Path("dist"),
+        type=Path,
+        help="Distribution directory",
+    )
+    parser.add_argument(
         "-o",
         "--output",
         default=Path(f"{DIRNAME}/output"),
@@ -282,27 +163,19 @@ if __name__ == "__main__":
         action="store_true",
         help="Override output directory if already exists",
     )
-    parser.add_argument(
-        "--translate-only",
-        action="store_true",
-        help="Run only .mo translation files generation",
-    )
 
     args = parser.parse_args()
 
+    input_dir = args.input
     output_dir = args.output
     force = args.force
-    translate_only = args.translate_only
 
     if force:
         shutil.rmtree(output_dir, ignore_errors=True)
     elif output_dir.is_dir():
         print(f"Output directory '{output_dir}' already exists, exiting...")
-        exit(1)
+        sys.exit(1)
 
     os.makedirs(output_dir)
 
-    if translate_only:
-        generate_translations(output_dir)
-    else:
-        build_repository(output_dir)
+    build_repository(input_dir, output_dir)

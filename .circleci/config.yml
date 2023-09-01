@@ -82,11 +82,12 @@ jobs:
           name: Install dependencies
           command: |
             sudo apt-get update && sudo apt-get install -y gettext
+            python -m pip install --upgrade hatch
       - run:
           name: Create zip package and repository
           command: |
-            python package.py
-          working_directory: release
+            python -m hatch build --target kicad-package
+            python release/package.py
       - store_artifacts:
           path: release/output
       - when: # run only on master or tag
@@ -101,8 +102,7 @@ jobs:
             - run:
                 name: Deploy repository to github pages
                 command: |
-                  ./deploy.sh
-                working_directory: release
+                  ./release/deploy.sh
   create-pypi-release:
     docker:
       - image: cimg/python:3.11

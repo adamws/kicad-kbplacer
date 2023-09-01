@@ -3,7 +3,8 @@
 set -o nounset
 set -o errexit
 
-cd output
+CUR_DIR="$(dirname $(readlink -f "$0"))"
+cd ${CUR_DIR}/output
 
 echo "==> Prepare to deploy\n"
 git init

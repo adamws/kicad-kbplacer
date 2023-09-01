@@ -1,5 +1,7 @@
 __pycache__/
 kbplacer/locale/
+kbplacer/version.txt
+dist/
 
 # Unit test / coverage reports
 .coverage
