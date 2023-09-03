@@ -134,7 +134,7 @@ jobs:
           name: Setup environment variables
           command: |
             if [ -z "$CIRCLE_TAG" ]; then
-              echo "export TAG=0.6-circleci" >> $BASH_ENV
+              echo "export TAG=0.7-circleci" >> $BASH_ENV
             else
               # tag branch, cut 'v' prefix (only v prefixed tags should trigger this job)
               echo "export TAG=$(echo $CIRCLE_TAG | cut -c 2-)" >> $BASH_ENV
