@@ -7,7 +7,9 @@ import pcbnew
 from .element_position import Side
 
 # remove pre-release and build numbers (if present) and split to major-minor-patch tuple
-KICAD_VERSION = tuple(map(int, ((pcbnew.Version().split("+")[0]).split("-")[0]).split(".")))
+KICAD_VERSION = tuple(
+    map(int, ((pcbnew.Version().split("+")[0]).split("-")[0]).split("."))
+)
 DEFAULT_CLEARANCE_MM = 0.25
 
 

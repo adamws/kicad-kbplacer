@@ -156,7 +156,7 @@ class LabeledTextCtrl(wx.Panel):
 
 
 class CustomRadioBox(wx.Panel):
-    def __init__(self, parent, choices: List[str]):
+    def __init__(self, parent, choices: List[str]) -> None:
         super().__init__(parent)
         self.radio_buttons: dict[str, wx.RadioButton] = {}
 

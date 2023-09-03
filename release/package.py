@@ -1,8 +1,8 @@
 import argparse
+import glob
 import hashlib
 import io
 import json
-import glob
 import os
 import shutil
 import sys
@@ -78,9 +78,7 @@ def get_json_metadata(filename) -> JsonMetadata:
 def build_repository(input_dir: str, output_dir: str):
     package = glob.glob(f"{input_dir}/*.zip")[0]
     package_name = Path(package).name
-    shutil.copy(
-        f"{package}", f"{output_dir}/"
-    )
+    shutil.copy(f"{package}", f"{output_dir}/")
 
     with open(f"{input_dir}/metadata.json", "r") as f:
         metadata = json.load(f)

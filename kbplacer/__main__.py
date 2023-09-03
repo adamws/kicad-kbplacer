@@ -1,6 +1,7 @@
 import argparse
 import json
 import logging
+import sys
 from typing import List
 
 import pcbnew
@@ -175,7 +176,7 @@ def app():
 
     if not args.mode:
         parser.print_help()
-        exit(0)
+        sys.exit(0)
     elif args.mode == "cli":
         layout_path = args.layout
         board_path = args.board
@@ -201,7 +202,7 @@ def app():
             key_distance = dlg.get_key_distance()
             template_path = dlg.get_template_path()
         else:
-            exit(0)
+            sys.exit(0)
 
     # set up logger
     logging.basicConfig(

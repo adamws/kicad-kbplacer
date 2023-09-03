@@ -19,7 +19,9 @@ Box = Tuple[Numeric, Numeric, Numeric, Numeric]
 
 
 # remove pre-release and build numbers (if present) and split to major-minor-patch tuple
-KICAD_VERSION = tuple(map(int, ((pcbnew.Version().split("+")[0]).split("-")[0]).split(".")))
+KICAD_VERSION = tuple(
+    map(int, ((pcbnew.Version().split("+")[0]).split("-")[0]).split("."))
+)
 logger = logging.getLogger(__name__)
 
 

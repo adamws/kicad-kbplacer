@@ -4,6 +4,7 @@ import argparse
 import copy
 import json
 import pprint
+import sys
 from dataclasses import asdict, dataclass, field, fields
 from typing import Any, List, Optional, Tuple, Type, Union
 
@@ -493,7 +494,7 @@ def parse_ergogen_points(layout: dict) -> Keyboard:
         return int(value) if int(value) == value else value
 
     for item in layout.values():
-        if not "meta" in item:
+        if "meta" not in item:
             msg = "Item needs to have meta defined"
             raise RuntimeError(msg)
 
@@ -608,7 +609,7 @@ if __name__ == "__main__":
 
     if input_format == output_format:
         print("Output format equal input format, nothing to do...")
-        exit(1)
+        sys.exit(1)
 
     with open(input_path, "r") as f:
         text_input = f.read()
