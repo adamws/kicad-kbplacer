@@ -1,9 +1,12 @@
 version: 2.1
 
 jobs:
-  test-ubuntu-lunar-kicad6:
+  test-linux:
+    parameters:
+      version:
+        type: string
     docker:
-      - image: admwscki/kicad-kbplacer-primary:6.0.11-lunar
+      - image: admwscki/kicad-kbplacer-primary:<<parameters.version>>
     steps: &in-docker-test-steps
       - checkout
       - run:
@@ -13,32 +16,22 @@ jobs:
       - run:
           name: Run tests
           command: |
-            pytest --junitxml=test-results/pytest/results.xml
-          working_directory: tests
+            pytest --junitxml=test-results/pytest/results.xml tests/
+      - when: # run only on master for latest kicad on lunar
+          condition:
+            and:
+              - equal: [ master, << pipeline.git.branch >> ]
+              - equal: [ 7.0.7-lunar, << parameters.version >> ]
+          steps:
+            - run:
+                name: Publish coverage
+                command: |
+                  pip install coveralls
+                  coveralls
       - store_artifacts:
-          path: tests/report.html
+          path: report.html
       - store_test_results:
-          path: tests/test-results
-  test-ubuntu-focal-kicad6:
-    docker:
-      - image: admwscki/kicad-kbplacer-primary:6.0.11-focal
-    steps: *in-docker-test-steps
-  test-ubuntu-lunar-kicad7-0-6:
-    docker:
-      - image: admwscki/kicad-kbplacer-primary:7.0.6-lunar
-    steps: *in-docker-test-steps
-  test-ubuntu-focal-kicad7-0-6:
-    docker:
-      - image: admwscki/kicad-kbplacer-primary:7.0.6-focal
-    steps: *in-docker-test-steps
-  test-ubuntu-lunar-kicad7-0-7:
-    docker:
-      - image: admwscki/kicad-kbplacer-primary:7.0.7-lunar
-    steps: *in-docker-test-steps
-  test-ubuntu-focal-kicad7-0-7:
-    docker:
-      - image: admwscki/kicad-kbplacer-primary:7.0.7-focal
-    steps: *in-docker-test-steps
+          path: test-results
   test-windows:
     machine:
       image: windows-server-2022-gui:current
@@ -66,13 +59,12 @@ jobs:
       - run:
           name: Run tests
           command: |
-            ..\.circleci\scripts\use-kicad-python.ps1
-            pytest --junitxml=test-results/pytest/results.xml
-          working_directory: tests
+            .\.circleci\scripts\use-kicad-python.ps1
+            pytest --junitxml=test-results/pytest/results.xml tests
       - store_artifacts:
-          path: tests/report.html
+          path: report.html
       - store_test_results:
-          path: tests/test-results
+          path: test-results
   create-pcm-release:
     docker:
       - image: cimg/python:3.11
@@ -144,11 +136,9 @@ jobs:
           name: Build and test docker image
           command: |
             docker build -t admwscki/$IMAGE_NAME:$TAG -f docker/Dockerfile .
-            docker run --rm -v $(pwd)/tests:/kicad/tests -v $(pwd)/examples:/kicad/examples \
-              -v $(pwd)/dev-requirements.txt:/kicad/tests/dev-requirements.txt \
-              -w /kicad/tests admwscki/$IMAGE_NAME:$TAG \
+            docker run --rm -v $(pwd):/kicad/tmp -w /kicad/tmp admwscki/$IMAGE_NAME:$TAG \
               /bin/bash -c \
-              "pip3 install -r dev-requirements.txt && /kicad/.local/bin/pytest -c /dev/null --test-plugin-installation -k test_with_examples"
+              "pip3 install -r dev-requirements.txt && /kicad/.local/bin/pytest -c /dev/null --test-plugin-installation -k test_with_examples tests/"
       - when: # run only on master or tag
           condition:
             or:
@@ -175,35 +165,36 @@ jobs:
             docker push admwscki/kicad-kbplacer-primary:nightly-lunar
           working_directory: .circleci/images/lunar
   test-linux-kicad-nightly:
+    parameters:
+      version:
+        type: string
     docker:
-      - image: admwscki/kicad-kbplacer-primary:nightly-lunar
+      - image: admwscki/kicad-kbplacer-primary:<<parameters.version>>
     steps: *in-docker-test-steps
 
 workflows:
   main:
     jobs:
-      - test-ubuntu-lunar-kicad6
-      - test-ubuntu-focal-kicad6
-      - test-ubuntu-lunar-kicad7-0-6
-      - test-ubuntu-focal-kicad7-0-6
-      - test-ubuntu-lunar-kicad7-0-7
-      - test-ubuntu-focal-kicad7-0-7
+      - test-linux:
+          matrix:
+            parameters:
+              version:
+                - 6.0.11-focal
+                - 6.0.11-lunar
+                - 7.0.6-focal
+                - 7.0.6-lunar
+                - 7.0.7-focal
+                - 7.0.7-lunar
       - test-windows:
-          name: "test-windows-kicad6"
-          kicad-version: "6.0.11"
-      - test-windows:
-          name: "test-windows-kicad7"
-          kicad-version: "7.0.5"
+          matrix:
+            parameters:
+              kicad-version:
+                - 6.0.11
+                - 7.0.7
       - create-pcm-release:
           requires: &required-tests
-            - test-ubuntu-lunar-kicad6
-            - test-ubuntu-focal-kicad6
-            - test-ubuntu-lunar-kicad7-0-6
-            - test-ubuntu-focal-kicad7-0-6
-            - test-ubuntu-lunar-kicad7-0-7
-            - test-ubuntu-focal-kicad7-0-7
-            - test-windows-kicad6
-            - test-windows-kicad7
+            - test-linux
+            - test-windows
       - create-pypi-release:
           requires: *required-tests
       - deploy-image:
@@ -234,6 +225,6 @@ workflows:
     jobs:
       - build-nightly-image
       - test-linux-kicad-nightly:
+          version: nightly-lunar
           requires:
             - build-nightly-image
-

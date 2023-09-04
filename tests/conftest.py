@@ -91,12 +91,13 @@ def prepare_ci_machine():
 
 
 @pytest.fixture(autouse=True, scope="session")
-def prepare_kicad_config(request):
+def prepare_kicad_config():
+    test_dir = Path(__file__).parent
     config_path = pcbnew.SETTINGS_MANAGER.GetUserSettingsPath()
     colors_path = f"{config_path}/colors"
     os.makedirs(colors_path, exist_ok=True)
     if not os.path.exists(f"{colors_path}/user.json"):
-        shutil.copy("./colors/user.json", colors_path)
+        shutil.copy(f"{test_dir}/colors/user.json", colors_path)
 
 
 def get_footprints_dir(request):
