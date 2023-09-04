@@ -169,18 +169,6 @@ def run_process(args, workdir):
     )
 
 
-def run_kbplacer_process(workdir, package_name):
-    kbplacer_args = [
-        "python3",
-        "-m",
-        package_name,
-        "gui",
-        "-b",
-        "",  # board path is required but it is not important in this test
-    ]
-    return run_process(kbplacer_args, workdir)
-
-
 def is_xvfb_avaiable() -> bool:
     try:
         p = subprocess.Popen(
@@ -242,9 +230,22 @@ def run_gui_test(tmpdir, screen_manager, window_name, gui_callback) -> None:
 
 def test_gui(tmpdir, workdir, package_name, screen_manager) -> None:
     def _callback():
-        return run_kbplacer_process(workdir, package_name)
+        return run_process(
+            [
+                "python3",
+                "-m",
+                f"{package_name}.kbplacer_dialog",
+                "-o",
+                tmpdir,
+            ],
+            workdir,
+        )
 
     run_gui_test(tmpdir, screen_manager, "kbplacer", _callback)
+    with open(f"{tmpdir}/window_state.json", "r") as f:
+        state = json.load(f)
+        # state not explicitly restored should result in default state:
+        assert state == DEFAULT_WINDOW_STATE
 
 
 def test_help_dialog(tmpdir, workdir, package_name, screen_manager) -> None:

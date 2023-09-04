@@ -20,7 +20,6 @@ def run_kbplacer_process(
         "python3",
         "-m",
         package_name,
-        "cli",
         "-l",
         layout_file,
         "-b",

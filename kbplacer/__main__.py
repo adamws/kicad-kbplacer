@@ -102,29 +102,17 @@ def app():
         description="Keyboard's key autoplacer",
         formatter_class=argparse.RawTextHelpFormatter,
     )
-    subparsers = parser.add_subparsers(dest="mode", help="Selects operation mode")
-    parser_cli = subparsers.add_parser(
-        "cli",
-        help="Run in command-line mode",
-        formatter_class=argparse.RawTextHelpFormatter,
-    )
-    parser_gui = subparsers.add_parser(
-        "gui",
-        help="Run in graphical mode",
-        formatter_class=argparse.RawTextHelpFormatter,
-    )
 
-    for p in [parser_cli, parser_gui]:
-        p.add_argument(
-            "-b", "--board", required=True, help=".kicad_pcb file to be processed"
-        )
-    parser_cli.add_argument(
+    parser.add_argument(
+        "-b", "--board", required=True, help=".kicad_pcb file to be processed"
+    )
+    parser.add_argument(
         "-l", "--layout", required=True, help="json layout definition file"
     )
-    parser_cli.add_argument(
+    parser.add_argument(
         "-r", "--route", action="store_true", help="Enable experimental routing"
     )
-    parser_cli.add_argument(
+    parser.add_argument(
         "-d",
         "--diode",
         default=ElementInfo("D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION),
@@ -140,7 +128,7 @@ def app():
             "equal 'D{} DEFAULT' by default"
         ),
     )
-    parser_cli.add_argument(
+    parser.add_argument(
         "--additional-elements",
         default=[
             ElementInfo(
@@ -161,7 +149,7 @@ def app():
             "equal 'ST{} CUSTOM 0 0 0 FRONT' by default"
         ),
     )
-    parser_cli.add_argument(
+    parser.add_argument(
         "--key-distance",
         default=(19.05, 19.05),
         action=XYAction,
@@ -170,39 +158,17 @@ def app():
             "19.05 19.05 by default"
         ),
     )
-    parser_cli.add_argument("-t", "--template", help="Controller circuit template")
+    parser.add_argument("-t", "--template", help="Controller circuit template")
 
     args = parser.parse_args()
 
-    if not args.mode:
-        parser.print_help()
-        sys.exit(0)
-    elif args.mode == "cli":
-        layout_path = args.layout
-        board_path = args.board
-        route_tracks = args.route
-        diode = args.diode
-        additional_elements = args.additional_elements
-        key_distance = args.key_distance
-        template_path = args.template
-    else:
-        # this must be gui mode (as other arguments would raise exception)
-        import wx
-
-        from .kbplacer_dialog import KbplacerDialog
-
-        _ = wx.App()
-        dlg = KbplacerDialog(None, "kbplacer")
-        if dlg.ShowModal() == wx.ID_OK:
-            layout_path = dlg.get_layout_path()
-            board_path = args.board
-            route_tracks = dlg.is_tracks()
-            diode = dlg.get_diode_position_info()
-            additional_elements = dlg.get_additional_elements_info()
-            key_distance = dlg.get_key_distance()
-            template_path = dlg.get_template_path()
-        else:
-            sys.exit(0)
+    layout_path = args.layout
+    board_path = args.board
+    route_tracks = args.route
+    diode = args.diode
+    additional_elements = args.additional_elements
+    key_distance = args.key_distance
+    template_path = args.template
 
     # set up logger
     logging.basicConfig(
