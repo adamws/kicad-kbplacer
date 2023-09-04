@@ -2,6 +2,7 @@ import copy
 import ctypes
 import json
 import logging
+import os
 import subprocess
 import sys
 import time
@@ -161,11 +162,15 @@ def get_window_position(window_handle):
 
 
 def run_process(args, workdir):
+    env = os.environ.copy()
     return subprocess.Popen(
         args,
         cwd=workdir,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        stdin=subprocess.PIPE,
+        text=True,
+        env=env,
     )
 
 
@@ -210,14 +215,12 @@ def run_gui_test(tmpdir, screen_manager, window_name, gui_callback) -> None:
             p = gui_callback()
             is_ok = mgr.screenshot(window_name, f"{tmpdir}/screenshot.png")
             try:
-                outs, errs = p.communicate(timeout=1)
+                outs, errs = p.communicate("q\n", timeout=1)
             except subprocess.TimeoutExpired:
                 p.kill()
                 outs, errs = p.communicate()
 
-            outs = outs.decode("utf-8")
-            errs = errs.decode("utf-8")
-            assert outs == ""
+            assert outs == "Press any key to exit: "
             assert errs == ""
 
             if is_ok:

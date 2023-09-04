@@ -162,6 +162,24 @@ class HelpDialog(wx.Dialog):
 
 
 if __name__ == "__main__":
-    _ = wx.App()
+    import sys
+    import threading
+
+    _ = wx.App(False)
     dlg = HelpDialog(None)
+
+    if "PYTEST_CURRENT_TEST" in os.environ:
+        # use stdin for gracefully closing GUI when running
+        # from pytest. This is required when measuring
+        # coverage and process kill would cause measurement to be lost
+        def listen_for_exit():
+            while True:
+                input("Press any key to exit: ")
+                dlg.Close(wx.ID_CANCEL)
+                sys.exit()
+
+        input_thread = threading.Thread(target=listen_for_exit)
+        input_thread.daemon = True
+        input_thread.start()
+
     dlg.ShowModal()

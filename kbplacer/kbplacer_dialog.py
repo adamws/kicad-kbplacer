@@ -699,6 +699,7 @@ class KbplacerDialog(wx.Dialog):
 # used for tests
 if __name__ == "__main__":
     import argparse
+    import threading
 
     parser = argparse.ArgumentParser(description="dialog test")
     parser.add_argument("-i", "--initial-state", default="{}", help="Initial gui state")
@@ -712,5 +713,19 @@ if __name__ == "__main__":
     dlg = KbplacerDialog(None, "kbplacer", initial_state=initial_state)
     with open(f"{args.output_dir}/window_state.json", "w") as f:
         f.write(dlg.get_window_state())
+
+    if "PYTEST_CURRENT_TEST" in os.environ:
+        # use stdin for gracefully closing GUI when running
+        # from pytest. This is required when measuring
+        # coverage and process kill would cause measurement to be lost
+        def listen_for_exit():
+            while True:
+                input("Press any key to exit: ")
+                dlg.Close(wx.ID_CANCEL)
+                sys.exit()
+
+        input_thread = threading.Thread(target=listen_for_exit)
+        input_thread.daemon = True
+        input_thread.start()
 
     dlg.ShowModal()
