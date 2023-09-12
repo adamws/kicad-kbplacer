@@ -4,7 +4,7 @@ set -o nounset
 set -o errexit
 
 CUR_DIR="$(dirname $(readlink -f "$0"))"
-cd ${CUR_DIR}/output
+cd ${CUR_DIR}/../dist/repository
 
 echo "==> Prepare to deploy\n"
 git init

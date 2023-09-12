@@ -1,5 +1,6 @@
 # ![icon](resources/icon-github.png) kicad-kbplacer
 
+[![KiCad Repository](https://img.shields.io/badge/KiCad-Plugin%20Repository-blue)](https://gitlab.com/kicad/addons/metadata/-/tree/main/packages/com.github.adamws.kicad-kbplacer)
 ![Downloads](https://img.shields.io/github/downloads/adamws/kicad-kbplacer/total)
 [![CircleCI](https://circleci.com/gh/adamws/kicad-kbplacer.svg?style=shield)](https://circleci.com/gh/adamws/kicad-kbplacer/tree/master)
 [![PyPI](https://img.shields.io/pypi/v/kbplacer?color=44CC11)](https://pypi.org/project/kbplacer/)
@@ -40,6 +41,8 @@ and select `Keyboard footprints placer` from official plugin repository.
 ![pcm](resources/pcm.png)
 
 To install development version, see how to use [custom plugin repository](./docs/custom_repository.md).
+Custom repository is automatically updated with latest `master` branch builds
+and it is available [here](https://adamws.github.io/kicad-kbplacer).
 
 For development activities, it is recommended to checkout this repository and copy (or link)
 content of `kbplacer` directory to one of the KiCad's plugin search paths.

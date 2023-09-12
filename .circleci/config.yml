@@ -71,22 +71,28 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Setup environment variables
+          command: |
+            if [ -z "$CIRCLE_TAG" ]; then
+              echo "export KBPLACER_KICAD_STATUS=stable" >> $BASH_ENV
+              echo "export KBPLACER_KICAD_RELEASE_URL=https://github.com/adamws/kicad-kbplacer/releases/download/v{version}/{zip_name}" >> $BASH_ENV
+            fi
+      - run:
           name: Install dependencies
           command: |
             sudo apt-get update && sudo apt-get install -y gettext
             python -m pip install --upgrade hatch
       - run:
           name: Create zip package and repository
+          environment:
+            HATCH_BUILD_HOOK_ENABLE_KICAD-REPOSITORY: true
           command: |
             python -m hatch build --target kicad-package
-            python release/package.py
       - store_artifacts:
-          path: release/output
-      - when: # run only on master or tag
+          path: dist/repository
+      - when: # run only on master
           condition:
-            or:
-              - << pipeline.git.tag >>
-              - equal: [ master, << pipeline.git.branch >> ]
+            equal: [ master, << pipeline.git.branch >> ]
           steps:
             - add_ssh_keys:
                 fingerprints:
