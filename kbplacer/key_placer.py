@@ -293,8 +293,6 @@ class KeyPlacer(BoardModifier):
     ) -> None:
         diode_format = ""
         template_tracks = []
-        column_switch_pads = {}
-        row_diode_pads = {}
 
         self.logger.info(f"User layout: {layout}")
         keyboard = get_keyboard(layout)
@@ -370,28 +368,7 @@ class KeyPlacer(BoardModifier):
                         if footprint := self.get_current_footprint(annotation_format):
                             self.rotate(footprint, rotation_reference, angle)
 
-            # TODO: do not assume pad numbers for switch/diode:
-
-            # append pad:
-            pad = switch_footprint.FindPadByNumber("1")
-            net_name = pad.GetNetname()
-            if match := re.match(r"^COL(\d+)$", net_name):
-                column_number = match.groups()[0]
-                column_switch_pads.setdefault(column_number, []).append(pad)
-            else:
-                self.logger.warning("Switch pad without recognized net name found.")
-
-            # append diode:
             diode_footprint = self.get_current_footprint(diode_format)
-            if diode_footprint:
-                pad = diode_footprint.FindPadByNumber("1")
-                net_name = pad.GetNetname()
-                if match := re.match(r"^ROW(\d+)$", net_name):
-                    row_number = match.groups()[0]
-                    row_diode_pads.setdefault(row_number, []).append(pad)
-                else:
-                    self.logger.warning("Switch pad without recognized net name found.")
-
             if route_tracks and diode_footprint:
                 self.route_switch_with_diode(
                     switch_footprint, diode_footprint, angle, template_tracks
@@ -400,8 +377,22 @@ class KeyPlacer(BoardModifier):
             self.__current_key += 1
 
         if route_tracks:
+            column_pads = {}
+            row_pads = {}
+
+            sorted_pads = pcbnew.PADS_VEC()
+            self.board.GetSortedPadListByXthenYCoord(sorted_pads)
+            for pad in sorted_pads:
+                net_name = pad.GetNetname()
+                if match := re.match(r"^COL(\d+)$", net_name, re.IGNORECASE):
+                    column_number = match.groups()[0]
+                    column_pads.setdefault(column_number, []).append(pad)
+                elif match := re.match(r"^ROW(\d+)$", net_name, re.IGNORECASE):
+                    row_number = match.groups()[0]
+                    row_pads.setdefault(row_number, []).append(pad)
+
             # very naive routing approach, will fail in some scenarios:
-            for pads in column_switch_pads.values():
+            for pads in column_pads.values():
                 positions = [pad.GetPosition() for pad in pads]
                 for pos1, pos2 in zip(positions, positions[1:]):
                     # connect two pads together
@@ -424,8 +415,8 @@ class KeyPlacer(BoardModifier):
                                 last_position, pos2, layer=pcbnew.F_Cu
                             )
 
-            for row in row_diode_pads:
-                pads = row_diode_pads[row]
+            for row in row_pads:
+                pads = row_pads[row]
                 positions = [pad.GetPosition() for pad in pads]
                 # we can assume that all diodes are on the same side:
                 layer = (
