@@ -8,7 +8,7 @@ from typing import List, Optional, Tuple
 
 import pcbnew
 
-from .board_modifier import KICAD_VERSION, BoardModifier
+from .board_modifier import KICAD_VERSION, BoardModifier, get_closest_pads_on_same_net
 from .element_position import ElementInfo, ElementPosition, Point, PositionOption, Side
 from .kle_serial import get_keyboard
 
@@ -107,14 +107,15 @@ class KeyPlacer(BoardModifier):
         template_track_points=None,
     ) -> None:
         """Performs routing between switch and diode elements.
-        Assumes col-to-row configuration where diode anode is pad number '2'.
+        It uses two closest (to each other) pads of the same net.
 
         :param switch: Switch footprint to be routed.
         :param diode: Diode footprint to be routed.
         :param angle: Rotation angle (in degrees) of switch footprint
                       (diode rotation is assumed to be the same)
         :param templateTrackPoints: List of positions (relative to diode pad position)
-                                    of track corners connecting switch and diode.
+                                    of track corners connecting switch and diode closest
+                                    pads of the same net name.
                                     Does not support vias, will be routed on the layer
                                     of the diode.
                                     If None, use automatic routing algorithm.
@@ -125,9 +126,14 @@ class KeyPlacer(BoardModifier):
         """
         self.logger.info(f"Routing {switch.GetReference()} with {diode.GetReference()}")
 
-        layer = pcbnew.B_Cu if self.get_side(diode) == Side.BACK else pcbnew.F_Cu
-        switch_pad_position = switch.FindPadByNumber("2").GetPosition()
-        diode_pad_position = diode.FindPadByNumber("2").GetPosition()
+        if result := get_closest_pads_on_same_net(switch, diode):
+            switch_pad, diode_pad = result
+        else:
+            self.logger.error("Could not find pads with the same net, routing skipped")
+            return
+
+        switch_pad_position = switch_pad.GetPosition()
+        diode_pad_position = diode_pad.GetPosition()
         if KICAD_VERSION >= (7, 0, 0):
             switch_pad_position = pcbnew.wxPoint(
                 switch_pad_position.x, switch_pad_position.y
@@ -141,6 +147,7 @@ class KeyPlacer(BoardModifier):
             f"diodePadPosition: {diode_pad_position}",
         )
 
+        layer = pcbnew.B_Cu if self.get_side(diode) == Side.BACK else pcbnew.F_Cu
         if template_track_points:
             if angle != 0:
                 self.logger.info(f"Routing at {angle} degree angle")
@@ -225,14 +232,24 @@ class KeyPlacer(BoardModifier):
     ) -> list[pcbnew.wxPoint]:
         switch = self.get_footprint(key_format.format(1))
         diode = self.get_footprint(diode_format.format(1))
-        net1 = switch.FindPadByNumber("2").GetNetname()
-        net2 = diode.FindPadByNumber("2").GetNetname()
+
+        if result := get_closest_pads_on_same_net(switch, diode):
+            switch_pad, diode_pad = result
+        else:
+            self.logger.error("Could not find pads with the same net, "
+            "routing template not obtained")
+            return []
+
+        net1 = switch_pad.GetNetname()
+        net2 = diode_pad.GetNetname()
+        # TODO: check if there is a better way to get tracks between two elements
+        # without itereting over all tracks of the board:
         tracks = [t for t in self.board.GetTracks() if t.GetNetname() == net1 == net2]
 
         # convert tracks to list of vectors which will be used
         # by `AddTrackSegmentByPoints`
-        switch_pad_position = switch.FindPadByNumber("2").GetPosition()
-        diode_pad_position = diode.FindPadByNumber("2").GetPosition()
+        switch_pad_position = switch_pad.GetPosition()
+        diode_pad_position = diode_pad.GetPosition()
         if KICAD_VERSION >= (7, 0, 0):
             switch_pad_position = pcbnew.wxPoint(
                 switch_pad_position.x, switch_pad_position.y
@@ -352,6 +369,8 @@ class KeyPlacer(BoardModifier):
                         annotation_format = element_info.annotation_format
                         if footprint := self.get_current_footprint(annotation_format):
                             self.rotate(footprint, rotation_reference, angle)
+
+            # TODO: do not assume pad numbers for switch/diode:
 
             # append pad:
             pad = switch_footprint.FindPadByNumber("1")

@@ -65,6 +65,11 @@ or selecting it from `Tools -> External Plugins` menu.
 
   ![schematic-example](resources/schematic-example.png)
 
+  > [!NOTE]
+  > Other matrix configurations are also supported. Track router will attempt
+  > to connect closest (to each other) pads of switch and diode as long as both
+  > have same `netname`, i.e. are connected on the schematic
+
 - Create new PCB and load netlist
 - Obtain json layout file from [keyboard-layout-editor](http://www.keyboard-layout-editor.com/) or
   convert [ergogen](https://github.com/ergogen/ergogen) points file to json

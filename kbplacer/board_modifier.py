@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import itertools
 from logging import Logger
+from typing import Tuple
 
 import pcbnew
 
@@ -25,6 +27,57 @@ def get_position(footprint: pcbnew.FOOTPRINT) -> pcbnew.wxPoint:
     if KICAD_VERSION >= (7, 0, 0):
         return pcbnew.wxPoint(position.x, position.y)
     return position
+
+
+def get_distance(i1: pcbnew.BOARD_ITEM, i2: pcbnew.BOARD_ITEM) -> int:
+    """Calculate distance between two board items"""
+    center1 = i1.GetPosition()
+    center2 = i2.GetPosition()
+    return int(((center1.x - center2.x) ** 2 + (center1.y - center2.y) ** 2) ** 0.5)
+
+
+def get_closest(
+    pads1: list[pcbnew.PAD], pads2: list[pcbnew.PAD]
+) -> Tuple[int, Tuple[pcbnew.PAD, pcbnew.PAD]]:
+    all_pairs = itertools.product(pads1, pads2)
+    min_distance, closest_pair = min(
+        ((get_distance(obj1, obj2), (obj1, obj2)) for obj1, obj2 in all_pairs),
+        key=lambda x: x[0],
+    )
+    return min_distance, closest_pair
+
+
+def get_closest_pads_on_same_net(
+    f1: pcbnew.FOOTPRINT, f2: pcbnew.FOOTPRINT
+) -> Tuple[pcbnew.PAD, pcbnew.PAD] | None:
+    """Return pair of closest, same net pads of two given footprints
+    or None if footprints do not use common net
+    """
+    pads1 = {}
+    for p in f1.Pads():
+        if netname := p.GetNetname():
+            pads1.setdefault(netname, []).append(p)
+
+    pads2 = {}
+    for p in f2.Pads():
+        netname = p.GetNetname()
+        if netname in pads1:
+            pads2.setdefault(netname, []).append(p)
+
+    result = None
+    closest = float("inf")
+    for key, value in pads2.items():
+        distance, result_temp = get_closest(value, pads1[key])
+        if distance < closest:
+            closest = distance
+            result = result_temp
+
+    # We iterated with pads2 so we need to swap reult to keep original
+    # order in tuple, first pad should be from f1, second from f2
+    # Some caller might require proper order
+    if result:
+        return result[1], result[0]
+    return result
 
 
 class BoardModifier:

@@ -92,13 +92,26 @@ def test_diode_switch_routing(position, orientation, side, expected, tmpdir, req
     if expected:
         expected = [pcbnew.wxPoint(x[0], x[1]) for x in expected]
     board = pcbnew.CreateEmptyBoard()
+
+    net_info = board.GetNetInfo()
+    net_count = board.GetNetCount()
+    net = pcbnew.NETINFO_ITEM(board, "Net-(D1-Pad2)", net_count)
+    net_info.AppendNet(net)
+    board.Add(net)
+
     switch = add_switch_footprint(board, request, 1)
     diode = add_diode_footprint(board, request, 1)
 
     key_placer = KeyPlacer(logger, board)
 
     key_placer.set_position(switch, pcbnew.wxPoint(0, 0))
-    switch_pad_position = switch.FindPadByNumber("2").GetPosition()
+
+    switch_pad = switch.FindPadByNumber("2")
+    switch_pad.SetNet(net)
+    switch_pad_position = switch_pad.GetPosition()
+
+    diode_pad = diode.FindPadByNumber("2")
+    diode_pad.SetNet(net)
 
     diode_position = pcbnew.wxPoint(
         switch_pad_position.x + pcbnew.FromMM(position[0]),
