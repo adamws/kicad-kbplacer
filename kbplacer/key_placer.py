@@ -310,36 +310,12 @@ class KeyPlacer(BoardModifier):
         self.logger.info(f"Detected template switch-to-diode path: {reduced_points}")
         return reduced_points
 
-    def run(
-        self,
-        layout: dict,
-        key_format: str,
-        diode_info: Optional[ElementInfo],
-        route_tracks: bool = False,
-        additional_elements: List[ElementInfo] = [],
+    def place_switches(
+        self, layout: dict, key_format: str, additional_elements: List[ElementInfo] = []
     ) -> None:
-        diode_format = ""
-        template_tracks = []
-
         self.logger.info(f"User layout: {layout}")
         keyboard = get_keyboard(layout)
-
-        if diode_info:
-            self.logger.info(f"Diode info: {diode_info}")
-            diode_format = diode_info.annotation_format
-            if route_tracks:
-                # check if first switch-diode pair is already routed, if yes,
-                # then reuse its track shape for remaining pairs,
-                # otherwise try to use automatic 'router'
-                template_tracks = self.check_if_diode_routed(key_format, diode_format)
-            additional_elements = [diode_info] + additional_elements
-
-        for element_info in additional_elements:
-            if element_info.position_option == PositionOption.CURRENT_RELATIVE:
-                position = self.get_current_relative_element_position(
-                    key_format, element_info.annotation_format
-                )
-                element_info.position = position
+        self.__current_key = 1
 
         for key in keyboard.keys:
             switch_footprint = self.get_current_key(key_format)
@@ -389,6 +365,39 @@ class KeyPlacer(BoardModifier):
                             self.rotate(footprint, rotation_reference, angle)
 
             self.__current_key += 1
+
+    def run(
+        self,
+        layout: dict,
+        key_format: str,
+        diode_info: Optional[ElementInfo],
+        route_tracks: bool = False,
+        additional_elements: List[ElementInfo] = [],
+    ) -> None:
+        diode_format = ""
+        template_tracks = []
+
+        if diode_info:
+            self.logger.info(f"Diode info: {diode_info}")
+            diode_format = diode_info.annotation_format
+            if route_tracks:
+                # check if first switch-diode pair is already routed, if yes,
+                # then reuse its track shape for remaining pairs,
+                # otherwise try to use automatic 'router'
+                template_tracks = self.check_if_diode_routed(key_format, diode_format)
+            additional_elements = [diode_info] + additional_elements
+
+        for element_info in additional_elements:
+            if element_info.position_option == PositionOption.CURRENT_RELATIVE:
+                position = self.get_current_relative_element_position(
+                    key_format, element_info.annotation_format
+                )
+                element_info.position = position
+
+        if layout:
+            # TODO: handle additional elements seprately if layout missing, allow
+            # to place elements to already placed switches (without layout defined by user)
+            self.place_switches(layout, key_format, additional_elements)
 
         if route_tracks:
             for i, switch_footprint in SwitchIterator(self.board, key_format):

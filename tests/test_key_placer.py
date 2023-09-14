@@ -241,4 +241,4 @@ def test_placer_invalid_layout(request):
     key_placer = KeyPlacer(logger, board)
 
     with pytest.raises(RuntimeError):
-        key_placer.run({}, "SW{}", None, True)
+        key_placer.run({"some": "urecognized layout format"}, "SW{}", None, True)
