@@ -329,8 +329,6 @@ class KeyPlacer(BoardModifier):
                 # then reuse its track shape for remaining pairs,
                 # otherwise try to use automatic 'router'
                 template_tracks = self.check_if_diode_routed(key_format, diode_format)
-
-        if diode_info:
             additional_elements = [diode_info] + additional_elements
 
         for element_info in additional_elements:
