@@ -20,11 +20,12 @@ def run_kbplacer_process(
         "python3",
         "-m",
         package_name,
-        "-l",
-        layout_file,
         "-b",
         pcb_path,
     ]
+    if layout_file:
+        kbplacer_args.append("-l")
+        kbplacer_args.append(layout_file)
     if route:
         kbplacer_args.append("--route")
     if diode_position:
@@ -125,10 +126,8 @@ def __get_parameters():
     return test_params
 
 
-def get_references_dir(request):
+def get_references_dir(request, example_name, route_option, diode_option):
     test_dir = Path(request.module.__file__).parent
-    _, test_parameters = request.node.name.split("[")
-    example_name, route_option, diode_option, _ = test_parameters[:-1].split(";")
     kicad_dir = "kicad7" if KICAD_VERSION >= (7, 0, 0) else "kicad6"
     return (
         test_dir
@@ -136,6 +135,26 @@ def get_references_dir(request):
         / kicad_dir
         / f"{example_name}/{route_option}-{diode_option}"
     )
+
+
+def request_to_references_dir(request):
+    _, test_parameters = request.node.name.split("[")
+    example_name, route_option, diode_option, _ = test_parameters[:-1].split(";")
+    return get_references_dir(request, example_name, route_option, diode_option)
+
+
+def get_reference_files(references_dir):
+    references = Path(references_dir).glob("*.svg")
+    reference_files = list(references)
+    # ignore silkscreen svg when asserting results. Plugin does not do anything on those layers
+    # and maintaining them is a bit tedious, for example between 7.0.0 and 7.0.5 there is very
+    # slight difference in silkscreen digits which would be falsely detected as failure here.
+    # `generate_render` will still produce silkscreen svg to have nice images in test report but
+    # for checking result it is ignored:
+    reference_files = [
+        item for item in reference_files if "Silkscreen" not in str(item)
+    ]
+    return reference_files
 
 
 @pytest.mark.parametrize("example,route,diode_position,layout_type", __get_parameters())
@@ -161,17 +180,52 @@ def test_with_examples(
 
     generate_render(tmpdir, request)
 
-    references_dir = get_references_dir(request)
-    references = Path(references_dir).glob("*.svg")
-    reference_files = list(references)
-    # ignore silkscreen svg when asserting results. Plugin does not do anything on those layers
-    # and maintaining them is a bit tedious, for example between 7.0.0 and 7.0.5 there is very
-    # slight difference in silkscreen digits which would be falsely detected as failure here.
-    # `generate_render` will still produce silkscreen svg to have nice images in test report but
-    # for checking result it is ignored:
-    reference_files = [
-        item for item in reference_files if "Silkscreen" not in str(item)
-    ]
+    references_dir = request_to_references_dir(request)
+    reference_files = get_reference_files(references_dir)
+    assert len(reference_files) == 4, "Reference files not found"
+    for path in reference_files:
+        assert_kicad_svg(path, Path(f"{tmpdir}/{path.name}"))
+
+
+def test_placing_and_routing_separately(tmpdir, request, workdir, package_name):
+    # It should be possible to run placing only (in first kbplacer invoke) and
+    # then routing only (in second invoke).
+    # Result should be the same as running all at once.
+    # This tests if running routing without layout defined works
+    example = "2x3-rotations"
+    layout_file = "kle.json"
+
+    test_dir = request.fspath.dirname
+
+    source_dir = f"{test_dir}/../examples/{example}"
+    for filename in ["keyboard-before.kicad_pcb", layout_file]:
+        shutil.copy(f"{source_dir}/{filename}", tmpdir)
+
+    pcb_path = f"{tmpdir}/keyboard-before.kicad_pcb"
+
+    # run without routing:
+    run_kbplacer_process(
+        False,
+        None,
+        workdir,
+        package_name,
+        f"{tmpdir}/{layout_file}",
+        pcb_path,
+    )
+    # run with routing, without layout
+    run_kbplacer_process(
+        True,
+        None,
+        workdir,
+        package_name,
+        None,
+        pcb_path,
+    )
+
+    generate_render(tmpdir, request)
+
+    references_dir = get_references_dir(request, example, "Tracks", "DefaultDiode")
+    reference_files = get_reference_files(references_dir)
     assert len(reference_files) == 4, "Reference files not found"
     for path in reference_files:
         assert_kicad_svg(path, Path(f"{tmpdir}/{path.name}"))

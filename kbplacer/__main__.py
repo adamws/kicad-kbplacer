@@ -106,7 +106,7 @@ def app():
         "-b", "--board", required=True, help=".kicad_pcb file to be processed"
     )
     parser.add_argument(
-        "-l", "--layout", required=True, help="json layout definition file"
+        "-l", "--layout", required=False, help="json layout definition file"
     )
     parser.add_argument(
         "-r", "--route", action="store_true", help="Enable experimental routing"
@@ -178,18 +178,19 @@ def app():
     board = pcbnew.LoadBoard(board_path)
 
     if layout_path:
-        with open(layout_path, "r") as footprint:
-            text_input = footprint.read()
-            layout = json.loads(text_input)
+        with open(layout_path, "r") as f:
+            layout = json.load(f)
+    else:
+        layout = {}
 
-        placer = KeyPlacer(logger, board, key_distance)
-        placer.run(
-            layout,
-            "SW{}",
-            diode,
-            route_tracks,
-            additional_elements=additional_elements,
-        )
+    placer = KeyPlacer(logger, board, key_distance)
+    placer.run(
+        layout,
+        "SW{}",
+        diode,
+        route_tracks,
+        additional_elements=additional_elements,
+    )
 
     if template_path:
         copier = TemplateCopier(logger, board, template_path, route_tracks)

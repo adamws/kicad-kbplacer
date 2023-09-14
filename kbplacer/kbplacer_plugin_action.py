@@ -96,20 +96,23 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
 
             if layout_path := dlg.get_layout_path():
                 with open(layout_path, "r") as f:
-                    text_input = f.read()
-                layout = json.loads(text_input)
-                key_format = dlg.get_key_annotation_format()
-                diode_info = dlg.get_diode_position_info()
-                additional_elements = dlg.get_additional_elements_info()
+                    layout = json.load(f)
+            else:
+                layout = {}
 
-                placer = KeyPlacer(self.logger, self.board, dlg.get_key_distance())
-                placer.run(
-                    layout,
-                    key_format,
-                    diode_info,
-                    dlg.is_tracks(),
-                    additional_elements=additional_elements,
-                )
+            key_format = dlg.get_key_annotation_format()
+            diode_info = dlg.get_diode_position_info()
+            additional_elements = dlg.get_additional_elements_info()
+
+            placer = KeyPlacer(self.logger, self.board, dlg.get_key_distance())
+            placer.run(
+                layout,
+                key_format,
+                diode_info,
+                dlg.is_tracks(),
+                additional_elements=additional_elements,
+            )
+
             if template_path := dlg.get_template_path():
                 template_copier = TemplateCopier(
                     self.logger, self.board, template_path, dlg.is_tracks()
