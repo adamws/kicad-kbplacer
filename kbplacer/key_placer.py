@@ -54,6 +54,26 @@ def position_in_cartesian_coordinates(
     return pcbnew.wxPoint(x, y)
 
 
+class SwitchIterator:
+    def __init__(self, board: pcbnew.BOARD, annotation: str) -> None:
+        self.__board = board
+        self.__annotation = annotation
+
+    def __iter__(self):
+        self.__current_key = 1
+        return self
+
+    def __next__(self):
+        reference = self.__annotation.format(self.__current_key)
+        footprint = self.__board.FindFootprintByReference(reference)
+        if footprint:
+            result = self.__current_key, footprint
+            self.__current_key += 1
+            return result
+        else:
+            raise StopIteration
+
+
 class KeyPlacer(BoardModifier):
     def __init__(
         self,
@@ -74,9 +94,11 @@ class KeyPlacer(BoardModifier):
     def get_current_key(self, key_format: str) -> pcbnew.FOOTPRINT:
         return self.get_footprint(key_format.format(self.__current_key))
 
-    def get_current_footprint(self, diode_format: str) -> Optional[pcbnew.FOOTPRINT]:
+    def get_current_footprint(
+        self, annotation_format: str
+    ) -> Optional[pcbnew.FOOTPRINT]:
         try:
-            f = self.get_footprint(diode_format.format(self.__current_key))
+            f = self.get_footprint(annotation_format.format(self.__current_key))
         except:
             f = None
         return f
@@ -236,8 +258,10 @@ class KeyPlacer(BoardModifier):
         if result := get_closest_pads_on_same_net(switch, diode):
             switch_pad, diode_pad = result
         else:
-            self.logger.error("Could not find pads with the same net, "
-            "routing template not obtained")
+            self.logger.error(
+                "Could not find pads with the same net, "
+                "routing template not obtained"
+            )
             return []
 
         net1 = switch_pad.GetNetname()
@@ -368,15 +392,19 @@ class KeyPlacer(BoardModifier):
                         if footprint := self.get_current_footprint(annotation_format):
                             self.rotate(footprint, rotation_reference, angle)
 
-            diode_footprint = self.get_current_footprint(diode_format)
-            if route_tracks and diode_footprint:
-                self.route_switch_with_diode(
-                    switch_footprint, diode_footprint, angle, template_tracks
-                )
-
             self.__current_key += 1
 
         if route_tracks:
+            for i, switch_footprint in SwitchIterator(self.board, key_format):
+                angle = -1 * switch_footprint.GetOrientationDegrees()
+
+                if diode_footprint := self.board.FindFootprintByReference(
+                    diode_format.format(i)
+                ):
+                    self.route_switch_with_diode(
+                        switch_footprint, diode_footprint, angle, template_tracks
+                    )
+
             column_pads = {}
             row_pads = {}
 
