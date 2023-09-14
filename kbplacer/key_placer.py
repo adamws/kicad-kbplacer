@@ -4,7 +4,7 @@ import builtins
 import math
 import re
 from logging import Logger
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, cast
 
 import pcbnew
 
@@ -83,8 +83,9 @@ class KeyPlacer(BoardModifier):
     ) -> None:
         super().__init__(logger, board)
 
-        self.__key_distance_x = pcbnew.FromMM(key_distance[0])
-        self.__key_distance_y = pcbnew.FromMM(key_distance[1])
+        self.__key_distance_x = cast(int, pcbnew.FromMM(key_distance[0]))
+        self.__key_distance_y = cast(int, pcbnew.FromMM(key_distance[1]))
+
         self.logger.debug(
             f"Set key 1U distance: {self.__key_distance_x}/{self.__key_distance_y}"
         )
@@ -231,8 +232,10 @@ class KeyPlacer(BoardModifier):
         element1 = self.get_footprint(element_format.format(1))
         pos1 = self.get_position(key1)
         pos2 = self.get_position(element1)
+        x = cast(float, pcbnew.ToMM(pos2.x - pos1.x))
+        y = cast(float, pcbnew.ToMM(pos2.y - pos1.y))
         return ElementPosition(
-            Point(pcbnew.ToMM(pos2.x - pos1.x), pcbnew.ToMM(pos2.y - pos1.y)),
+            Point(x, y),
             element1.GetOrientationDegrees(),
             self.get_side(element1),
         )
@@ -337,11 +340,6 @@ class KeyPlacer(BoardModifier):
                     key_format, element_info.annotation_format
                 )
                 element_info.position = position
-
-        if type(self.__key_distance_x) != int or type(self.__key_distance_y) != int:
-            # this should never happen, add check to satisfy type hints
-            msg = "Unsupported key_distance type"
-            raise RuntimeError(msg)
 
         for key in keyboard.keys:
             switch_footprint = self.get_current_key(key_format)
