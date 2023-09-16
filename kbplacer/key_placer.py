@@ -311,7 +311,10 @@ class KeyPlacer(BoardModifier):
         return reduced_points
 
     def place_switches(
-        self, keyboard: Keyboard, key_format: str, additional_elements: List[ElementInfo] = []
+        self,
+        keyboard: Keyboard,
+        key_format: str,
+        additional_elements: List[ElementInfo] = [],
     ) -> None:
         self.__current_key = 1
 

@@ -1,13 +1,17 @@
 import argparse
 import json
 import logging
+import os
+import sys
 from typing import List
 
 import pcbnew
 
+from .board_builder import BoardBuilder
 from .defaults import DEFAULT_DIODE_POSITION, ZERO_POSITION
 from .element_position import ElementInfo, ElementPosition, Point, PositionOption, Side
 from .key_placer import KeyPlacer
+from .kle_serial import parse_via
 from .template_copier import TemplateCopier
 
 
@@ -103,7 +107,10 @@ def app():
     )
 
     parser.add_argument(
-        "-b", "--board", required=True, help=".kicad_pcb file to be processed"
+        "-b",
+        "--board",
+        required=True,
+        help=".kicad_pcb file to be processed or created",
     )
     parser.add_argument(
         "-l", "--layout", required=False, help="json layout definition file"
@@ -158,6 +165,31 @@ def app():
         ),
     )
     parser.add_argument("-t", "--template", help="Controller circuit template")
+    parser.add_argument(
+        "--create-from-via",
+        required=False,
+        action="store_true",
+        help=(
+            "Enables experimental creation mode, where via-annotated kle layout is used\n"
+            "for adding footprints and netlists to the newly created board file.\n"
+        ),
+    )
+    parser.add_argument(
+        "--switch-footprint",
+        required=False,
+        type=str,
+        help=(
+            "Full path to switch footprint, required when `--crate-from-via` option used."
+        ),
+    )
+    parser.add_argument(
+        "--diode-footprint",
+        required=False,
+        type=str,
+        help=(
+            "Full path to diode footprint, required when `--crate-from-via` option used."
+        ),
+    )
 
     args = parser.parse_args()
 
@@ -168,6 +200,7 @@ def app():
     additional_elements = args.additional_elements
     key_distance = args.key_distance
     template_path = args.template
+    create_from_via = args.create_from_via
 
     # set up logger
     logging.basicConfig(
@@ -175,13 +208,26 @@ def app():
     )
     logger = logging.getLogger(__name__)
 
-    board = pcbnew.LoadBoard(board_path)
-
     if layout_path:
         with open(layout_path, "r") as f:
             layout = json.load(f)
     else:
         layout = {}
+
+    if create_from_via:
+        if os.path.isfile(board_path):
+            logger.error(f"File {board_path} already exist, aborting")
+            sys.exit(1)
+
+        builder = BoardBuilder(
+            logger,
+            switch_footprint=args.switch_footprint,
+            diode_footprint=args.diode_footprint,
+        )
+        board = builder.create_board(parse_via(layout))
+        board.Save(board_path)
+
+    board = pcbnew.LoadBoard(board_path)
 
     placer = KeyPlacer(logger, board, key_distance)
     placer.run(

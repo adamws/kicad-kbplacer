@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import difflib
 import logging
 import shutil
@@ -8,13 +10,20 @@ from pathlib import Path
 import pytest
 from xmldiff import actions, main
 
-from .conftest import KICAD_VERSION, generate_render
+from .conftest import KICAD_VERSION, generate_render, get_footprints_dir
 
 logger = logging.getLogger(__name__)
 
 
 def run_kbplacer_process(
-    route, diode_position, workdir, package_name, layout_file, pcb_path
+    route,
+    diode_position,
+    workdir,
+    package_name,
+    layout_file,
+    pcb_path,
+    flags: list[str] = [],
+    args: dict[str, str] = {},
 ):
     kbplacer_args = [
         "python3",
@@ -31,6 +40,11 @@ def run_kbplacer_process(
     if diode_position:
         kbplacer_args.append("--diode")
         kbplacer_args.append(diode_position)
+    for v in flags:
+        kbplacer_args.append(v)
+    for k, v in args.items():
+        kbplacer_args.append(k)
+        kbplacer_args.append(v)
 
     p = subprocess.Popen(
         kbplacer_args,
@@ -73,7 +87,7 @@ def assert_group(expected: ET.ElementTree, actual: ET.ElementTree):
                 logger.info("'textLength' attribute is allowed to be different")
                 differences.remove(node)
 
-        assert not differences, "Not allowd differences found"
+        assert not differences, "Not allowed differences found"
     else:
         logger.info("No differences found")
 
@@ -120,9 +134,7 @@ def __get_parameters():
 
     # this special example can't be used with all option combinations, appended here:
     for layout_option_name, layout_option in layout_options.items():
-        test_id = (
-            f"2x3-rotations-custom-diode-with-track;Tracks;DiodeOption2;{layout_option_name}"
-        )
+        test_id = f"2x3-rotations-custom-diode-with-track;Tracks;DiodeOption2;{layout_option_name}"
         param = pytest.param(
             "2x3-rotations-custom-diode-with-track",
             True,
@@ -184,9 +196,18 @@ def prepare_project(request, tmpdir, example: str, layout_file: str) -> None:
         shutil.copy(f"{source_dir}/{filename}", tmpdir)
 
 
-@pytest.mark.parametrize("example,route,diode_position,layout_option", __get_parameters())
+@pytest.mark.parametrize(
+    "example,route,diode_position,layout_option", __get_parameters()
+)
 def test_with_examples(
-    example, route, diode_position, layout_option, tmpdir, request, workdir, package_name
+    example,
+    route,
+    diode_position,
+    layout_option,
+    tmpdir,
+    request,
+    workdir,
+    package_name,
 ) -> None:
     prepare_project(request, tmpdir, example, layout_option)
 
@@ -242,3 +263,34 @@ def test_placing_and_routing_separately(tmpdir, request, workdir, package_name):
     references_dir = get_references_dir(request, example, "Tracks", "DefaultDiode")
     assert_example(tmpdir, references_dir)
 
+
+def test_board_creation(tmpdir, request, workdir, package_name):
+    example = "2x2"
+    layout_file = "via.json"
+
+    test_dir = request.fspath.dirname
+
+    source_dir = f"{test_dir}/../examples/{example}"
+    shutil.copy(f"{source_dir}/{layout_file}", tmpdir)
+
+    pcb_path = f"{tmpdir}/keyboard-before.kicad_pcb"
+
+    # run without routing:
+    run_kbplacer_process(
+        True,
+        None,
+        workdir,
+        package_name,
+        f"{tmpdir}/{layout_file}",
+        pcb_path,
+        flags=["--create-from-via"],
+        args={
+            "--switch-footprint": f"{get_footprints_dir(request)}:SW_Cherry_MX_PCB_1.00u",
+            "--diode-footprint": f"{get_footprints_dir(request)}:D_SOD-323F",
+        },
+    )
+
+    generate_render(tmpdir, request)
+
+    references_dir = get_references_dir(request, example, "Tracks", "DefaultDiode")
+    assert_example(tmpdir, references_dir)
