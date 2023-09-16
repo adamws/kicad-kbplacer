@@ -280,6 +280,29 @@ class Keyboard:
         return result
 
 
+@dataclass
+class ViaKeyboard(Keyboard):
+    alternative_keys: List[Key] = field(default_factory=list)
+
+    LAYOUT_LABEL = 8
+
+    def __post_init__(self: ViaKeyboard) -> None:
+        for key in list(self.keys):
+            if self.is_alternative(key):
+                self.alternative_keys.append(copy.deepcopy(key))
+                self.keys.remove(key)
+
+    def is_alternative(self, key: Key) -> bool:
+        labels = key.labels
+        if key.decal or len(labels) >= 9 and labels[self.LAYOUT_LABEL]:
+            # check if not default layout:
+            if labels[self.LAYOUT_LABEL].split(",")[1] != "0":
+                # alternative layout key
+                return True
+
+        return False
+
+
 def reorder_items(items: List[Any], align: int) -> List[Any]:
     ret: List[Any] = 12 * [None]
     for i, item in enumerate(items):
@@ -330,6 +353,11 @@ def cleanup_key(key: Key):
         while attribute and attribute[-1] is None:
             attribute.pop()
         setattr(key, attribute_name, attribute)
+
+
+def parse_via(layout) -> ViaKeyboard:
+    keyboard = parse_kle(layout["layouts"]["keymap"])
+    return ViaKeyboard(meta=keyboard.meta, keys=keyboard.keys)
 
 
 def parse_kle(layout) -> Keyboard:
@@ -567,6 +595,10 @@ def get_keyboard(layout: dict) -> Keyboard:
     except Exception:
         pass
     try:
+        return parse_via(layout)
+    except Exception:
+        pass
+    try:
         return Keyboard.from_json(layout)
     except Exception:
         pass
@@ -585,7 +617,7 @@ if __name__ == "__main__":
         "-inform",
         required=False,
         default="RAW",
-        choices=["KLE_RAW", "KLE_INTERNAL", "ERGOGEN_INTERNAL"],
+        choices=["KLE_RAW", "KLE_VIA", "KLE_INTERNAL", "ERGOGEN_INTERNAL"],
         help="Specifies the input format",
     )
     parser.add_argument("-out", required=False, help="Result file")
@@ -618,6 +650,11 @@ if __name__ == "__main__":
         result = ""
         if input_format == "KLE_RAW":  # convert to KLE_INTERNAL
             result = parse_kle(layout)
+            result = json.loads(result.to_json())
+            if print_result:
+                pprint.pprint(result)
+        elif input_format == "KLE_VIA":  # convert to KLE_INTERNAL
+            result = parse_via(layout)
             result = json.loads(result.to_json())
             if print_result:
                 pprint.pprint(result)

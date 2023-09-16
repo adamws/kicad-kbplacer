@@ -10,7 +10,7 @@ import pcbnew
 
 from .board_modifier import KICAD_VERSION, BoardModifier, get_closest_pads_on_same_net
 from .element_position import ElementInfo, ElementPosition, Point, PositionOption, Side
-from .kle_serial import get_keyboard
+from .kle_serial import Keyboard, get_keyboard
 
 
 def position_in_rotated_coordinates(
@@ -311,10 +311,8 @@ class KeyPlacer(BoardModifier):
         return reduced_points
 
     def place_switches(
-        self, layout: dict, key_format: str, additional_elements: List[ElementInfo] = []
+        self, keyboard: Keyboard, key_format: str, additional_elements: List[ElementInfo] = []
     ) -> None:
-        self.logger.info(f"User layout: {layout}")
-        keyboard = get_keyboard(layout)
         self.__current_key = 1
 
         for key in keyboard.keys:
@@ -397,7 +395,9 @@ class KeyPlacer(BoardModifier):
         if layout:
             # TODO: handle additional elements seprately if layout missing, allow
             # to place elements to already placed switches (without layout defined by user)
-            self.place_switches(layout, key_format, additional_elements)
+            self.logger.info(f"User layout: {layout}")
+            keyboard = get_keyboard(layout)
+            self.place_switches(keyboard, key_format, additional_elements)
 
         if route_tracks:
             for i, switch_footprint in SwitchIterator(self.board, key_format):

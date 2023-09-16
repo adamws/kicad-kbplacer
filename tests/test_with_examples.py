@@ -95,34 +95,53 @@ def assert_kicad_svg(expected: Path, actual: Path):
         assert_group(expected_groups[i], actual_groups[i])
 
 
+def assert_example(tmpdir, references_dir: Path) -> None:
+    reference_files = get_reference_files(references_dir)
+    assert len(reference_files) == 4, "Reference files not found"
+    for path in reference_files:
+        assert_kicad_svg(path, Path(f"{tmpdir}/{path.name}"))
+
+
 def __get_parameters():
     examples = ["2x2", "3x2-sizes", "2x3-rotations", "1x4-rotations-90-step"]
     route_options = {"NoTracks": False, "Tracks": True}
     diode_options = {"DefaultDiode": None, "DiodeOption1": "D{} CUSTOM 0 4.5 0 BACK"}
+    layout_options = {"RAW": "kle.json", "INTERNAL": "kle-internal.json"}
     test_params = []
     for example in examples:
         for route_option_name, route_option in route_options.items():
             for diode_option_name, diode_option in diode_options.items():
-                for layout_type in ["RAW", "INTERNAL"]:
-                    test_id = f"{example};{route_option_name};{diode_option_name};{layout_type}"
+                for layout_option_name, layout_option in layout_options.items():
+                    test_id = f"{example};{route_option_name};{diode_option_name};{layout_option_name}"
                     param = pytest.param(
-                        example, route_option, diode_option, layout_type, id=test_id
+                        example, route_option, diode_option, layout_option, id=test_id
                     )
                     test_params.append(param)
 
     # this special example can't be used with all option combinations, appended here:
-    for layout_type in ["RAW", "INTERNAL"]:
+    for layout_option_name, layout_option in layout_options.items():
         test_id = (
-            f"2x3-rotations-custom-diode-with-track;Tracks;DiodeOption2;{layout_type}"
+            f"2x3-rotations-custom-diode-with-track;Tracks;DiodeOption2;{layout_option_name}"
         )
         param = pytest.param(
             "2x3-rotations-custom-diode-with-track",
             True,
             "D{} CURRENT_RELATIVE",
-            layout_type,
+            layout_option,
             id=test_id,
         )
         test_params.append(param)
+
+    # add one test for via layout
+    param = pytest.param(
+        "2x2",
+        True,
+        None,
+        "via.json",
+        id="2x2;Tracks;DefaultDiode;VIA",
+    )
+    test_params.append(param)
+
     return test_params
 
 
@@ -157,34 +176,35 @@ def get_reference_files(references_dir):
     return reference_files
 
 
-@pytest.mark.parametrize("example,route,diode_position,layout_type", __get_parameters())
-def test_with_examples(
-    example, route, diode_position, layout_type, tmpdir, request, workdir, package_name
-) -> None:
+def prepare_project(request, tmpdir, example: str, layout_file: str) -> None:
     test_dir = request.fspath.dirname
 
     source_dir = f"{test_dir}/../examples/{example}"
-    layout_file = "kle.json" if layout_type == "RAW" else "kle-internal.json"
     for filename in ["keyboard-before.kicad_pcb", layout_file]:
         shutil.copy(f"{source_dir}/{filename}", tmpdir)
 
+
+@pytest.mark.parametrize("example,route,diode_position,layout_option", __get_parameters())
+def test_with_examples(
+    example, route, diode_position, layout_option, tmpdir, request, workdir, package_name
+) -> None:
+    prepare_project(request, tmpdir, example, layout_option)
+
     pcb_path = f"{tmpdir}/keyboard-before.kicad_pcb"
+
     run_kbplacer_process(
         route,
         diode_position,
         workdir,
         package_name,
-        f"{tmpdir}/{layout_file}",
+        f"{tmpdir}/{layout_option}",
         pcb_path,
     )
 
     generate_render(tmpdir, request)
 
     references_dir = request_to_references_dir(request)
-    reference_files = get_reference_files(references_dir)
-    assert len(reference_files) == 4, "Reference files not found"
-    for path in reference_files:
-        assert_kicad_svg(path, Path(f"{tmpdir}/{path.name}"))
+    assert_example(tmpdir, references_dir)
 
 
 def test_placing_and_routing_separately(tmpdir, request, workdir, package_name):
@@ -194,12 +214,7 @@ def test_placing_and_routing_separately(tmpdir, request, workdir, package_name):
     # This tests if running routing without layout defined works
     example = "2x3-rotations"
     layout_file = "kle.json"
-
-    test_dir = request.fspath.dirname
-
-    source_dir = f"{test_dir}/../examples/{example}"
-    for filename in ["keyboard-before.kicad_pcb", layout_file]:
-        shutil.copy(f"{source_dir}/{filename}", tmpdir)
+    prepare_project(request, tmpdir, example, layout_file)
 
     pcb_path = f"{tmpdir}/keyboard-before.kicad_pcb"
 
@@ -225,7 +240,5 @@ def test_placing_and_routing_separately(tmpdir, request, workdir, package_name):
     generate_render(tmpdir, request)
 
     references_dir = get_references_dir(request, example, "Tracks", "DefaultDiode")
-    reference_files = get_reference_files(references_dir)
-    assert len(reference_files) == 4, "Reference files not found"
-    for path in reference_files:
-        assert_kicad_svg(path, Path(f"{tmpdir}/{path.name}"))
+    assert_example(tmpdir, references_dir)
+

@@ -79,11 +79,17 @@ or selecting it from `Tools -> External Plugins` menu.
 
     ![kle-download](resources/kle-download.png)
 
-    Plugin supports internal [kle-serial](https://github.com/ijprest/kle-serial) layout files.
+    Plugin supports internal [kle-serial](https://github.com/ijprest/kle-serial) layout files
+    and [via](https://www.caniusevia.com/docs/layouts) files.
     Detection of layout format will be done automatically.
     Conversion between layout downloaded from keyboard-layout-editor and its internal form
     can be done with [https://adamws.github.io/kle-serial](https://adamws.github.io/kle-serial/)
     or [keyboard-tools.xyz/kle-converter](http://keyboard-tools.xyz/kle-converter)
+
+    > [!NOTE]
+    > When using `via` layouts, switch matrix **must** be annotated according to `via` rules.
+    > If layout supports [multiple layout of keys](https://www.caniusevia.com/docs/layouts#layout-options)
+    > only the default one will be used by `kicad-kbplacer`.
 
   </details>
 
