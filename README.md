@@ -192,6 +192,10 @@ keyboard = parse_kle([["", ""]])
 print(f"This keyboard has only {len(keyboard.keys)} keys")
 ```
 
+Another example can be found in [tools/viaimages.py](./tools/viaimages.py) file.
+This simple script creates images based on [`via`](https://www.caniusevia.com/docs/layouts) annotated layouts.
+For more complex usage, see [keyboard-pcbs](https://github.com/adamws/keyboard-pcbs/blob/master/via_layouts_to_boards.py) repository. It demonstrates how to create `.kicad_pcb` file with switch matrix from scratch.
+
 ### As a service
 
 This plugin is part of my another project. See [keyboard-tools](https://github.com/adamws/keyboard-tools) for more details.
