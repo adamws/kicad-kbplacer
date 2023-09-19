@@ -11,6 +11,22 @@ KiCad plugin for mechanical keyboard design. It features automatic key placement
 based on popular layout descriptions from [keyboard-layout-editor](http://www.keyboard-layout-editor.com/)
 and [ergogen](https://github.com/ergogen/ergogen).
 
+**Table of Contents**
+- [Motivation](#motivation)
+- [Features](#features)
+- [Installation](#installation)
+- [How to use](#how-to-use)
+  - [Direct usage](#direct-usage)
+    - [Diode placement and routing](#diode-placement-and-routing)
+    - [Additional elements placement](#additional-elements-placement)
+    - [Demo project](#demo-project)
+  - [As python package](#as-python-package)
+  - [As a service](#as-a-service)
+- [Troubleshooting](#troubleshooting)
+  - [Plugin does not load](#plugin-does-not-load)
+  - [Plugin misbehaves or crashes](#plugin-misbehaves-or-crashes)
+
+<!-- TOC --><a name="motivation"></a>
 ## Motivation
 
 All PCB's for mechanical keyboards shares common properties which creates great
@@ -18,6 +34,7 @@ opportunity for scripting. Although this project does not aim to provide
 complete automatic PCB generation tool it speeds up development process
 by reducing tedious element placement and routing tasks.
 
+<!-- TOC --><a name="features"></a>
 ## Features
 
 - [x] Automatic keys and diodes placement
@@ -33,6 +50,7 @@ by reducing tedious element placement and routing tasks.
 
 Some examples can be found in [examples](./examples) directory.
 
+<!-- TOC --><a name="installation"></a>
 ## Installation
 
 To install release version of this plugin, use KiCad's `Plugin and Content Manager`
@@ -54,8 +72,10 @@ After installation, plugin can be started by clicking plugin icon on the toolbar
 
 or selecting it from `Tools -> External Plugins` menu.
 
+<!-- TOC --><a name="how-to-use"></a>
 ## How to use?
 
+<!-- TOC --><a name="direct-usage"></a>
 ### Direct usage
 
 - Create switch matrix schematic which meets following requirements:
@@ -123,6 +143,7 @@ python -m com_github_adamws_kicad-kbplacer cli --help
 > [!IMPORTANT]
 > On windows, use python bundled with KiCad
 
+<!-- TOC --><a name="diode-placement-and-routing"></a>
 #### Diode placement and routing
 
 By default diodes are placed like shown below. This placement may not work for all switch and diode
@@ -163,6 +184,7 @@ Before | After
 --- | ---
 ![custom-with-track-before](resources/custom-with-track-before.png) | ![custom-with-track-after](resources/custom-with-track-after.png)
 
+<!-- TOC --><a name="additional-elements-placement"></a>
 #### Additional elements placement
 
 In case additional elements need to be automatically placed next to corresponding switches (for example
@@ -173,6 +195,7 @@ in `Additional elements settings` section. It behaves very similarly to switch d
 - when footprint not found, algorithm proceeds. There is no 1-to-1 mapping required
 - there is no track routing
 
+<!-- TOC --><a name="demo-project"></a>
 #### Demo project
 
 For example demo project see `demo` directory. This project contains 4x4 switch matrix with
@@ -180,6 +203,7 @@ layout json files in raw (`kle.json`) and internal (`kle_internal.json`) formats
 It requires [keyswitch-kicad-library](https://github.com/perigoso/keyswitch-kicad-library) to be installed.
 Use this project to validate plugin installation.
 
+<!-- TOC --><a name="as-python-package"></a>
 ### As python package
 
 For advanced users who want to integrate `kbplacer` with other tools or automate it's usage
@@ -196,12 +220,15 @@ Another example can be found in [tools/viaimages.py](./tools/viaimages.py) file.
 This simple script creates images based on [`via`](https://www.caniusevia.com/docs/layouts) annotated layouts.
 For more complex usage, see [keyboard-pcbs](https://github.com/adamws/keyboard-pcbs/blob/master/via_layouts_to_boards.py) repository. It demonstrates how to create `.kicad_pcb` file with switch matrix from scratch.
 
+<!-- TOC --><a name="as-a-service"></a>
 ### As a service
 
 This plugin is part of my another project. See [keyboard-tools](https://github.com/adamws/keyboard-tools) for more details.
 
+<!-- TOC --><a name="troubleshooting"></a>
 ## Troubleshooting
 
+<!-- TOC --><a name="plugin-does-not-load"></a>
 ### Plugin does not load
 
 If plugin does not appear on the `Tools -> External Plugins` menu and its icon is missing on toolbar,
@@ -213,6 +240,7 @@ import pcbnew; pcbnew.GetWizardsBackTrace()
 
 This should return backtrace with an information about the fault. Include this information in bug report.
 
+<!-- TOC --><a name="plugin-misbehaves-or-crashes"></a>
 ### Plugin misbehaves or crashes
 
 - Read stacktrace in error pop-up
