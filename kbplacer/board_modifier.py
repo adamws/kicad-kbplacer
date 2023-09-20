@@ -118,18 +118,6 @@ class BoardModifier:
         )
         return position
 
-    def set_relative_position_mm(
-        self,
-        footprint: pcbnew.FOOTPRINT,
-        reference_point: pcbnew.wxPoint,
-        direction: list[float],
-    ) -> None:
-        position = pcbnew.wxPoint(
-            reference_point.x + pcbnew.FromMM(direction[0]),
-            reference_point.y + pcbnew.FromMM(direction[1]),
-        )
-        self.set_position(footprint, position)
-
     def test_track_collision(self, track: pcbnew.PCB_TRACK) -> bool:
         collide_list = []
         track_shape = track.GetEffectiveShape()
@@ -282,9 +270,6 @@ class BoardModifier:
         end = pcbnew.wxPoint(start.x + vector[0], start.y + vector[1])
         return self.add_track_segment_by_points(start, end, layer)
 
-    def reset_rotation(self, footprint: pcbnew.FOOTPRINT):
-        footprint.SetOrientationDegrees(0)
-
     def rotate(
         self,
         footprint: pcbnew.FOOTPRINT,
@@ -309,3 +294,12 @@ class BoardModifier:
 
     def get_side(self, footprint: pcbnew.FOOTPRINT) -> Side:
         return Side(footprint.IsFlipped())
+
+    def set_rotation(self, footprint: pcbnew.FOOTPRINT, angle: float) -> None:
+        footprint.SetOrientationDegrees(angle)
+
+    def reset_rotation(self, footprint: pcbnew.FOOTPRINT) -> None:
+        self.set_rotation(footprint, 0)
+
+    def get_orientation(self, footprint: pcbnew.FOOTPRINT) -> float:
+        return footprint.GetOrientationDegrees()

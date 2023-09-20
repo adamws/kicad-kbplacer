@@ -105,6 +105,23 @@ def get_footprints_dir(request):
     return test_dir / "data/footprints/tests.pretty"
 
 
+def get_references_dir(request, example_name, route_option, diode_option):
+    test_dir = Path(request.module.__file__).parent
+    kicad_dir = "kicad7" if KICAD_VERSION >= (7, 0, 0) else "kicad6"
+    return (
+        test_dir
+        / "data/examples-references"
+        / kicad_dir
+        / f"{example_name}/{route_option}-{diode_option}"
+    )
+
+
+def request_to_references_dir(request):
+    _, test_parameters = request.node.name.split("[")
+    example_name, route_option, diode_option, _ = test_parameters[:-1].split(";")
+    return get_references_dir(request, example_name, route_option, diode_option)
+
+
 def merge_bbox(left: Box, right: Box) -> Box:
     """
     Merge bounding boxes in format (xmin, xmax, ymin, ymax)
@@ -223,7 +240,7 @@ def generate_render(tmpdir, request):
         os.remove(f"{tmpdir}/{project_name}-{layer_name}.svg")
 
     if request.config.getoption("--save-results-as-reference"):
-        references_dir = get_references_dir(request)
+        references_dir = request_to_references_dir(request)
         references_dir.mkdir(parents=True, exist_ok=True)
 
         for layer_name, _ in plot_plan:

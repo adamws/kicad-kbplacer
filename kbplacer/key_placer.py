@@ -314,7 +314,6 @@ class KeyPlacer(BoardModifier):
         self,
         keyboard: Keyboard,
         key_format: str,
-        additional_elements: List[ElementInfo] = [],
     ) -> None:
         self.__current_key = 1
 
@@ -335,20 +334,6 @@ class KeyPlacer(BoardModifier):
             self.set_position(switch_footprint, position)
             self.reset_rotation(switch_footprint)
 
-            for element_info in additional_elements:
-                annotation_format = element_info.annotation_format
-                element_position = element_info.position
-                footprint = self.get_current_footprint(annotation_format)
-                if footprint and element_position:
-                    self.reset_rotation(footprint)
-                    self.set_side(footprint, element_position.side)
-                    footprint.SetOrientationDegrees(element_position.orientation)
-                    self.set_relative_position_mm(
-                        footprint,
-                        position,
-                        element_position.relative_position.to_list(),
-                    )
-
             angle = key.rotation_angle
             if angle != 0:
                 rotation_reference = (
@@ -359,13 +344,38 @@ class KeyPlacer(BoardModifier):
                     + self.__reference_coordinate
                 )
                 self.rotate(switch_footprint, rotation_reference, angle)
-                if additional_elements:
-                    for element_info in additional_elements:
-                        annotation_format = element_info.annotation_format
-                        if footprint := self.get_current_footprint(annotation_format):
-                            self.rotate(footprint, rotation_reference, angle)
 
             self.__current_key += 1
+
+    def place_switch_elements(
+        self,
+        key_format: str,
+        elements: List[ElementInfo],
+    ) -> None:
+        for i, switch_footprint in SwitchIterator(self.board, key_format):
+            position = self.get_position(switch_footprint)
+            orientation = self.get_orientation(switch_footprint)
+            for element_info in elements:
+                annotation_format = element_info.annotation_format
+                element_position = element_info.position
+                footprint = self.board.FindFootprintByReference(
+                    annotation_format.format(i)
+                )
+                if footprint and element_position:
+                    self.reset_rotation(footprint)
+                    self.set_side(footprint, element_position.side)
+                    self.set_rotation(footprint, element_position.orientation)
+
+                    offset = pcbnew.wxPointMM(
+                        *element_position.relative_position.to_list()
+                    )
+                    if orientation != 0:
+                        offset = position_in_rotated_coordinates(offset, orientation)
+
+                    self.set_position(footprint, position + offset)
+                    if orientation != 0:
+                        current_position = self.get_position(footprint)
+                        self.rotate(footprint, current_position, -1 * orientation)
 
     def run(
         self,
@@ -396,11 +406,12 @@ class KeyPlacer(BoardModifier):
                 element_info.position = position
 
         if layout:
-            # TODO: handle additional elements seprately if layout missing, allow
-            # to place elements to already placed switches (without layout defined by user)
             self.logger.info(f"User layout: {layout}")
             keyboard = get_keyboard(layout)
-            self.place_switches(keyboard, key_format, additional_elements)
+            self.place_switches(keyboard, key_format)
+
+        if additional_elements:
+            self.place_switch_elements(key_format, additional_elements)
 
         if route_tracks:
             for i, switch_footprint in SwitchIterator(self.board, key_format):

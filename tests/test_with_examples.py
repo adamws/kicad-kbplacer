@@ -10,7 +10,12 @@ from pathlib import Path
 import pytest
 from xmldiff import actions, main
 
-from .conftest import KICAD_VERSION, generate_render, get_footprints_dir
+from .conftest import (
+    generate_render,
+    get_footprints_dir,
+    get_references_dir,
+    request_to_references_dir,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -155,23 +160,6 @@ def __get_parameters():
     test_params.append(param)
 
     return test_params
-
-
-def get_references_dir(request, example_name, route_option, diode_option):
-    test_dir = Path(request.module.__file__).parent
-    kicad_dir = "kicad7" if KICAD_VERSION >= (7, 0, 0) else "kicad6"
-    return (
-        test_dir
-        / "data/examples-references"
-        / kicad_dir
-        / f"{example_name}/{route_option}-{diode_option}"
-    )
-
-
-def request_to_references_dir(request):
-    _, test_parameters = request.node.name.split("[")
-    example_name, route_option, diode_option, _ = test_parameters[:-1].split(";")
-    return get_references_dir(request, example_name, route_option, diode_option)
 
 
 def get_reference_files(references_dir):
