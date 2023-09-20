@@ -179,7 +179,7 @@ class BoardModifier:
             # check collision if not itself, on same layer and with different netlist
             # (unless 'trackNetCode' is default '0' netlist):
             if (
-                t.m_Uuid.__ne__(track.m_Uuid)
+                t.m_Uuid != track.m_Uuid
                 and t.IsOnLayer(track.GetLayer())
                 and (track_net_code != t.GetNetCode() or track_net_code == 0)
             ):

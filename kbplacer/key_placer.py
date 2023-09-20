@@ -171,10 +171,10 @@ class KeyPlacer(BoardModifier):
                     diode_pad_position_r = position_in_rotated_coordinates(
                         diode_pad_position, angle
                     )
-                    end = t.__add__(diode_pad_position_r)
+                    end = t + diode_pad_position_r
                     end = position_in_cartesian_coordinates(end, angle)
                 else:
-                    end = t.__add__(diode_pad_position)
+                    end = t + diode_pad_position
                 if end := self.add_track_segment_by_points(start, end, layer):
                     start = end
         elif (
@@ -285,8 +285,8 @@ class KeyPlacer(BoardModifier):
                 if KICAD_VERSION >= (7, 0, 0):
                     start = pcbnew.wxPoint(start.x, start.y)
                     end = pcbnew.wxPoint(end.x, end.y)
-                found_start = start.__eq__(search_point)
-                found_end = end.__eq__(search_point)
+                found_start = start == search_point
+                found_end = end == search_point
                 if found_start or found_end:
                     points_sorted.append(search_point)
                     search_point = end if found_start else start
@@ -297,7 +297,7 @@ class KeyPlacer(BoardModifier):
             points_sorted.pop(0)
             points_sorted.append(switch_pad_position)
 
-        reduced_points = [p.__sub__(diode_pad_position) for p in points_sorted]
+        reduced_points = [p - diode_pad_position for p in points_sorted]
         self.logger.info(f"Detected template switch-to-diode path: {reduced_points}")
         return reduced_points
 
