@@ -95,15 +95,6 @@ class KeyPlacer(BoardModifier):
     def get_current_key(self, key_format: str) -> pcbnew.FOOTPRINT:
         return self.get_footprint(key_format.format(self.__current_key))
 
-    def get_current_footprint(
-        self, annotation_format: str
-    ) -> Optional[pcbnew.FOOTPRINT]:
-        try:
-            f = self.get_footprint(annotation_format.format(self.__current_key))
-        except:
-            f = None
-        return f
-
     def calculate_corner_position_of_switch_diode_route(
         self, diode_pad_position: pcbnew.wxPoint, switch_pad_position: pcbnew.wxPoint
     ) -> pcbnew.wxPoint:
