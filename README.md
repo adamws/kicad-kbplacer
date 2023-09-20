@@ -19,6 +19,7 @@ and [ergogen](https://github.com/ergogen/ergogen).
   - [As python package](#installation-as-python-package)
 - [How to use](#how-to-use)
   - [Direct usage](#direct-usage)
+    - [Options overview](#options-overview)
     - [Diode placement and routing](#diode-placement-and-routing)
     - [Additional elements placement](#additional-elements-placement)
     - [Track templating](#track-templating)
@@ -188,6 +189,113 @@ python -m com_github_adamws_kicad-kbplacer --help
 
 > [!IMPORTANT]
 > On windows, use python bundled with KiCad
+
+<!-- TOC --><a name="options-overview"></a>
+#### Options overview
+
+<table>
+  <tr><td><b>Section</b></td><td><b>Label</b></td><td><b>Description</b></td></tr>
+  <tr>
+    <td rowspan="3" align="center" style="vertical-align: middle;">Switch settings</td>
+    <td align="center" style="vertical-align: middle;">Footprint Annotation</td>
+    <td>
+      The switch footprint annotation format with <code>{}</code> token
+      which will get replaced with incremented footprint number.
+    </td>
+  </tr>
+  <tr>
+    <td align="center" style="vertical-align: middle;">Keyboard layout file</td>
+    <td>
+      Layout file path. Supports <a href="http://www.keyboard-layout-editor.com/">keyboard-leyout-editor</a>
+      json layouts in both raw and internal form, <a href="https://www.caniusevia.com/docs/layouts">via</a>
+      json layouts and <a href="https://docs.ergogen.xyz/formats">ergogen</a> canonical
+      yaml points files converted to json.</br>
+      Can be empty to run without switch footprints placement.
+    </td>
+  </tr>
+  <tr>
+    <td align="center" style="vertical-align: middle;">Step X / Step Y</td>
+    <td>
+      Distance (in millimeters) of 1U between two switches in X and Y directions.
+    </td>
+  </tr>
+  <tr>
+    <td rowspan="6" align="center" style="vertical-align: middle;">Switch diodes settings</td>
+    <td align="center" style="vertical-align: middle;">Allow autoplacement</td>
+    <td>
+      Enables automatic diodes positioning. When turned on, each diode will be placed
+      next to the switch footprint of the same annotation number, according to the position
+      settings. When disabled, diodes will not be moved.
+    </td>
+  </tr>
+  <tr>
+    <td align="center" style="vertical-align: middle;">Footprint annotation</td>
+    <td>
+      The diode annotation format. Same rules as for switch footprint annotation applies.
+    </td>
+  </tr>
+  <tr>
+    <td align="center" style="vertical-align: middle;">Position</td>
+    <td>
+      Diode position option with three possible choices:<br>
+      &emsp;<code>Default</code> - positions diodes to default position<br>
+      &emsp;<code>Custom</code> - positions diodes based on user defined values<br>
+      &emsp;<code>Current relative</code> - uses first switch-diode pair to get relative position
+      between them and uses that as reference position for remaining pairs
+    </td>
+  </tr>
+  <tr>
+    <td align="center" style="vertical-align: middle;">Offset X/Y</td>
+    <td>
+      Distance (in millimeters) from the center of switch footprint to the center of diode footprint.
+      Accepts floating values with <code>.</code> (dot) decimal separator.</br>
+      Applicable only for <code>Custom</code> position option.
+    </td>
+  </tr>
+  <tr>
+    <td align="center" style="vertical-align: middle;">Orientation</td>
+    <td>
+      Angle (in degrees) of diode footprint. If switch is rotated it will be automatically
+      adjusted to match switch rotation</br>
+      Applicable only for <code>Custom</code> position option.
+    </td>
+  </tr>
+  <tr>
+    <td align="center" style="vertical-align: middle;">Side</td>
+    <td>
+      Selects <code>Front</code> or <code>Back</code> side of the board.</br>
+      Applicable only for <code>Custom</code> position option.
+    </td>
+  </tr>
+  <tr>
+    <td align="center" style="vertical-align: middle;">Additional elements settings</td>
+    <td align="center" style="vertical-align: middle;">-</td>
+    <td>
+      This is equivalent of <b>Switch diodes settings</b> with these exceptions:</br>
+      1) It is possible to add/subtract elements from the list using <code>+/-</code> buttons</br>
+      2) <b>Allow autoplacement</b> option is missing, footprints which should not be moved
+      should not be added to the list</br>
+      3) Footprints from this sections are not routed</br>
+      4) Footprints from this section does not must to exist, i.e. there is no 1-to-1 mapping
+      between switch and element required
+    </td>
+  </tr>
+  <tr>
+    <td rowspan="2" align="center" style="vertical-align: middle;">Other settings</td>
+    <td align="center" style="vertical-align: middle;">Route tracks</td>
+    <td>
+      Enables/disables elements routing.
+    </td>
+  </tr>
+  <tr>
+    <td align="center" style="vertical-align: middle;">Controller template circuit file</td>
+    <td>
+      Path to <code>kicad_pcb</code> template file which can be used for placing/routing
+      repetitive parts of the PCBs. It is expected that user creates own templates.</br>
+      This is optional and not very well documented process.
+    </td>
+  </tr>
+</table>
 
 <!-- TOC --><a name="diode-placement-and-routing"></a>
 #### Diode placement and routing
