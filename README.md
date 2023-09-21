@@ -192,7 +192,11 @@ python -m com_github_adamws_kicad-kbplacer --help
 ### Options overview
 
 <table>
-  <tr><td><b>Section</b></td><td><b>Label</b></td><td><b>Description</b></td></tr>
+  <tr>
+    <th align="center"><b>Section</b></th>
+    <th align="center"><b>Label</b></th>
+    <th align="center"><b>Description</b></th>
+  </tr>
   <tr>
     <td rowspan="3" align="center" style="vertical-align: middle;">Switch settings</td>
     <td align="center" style="vertical-align: middle;">Footprint Annotation</td>
@@ -270,12 +274,11 @@ python -m com_github_adamws_kicad-kbplacer --help
     <td align="center" style="vertical-align: middle;">Additional elements settings</td>
     <td align="center" style="vertical-align: middle;">-</td>
     <td>
-      This is equivalent of <b>Switch diodes settings</b> with these exceptions:</br>
+      This is equivalent of <b>Switch diodes settings</b> section with these exceptions:</br>
       1) It is possible to add/subtract elements from the list using <code>+/-</code> buttons</br>
       2) <b>Allow autoplacement</b> option is missing, footprints which should not be moved
       should not be added to the list</br>
-      3) Footprints from this sections are not routed</br>
-      between switch and element required
+      3) Footprints from this sections are not routed
     </td>
   </tr>
   <tr>
