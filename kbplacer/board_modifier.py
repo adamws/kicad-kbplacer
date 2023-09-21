@@ -98,6 +98,13 @@ class BoardModifier:
             raise Exception(msg)
         return footprint
 
+    def get_optional_footprint(self, reference: str) -> pcbnew.FOOTPRINT | None:
+        try:
+            footprint = self.get_footprint(reference)
+        except Exception as _:
+            footprint = None
+        return footprint
+
     def set_position(
         self, footprint: pcbnew.FOOTPRINT, position: pcbnew.wxPoint
     ) -> None:

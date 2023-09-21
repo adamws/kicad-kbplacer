@@ -89,11 +89,7 @@ class KeyPlacer(BoardModifier):
         self.logger.debug(
             f"Set key 1U distance: {self.__key_distance_x}/{self.__key_distance_y}"
         )
-        self.__current_key = 1
         self.__reference_coordinate = pcbnew.wxPointMM(25, 25)
-
-    def get_current_key(self, key_format: str) -> pcbnew.FOOTPRINT:
-        return self.get_footprint(key_format.format(self.__current_key))
 
     def calculate_corner_position_of_switch_diode_route(
         self, diode_pad_position: pcbnew.wxPoint, switch_pad_position: pcbnew.wxPoint
@@ -219,6 +215,9 @@ class KeyPlacer(BoardModifier):
     def get_current_relative_element_position(
         self, key_format: str, element_format: str
     ) -> ElementPosition:
+        # TODO: perhaps add support for using diferent pair as reference,
+        # we no longer require strict 1-to-1 mapping between switches and diodes
+        # so `D1` does not have to exist
         key1 = self.get_footprint(key_format.format(1))
         element1 = self.get_footprint(element_format.format(1))
         pos1 = self.get_position(key1)
@@ -247,7 +246,9 @@ class KeyPlacer(BoardModifier):
         self, key_format: str, diode_format: str
     ) -> list[pcbnew.wxPoint]:
         switch = self.get_footprint(key_format.format(1))
-        diode = self.get_footprint(diode_format.format(1))
+        diode = self.get_optional_footprint(diode_format.format(1))
+        if not diode:
+            return []
 
         if result := get_closest_pads_on_same_net(switch, diode):
             switch_pad, diode_pad = result
@@ -306,10 +307,10 @@ class KeyPlacer(BoardModifier):
         keyboard: Keyboard,
         key_format: str,
     ) -> None:
-        self.__current_key = 1
+        current_key = 1
 
         for key in keyboard.keys:
-            switch_footprint = self.get_current_key(key_format)
+            switch_footprint = self.get_footprint(key_format.format(current_key))
 
             width = key.width
             height = key.height
@@ -336,7 +337,7 @@ class KeyPlacer(BoardModifier):
                 )
                 self.rotate(switch_footprint, rotation_reference, angle)
 
-            self.__current_key += 1
+            current_key += 1
 
     def place_switch_elements(
         self,
@@ -349,7 +350,7 @@ class KeyPlacer(BoardModifier):
             for element_info in elements:
                 annotation_format = element_info.annotation_format
                 element_position = element_info.position
-                footprint = self.board.FindFootprintByReference(
+                footprint = self.get_optional_footprint(
                     annotation_format.format(i)
                 )
                 if footprint and element_position:
@@ -408,7 +409,7 @@ class KeyPlacer(BoardModifier):
             for i, switch_footprint in SwitchIterator(self.board, key_format):
                 angle = -1 * switch_footprint.GetOrientationDegrees()
 
-                if diode_footprint := self.board.FindFootprintByReference(
+                if diode_footprint := self.get_optional_footprint(
                     diode_format.format(i)
                 ):
                     self.route_switch_with_diode(

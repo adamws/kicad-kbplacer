@@ -276,7 +276,6 @@ python -m com_github_adamws_kicad-kbplacer --help
       2) <b>Allow autoplacement</b> option is missing, footprints which should not be moved
       should not be added to the list</br>
       3) Footprints from this sections are not routed</br>
-      4) Footprints from this section does not must to exist, i.e. there is no 1-to-1 mapping
       between switch and element required
     </td>
   </tr>
@@ -349,7 +348,6 @@ stabilizer footprints if not integral part of switch footprint, or RGB LEDs), de
 in `Additional elements settings` section. It behaves very similarly to switch diodes options with few exceptions:
 
 - there is no default position defined
-- when footprint not found, algorithm proceeds. There is no 1-to-1 mapping required
 - there is no track routing
 
 <!-- TOC --><a name="run-without-layout"></a>
