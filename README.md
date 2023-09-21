@@ -17,17 +17,15 @@ and [ergogen](https://github.com/ergogen/ergogen).
 - [Installation](#installation)
   - [As KiCad plugin](#installation-as-kicad-plugin)
   - [As python package](#installation-as-python-package)
-- [How to use](#how-to-use)
-  - [From KiCad](#how-to-use-from-kicad)
-    - [Options overview](#options-overview)
-    - [Diode placement and routing](#diode-placement-and-routing)
-    - [Additional elements placement](#additional-elements-placement)
-    - [Track templating](#track-templating)
-    - [Run without layout](#run-without-layout)
-  - [From CLI or from another scripts](#how-to-use-from-cli-or-another-scripts)
-    - [Run as a script](#run-as-a-script)
-    - [Use in python projects](#use-in-python-projects)
-  - [As a service](#as-a-service)
+- [Use from KiCad](#how-to-use-from-kicad)
+  - [Options overview](#options-overview)
+  - [Diode placement and routing](#diode-placement-and-routing)
+  - [Additional elements placement](#additional-elements-placement)
+  - [Track templating](#track-templating)
+  - [Run without layout](#run-without-layout)
+- [Use from CLI or from another tools](#how-to-use-from-cli-or-another-tools)
+  - [Run as a script](#run-as-a-script)
+  - [Use in python projects](#use-in-python-projects)
 - [Demo keyboard project](#demo-keyboard-project)
 - [Troubleshooting](#troubleshooting)
   - [Plugin does not load](#plugin-does-not-load)
@@ -81,7 +79,7 @@ After installation, plugin can be started by clicking plugin icon on the toolbar
 ![plugin-icon-on-toolbar](resources/plugin-icon-on-toolbar.png)
 
 or selecting it from `Tools -> External Plugins` menu.
-For more details about plugin usage see [How to use from KiCad](#how-to-use-from-kicad) section.
+For more details about plugin usage see [Use from KiCad](#how-to-use-from-kicad) section.
 
 <!-- TOC --><a name="installation-as-kicad-package"></a>
 ### As python package
@@ -93,11 +91,13 @@ pip install kbplacer
 ```
 
 When installed this way, it **can't** be launched from KiCad as KiCad plugin.
-This option exist for usage via command line interface.
+This option exist for usage via command line interface or for integrating with
+another tools.
+
 Command line interface provides more options but generally it is recommended for
 more advanced users. For example it allows to create PCBs without schematic,
 which is non-typical KiCad workflow.
-For more see [How to use from CLI or from another scripts](#how-to-use-from-cli-or-another-scripts) section.
+For details see [Use from CLI or from another tools](#how-to-use-from-cli-or-another-tools) section.
 
 > [!IMPORTANT]
 > Most of the `kbplacer` python package functionalities depends on `pcbnew` package
@@ -113,11 +113,8 @@ For more see [How to use from CLI or from another scripts](#how-to-use-from-cli-
 > some scripting capabilities are still available, but in order to use `kbplacer`
 > in another python scripts, installing as python package is required.
 
-<!-- TOC --><a name="how-to-use"></a>
-## How to use?
-
 <!-- TOC --><a name="how-to-use-from-kicad"></a>
-### From KiCad
+## Use from KiCad
 
 This is _traditional_ way of using this tool. Before it can be used on `kicad_pcb` project
 file, user needs to create it and populate with footprints. In typical KiCad workflow
@@ -192,7 +189,7 @@ python -m com_github_adamws_kicad-kbplacer --help
 > On windows, use python bundled with KiCad
 
 <!-- TOC --><a name="options-overview"></a>
-#### Options overview
+### Options overview
 
 <table>
   <tr><td><b>Section</b></td><td><b>Label</b></td><td><b>Description</b></td></tr>
@@ -299,7 +296,7 @@ python -m com_github_adamws_kicad-kbplacer --help
 </table>
 
 <!-- TOC --><a name="diode-placement-and-routing"></a>
-#### Diode placement and routing
+### Diode placement and routing
 
 By default diodes are placed like shown below. This placement may not work for all switch and diode
 footprints combinations.
@@ -332,7 +329,7 @@ It attempts to create track in the shortest way (using 45&deg; angles) and doesn
 if there is a collision, leaving elements unconnected.
 
 <!-- TOC --><a name="track-templating"></a>
-#### Track templating
+### Track templating
 
 If first switch-diode pair is routed before plugin execution, as shown below, `kicad-kbplacer` instead of
 using it's built in routing algorithm, will copy user's track. This allow to circumvent plugin's router
@@ -343,7 +340,7 @@ Before | After
 ![custom-with-track-before](resources/custom-with-track-before.png) | ![custom-with-track-after](resources/custom-with-track-after.png)
 
 <!-- TOC --><a name="additional-elements-placement"></a>
-#### Additional elements placement
+### Additional elements placement
 
 In case additional elements need to be automatically placed next to corresponding switches (for example
 stabilizer footprints if not integral part of switch footprint, or RGB LEDs), define entries
@@ -353,7 +350,7 @@ in `Additional elements settings` section. It behaves very similarly to switch d
 - there is no track routing
 
 <!-- TOC --><a name="run-without-layout"></a>
-#### Run without layout
+### Run without layout
 
 Creating tracks or placing switch elements (like diodes) does not require layout file.
 With empty `Keyboard layout file` field, switch placement is simply skipped.
@@ -361,11 +358,11 @@ Placing and routing of other elements will use already placed switches as refere
 and won't move them. This might be useful for PCB files generated by other tools,
 for example [ergogen](https://github.com/ergogen/ergogen).
 
-<!-- TOC --><a name="how-to-use-from-cli-or-another-scripts"></a>
-### From CLI or from another scripts
+<!-- TOC --><a name="how-to-use-from-cli-or-another-tools"></a>
+## Use from CLI or from another tools
 
 <!-- TOC --><a name="run-as-a-script"></a>
-#### Run as a script
+### Run as a script
 
 The `kbplacer` module might be executed as a script using python's `-m` command line option.
 
@@ -377,7 +374,7 @@ This is command line equivalent of running this tool as KiCad plugin but without
 Run it with `--help` option to get more details about options and CLI usage.
 
 <!-- TOC --><a name="use-in-python-projects"></a>
-#### Use in python projects
+### Use in python projects
 
 Some `kbplacer` functionality might be reused in another projects.
 For example, to parse raw KLE data to it's internal form run:
@@ -396,10 +393,7 @@ where schematic preparation can be completely skipped. For example see
 > This is work in progress. Creating keyboard PCBs without schematic is not recommended
 > for inexperienced users. Internal `kbplacer` API is not stable.
 
-<!-- TOC --><a name="as-a-service"></a>
-### As a service
-
-This plugin is part of my another project. See [keyboard-tools](https://github.com/adamws/keyboard-tools) for more details.
+This package is also key component of [keyboard-tools](https://github.com/adamws/keyboard-tools) project.
 
 <!-- TOC --><a name="demo-keyboard-project"></a>
 ## Demo keyboard project
