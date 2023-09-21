@@ -270,9 +270,11 @@ def generate_render(tmpdir, request):
     new_tree.write(f"{tmpdir}/render.svg")
 
 
-def add_switch_footprint(board, request, ref_count) -> pcbnew.FOOTPRINT:
+def add_switch_footprint(
+    board, request, ref_count, footprint: str = "SW_Cherry_MX_PCB_1.00u"
+) -> pcbnew.FOOTPRINT:
     library = get_footprints_dir(request)
-    f = pcbnew.FootprintLoad(str(library), "SW_Cherry_MX_PCB_1.00u")
+    f = pcbnew.FootprintLoad(str(library), footprint)
     f.SetReference(f"SW{ref_count}")
     board.Add(f)
     return f

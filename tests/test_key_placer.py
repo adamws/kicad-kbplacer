@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import logging
 from typing import Tuple
@@ -34,6 +36,45 @@ def equal_ignore_order(a, b):
         except ValueError:
             return False
     return not unmatched
+
+
+def get_board_with_one_switch(
+    request, footprint: str
+) -> Tuple[pcbnew.BOARD, pcbnew.FOOTPRINT, pcbnew.FOOTPRINT]:
+    board = pcbnew.CreateEmptyBoard()
+    net_info = board.GetNetInfo()
+    net_count = board.GetNetCount()
+    net = pcbnew.NETINFO_ITEM(board, "Net-(D1-Pad2)", net_count)
+    net_info.AppendNet(net)
+    board.Add(net)
+
+    switch = add_switch_footprint(board, request, 1, footprint=footprint)
+    diode = add_diode_footprint(board, request, 1)
+
+    for p in switch.Pads():
+        if p.GetNumber() == "2":
+            p.SetNet(net)
+    diode.FindPadByNumber("2").SetNet(net)
+
+    return board, switch, diode
+
+
+def assert_board_tracks(expected: list[Tuple[int, int]] | None, board: pcbnew.BOARD):
+    if expected:
+        expected = [pcbnew.wxPoint(x[0], x[1]) for x in expected]
+    points = []
+    for track in board.GetTracks():
+        start = track.GetStart()
+        if start not in points:
+            points.append(start)
+        end = track.GetEnd()
+        if end not in points:
+            points.append(end)
+
+    if expected is None:
+        assert not points
+    else:
+        assert equal_ignore_order(points, expected)
 
 
 @pytest.mark.parametrize(
@@ -89,29 +130,11 @@ def equal_ignore_order(a, b):
 )
 @pytest.mark.parametrize("side", [Side.FRONT, Side.BACK])
 def test_diode_switch_routing(position, orientation, side, expected, tmpdir, request):
-    if expected:
-        expected = [pcbnew.wxPoint(x[0], x[1]) for x in expected]
-    board = pcbnew.CreateEmptyBoard()
-
-    net_info = board.GetNetInfo()
-    net_count = board.GetNetCount()
-    net = pcbnew.NETINFO_ITEM(board, "Net-(D1-Pad2)", net_count)
-    net_info.AppendNet(net)
-    board.Add(net)
-
-    switch = add_switch_footprint(board, request, 1)
-    diode = add_diode_footprint(board, request, 1)
-
+    board, switch, diode = get_board_with_one_switch(request, "SW_Cherry_MX_PCB_1.00u")
     key_placer = KeyPlacer(logger, board)
 
-    key_placer.set_position(switch, pcbnew.wxPoint(0, 0))
-
     switch_pad = switch.FindPadByNumber("2")
-    switch_pad.SetNet(net)
     switch_pad_position = switch_pad.GetPosition()
-
-    diode_pad = diode.FindPadByNumber("2")
-    diode_pad.SetNet(net)
 
     diode_position = pcbnew.wxPoint(
         switch_pad_position.x + pcbnew.FromMM(position[0]),
@@ -126,20 +149,35 @@ def test_diode_switch_routing(position, orientation, side, expected, tmpdir, req
 
     board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
     generate_render(tmpdir, request)
+    assert_board_tracks(expected, board)
 
-    points = []
-    for track in board.GetTracks():
-        start = track.GetStart()
-        if start not in points:
-            points.append(start)
-        end = track.GetEnd()
-        if end not in points:
-            points.append(end)
 
-    if expected is None:
-        assert not points
-    else:
-        assert equal_ignore_order(points, expected)
+@pytest.mark.parametrize(
+    "position,orientation,expected",
+    [
+        # fmt: off
+        # simple cases when pads in line, expecting single segment track:
+        ((0,  3.8),  0, [(1050000,  3800000), ( 5000000, 3800000)]),
+        ((-8, 3.8),  0, [(-6950000, 3800000), (-5000000, 3800000)]),
+        # fmt: on
+    ],
+)
+def test_diode_switch_routing_complicated_footprint(
+    position, orientation, expected, tmpdir, request
+):
+    board, switch, diode = get_board_with_one_switch(
+        request, "Kailh_socket_PG1350_optional_reversible"
+    )
+    key_placer = KeyPlacer(logger, board)
+
+    key_placer.set_position(diode, pcbnew.wxPointMM(*position))
+    diode.SetOrientationDegrees(orientation)
+
+    key_placer.route_switch_with_diode(switch, diode, 0)
+
+    board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
+    generate_render(tmpdir, request)
+    assert_board_tracks(expected, board)
 
 
 def get_2x2_layout(request):
