@@ -167,6 +167,7 @@ class KeyPlacer(BoardModifier):
             if angle != 0:
                 self.logger.info(f"Routing at {angle} degree angle")
             switch_position = self.get_position(switch)
+            rejects = []
             for item in template_connection:
                 # item is either PCB_TRACK or PCB_VIA, since via extends track
                 # we should be safe with `Cast_to_PCB_TRACK` (not doing any via
@@ -174,12 +175,26 @@ class KeyPlacer(BoardModifier):
                 track = pcbnew.Cast_to_PCB_TRACK(item)
                 new_track = track.Duplicate()
                 if KICAD_VERSION >= (7, 0, 0):
-                    new_track.Move(pcbnew.VECTOR2I(switch_position.x, switch_position.y))
+                    new_track.Move(
+                        pcbnew.VECTOR2I(switch_position.x, switch_position.y)
+                    )
                 else:
                     new_track.Move(switch_position)
                 if angle != 0:
                     rotate(new_track, switch_position, angle)
-                self.add_track_to_board(new_track)
+                result = self.add_track_to_board(new_track)
+                # depending on the order of track elements placement, some may not pass
+                # collision check (for example when starting from middle segment,
+                # if it ends to close to a pad). To avoid rejecting false positives,
+                # collect rejects and give them a second chance. Only the 'middle' segments
+                # (i.e. not starting in a pad) should be in this list, others should
+                # get placed properly (unless indeed colliding with some footprints,
+                # for example optional stabilizer holes), so running placement of rejects
+                # a second time should succeed.
+                if result is None:
+                    rejects.append(new_track)
+            for item in rejects:
+                self.add_track_to_board(item)
         elif (
             switch_pad_position.x == diode_pad_position.x
             or switch_pad_position.y == diode_pad_position.y
@@ -222,7 +237,7 @@ class KeyPlacer(BoardModifier):
     def get_current_relative_element_position(
         self, key_format: str, element_format: str
     ) -> ElementPosition:
-        # TODO: perhaps add support for using diferent pair as reference,
+        # TODO: perhaps add support for using different pair as reference,
         # we no longer require strict 1-to-1 mapping between switches and diodes
         # so `D1` does not have to exist
         key1 = self.get_footprint(key_format.format(1))
@@ -290,6 +305,17 @@ class KeyPlacer(BoardModifier):
         for net in switch_unique_nets:
             _append_normalized_connection_items(net)
 
+        def _format_item(item: pcbnew.PCB_TRACK) -> str:
+            if KICAD_VERSION >= (7, 0, 0):
+                name = item.GetFriendlyName()
+            else:
+                name = "Via" if item.Type() == pcbnew.PCB_VIA_T else "Track"
+            start = item.GetStart()
+            end = item.GetEnd()
+            return f"{name} [{start} {end}]"
+
+        items_str = ", ".join([_format_item(i) for i in result])
+        self.logger.info(f"Got connection template: {items_str}")
         return result
 
     def place_switches(
