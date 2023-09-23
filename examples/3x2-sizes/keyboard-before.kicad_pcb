@@ -361,7 +361,7 @@
     )
   )
 
-  (footprint "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.00u" (layer "F.Cu")
+  (footprint "examples:SW_Cherry_MX_PCB_1.00u" (layer "F.Cu")
     (tedit 602D5B6F) (tstamp 00000000-0000-0000-0000-000060511730)
     (at 57.77 -11.55)
     (descr "Cherry MX keyswitch, https://www.cherrymx.de/en/dev.html")
@@ -410,7 +410,7 @@
     )
   )
 
-  (footprint "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.00u" (layer "F.Cu")
+  (footprint "examples:SW_Cherry_MX_PCB_1.00u" (layer "F.Cu")
     (tedit 602D5B6F) (tstamp 00000000-0000-0000-0000-00006051174a)
     (at 37.62 -11.55)
     (descr "Cherry MX keyswitch, https://www.cherrymx.de/en/dev.html")
@@ -459,7 +459,7 @@
     )
   )
 
-  (footprint "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.50u" (layer "F.Cu")
+  (footprint "examples:SW_Cherry_MX_PCB_1.50u" (layer "F.Cu")
     (tedit 602D5B6F) (tstamp 00000000-0000-0000-0000-000060511764)
     (at 12.7125 -11.55)
     (descr "Cherry MX keyswitch, https://www.cherrymx.de/en/dev.html")
@@ -508,7 +508,7 @@
     )
   )
 
-  (footprint "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.00u" (layer "F.Cu")
+  (footprint "examples:SW_Cherry_MX_PCB_1.00u" (layer "F.Cu")
     (tedit 602D5B6F) (tstamp 00000000-0000-0000-0000-00006051177e)
     (at 42.38 -31.7)
     (descr "Cherry MX keyswitch, https://www.cherrymx.de/en/dev.html")
@@ -557,7 +557,7 @@
     )
   )
 
-  (footprint "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.75u" (layer "F.Cu")
+  (footprint "examples:SW_Cherry_MX_PCB_1.75u" (layer "F.Cu")
     (tedit 602D5B6F) (tstamp 00000000-0000-0000-0000-000060511798)
     (at 15.09375 -31.7)
     (descr "Cherry MX keyswitch, https://www.cherrymx.de/en/dev.html")
@@ -606,7 +606,7 @@
     )
   )
 
-  (footprint "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.00u" (layer "F.Cu")
+  (footprint "examples:SW_Cherry_MX_PCB_1.00u" (layer "F.Cu")
     (tedit 602D5B6F) (tstamp 00000000-0000-0000-0000-0000605117b2)
     (at 62.53 -31.7)
     (descr "Cherry MX keyswitch, https://www.cherrymx.de/en/dev.html")

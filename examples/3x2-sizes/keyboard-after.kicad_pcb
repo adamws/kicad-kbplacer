@@ -79,7 +79,7 @@
   (net 11 "ROW1")
   (net 12 "ROW2")
 
-  (footprint "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.00u" (layer "F.Cu")
+  (footprint "examples:SW_Cherry_MX_PCB_1.00u" (layer "F.Cu")
     (tedit 602D5B6F) (tstamp 00000000-0000-0000-0000-000060511730)
     (at 34.525 34.525)
     (descr "Cherry MX keyswitch, https://www.cherrymx.de/en/dev.html")
@@ -128,7 +128,7 @@
     )
   )
 
-  (footprint "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.00u" (layer "F.Cu")
+  (footprint "examples:SW_Cherry_MX_PCB_1.00u" (layer "F.Cu")
     (tedit 602D5B6F) (tstamp 00000000-0000-0000-0000-00006051174a)
     (at 53.575 34.525)
     (descr "Cherry MX keyswitch, https://www.cherrymx.de/en/dev.html")
@@ -177,7 +177,7 @@
     )
   )
 
-  (footprint "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.50u" (layer "F.Cu")
+  (footprint "examples:SW_Cherry_MX_PCB_1.50u" (layer "F.Cu")
     (tedit 602D5B6F) (tstamp 00000000-0000-0000-0000-000060511764)
     (at 39.2875 53.575)
     (descr "Cherry MX keyswitch, https://www.cherrymx.de/en/dev.html")
@@ -226,7 +226,7 @@
     )
   )
 
-  (footprint "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.00u" (layer "F.Cu")
+  (footprint "examples:SW_Cherry_MX_PCB_1.00u" (layer "F.Cu")
     (tedit 602D5B6F) (tstamp 00000000-0000-0000-0000-00006051177e)
     (at 63.1 53.575)
     (descr "Cherry MX keyswitch, https://www.cherrymx.de/en/dev.html")
@@ -275,7 +275,7 @@
     )
   )
 
-  (footprint "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.75u" (layer "F.Cu")
+  (footprint "examples:SW_Cherry_MX_PCB_1.75u" (layer "F.Cu")
     (tedit 602D5B6F) (tstamp 00000000-0000-0000-0000-000060511798)
     (at 41.66875 72.625)
     (descr "Cherry MX keyswitch, https://www.cherrymx.de/en/dev.html")
@@ -324,7 +324,7 @@
     )
   )
 
-  (footprint "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.00u" (layer "F.Cu")
+  (footprint "examples:SW_Cherry_MX_PCB_1.00u" (layer "F.Cu")
     (tedit 602D5B6F) (tstamp 00000000-0000-0000-0000-0000605117b2)
     (at 67.8625 72.625)
     (descr "Cherry MX keyswitch, https://www.cherrymx.de/en/dev.html")

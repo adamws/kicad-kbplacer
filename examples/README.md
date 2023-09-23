@@ -11,8 +11,8 @@ Each example has own directory with following file structure:
   testing of plugin's code changes.
 - `keyboard-after.kicad_pcb` - PCB file after running plugin. Demonstrates
   current capabilities - this file does not contain any manual changes.
-- `fp-lib-table` - footprints location file, points to external dependencies
-  stored in parent's `libs` directory.
+- `fp-lib-table` - footprints location file, points to external footprints
+  stored in parent's `examples.pretty` directory.
 - `keyboard-layout.png` - picture of keyboard-layout-editor layout.
 - `render.svg` - picture of PCB, this file is created by KiCad's SVG export.
 
