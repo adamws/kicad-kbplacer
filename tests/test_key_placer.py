@@ -7,7 +7,11 @@ from typing import Tuple
 import pcbnew
 import pytest
 
-from .conftest import add_diode_footprint, add_switch_footprint, generate_render
+from .conftest import (
+    add_diode_footprint,
+    add_switch_footprint,
+    generate_render,
+)
 
 try:
     from kbplacer.defaults import DEFAULT_DIODE_POSITION
@@ -44,24 +48,31 @@ def get_board_with_one_switch(
     board = pcbnew.CreateEmptyBoard()
     net_info = board.GetNetInfo()
     net_count = board.GetNetCount()
-    net = pcbnew.NETINFO_ITEM(board, "Net-(D1-Pad2)", net_count)
-    net_info.AppendNet(net)
-    board.Add(net)
+    switch_diode_net = pcbnew.NETINFO_ITEM(board, "Net-(D1-Pad2)", net_count)
+    net_info.AppendNet(switch_diode_net)
+    board.Add(switch_diode_net)
 
     switch = add_switch_footprint(board, request, 1, footprint=footprint)
     diode = add_diode_footprint(board, request, 1)
 
     for p in switch.Pads():
         if p.GetNumber() == "2":
-            p.SetNet(net)
-    diode.FindPadByNumber("2").SetNet(net)
+            p.SetNet(switch_diode_net)
+    diode.FindPadByNumber("2").SetNet(switch_diode_net)
+
+    column_net = pcbnew.NETINFO_ITEM(board, "COL1", net_count + 1)
+    net_info.AppendNet(column_net)
+    board.Add(column_net)
+
+    for p in switch.Pads():
+        if p.GetNumber() == "1":
+            p.SetNet(column_net)
 
     return board, switch, diode
 
 
 def assert_board_tracks(expected: list[Tuple[int, int]] | None, board: pcbnew.BOARD):
-    if expected:
-        expected = [pcbnew.wxPoint(x[0], x[1]) for x in expected]
+    expected_wx = [pcbnew.wxPoint(x[0], x[1]) for x in expected] if expected else None
     points = []
     for track in board.GetTracks():
         start = track.GetStart()
@@ -71,10 +82,10 @@ def assert_board_tracks(expected: list[Tuple[int, int]] | None, board: pcbnew.BO
         if end not in points:
             points.append(end)
 
-    if expected is None:
-        assert not points
+    if expected_wx:
+        assert equal_ignore_order(points, expected_wx)
     else:
-        assert equal_ignore_order(points, expected)
+        assert not points
 
 
 @pytest.mark.parametrize(

@@ -29,11 +29,34 @@ def get_position(footprint: pcbnew.FOOTPRINT) -> pcbnew.wxPoint:
     return position
 
 
+def rotate(
+    footprint: pcbnew.BOARD_ITEM,
+    rotation_reference: pcbnew.wxPoint,
+    angle: float,
+) -> None:
+    if KICAD_VERSION >= (7, 0, 0):
+        footprint.Rotate(
+            pcbnew.VECTOR2I(rotation_reference.x, rotation_reference.y),
+            pcbnew.EDA_ANGLE(angle * -1, pcbnew.DEGREES_T),
+        )
+    else:
+        footprint.Rotate(rotation_reference, angle * -10)
+
+
 def get_distance(i1: pcbnew.BOARD_ITEM, i2: pcbnew.BOARD_ITEM) -> int:
     """Calculate distance between two board items"""
     center1 = i1.GetPosition()
     center2 = i2.GetPosition()
     return int(((center1.x - center2.x) ** 2 + (center1.y - center2.y) ** 2) ** 0.5)
+
+
+def get_common_nets(f1: pcbnew.FOOTPRINT, f2: pcbnew.FOOTPRINT) -> list[int]:
+    """Returns list of netcodes which are used by both of the
+    given footprints, may be empty if no common nets found
+    """
+    codes1 = [p.GetNetCode() for p in f1.Pads()]
+    codes2 = [p.GetNetCode() for p in f2.Pads()]
+    return list(set(codes1).intersection(codes2))
 
 
 def get_closest(
@@ -287,13 +310,7 @@ class BoardModifier:
             f"Rotating {footprint.GetReference()} footprint: "
             f"rotationReference: {rotation_reference}, rotationAngle: {angle}"
         )
-        if KICAD_VERSION >= (7, 0, 0):
-            footprint.Rotate(
-                pcbnew.VECTOR2I(rotation_reference.x, rotation_reference.y),
-                pcbnew.EDA_ANGLE(angle * -1, pcbnew.DEGREES_T),
-            )
-        else:
-            footprint.Rotate(rotation_reference, angle * -10)
+        rotate(footprint, rotation_reference, angle)
 
     def set_side(self, footprint: pcbnew.FOOTPRINT, side: Side) -> None:
         if side ^ self.get_side(footprint):

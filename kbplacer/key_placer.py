@@ -8,7 +8,13 @@ from typing import List, Optional, Tuple, cast
 
 import pcbnew
 
-from .board_modifier import KICAD_VERSION, BoardModifier, get_closest_pads_on_same_net
+from .board_modifier import (
+    KICAD_VERSION,
+    BoardModifier,
+    get_closest_pads_on_same_net,
+    get_common_nets,
+    rotate,
+)
 from .element_position import ElementInfo, ElementPosition, Point, PositionOption, Side
 from .kle_serial import Keyboard, get_keyboard
 
@@ -114,7 +120,7 @@ class KeyPlacer(BoardModifier):
         switch: pcbnew.FOOTPRINT,
         diode: pcbnew.FOOTPRINT,
         angle: float,
-        template_track_points=None,
+        template_connection: List[pcbnew.PCB_TRACK] | None = None,
     ) -> None:
         """Performs routing between switch and diode elements.
         It uses two closest (to each other) pads of the same net.
@@ -123,16 +129,15 @@ class KeyPlacer(BoardModifier):
         :param diode: Diode footprint to be routed.
         :param angle: Rotation angle (in degrees) of switch footprint
                       (diode rotation is assumed to be the same)
-        :param templateTrackPoints: List of positions (relative to diode pad position)
-                                    of track corners connecting switch and diode closest
-                                    pads of the same net name.
-                                    Does not support vias, will be routed on the layer
-                                    of the diode.
+        :param template_connection: List of template elements (tracks and vias) for
+                                    routing switch and diode pads. Normalised to
+                                    switch position coordinate. Templates
+                                    items must not have netcodes assigned.
                                     If None, use automatic routing algorithm.
         :type switch: FOOTPRINT
         :type diode: FOOTPRINT
         :type angle: float
-        :type templateTrackPoints: List[pcbnew.wxPoint]
+        :type template_connection: List[pcbnew.PCB_TRACK] | None
         """
         self.logger.info(f"Routing {switch.GetReference()} with {diode.GetReference()}")
 
@@ -158,21 +163,23 @@ class KeyPlacer(BoardModifier):
         )
 
         layer = pcbnew.B_Cu if self.get_side(diode) == Side.BACK else pcbnew.F_Cu
-        if template_track_points:
+        if template_connection:
             if angle != 0:
                 self.logger.info(f"Routing at {angle} degree angle")
-            start = diode_pad_position
-            for t in template_track_points:
-                if angle != 0:
-                    diode_pad_position_r = position_in_rotated_coordinates(
-                        diode_pad_position, angle
-                    )
-                    end = t + diode_pad_position_r
-                    end = position_in_cartesian_coordinates(end, angle)
+            switch_position = self.get_position(switch)
+            for item in template_connection:
+                # item is either PCB_TRACK or PCB_VIA, since via extends track
+                # we should be safe with `Cast_to_PCB_TRACK` (not doing any via
+                # specific operations here)
+                track = pcbnew.Cast_to_PCB_TRACK(item)
+                new_track = track.Duplicate()
+                if KICAD_VERSION >= (7, 0, 0):
+                    new_track.Move(pcbnew.VECTOR2I(switch_position.x, switch_position.y))
                 else:
-                    end = t + diode_pad_position
-                if end := self.add_track_segment_by_points(start, end, layer):
-                    start = end
+                    new_track.Move(switch_position)
+                if angle != 0:
+                    rotate(new_track, switch_position, angle)
+                self.add_track_to_board(new_track)
         elif (
             switch_pad_position.x == diode_pad_position.x
             or switch_pad_position.y == diode_pad_position.y
@@ -242,65 +249,48 @@ class KeyPlacer(BoardModifier):
             if _is_dangling(track):
                 self.board.RemoveNative(track)
 
-    def check_if_diode_routed(
+    def get_connection_template(
         self, key_format: str, diode_format: str
-    ) -> list[pcbnew.wxPoint]:
+    ) -> List[pcbnew.PCB_TRACK]:
         switch = self.get_footprint(key_format.format(1))
         diode = self.get_optional_footprint(diode_format.format(1))
         if not diode:
             return []
 
-        if result := get_closest_pads_on_same_net(switch, diode):
-            switch_pad, diode_pad = result
-        else:
-            self.logger.error(
-                "Could not find pads with the same net, "
-                "routing template not obtained"
-            )
-            return []
+        result = []
+        origin = self.get_position(switch)
 
-        net1 = switch_pad.GetNetname()
-        net2 = diode_pad.GetNetname()
-        # TODO: check if there is a better way to get tracks between two elements
-        # without itereting over all tracks of the board:
-        tracks = [t for t in self.board.GetTracks() if t.GetNetname() == net1 == net2]
+        connectivity = self.get_connectivity()
+        common_nets = get_common_nets(switch, diode)
 
-        # convert tracks to list of vectors which will be used
-        # by `AddTrackSegmentByPoints`
-        switch_pad_position = switch_pad.GetPosition()
-        diode_pad_position = diode_pad.GetPosition()
-        if KICAD_VERSION >= (7, 0, 0):
-            switch_pad_position = pcbnew.wxPoint(
-                switch_pad_position.x, switch_pad_position.y
+        def _append_normalized_connection_items(netcode: int) -> None:
+            items = connectivity.GetNetItems(
+                netcode, [pcbnew.PCB_TRACE_T, pcbnew.PCB_VIA_T]
             )
-            diode_pad_position = pcbnew.wxPoint(
-                diode_pad_position.x, diode_pad_position.y
-            )
-
-        points_sorted = []
-        search_point = diode_pad_position
-        for _ in range(0, len(tracks) + 1):
-            for t in list(tracks):
-                start = t.GetStart()
-                end = t.GetEnd()
+            for item in items:
+                item_copy = item.Duplicate()
+                item_copy.SetNetCode(0)
                 if KICAD_VERSION >= (7, 0, 0):
-                    start = pcbnew.wxPoint(start.x, start.y)
-                    end = pcbnew.wxPoint(end.x, end.y)
-                found_start = start == search_point
-                found_end = end == search_point
-                if found_start or found_end:
-                    points_sorted.append(search_point)
-                    search_point = end if found_start else start
-                    tracks.remove(t)
-                    self.board.RemoveNative(t)
-                    break
-        if points_sorted:
-            points_sorted.pop(0)
-            points_sorted.append(switch_pad_position)
+                    item_copy.Move(pcbnew.VECTOR2I(-origin.x, -origin.y))
+                else:
+                    item_copy.Move(pcbnew.wxPoint(-origin.x, -origin.y))
 
-        reduced_points = [p - diode_pad_position for p in points_sorted]
-        self.logger.info(f"Detected template switch-to-diode path: {reduced_points}")
-        return reduced_points
+                self.board.RemoveNative(item)
+                result.append(item_copy)
+
+        for net in common_nets:
+            _append_normalized_connection_items(net)
+
+        # some switch footprints (for example reversible) can have multiple pads
+        # with the same netcode which might 'pre-routed' as well.
+        # get nets unique to switch (not shared with diode) and collect connection
+        # temple from them as well.
+        switch_nets = [p.GetNetCode() for p in switch.Pads()]
+        switch_unique_nets = list(set(switch_nets) - set(common_nets))
+        for net in switch_unique_nets:
+            _append_normalized_connection_items(net)
+
+        return result
 
     def place_switches(
         self,
@@ -350,9 +340,7 @@ class KeyPlacer(BoardModifier):
             for element_info in elements:
                 annotation_format = element_info.annotation_format
                 element_position = element_info.position
-                footprint = self.get_optional_footprint(
-                    annotation_format.format(i)
-                )
+                footprint = self.get_optional_footprint(annotation_format.format(i))
                 if footprint and element_position:
                     self.reset_rotation(footprint)
                     self.set_side(footprint, element_position.side)
@@ -378,16 +366,18 @@ class KeyPlacer(BoardModifier):
         additional_elements: List[ElementInfo] = [],
     ) -> None:
         diode_format = ""
-        template_tracks = []
+        template_connection = []
 
         if diode_info:
             self.logger.info(f"Diode info: {diode_info}")
             diode_format = diode_info.annotation_format
             if route_tracks:
                 # check if first switch-diode pair is already routed, if yes,
-                # then reuse its track shape for remaining pairs,
+                # then reuse its tracks and vias for remaining pairs,
                 # otherwise try to use automatic 'router'
-                template_tracks = self.check_if_diode_routed(key_format, diode_format)
+                template_connection = self.get_connection_template(
+                    key_format, diode_format
+                )
             additional_elements = [diode_info] + additional_elements
 
         for element_info in additional_elements:
@@ -413,9 +403,13 @@ class KeyPlacer(BoardModifier):
                     diode_format.format(i)
                 ):
                     self.route_switch_with_diode(
-                        switch_footprint, diode_footprint, angle, template_tracks
+                        switch_footprint, diode_footprint, angle, template_connection
                     )
+            # when done, delete all template items
+            for item in template_connection:
+                self.board.RemoveNative(item)
 
+            # TODO: extract this to some separate class/method:
             column_pads = {}
             row_pads = {}
 
@@ -432,8 +426,12 @@ class KeyPlacer(BoardModifier):
 
             # very naive routing approach, will fail in some scenarios:
             for pads in column_pads.values():
-                positions = [pad.GetPosition() for pad in pads]
-                for pos1, pos2 in zip(positions, positions[1:]):
+                for pad1, pad2 in zip(pads, pads[1:]):
+                    if pad1.GetParentAsString() == pad2.GetParentAsString():
+                        # do not connect pads of the same footprint
+                        continue
+                    pos1 = pad1.GetPosition()
+                    pos2 = pad2.GetPosition()
                     # connect two pads together
                     if pos1.x == pos2.x:
                         self.add_track_segment_by_points(pos1, pos2, layer=pcbnew.F_Cu)

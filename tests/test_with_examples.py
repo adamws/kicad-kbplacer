@@ -137,7 +137,7 @@ def __get_parameters():
                     )
                     test_params.append(param)
 
-    # this special example can't be used with all option combinations, appended here:
+    # this special examples can't be used with all option combinations, appended here:
     for layout_option_name, layout_option in layout_options.items():
         test_id = f"2x3-rotations-custom-diode-with-track;Tracks;DiodeOption2;{layout_option_name}"
         param = pytest.param(
@@ -148,6 +148,16 @@ def __get_parameters():
             id=test_id,
         )
         test_params.append(param)
+
+    # add test with complex footprint
+    param = pytest.param(
+        "2x3-rotations-custom-diode-with-track-and-complex-footprint",
+        True,
+        "D{} CURRENT_RELATIVE",
+        "kle.json",
+        id="2x3-rotations-custom-diode-with-track-and-complex-footprint;Tracks;DiodeOption2;RAW",
+    )
+    test_params.append(param)
 
     # add one test for via layout
     param = pytest.param(
