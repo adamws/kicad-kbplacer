@@ -43,14 +43,14 @@
 <svg:path style="fill:#4D7FC4; fill-opacity:1.000;  stroke:#4D7FC4; stroke-width:0.000; stroke-opacity:1;  stroke-linecap:round; stroke-linejoin:round;fill-rule:evenodd;" d="M 96.425,33.675 95.925,33.675 95.925,33.175 96.425,33.175 Z" /> 
 </svg:g>
 <svg:g style="fill:#4D7FC4; fill-opacity:0.0;  stroke:#4D7FC4; stroke-width:0.250; stroke-opacity:1;  stroke-linecap:round; stroke-linejoin:round;">
-<svg:path d="M35.625 39.025 L37.065 37.585 " />
-<svg:path d="M37.065 37.585 L37.065 29.445 " />
-<svg:path d="M49.075 35.625 L50.515 37.065 " />
-<svg:path d="M50.515 37.065 L58.655 37.065 " />
-<svg:path d="M71.525 30.025 L70.085 31.465 " />
-<svg:path d="M70.085 31.465 L70.085 39.605 " />
-<svg:path d="M96.175 33.425 L94.735 31.985 " />
-<svg:path d="M94.735 31.985 L86.595 31.985 " />
+<svg:path d="M37.065 29.445 L37.065 37.585 " />
+<svg:path d="M37.065 37.585 L35.625 39.025 " />
+<svg:path d="M50.515 37.065 L49.075 35.625 " />
+<svg:path d="M58.655 37.065 L50.515 37.065 " />
+<svg:path d="M70.085 31.465 L71.525 30.025 " />
+<svg:path d="M70.085 39.605 L70.085 31.465 " />
+<svg:path d="M94.735 31.985 L96.175 33.425 " />
+<svg:path d="M86.595 31.985 L94.735 31.985 " />
 </svg:g>
 </svg:g> 
 </svg:svg>

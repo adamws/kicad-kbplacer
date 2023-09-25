@@ -39,12 +39,12 @@
 <svg:circle cx="70402.500000" cy="67545.000000" r="1250.000000" /> 
 </svg:g>
 <svg:g style="fill:#C83434; fill-opacity:0.0;  stroke:#C83434; stroke-width:250.000000; stroke-opacity:1;  stroke-linecap:round; stroke-linejoin:round;">
-<svg:path d="M30715 31985 L30715 46272 " />
-<svg:path d="M35477 51035 L35477 67703 " />
-<svg:path d="M30715 46272 L35477 51035 " />
 <svg:path d="M35477 67703 L37858 70085 " />
-<svg:path d="M59290 65322 L64052 70085 " />
+<svg:path d="M30715 46272 L35477 51035 " />
+<svg:path d="M35477 51035 L35477 67703 " />
+<svg:path d="M30715 31985 L30715 46272 " />
 <svg:path d="M59290 51035 L59290 65322 " />
+<svg:path d="M59290 65322 L64052 70085 " />
 </svg:g>
 </svg:g> 
 </svg:svg>
