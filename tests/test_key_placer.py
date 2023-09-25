@@ -130,12 +130,13 @@ def assert_board_tracks(expected: list[Tuple[int, int]] | None, board: pcbnew.BO
         ((-1, -4), 180, [(490000,   -9080000), (2540000,  -7030000), (2540000, -5080000)]),
         (( 1, -4), 270, [(3540000,  -8030000), (2540000,  -7030000), (2540000, -5080000)]),
         ((-1, -4), 270, [(1540000,  -8030000), (2540000,  -7030000), (2540000, -5080000)]),
+        # these positions used to be difficult for router but works after adding second
+        # attempt with track posture changed, if the first try failed:
+        ((5.5, 5),  90, [(8040000,  -1130000), (4090000,  -5080000), (2540000, -5080000)]),
+        ((7, 10),   90, [(9540000,   3870000), (9540000,   1920000), (2540000, -5080000)]),
         # special cases testing some edge cases or special conditions:
-        # this position should be possible to route but resulting corner is to close to pad
-        ((5.5, 5), 90, None),
         # cases to difficult for router. Two segment track would collide with footprint:
         ((-7, 10), 90, None),
-        ((7, 10), 90, None),
         # fmt: on
     ],
 )

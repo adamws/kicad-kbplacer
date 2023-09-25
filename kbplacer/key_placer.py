@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import builtins
-import math
 import re
 from logging import Logger
 from typing import List, Optional, Tuple, cast
@@ -13,51 +11,11 @@ from .board_modifier import (
     BoardModifier,
     get_closest_pads_on_same_net,
     get_common_nets,
+    position_in_rotated_coordinates,
     rotate,
 )
-from .element_position import ElementInfo, ElementPosition, Point, PositionOption, Side
+from .element_position import ElementInfo, ElementPosition, Point, PositionOption
 from .kle_serial import Keyboard, get_keyboard
-
-
-def position_in_rotated_coordinates(
-    point: pcbnew.wxPoint, angle: float
-) -> pcbnew.wxPoint:
-    """
-    Map position in xy-Cartesian coordinate system to x'y'-Cartesian which
-    has same origin but axes are rotated by angle
-
-    :param point: A point to be mapped
-    :param angle: Rotation angle (in degrees) of x'y'-Cartesian coordinates
-    :type point: pcbnew.wxPoint
-    :type angle: float
-    :return: Result position in x'y'-Cartesian coordinates
-    :rtype: pcbnew.wxPoint
-    """
-    x, y = point.x, point.y
-    angle = math.radians(angle)
-    xr = (x * math.cos(angle)) + (y * math.sin(angle))
-    yr = (-x * math.sin(angle)) + (y * math.cos(angle))
-    return pcbnew.wxPoint(xr, yr)
-
-
-def position_in_cartesian_coordinates(
-    point: pcbnew.wxPoint, angle: float
-) -> pcbnew.wxPoint:
-    """Performs inverse operation to position_in_rotated_coordinates i.e.
-    map position in rotated (by angle) x'y'-Cartesian to xy-Cartesian
-
-    :param point: A point to be mapped
-    :param angle: Rotation angle (in degrees) of x'y'-Cartesian coordinates
-    :type point: pcbnew.wxPoint
-    :type angle: float
-    :return: Result position in xy-Cartesian coordinates
-    :rtype: pcbnew.wxPoint
-    """
-    xr, yr = point.x, point.y
-    angle = math.radians(angle)
-    x = (xr * math.cos(angle)) - (yr * math.sin(angle))
-    y = (xr * math.sin(angle)) + (yr * math.cos(angle))
-    return pcbnew.wxPoint(x, y)
 
 
 class SwitchIterator:
@@ -97,24 +55,6 @@ class KeyPlacer(BoardModifier):
         )
         self.__reference_coordinate = pcbnew.wxPointMM(25, 25)
 
-    def calculate_corner_position_of_switch_diode_route(
-        self, diode_pad_position: pcbnew.wxPoint, switch_pad_position: pcbnew.wxPoint
-    ) -> pcbnew.wxPoint:
-        x_diff = diode_pad_position.x - switch_pad_position.x
-        y_diff = diode_pad_position.y - switch_pad_position.y
-        if builtins.abs(x_diff) < builtins.abs(y_diff):
-            up_or_down = -1 if y_diff > 0 else 1
-            return pcbnew.wxPoint(
-                diode_pad_position.x - x_diff,
-                diode_pad_position.y + (up_or_down * builtins.abs(x_diff)),
-            )
-        else:
-            left_or_right = -1 if x_diff > 0 else 1
-            return pcbnew.wxPoint(
-                diode_pad_position.x + (left_or_right * builtins.abs(y_diff)),
-                diode_pad_position.y - y_diff,
-            )
-
     def route_switch_with_diode(
         self,
         switch: pcbnew.FOOTPRINT,
@@ -141,29 +81,8 @@ class KeyPlacer(BoardModifier):
         """
         self.logger.info(f"Routing {switch.GetReference()} with {diode.GetReference()}")
 
-        if result := get_closest_pads_on_same_net(switch, diode):
-            switch_pad, diode_pad = result
-        else:
-            self.logger.error("Could not find pads with the same net, routing skipped")
-            return
-
-        switch_pad_position = switch_pad.GetPosition()
-        diode_pad_position = diode_pad.GetPosition()
-        if KICAD_VERSION >= (7, 0, 0):
-            switch_pad_position = pcbnew.wxPoint(
-                switch_pad_position.x, switch_pad_position.y
-            )
-            diode_pad_position = pcbnew.wxPoint(
-                diode_pad_position.x, diode_pad_position.y
-            )
-
-        self.logger.debug(
-            f"switchPadPosition: {switch_pad_position}, "
-            f"diodePadPosition: {diode_pad_position}",
-        )
-
-        layer = pcbnew.B_Cu if self.get_side(diode) == Side.BACK else pcbnew.F_Cu
         if template_connection:
+            self.logger.info("Using template replication method")
             if angle != 0:
                 self.logger.info(f"Routing at {angle} degree angle")
             switch_position = self.get_position(switch)
@@ -195,44 +114,12 @@ class KeyPlacer(BoardModifier):
                     rejects.append(new_track)
             for item in rejects:
                 self.add_track_to_board(item)
-        elif (
-            switch_pad_position.x == diode_pad_position.x
-            or switch_pad_position.y == diode_pad_position.y
-        ):
-            self.add_track_segment_by_points(
-                diode_pad_position, switch_pad_position, layer
-            )
+        elif result := get_closest_pads_on_same_net(switch, diode):
+            self.logger.info("Using internal autorouter method")
+            switch_pad, diode_pad = result
+            self.route(switch_pad, diode_pad)
         else:
-            # pads are not in single line, attempt routing with two segment track
-            if angle != 0:
-                self.logger.info(f"Routing at {angle} degree angle")
-                switch_pad_position_r = position_in_rotated_coordinates(
-                    switch_pad_position, angle
-                )
-                diode_pad_position_r = position_in_rotated_coordinates(
-                    diode_pad_position, angle
-                )
-
-                self.logger.debug(
-                    "In rotated coordinates: "
-                    f"switchPadPosition: {switch_pad_position_r}, "
-                    f"diodePadPosition: {diode_pad_position_r}",
-                )
-
-                corner = self.calculate_corner_position_of_switch_diode_route(
-                    diode_pad_position_r, switch_pad_position_r
-                )
-                corner = position_in_cartesian_coordinates(corner, angle)
-            else:
-                corner = self.calculate_corner_position_of_switch_diode_route(
-                    diode_pad_position, switch_pad_position
-                )
-
-            # first segment: at 45 degree angle
-            # (might be in rotated coordinate system) towards switch pad
-            self.add_track_segment_by_points(diode_pad_position, corner, layer)
-            # second segment: up to switch pad
-            self.add_track_segment_by_points(corner, switch_pad_position, layer)
+            self.logger.error("Could not find pads with the same net, routing skipped")
 
     def get_current_relative_element_position(
         self, key_format: str, element_format: str
@@ -456,44 +343,10 @@ class KeyPlacer(BoardModifier):
                     if pad1.GetParentAsString() == pad2.GetParentAsString():
                         # do not connect pads of the same footprint
                         continue
-                    pos1 = pad1.GetPosition()
-                    pos2 = pad2.GetPosition()
-                    # connect two pads together
-                    if pos1.x == pos2.x:
-                        self.add_track_segment_by_points(pos1, pos2, layer=pcbnew.F_Cu)
-                    else:
-                        # two segment track
-                        y_diff = builtins.abs(pos1.y - pos2.y)
-                        x_diff = builtins.abs(pos1.x - pos2.x)
-                        vector = [0, (y_diff - x_diff)]
-                        if vector[1] <= 0:
-                            self.logger.warning(
-                                "Switch pad to far to route 2 segment track "
-                                "with 45 degree angles"
-                            )
-                        elif last_position := self.add_track_segment(
-                            pos1, vector, layer=pcbnew.F_Cu
-                        ):
-                            self.add_track_segment_by_points(
-                                last_position, pos2, layer=pcbnew.F_Cu
-                            )
+                    self.route(pad1, pad2)
 
-            for row in row_pads:
-                pads = row_pads[row]
-                positions = [pad.GetPosition() for pad in pads]
-                # we can assume that all diodes are on the same side:
-                layer = (
-                    pcbnew.B_Cu
-                    if self.get_side(pads[0].GetParent()) == Side.BACK
-                    else pcbnew.F_Cu
-                )
-                for pos1, pos2 in zip(positions, positions[1:]):
-                    if pos1.y == pos2.y:
-                        self.add_track_segment_by_points(pos1, pos2, layer)
-                    else:
-                        self.logger.warning(
-                            "Automatic diode routing supported only when "
-                            "diodes aligned vertically"
-                        )
+            for pads in row_pads.values():
+                for pad1, pad2 in zip(pads, pads[1:]):
+                    self.route(pad1, pad2)
 
             self.remove_dangling_tracks()

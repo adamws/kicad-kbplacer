@@ -97,10 +97,12 @@
 <svg:g style="fill:#4D7FC4; fill-opacity:0.0;  stroke:#4D7FC4; stroke-width:250.000000; stroke-opacity:1;  stroke-linecap:round; stroke-linejoin:round;">
 <svg:path d="M31250 28575 L31311 28575 " />
 <svg:path d="M31250 47625 L31311 47625 " />
+<svg:path d="M31250 43700 L34525 40425 " />
+<svg:path d="M31250 47625 L31250 43700 " />
 <svg:path d="M31311 28575 L34525 31789 " />
 <svg:path d="M31311 47625 L34525 50839 " />
-<svg:path d="M54092 49769 L54151 49785 " />
 <svg:path d="M68223 33834 L68282 33850 " />
+<svg:path d="M54092 49769 L54151 49785 " />
 <svg:path d="M68282 33850 L70554 37786 " />
 <svg:path d="M54151 49785 L56423 53722 " />
 <svg:path d="M72493 54700 L72552 54716 " />

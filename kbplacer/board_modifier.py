@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import builtins
 import itertools
+import math
 from logging import Logger
 from typing import Tuple
 
@@ -13,6 +15,47 @@ KICAD_VERSION = tuple(
     map(int, ((pcbnew.Version().split("+")[0]).split("-")[0]).split("."))
 )
 DEFAULT_CLEARANCE_MM = 0.25
+
+
+def position_in_rotated_coordinates(
+    point: pcbnew.wxPoint, angle: float
+) -> pcbnew.wxPoint:
+    """
+    Map position in xy-Cartesian coordinate system to x'y'-Cartesian which
+    has same origin but axes are rotated by angle
+
+    :param point: A point to be mapped
+    :param angle: Rotation angle (in degrees) of x'y'-Cartesian coordinates
+    :type point: pcbnew.wxPoint
+    :type angle: float
+    :return: Result position in x'y'-Cartesian coordinates
+    :rtype: pcbnew.wxPoint
+    """
+    x, y = point.x, point.y
+    angle = math.radians(angle)
+    xr = (x * math.cos(angle)) + (y * math.sin(angle))
+    yr = (-x * math.sin(angle)) + (y * math.cos(angle))
+    return pcbnew.wxPoint(xr, yr)
+
+
+def position_in_cartesian_coordinates(
+    point: pcbnew.wxPoint, angle: float
+) -> pcbnew.wxPoint:
+    """Performs inverse operation to position_in_rotated_coordinates i.e.
+    map position in rotated (by angle) x'y'-Cartesian to xy-Cartesian
+
+    :param point: A point to be mapped
+    :param angle: Rotation angle (in degrees) of x'y'-Cartesian coordinates
+    :type point: pcbnew.wxPoint
+    :type angle: float
+    :return: Result position in xy-Cartesian coordinates
+    :rtype: pcbnew.wxPoint
+    """
+    xr, yr = point.x, point.y
+    angle = math.radians(angle)
+    x = (xr * math.cos(angle)) - (yr * math.sin(angle))
+    y = (xr * math.sin(angle)) + (yr * math.cos(angle))
+    return pcbnew.wxPoint(x, y)
 
 
 def set_position(footprint: pcbnew.FOOTPRINT, position: pcbnew.wxPoint) -> None:
@@ -48,6 +91,15 @@ def get_distance(i1: pcbnew.BOARD_ITEM, i2: pcbnew.BOARD_ITEM) -> int:
     center1 = i1.GetPosition()
     center2 = i2.GetPosition()
     return int(((center1.x - center2.x) ** 2 + (center1.y - center2.y) ** 2) ** 0.5)
+
+
+def get_common_layers(p1: pcbnew.PAD, p2: pcbnew.PAD) -> list[int]:
+    """Returns list of common layer ids for both of the given pads,
+    may be empty if no common layers found
+    """
+    set1 = [layer for layer in p1.GetLayerSet().CuStack()]
+    set2 = [layer for layer in p2.GetLayerSet().CuStack()]
+    return list(set(set1).intersection(set2))
 
 
 def get_common_nets(f1: pcbnew.FOOTPRINT, f2: pcbnew.FOOTPRINT) -> list[int]:
@@ -177,13 +229,13 @@ class BoardModifier:
                     # if track starts or ends in pad then assume that
                     # this collision is expected, with the exception of case
                     # where track already has netlist set and it is different
-                    # than pad's netlist
+                    # than pad's netlist or pad has `NPTH` attribute
                     if p.HitTest(track_start) or p.HitTest(track_end):
                         if (
                             track_net_code != 0
                             and track_net_code != p.GetNetCode()
                             and p.IsOnLayer(track.GetLayer())
-                        ):
+                        ) or p.GetAttribute() == pcbnew.PAD_ATTRIB_NPTH:
                             self.logger.debug(
                                 f"Track collide with pad {reference}:{pad_name}"
                             )
@@ -327,3 +379,117 @@ class BoardModifier:
 
     def get_orientation(self, footprint: pcbnew.FOOTPRINT) -> float:
         return footprint.GetOrientationDegrees()
+
+    def route(self, pad1: pcbnew.PAD, pad2: pcbnew.PAD) -> None:
+        r"""Simple track router
+        If pads are collinear, it will use single track segment.
+        If pads are not collinear it will try use two segments track,
+        in first try, it will fanout straight segment from `pad1` to
+        `pad2` direction and then it will end it with second segment
+        at 45degree angle:
+
+        |pad| ____
+        | 1 |     \
+                   \
+                  |pad|
+                  | 2 |
+
+        If this does not succeed (it is not possible using 45degree angles
+        and two segments only or there is collision detected),
+        then it will try to switch track posture:
+
+        |pad|
+        | 1 |
+          \
+           \______|pad|
+                  | 2 |
+
+        If this is not possible as well, it will leave pads unconnected
+        and will not try another route.
+
+        If both parent footprint are rotated the same, it might
+        route track at that angle.
+        Footprint is considered rotated, if its orientation is different than
+        0, 90, 180 and 270. When comparing rotations use angle to closest
+        quorter, i.e. footprints with orientation 10 and 190 (190-180=10) are
+        considered to be rotated the same.
+        """
+        layers = get_common_layers(pad1, pad2)
+        if not layers:
+            self.logger.warning("Could not route pads, no common layers found")
+            return
+
+        layer = layers[0]
+        self.logger.debug(f"Routing at {self.board.GetLayerName(layer)} layer")
+
+        def _calculate_corners(
+            pos1: pcbnew.wxPoint, pos2: pcbnew.wxPoint
+        ) -> Tuple[pcbnew.wxPoint, pcbnew.wxPoint]:
+            x_diff = pos1.x - pos2.x
+            y_diff = pos1.y - pos2.y
+            x_diff_abs = builtins.abs(x_diff)
+            y_diff_abs = builtins.abs(y_diff)
+            if x_diff_abs < y_diff_abs:
+                up_or_down = -1 if y_diff > 0 else 1
+                return (
+                    pcbnew.wxPoint(
+                        pos2.x + x_diff,
+                        pos2.y - (up_or_down * x_diff_abs),
+                    ),
+                    pcbnew.wxPoint(pos1.x - x_diff, pos1.y - x_diff),
+                )
+            else:
+                left_or_right = -1 if x_diff > 0 else 1
+                return (
+                    pcbnew.wxPoint(
+                        pos2.x - (left_or_right * y_diff_abs),
+                        pos2.y + y_diff,
+                    ),
+                    pcbnew.wxPoint(pos1.x - y_diff, pos1.y - y_diff),
+                )
+
+        def _route(
+            pos1: pcbnew.wxPoint, pos2: pcbnew.wxPoint, corner: pcbnew.wxPoint
+        ) -> bool:
+            if end := self.add_track_segment_by_points(pos1, corner, layer):
+                end = self.add_track_segment_by_points(end, pos2, layer)
+                return end is not None
+            return False
+
+        pos1 = pad1.GetPosition()
+        pos2 = pad2.GetPosition()
+
+        orientation1 = self.get_orientation(pad1.GetParent())
+        orientation2 = self.get_orientation(pad2.GetParent())
+
+        if (orientation1 % 90 == 0) and (orientation2 % 90 == 0):
+            angle = 0
+        elif orientation1 % 90 == orientation2 % 90:
+            # if rotations are considered the same use the angle
+            angle = (-1 * orientation1 + 360) % 360
+        else:
+            self.logger.warning(
+                "Could not route pads when parent footprints not rotated the same"
+            )
+            return
+
+        self.logger.debug(f"Routing pad {pos1} with pad {pos2} at {angle} degree angle")
+
+        # if in line, use one track segment
+        if pos1.x == pos2.x or pos1.y == pos2.y:
+            self.add_track_segment_by_points(pos1, pos2, layer)
+        else:
+            # pads are not in single line, attempt routing with two segment track
+            if angle != 0:
+                pos1_r = position_in_rotated_coordinates(pos1, angle)
+                pos2_r = position_in_rotated_coordinates(pos2, angle)
+                corners = _calculate_corners(pos1_r, pos2_r)
+                corners = (
+                    position_in_cartesian_coordinates(corners[0], angle),
+                    position_in_cartesian_coordinates(corners[1], angle),
+                )
+            else:
+                corners = _calculate_corners(pos1, pos2)
+
+            if not _route(pos1, pos2, corners[0]):
+                _route(pos1, pos2, corners[1])
