@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2023-08-03 22:29+0200\n"
+"POT-Creation-Date: 2023-09-25 23:07+0200\n"
 "PO-Revision-Date: 2023-07-14 20:04+0200\n"
 "Last-Translator: Google translate\n"
 "Language-Team: none\n"
@@ -36,11 +36,17 @@ msgstr "键盘布局文件:"
 msgid "Switch settings"
 msgstr "开关设置"
 
+msgid "Route with switches"
+msgstr ""
+
 msgid "Switch diodes settings"
 msgstr "开关二极管设置"
 
 msgid "Additional elements settings"
 msgstr "附加元素设置"
+
+msgid "Route rows and columns"
+msgstr ""
 
 msgid "Controller circuit template file:"
 msgstr "控制器电路模板文件:"

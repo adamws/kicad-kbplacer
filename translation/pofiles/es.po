@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2023-08-03 22:29+0200\n"
+"POT-Creation-Date: 2023-09-25 23:07+0200\n"
 "PO-Revision-Date: 2023-07-14 20:04+0200\n"
 "Last-Translator: Google translate\n"
 "Language-Team: none\n"
@@ -22,7 +22,8 @@ msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
 "based on popular layout description from "
 msgstr ""
-"Plugin para el diseño de teclados mecánicos. Ofrece la colocación automática \n"
+"Plugin para el diseño de teclados mecánicos. Ofrece la colocación "
+"automática \n"
 "de teclas basada en la descripción de diseño popular de "
 
 msgid "Project website - "
@@ -37,11 +38,17 @@ msgstr "Archivo de diseño de teclado:"
 msgid "Switch settings"
 msgstr "Configuración de los interruptores"
 
+msgid "Route with switches"
+msgstr ""
+
 msgid "Switch diodes settings"
 msgstr "Configuración de los diodos de los interruptores"
 
 msgid "Additional elements settings"
 msgstr "Configuración de elementos adicionales"
+
+msgid "Route rows and columns"
+msgstr ""
 
 msgid "Controller circuit template file:"
 msgstr "Archivo de plantilla de circuito del controlador:"

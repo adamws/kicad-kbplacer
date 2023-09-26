@@ -41,7 +41,8 @@ def run_kbplacer_process(
         kbplacer_args.append("-l")
         kbplacer_args.append(layout_file)
     if route:
-        kbplacer_args.append("--route")
+        kbplacer_args.append("--route-switches-with-diodes")
+        kbplacer_args.append("--route-rows-and-columns")
     if diode_position:
         kbplacer_args.append("--diode")
         kbplacer_args.append(diode_position)

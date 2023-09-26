@@ -116,7 +116,14 @@ def app():
         "-l", "--layout", required=False, help="json layout definition file"
     )
     parser.add_argument(
-        "-r", "--route", action="store_true", help="Enable experimental routing"
+        "--route-switches-with-diodes",
+        action="store_true",
+        help="Enable switch-diode routing",
+    )
+    parser.add_argument(
+        "--route-rows-and-columns",
+        action="store_true",
+        help="Enable rows/columns routing",
     )
     parser.add_argument(
         "-d",
@@ -195,7 +202,8 @@ def app():
 
     layout_path = args.layout
     board_path = args.board
-    route_tracks = args.route
+    route_switches_with_diodes = args.route_switches_with_diodes
+    route_rows_and_columns = args.route_rows_and_columns
     diode = args.diode
     additional_elements = args.additional_elements
     key_distance = args.key_distance
@@ -234,12 +242,13 @@ def app():
         layout,
         "SW{}",
         diode,
-        route_tracks,
+        route_switches_with_diodes,
+        route_rows_and_columns,
         additional_elements=additional_elements,
     )
 
     if template_path:
-        copier = TemplateCopier(logger, board, template_path, route_tracks)
+        copier = TemplateCopier(logger, board, template_path, route_rows_and_columns)
         copier.run()
 
     pcbnew.Refresh()

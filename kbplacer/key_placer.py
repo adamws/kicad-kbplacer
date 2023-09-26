@@ -275,7 +275,8 @@ class KeyPlacer(BoardModifier):
         layout: dict,
         key_format: str,
         diode_info: Optional[ElementInfo],
-        route_tracks: bool = False,
+        route_switches_with_diodes: bool = False,
+        route_rows_and_columns: bool = False,
         additional_elements: List[ElementInfo] = [],
     ) -> None:
         diode_format = ""
@@ -284,7 +285,7 @@ class KeyPlacer(BoardModifier):
         if diode_info:
             self.logger.info(f"Diode info: {diode_info}")
             diode_format = diode_info.annotation_format
-            if route_tracks:
+            if route_switches_with_diodes:
                 # check if first switch-diode pair is already routed, if yes,
                 # then reuse its tracks and vias for remaining pairs,
                 # otherwise try to use automatic 'router'
@@ -308,7 +309,7 @@ class KeyPlacer(BoardModifier):
         if additional_elements:
             self.place_switch_elements(key_format, additional_elements)
 
-        if route_tracks:
+        if route_switches_with_diodes:
             for i, switch_footprint in SwitchIterator(self.board, key_format):
                 angle = -1 * switch_footprint.GetOrientationDegrees()
 
@@ -322,6 +323,7 @@ class KeyPlacer(BoardModifier):
             for item in template_connection:
                 self.board.RemoveNative(item)
 
+        if route_rows_and_columns:
             # TODO: extract this to some separate class/method:
             column_pads = {}
             row_pads = {}
@@ -349,4 +351,5 @@ class KeyPlacer(BoardModifier):
                 for pad1, pad2 in zip(pads, pads[1:]):
                     self.route(pad1, pad2)
 
+        if route_switches_with_diodes or route_rows_and_columns:
             self.remove_dangling_tracks()

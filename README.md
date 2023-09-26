@@ -223,12 +223,21 @@ python -m com_github_adamws_kicad-kbplacer --help
     </td>
   </tr>
   <tr>
-    <td rowspan="6" align="center" style="vertical-align: middle;">Switch diodes settings</td>
+    <td rowspan="7" align="center" style="vertical-align: middle;">Switch diodes settings</td>
     <td align="center" style="vertical-align: middle;">Allow autoplacement</td>
     <td>
       Enables automatic diodes positioning. When turned on, each diode will be placed
       next to the switch footprint of the same annotation number, according to the position
       settings. When disabled, diodes will not be moved.
+    </td>
+  </tr>
+  <tr>
+    <td align="center" style="vertical-align: middle;">Route with switches</td>
+    <td>
+      Enables automatic routing of switch-diode pairs. If user manually route first pair,
+      then it replicates the connection for remaining pairs. If not, uses automatic
+      internal router. When automatic router used, attempts to connect only two closest
+      pads of the same net.
     </td>
   </tr>
   <tr>
@@ -283,9 +292,13 @@ python -m com_github_adamws_kicad-kbplacer --help
   </tr>
   <tr>
     <td rowspan="2" align="center" style="vertical-align: middle;">Other settings</td>
-    <td align="center" style="vertical-align: middle;">Route tracks</td>
+    <td align="center" style="vertical-align: middle;">Route rows and columns</td>
     <td>
-      Enables/disables elements routing.
+      Enables/disables automatic routing of keyboard switch matrix.
+      Works by finding all pads with nets matching <code>COL(\d+)</code> and
+      <code>ROW(\d+)</code> regular expressions (ignoring case) and connecting them
+      using simplified internal router. Configuration of row/column naming scheme
+      is not yet supported.
     </td>
   </tr>
   <tr>

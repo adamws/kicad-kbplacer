@@ -109,13 +109,14 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
                 layout,
                 key_format,
                 diode_info,
-                dlg.is_tracks(),
+                dlg.route_switches_with_diodes(),
+                dlg.route_rows_and_columns(),
                 additional_elements=additional_elements,
             )
 
             if template_path := dlg.get_template_path():
                 template_copier = TemplateCopier(
-                    self.logger, self.board, template_path, dlg.is_tracks()
+                    self.logger, self.board, template_path, dlg.route_rows_and_columns()
                 )
                 template_copier.run()
         else:

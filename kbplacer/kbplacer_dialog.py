@@ -494,6 +494,7 @@ class KbplacerDialog(wx.Dialog):
     def get_switch_diodes_section(
         self,
         enable: bool = True,
+        route_switches_with_diodes: bool = True,
         element_info: ElementInfo = ElementInfo(
             "D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION
         ),
@@ -501,6 +502,11 @@ class KbplacerDialog(wx.Dialog):
         place_diodes_checkbox = wx.CheckBox(self, label=wx_("Allow autoplacement"))
         place_diodes_checkbox.SetValue(enable)
         place_diodes_checkbox.Bind(wx.EVT_CHECKBOX, self.on_diode_place_checkbox)
+
+        switches_and_diodes_tracks_checkbox = wx.CheckBox(
+            self, label=self._("Route with switches")
+        )
+        switches_and_diodes_tracks_checkbox.SetValue(route_switches_with_diodes)
 
         diode_settings = ElementSettingsWidget(
             self,
@@ -510,11 +516,17 @@ class KbplacerDialog(wx.Dialog):
 
         box = wx.StaticBox(self, label=self._("Switch diodes settings"))
         sizer = wx.StaticBoxSizer(box, wx.VERTICAL)
-        sizer.Add(place_diodes_checkbox, 0, wx.EXPAND | wx.ALL, 5)
+
+        row1 = wx.BoxSizer(wx.HORIZONTAL)
+        row1.Add(place_diodes_checkbox, 0, wx.ALL, 0)
+        row1.Add(switches_and_diodes_tracks_checkbox, 0, wx.ALL, 0)
+
+        sizer.Add(row1, 0, wx.EXPAND | wx.ALL, 5)
         # weird border value to make it aligned with 'additional_elements_section':
         sizer.Add(diode_settings, 0, wx.EXPAND | wx.ALL, 9)
 
         self.__place_diodes_checkbox = place_diodes_checkbox
+        self.__switches_and_diodes_tracks_checkbox = switches_and_diodes_tracks_checkbox
         self.__diode_settings = diode_settings
 
         self.__enable_diode_settings(enable)
@@ -600,10 +612,12 @@ class KbplacerDialog(wx.Dialog):
         return sizer
 
     def get_misc_section(
-        self, route_tracks: bool = True, template_path: str = ""
+        self, route_rows_and_columns: bool = True, template_path: str = ""
     ) -> wx.Sizer:
-        tracks_checkbox = wx.CheckBox(self, label=wx_("Route tracks"))
-        tracks_checkbox.SetValue(route_tracks)
+        row_and_columns_tracks_checkbox = wx.CheckBox(
+            self, label=self._("Route rows and columns")
+        )
+        row_and_columns_tracks_checkbox.SetValue(route_rows_and_columns)
 
         template_label = wx.StaticText(
             self, -1, self._("Controller circuit template file:")
@@ -621,12 +635,12 @@ class KbplacerDialog(wx.Dialog):
         box = wx.StaticBox(self, label=self._("Other settings"))
         sizer = wx.StaticBoxSizer(box, wx.HORIZONTAL)
 
-        sizer.Add(tracks_checkbox, 0, wx.EXPAND | wx.ALL, 5)
+        sizer.Add(row_and_columns_tracks_checkbox, 0, wx.EXPAND | wx.ALL, 5)
         sizer.Add(wx.StaticLine(self, style=wx.LI_VERTICAL), 0, wx.EXPAND | wx.ALL, 5)
         sizer.Add(template_label, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5)
         sizer.Add(template_picker, 1, wx.EXPAND | wx.ALL, 5)
 
-        self.__tracks_checkbox = tracks_checkbox
+        self.__rows_and_columns_tracks_checkbox = row_and_columns_tracks_checkbox
         self.__template_picker = template_picker
 
         return sizer
@@ -643,8 +657,11 @@ class KbplacerDialog(wx.Dialog):
     def get_key_annotation_format(self) -> str:
         return self.__key_annotation_format.GetValue()
 
-    def is_tracks(self) -> bool:
-        return self.__tracks_checkbox.GetValue()
+    def route_switches_with_diodes(self) -> bool:
+        return self.__switches_and_diodes_tracks_checkbox.GetValue()
+
+    def route_rows_and_columns(self) -> bool:
+        return self.__rows_and_columns_tracks_checkbox.GetValue()
 
     def get_key_distance(self) -> Tuple[float, float]:
         x = float(self.__key_distance_x.GetValue())
@@ -681,6 +698,7 @@ class KbplacerDialog(wx.Dialog):
             },
             "switch_diodes_section": {
                 "enable": self.__place_diodes_checkbox.GetValue(),
+                "route_switches_with_diodes": self.route_switches_with_diodes(),
                 "element_info": self.__diode_settings.GetValue().to_dict(),
             },
             "additional_elements": {
@@ -689,7 +707,7 @@ class KbplacerDialog(wx.Dialog):
                 ],
             },
             "misc_section": {
-                "route_tracks": self.is_tracks(),
+                "route_rows_and_columns": self.route_rows_and_columns(),
                 "template_path": self.get_template_path(),
             },
         }

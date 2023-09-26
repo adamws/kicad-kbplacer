@@ -23,6 +23,7 @@ DEFAULT_WINDOW_STATE = {
     },
     "switch_diodes_section": {
         "enable": True,
+        "route_switches_with_diodes": True,
         "element_info": {
             "annotation_format": "D{}",
             "position": {
@@ -47,7 +48,7 @@ DEFAULT_WINDOW_STATE = {
         ],
     },
     "misc_section": {
-        "route_tracks": True,
+        "route_rows_and_columns": True,
         "template_path": "",
     },
 }
@@ -61,6 +62,7 @@ CUSTOM_WINDOW_STATE_EXAMPLE1 = {
     },
     "switch_diodes_section": {
         "enable": False,
+        "route_switches_with_diodes": False,
         "element_info": {
             "annotation_format": "D{}",
             "position": {
@@ -90,7 +92,7 @@ CUSTOM_WINDOW_STATE_EXAMPLE1 = {
         ],
     },
     "misc_section": {
-        "route_tracks": False,
+        "route_rows_and_columns": False,
         "template_path": "/home/user/template.kicad_pcb",
     },
 }

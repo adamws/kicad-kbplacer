@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2023-07-14 20:04+0200\n"
+"POT-Creation-Date: 2023-09-25 23:07+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -34,10 +34,16 @@ msgstr ""
 msgid "Switch settings"
 msgstr ""
 
+msgid "Route with switches"
+msgstr ""
+
 msgid "Switch diodes settings"
 msgstr ""
 
 msgid "Additional elements settings"
+msgstr ""
+
+msgid "Route rows and columns"
 msgstr ""
 
 msgid "Controller circuit template file:"
