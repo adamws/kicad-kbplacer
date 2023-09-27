@@ -270,6 +270,50 @@ class KeyPlacer(BoardModifier):
                         current_position = self.get_position(footprint)
                         self.rotate(footprint, current_position, -1 * orientation)
 
+    def route_switches_with_diodes(
+        self,
+        key_format: str,
+        diode_format: str,
+        template_connection: List[pcbnew.PCB_TRACK],
+    ) -> None:
+        for i, switch_footprint in SwitchIterator(self.board, key_format):
+            angle = -1 * switch_footprint.GetOrientationDegrees()
+
+            if diode_footprint := self.get_optional_footprint(diode_format.format(i)):
+                self.route_switch_with_diode(
+                    switch_footprint, diode_footprint, angle, template_connection
+                )
+        # when done, delete all template items
+        for item in template_connection:
+            self.board.RemoveNative(item)
+
+    def route_rows_and_columns(self) -> None:
+        column_pads = {}
+        row_pads = {}
+
+        sorted_pads = pcbnew.PADS_VEC()
+        self.board.GetSortedPadListByXthenYCoord(sorted_pads)
+        for pad in sorted_pads:
+            net_name = pad.GetNetname()
+            if match := re.match(r"^COL(\d+)$", net_name, re.IGNORECASE):
+                column_number = match.groups()[0]
+                column_pads.setdefault(column_number, []).append(pad)
+            elif match := re.match(r"^ROW(\d+)$", net_name, re.IGNORECASE):
+                row_number = match.groups()[0]
+                row_pads.setdefault(row_number, []).append(pad)
+
+        # very naive routing approach, will fail in some scenarios:
+        for pads in column_pads.values():
+            for pad1, pad2 in zip(pads, pads[1:]):
+                if pad1.GetParentAsString() == pad2.GetParentAsString():
+                    # do not connect pads of the same footprint
+                    continue
+                self.route(pad1, pad2)
+
+        for pads in row_pads.values():
+            for pad1, pad2 in zip(pads, pads[1:]):
+                self.route(pad1, pad2)
+
     def run(
         self,
         layout: dict,
@@ -310,46 +354,12 @@ class KeyPlacer(BoardModifier):
             self.place_switch_elements(key_format, additional_elements)
 
         if route_switches_with_diodes:
-            for i, switch_footprint in SwitchIterator(self.board, key_format):
-                angle = -1 * switch_footprint.GetOrientationDegrees()
-
-                if diode_footprint := self.get_optional_footprint(
-                    diode_format.format(i)
-                ):
-                    self.route_switch_with_diode(
-                        switch_footprint, diode_footprint, angle, template_connection
-                    )
-            # when done, delete all template items
-            for item in template_connection:
-                self.board.RemoveNative(item)
+            self.route_switches_with_diodes(
+                key_format, diode_format, template_connection
+            )
 
         if route_rows_and_columns:
-            # TODO: extract this to some separate class/method:
-            column_pads = {}
-            row_pads = {}
-
-            sorted_pads = pcbnew.PADS_VEC()
-            self.board.GetSortedPadListByXthenYCoord(sorted_pads)
-            for pad in sorted_pads:
-                net_name = pad.GetNetname()
-                if match := re.match(r"^COL(\d+)$", net_name, re.IGNORECASE):
-                    column_number = match.groups()[0]
-                    column_pads.setdefault(column_number, []).append(pad)
-                elif match := re.match(r"^ROW(\d+)$", net_name, re.IGNORECASE):
-                    row_number = match.groups()[0]
-                    row_pads.setdefault(row_number, []).append(pad)
-
-            # very naive routing approach, will fail in some scenarios:
-            for pads in column_pads.values():
-                for pad1, pad2 in zip(pads, pads[1:]):
-                    if pad1.GetParentAsString() == pad2.GetParentAsString():
-                        # do not connect pads of the same footprint
-                        continue
-                    self.route(pad1, pad2)
-
-            for pads in row_pads.values():
-                for pad1, pad2 in zip(pads, pads[1:]):
-                    self.route(pad1, pad2)
+            self.route_rows_and_columns()
 
         if route_switches_with_diodes or route_rows_and_columns:
             self.remove_dangling_tracks()
