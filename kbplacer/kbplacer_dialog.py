@@ -195,29 +195,11 @@ class ElementPositionWidget(wx.Panel):
     def __init__(
         self,
         parent,
-        initial_choice: PositionOption,
-        initial_position: Optional[ElementPosition] = None,
         default_position: Optional[ElementPosition] = None,
     ) -> None:
         super().__init__(parent)
 
         self.default = default_position
-        choices = [PositionOption.CUSTOM, PositionOption.CURRENT_RELATIVE]
-        if self.default:
-            choices.insert(0, PositionOption.DEFAULT)
-
-        self.dropdown = wx.ComboBox(self, choices=choices, style=wx.CB_DROPDOWN)
-        self.dropdown.Bind(wx.EVT_COMBOBOX, self.__on_position_choice_change)
-
-        dropdown_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        dropdown_sizer.Add(
-            wx.StaticText(self, -1, wx_("Position") + ":"),
-            0,
-            wx.RIGHT | wx.ALIGN_CENTER_VERTICAL,
-            5,
-        )
-        dropdown_sizer.Add(self.dropdown, 0, wx.EXPAND | wx.TOP | wx.BOTTOM, 5)
-
         self.x = LabeledTextCtrl(
             self, wx_("Offset X:"), value="", width=5, validator=FloatValidator()
         )
@@ -230,29 +212,16 @@ class ElementPositionWidget(wx.Panel):
         self.side_label = wx.StaticText(self, -1, wx_("Side:"))
         self.side = CustomRadioBox(self, choices=[wx_("Front"), wx_("Back")])
 
-        self.__set_initial_state(initial_choice)
-        if initial_position and initial_choice == PositionOption.CUSTOM:
-            self.__set_position(initial_position)
-
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(dropdown_sizer, 0, wx.EXPAND | wx.ALL, 5)
-        sizer.Add(self.x, 0, wx.EXPAND | wx.ALL, 5)
-        sizer.Add(self.y, 0, wx.EXPAND | wx.ALL, 5)
-        sizer.Add(self.orientation, 0, wx.EXPAND | wx.ALL, 5)
+        sizer.Add(self.x, 0, wx.EXPAND | wx.LEFT, 5)
+        sizer.Add(self.y, 0, wx.EXPAND | wx.LEFT, 5)
+        sizer.Add(self.orientation, 0, wx.EXPAND | wx.LEFT, 5)
         sizer.Add(self.side_label, 0, wx.LEFT | wx.ALIGN_CENTER_VERTICAL, 5)
-        sizer.Add(self.side, 0, wx.EXPAND | wx.ALL, 5)
+        sizer.Add(self.side, 0, wx.EXPAND | wx.LEFT, 5)
 
         self.SetSizer(sizer)
 
-    def __set_initial_state(self, choice) -> None:
-        self.dropdown.SetValue(choice)
-        self.__set_position_by_choice(choice)
-
-    def __on_position_choice_change(self, event) -> None:
-        choice = event.GetString()
-        self.__set_position_by_choice(choice)
-
-    def __set_position_by_choice(self, choice: str) -> None:
+    def set_position_by_choice(self, choice: str) -> None:
         if choice == PositionOption.DEFAULT:
             self.__set_position_to_default()
         elif choice == PositionOption.CURRENT_RELATIVE:
@@ -261,9 +230,8 @@ class ElementPositionWidget(wx.Panel):
             self.__set_position_to_zero_editable()
         else:
             raise ValueError
-        self.choice = PositionOption(choice)
 
-    def __set_position(self, position: ElementPosition) -> None:
+    def set_position(self, position: ElementPosition) -> None:
         self.__set_coordinates(
             str(position.relative_position.x), str(position.relative_position.y)
         )
@@ -277,19 +245,19 @@ class ElementPositionWidget(wx.Panel):
             self.__set_coordinates(x, y)
             self.__set_orientation(str(self.default.orientation))
             self.__set_side(self.default.side)
-            self.__disable_position_controls()
+            self.Disable()
 
     def __set_position_to_zero_editable(self) -> None:
         self.__set_coordinates("0", "0")
         self.__set_orientation("0")
         self.__set_side(Side.FRONT)
-        self.__enable_position_controls()
+        self.Enable()
 
     def __set_position_to_empty_non_editable(self) -> None:
         self.__set_coordinates("-", "-")
         self.__set_orientation("-")
         self.side.Clear()
-        self.__disable_position_controls()
+        self.Disable()
 
     def __set_coordinates(self, x: str, y: str) -> None:
         self.x.text.SetValue(x)
@@ -304,39 +272,91 @@ class ElementPositionWidget(wx.Panel):
         else:
             self.side.Select(wx_("Front"))
 
-    def __enable_position_controls(self):
+    def GetValue(self) -> ElementPosition:
+        x = float(self.x.text.GetValue())
+        y = float(self.y.text.GetValue())
+        orientation = float(self.orientation.text.GetValue())
+        side_str = self.side.GetValue()
+        return ElementPosition(Point(x, y), orientation, Side(side_str == wx_("Back")))
+
+    def Enable(self):
         self.x.Enable()
         self.y.Enable()
         self.orientation.Enable()
         self.side_label.Enable()
         self.side.Enable()
 
-    def __disable_position_controls(self):
+    def Disable(self):
         self.x.Disable()
         self.y.Disable()
         self.orientation.Disable()
         self.side_label.Disable()
         self.side.Disable()
 
+
+class ElementPositionChoiceWidget(wx.Panel):
+    def __init__(
+        self,
+        parent,
+        initial_choice: PositionOption,
+        initial_position: Optional[ElementPosition] = None,
+        default_position: Optional[ElementPosition] = None,
+    ) -> None:
+        super().__init__(parent)
+
+        choices = [PositionOption.CUSTOM, PositionOption.CURRENT_RELATIVE]
+        if default_position:
+            choices.insert(0, PositionOption.DEFAULT)
+
+        self.dropdown = wx.ComboBox(self, choices=choices, style=wx.CB_DROPDOWN)
+        self.dropdown.Bind(wx.EVT_COMBOBOX, self.__on_position_choice_change)
+
+        dropdown_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        dropdown_sizer.Add(
+            wx.StaticText(self, -1, wx_("Position") + ":"),
+            0,
+            wx.RIGHT | wx.ALIGN_CENTER_VERTICAL,
+            5,
+        )
+        dropdown_sizer.Add(self.dropdown, 0, wx.EXPAND | wx.TOP | wx.BOTTOM, 5)
+
+        self.position = ElementPositionWidget(self, default_position)
+
+        self.__set_initial_state(initial_choice)
+        if initial_position and initial_choice == PositionOption.CUSTOM:
+            self.position.set_position(initial_position)
+
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(dropdown_sizer, 0, wx.EXPAND | wx.ALL, 5)
+        sizer.Add(self.position, 0, wx.EXPAND | wx.ALL, 5)
+
+        self.SetSizer(sizer)
+
+    def __set_initial_state(self, choice) -> None:
+        self.dropdown.SetValue(choice)
+        self.__set_position_by_choice(choice)
+
+    def __on_position_choice_change(self, event) -> None:
+        choice = event.GetString()
+        self.__set_position_by_choice(choice)
+
+    def __set_position_by_choice(self, choice: str) -> None:
+        self.position.set_position_by_choice(choice)
+        self.choice = PositionOption(choice)
+
     def GetValue(self) -> Tuple[PositionOption, Optional[ElementPosition]]:
         if self.choice not in [PositionOption.DEFAULT, PositionOption.CUSTOM]:
             return self.choice, None
-        x = float(self.x.text.GetValue())
-        y = float(self.y.text.GetValue())
-        orientation = float(self.orientation.text.GetValue())
-        side_str = self.side.GetValue()
-        return self.choice, ElementPosition(
-            Point(x, y), orientation, Side(side_str == wx_("Back"))
-        )
+        return self.choice, self.position.GetValue()
 
     def Enable(self):
         self.dropdown.Enable()
         if self.dropdown.GetValue() == PositionOption.CUSTOM:
-            self.__enable_position_controls()
+            self.position.Enable()
 
     def Disable(self):
         self.dropdown.Disable()
-        self.__disable_position_controls()
+        self.position.Disable()
 
 
 class ElementSettingsWidget(wx.Panel):
@@ -354,7 +374,7 @@ class ElementSettingsWidget(wx.Panel):
             value=element_info.annotation_format,
             width=3,
         )
-        self.position_widget = ElementPositionWidget(
+        self.position_widget = ElementPositionChoiceWidget(
             self,
             element_info.position_option,
             element_info.position,
