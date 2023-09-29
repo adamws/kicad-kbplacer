@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2023-09-25 23:07+0200\n"
+"POT-Creation-Date: 2023-09-30 23:37+0200\n"
 "PO-Revision-Date: 2023-07-14 20:04+0200\n"
 "Last-Translator: adamws\n"
 "Language-Team: none\n"
@@ -32,6 +32,12 @@ msgstr "Witryna projektu - "
 
 msgid "Geekhack forum thread - "
 msgstr "Wątek na forum Geekhack - "
+
+msgid "Save to:"
+msgstr ""
+
+msgid "Load from:"
+msgstr ""
 
 msgid "Keyboard layout file:"
 msgstr "Plik układu klawiatury:"

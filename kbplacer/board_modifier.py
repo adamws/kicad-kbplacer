@@ -59,7 +59,7 @@ def position_in_cartesian_coordinates(
 
 
 def get_footprint(board: pcbnew.BOARD, reference: str) -> pcbnew.FOOTPRINT:
-    logging.info(f"Searching for {reference} footprint")
+    logging.info(f"Searching for {reference} footprint in {board.GetFileName()}")
     footprint = board.FindFootprintByReference(reference)
     if footprint is None:
         logging.error("Footprint not found")

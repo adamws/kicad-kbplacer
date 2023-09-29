@@ -6,6 +6,7 @@ import logging
 import os
 import string
 import sys
+from enum import Flag
 from typing import List, Optional, Tuple
 
 import wx
@@ -224,7 +225,7 @@ class ElementPositionWidget(wx.Panel):
     def set_position_by_choice(self, choice: str) -> None:
         if choice == PositionOption.DEFAULT:
             self.__set_position_to_default()
-        elif choice == PositionOption.CURRENT_RELATIVE:
+        elif choice in [PositionOption.RELATIVE, PositionOption.PRESET]:
             self.__set_position_to_empty_non_editable()
         elif choice == PositionOption.CUSTOM:
             self.__set_position_to_zero_editable()
@@ -294,6 +295,62 @@ class ElementPositionWidget(wx.Panel):
         self.side.Disable()
 
 
+class TemplateType(Flag):
+    LOAD = False
+    SAVE = True
+
+
+class ElementTemplateSelectionWidget(wx.Panel):
+    def __init__(
+        self, parent, picker_type: TemplateType, initial_path: str = ""
+    ) -> None:
+        super().__init__(parent)
+        self._ = self.GetTopLevelParent()._
+
+        label = (
+            self._("Save to:")
+            if picker_type == TemplateType.SAVE
+            else self._("Load from:")
+        )
+        layout_label = wx.StaticText(self, -1, label)
+        layout_picker = self.__get_file_picker(
+            self,
+            -1,
+            wildcard="KiCad printed circuit board files (*.kicad_pcb)|*.kicad_pcb",
+            style=wx.FLP_USE_TEXTCTRL
+            | (wx.FLP_SAVE if picker_type == TemplateType.SAVE else wx.FLP_OPEN),
+        )
+
+        if initial_path:
+            layout_picker.SetPath(initial_path)
+            layout_picker.GetTextCtrl().SetInsertionPointEnd()
+
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(layout_label, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5)
+        sizer.Add(layout_picker, 1, wx.EXPAND | wx.ALL, 5)
+        self.SetSizer(sizer)
+
+        self.__layout_picker = layout_picker
+        self.__picker_type = picker_type
+
+    def __get_file_picker(self, *args, **kwargs):
+        file_picker = wx.FilePickerCtrl(*args, **kwargs)
+        file_picker.SetTextCtrlGrowable(True)
+        file_picker.Bind(
+            wx.EVT_FILEPICKER_CHANGED,
+            lambda _: file_picker.GetTextCtrl().SetInsertionPointEnd(),
+        )
+        return file_picker
+
+    def GetValue(self) -> str:
+        path = self.__layout_picker.GetPath()
+        if self.__picker_type == TemplateType.LOAD and not path:
+            # can't be empty when running in `LOAD` mode
+            msg = "'Load from:' file picker can't be empty"
+            raise ValueError(msg)
+        return path
+
+
 class ElementPositionChoiceWidget(wx.Panel):
     def __init__(
         self,
@@ -301,10 +358,15 @@ class ElementPositionChoiceWidget(wx.Panel):
         initial_choice: PositionOption,
         initial_position: Optional[ElementPosition] = None,
         default_position: Optional[ElementPosition] = None,
+        initial_path: str = "",
     ) -> None:
         super().__init__(parent)
 
-        choices = [PositionOption.CUSTOM, PositionOption.CURRENT_RELATIVE]
+        choices = [
+            PositionOption.CUSTOM,
+            PositionOption.RELATIVE,
+            PositionOption.PRESET,
+        ]
         if default_position:
             choices.insert(0, PositionOption.DEFAULT)
 
@@ -320,7 +382,13 @@ class ElementPositionChoiceWidget(wx.Panel):
         )
         dropdown_sizer.Add(self.dropdown, 0, wx.EXPAND | wx.TOP | wx.BOTTOM, 5)
 
-        self.position = ElementPositionWidget(self, default_position)
+        self.position = ElementPositionWidget(self, initial_position)
+        self.load_template = ElementTemplateSelectionWidget(
+            self, picker_type=TemplateType.LOAD, initial_path=initial_path
+        )
+        self.save_template = ElementTemplateSelectionWidget(
+            self, picker_type=TemplateType.SAVE, initial_path=initial_path
+        )
 
         self.__set_initial_state(initial_choice)
         if initial_position and initial_choice == PositionOption.CUSTOM:
@@ -329,6 +397,8 @@ class ElementPositionChoiceWidget(wx.Panel):
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(dropdown_sizer, 0, wx.EXPAND | wx.ALL, 5)
         sizer.Add(self.position, 0, wx.EXPAND | wx.ALL, 5)
+        sizer.Add(self.load_template, 1, wx.EXPAND | wx.ALL, 5)
+        sizer.Add(self.save_template, 1, wx.EXPAND | wx.ALL, 5)
 
         self.SetSizer(sizer)
 
@@ -341,13 +411,32 @@ class ElementPositionChoiceWidget(wx.Panel):
         self.__set_position_by_choice(choice)
 
     def __set_position_by_choice(self, choice: str) -> None:
+        if choice == PositionOption.RELATIVE:
+            self.position.Hide()
+            self.load_template.Hide()
+            self.save_template.Show()
+        elif choice == PositionOption.PRESET:
+            self.position.Hide()
+            self.load_template.Show()
+            self.save_template.Hide()
+        else:
+            self.position.Show()
+            self.load_template.Hide()
+            self.save_template.Hide()
+        self.GetTopLevelParent().Layout()
         self.position.set_position_by_choice(choice)
         self.choice = PositionOption(choice)
 
-    def GetValue(self) -> Tuple[PositionOption, Optional[ElementPosition]]:
+    def GetValue(self) -> Tuple[PositionOption, Optional[ElementPosition], str]:
+        template_path = ""
+        if self.dropdown.GetValue() == PositionOption.RELATIVE:
+            template_path = self.save_template.GetValue()
+        elif self.dropdown.GetValue() == PositionOption.PRESET:
+            template_path = self.load_template.GetValue()
+
         if self.choice not in [PositionOption.DEFAULT, PositionOption.CUSTOM]:
-            return self.choice, None
-        return self.choice, self.position.GetValue()
+            return self.choice, None, template_path
+        return self.choice, self.position.GetValue(), template_path
 
     def Enable(self):
         self.dropdown.Enable()
@@ -379,6 +468,7 @@ class ElementSettingsWidget(wx.Panel):
             element_info.position_option,
             element_info.position,
             default_position=default_position,
+            initial_path=element_info.template_path,
         )
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -386,14 +476,14 @@ class ElementSettingsWidget(wx.Panel):
         sizer.Add(
             self.annotation_format, 0, wx.EXPAND | wx.TOP | wx.BOTTOM | wx.RIGHT, 5
         )
-        sizer.Add(self.position_widget, 0, wx.EXPAND | wx.ALL, 0)
+        sizer.Add(self.position_widget, 1, wx.EXPAND | wx.ALL, 0)
 
         self.SetSizer(sizer)
 
     def GetValue(self) -> ElementInfo:
         annotation = self.annotation_format.text.GetValue()
         position = self.position_widget.GetValue()
-        return ElementInfo(annotation, position[0], position[1])
+        return ElementInfo(annotation, *position)
 
     def Enable(self):
         self.annotation_format.Enable()
@@ -516,7 +606,7 @@ class KbplacerDialog(wx.Dialog):
         enable: bool = True,
         route_switches_with_diodes: bool = True,
         element_info: ElementInfo = ElementInfo(
-            "D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION
+            "D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, ""
         ),
     ) -> wx.Sizer:
         place_diodes_checkbox = wx.CheckBox(self, label=wx_("Allow autoplacement"))
@@ -566,7 +656,7 @@ class KbplacerDialog(wx.Dialog):
     def get_additional_elements_section(
         self,
         elements_info: List[ElementInfo] = [
-            ElementInfo("ST{}", PositionOption.CUSTOM, ZERO_POSITION)
+            ElementInfo("ST{}", PositionOption.CUSTOM, ZERO_POSITION, "")
         ],
     ) -> wx.Sizer:
         self.__additional_elements = []
@@ -592,11 +682,11 @@ class KbplacerDialog(wx.Dialog):
         def add_element(element_info: ElementInfo) -> None:
             element_settings = ElementSettingsWidget(scrolled_window, element_info)
             self.__additional_elements.append(element_settings)
-            scrolled_window_sizer.Add(element_settings, 0, wx.ALIGN_LEFT, 0)
-            self.Layout()
+            scrolled_window_sizer.Add(element_settings, 0, wx.EXPAND | wx.ALIGN_LEFT, 0)
+            self.GetTopLevelParent().Layout()
 
         def add_element_callback(_) -> None:
-            add_element(ElementInfo("", PositionOption.CUSTOM, ZERO_POSITION))
+            add_element(ElementInfo("", PositionOption.CUSTOM, ZERO_POSITION, ""))
 
         for element_info in elements_info:
             add_element(element_info)
@@ -759,7 +849,7 @@ if __name__ == "__main__":
         def listen_for_exit():
             while True:
                 input("Press any key to exit: ")
-                dlg.Close(wx.ID_CANCEL)
+                dlg.Close(True)
                 sys.exit()
 
         input_thread = threading.Thread(target=listen_for_exit)

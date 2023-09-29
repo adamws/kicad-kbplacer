@@ -254,7 +254,10 @@ def test_switch_distance(key_distance, tmpdir, request):
     key_placer = KeyPlacer(board, key_distance)
     diode_position = DEFAULT_DIODE_POSITION
     key_placer.run(
-        layout, "SW{}", ElementInfo("D{}", PositionOption.DEFAULT, diode_position), True
+        layout,
+        "SW{}",
+        ElementInfo("D{}", PositionOption.DEFAULT, diode_position, ""),
+        True,
     )
 
     board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")

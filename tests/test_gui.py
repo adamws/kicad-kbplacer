@@ -32,6 +32,7 @@ DEFAULT_WINDOW_STATE = {
                 "side": "BACK",
             },
             "position_option": "Default",
+            "template_path": "",
         },
     },
     "additional_elements": {
@@ -44,6 +45,7 @@ DEFAULT_WINDOW_STATE = {
                     "side": "FRONT",
                 },
                 "position_option": "Custom",
+                "template_path": "",
             }
         ],
     },
@@ -71,6 +73,7 @@ CUSTOM_WINDOW_STATE_EXAMPLE1 = {
                 "side": "FRONT",
             },
             "position_option": "Custom",
+            "template_path": "",
         },
     },
     "additional_elements": {
@@ -83,11 +86,13 @@ CUSTOM_WINDOW_STATE_EXAMPLE1 = {
                     "side": "FRONT",
                 },
                 "position_option": "Custom",
+                "template_path": "",
             },
             {
                 "annotation_format": "LED{}",
                 "position": None,
-                "position_option": "Current Relative",
+                "position_option": "Relative",
+                "template_path": "/home/user/led_template.kicad_pcb",
             },
         ],
     },
@@ -163,15 +168,15 @@ def get_window_position(window_handle):
     return (rect.left, rect.top, rect.right, rect.bottom)
 
 
-def run_process(args, workdir):
+def run_process(args, package_path):
     env = os.environ.copy()
     return subprocess.Popen(
         args,
-        cwd=workdir,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         stdin=subprocess.PIPE,
         text=True,
+        cwd=package_path,
         env=env,
     )
 
@@ -233,7 +238,7 @@ def run_gui_test(tmpdir, screen_manager, window_name, gui_callback) -> None:
     assert is_ok
 
 
-def test_gui(tmpdir, workdir, package_name, screen_manager) -> None:
+def test_gui(tmpdir, package_path, package_name, screen_manager) -> None:
     def _callback():
         return run_process(
             [
@@ -243,7 +248,7 @@ def test_gui(tmpdir, workdir, package_name, screen_manager) -> None:
                 "-o",
                 tmpdir,
             ],
-            workdir,
+            package_path,
         )
 
     run_gui_test(tmpdir, screen_manager, "kbplacer", _callback)
@@ -253,17 +258,20 @@ def test_gui(tmpdir, workdir, package_name, screen_manager) -> None:
         assert state == DEFAULT_WINDOW_STATE
 
 
-def test_help_dialog(tmpdir, workdir, package_name, screen_manager) -> None:
+def test_help_dialog(tmpdir, package_path, package_name, screen_manager) -> None:
     def _callback():
-        return run_process(["python3", "-m", f"{package_name}.help_dialog"], workdir)
+        return run_process(
+            ["python3", "-m", f"{package_name}.help_dialog"], package_path
+        )
 
     run_gui_test(tmpdir, screen_manager, "kbplacer help", _callback)
 
 
-def test_gui_default_state(tmpdir, workdir, package_name, screen_manager) -> None:
+def test_gui_default_state(tmpdir, package_path, package_name, screen_manager) -> None:
     def _callback():
         return run_process(
-            ["python3", "-m", f"{package_name}.kbplacer_dialog", "-o", tmpdir], workdir
+            ["python3", "-m", f"{package_name}.kbplacer_dialog", "-o", tmpdir],
+            package_path,
         )
 
     run_gui_test(tmpdir, screen_manager, "kbplacer", _callback)
@@ -305,7 +313,7 @@ def get_state_data(state: dict, name: str):
     ],
 )
 def test_gui_state_restore(
-    state, expected, tmpdir, workdir, package_name, screen_manager
+    state, expected, tmpdir, package_path, package_name, screen_manager
 ) -> None:
     def _callback():
         return run_process(
@@ -318,7 +326,7 @@ def test_gui_state_restore(
                 "-o",
                 tmpdir,
             ],
-            workdir,
+            package_path,
         )
 
     run_gui_test(tmpdir, screen_manager, "kbplacer", _callback)

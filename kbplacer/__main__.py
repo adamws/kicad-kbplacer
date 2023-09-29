@@ -26,7 +26,7 @@ class ElementInfoAction(argparse.Action):
     def parse(self, values: str, option_string) -> ElementInfo:
         tokens: list[str] = values.split()
         err = ""
-        if len(tokens) not in [2, 6]:
+        if len(tokens) not in [2, 3, 6]:
             err = f"{option_string} invalid format."
             raise ValueError(err)
         else:
@@ -40,14 +40,20 @@ class ElementInfoAction(argparse.Action):
 
             option = PositionOption.get(tokens[1])
             position = None
+            template_path = ""
+
             if len(tokens) == 2:
-                if option not in [
-                    PositionOption.CURRENT_RELATIVE,
-                    PositionOption.DEFAULT,
-                ]:
+                if option not in [PositionOption.RELATIVE, PositionOption.DEFAULT]:
                     err = (
                         f"{option_string} position option needs to be equal "
-                        "CURRENT_RELATIVE or DEFAULT if position details not provided"
+                        "RELATIVE or DEFAULT if position details not provided"
+                    )
+                    raise ValueError(err)
+            elif len(tokens) == 3:
+                if option not in [PositionOption.PRESET, PositionOption.RELATIVE]:
+                    err = (
+                        f"{option_string} position option needs to be equal"
+                        "RELATIVE or PRESET when providing template path"
                     )
                     raise ValueError(err)
             elif option != PositionOption.CUSTOM:
@@ -56,15 +62,25 @@ class ElementInfoAction(argparse.Action):
                     "when providing position details"
                 )
                 raise ValueError(err)
-            else:
+
+            if option == PositionOption.CUSTOM:
                 floats = tuple(map(float, tokens[2:5]))
                 side = Side.get(tokens[5])
                 position = ElementPosition(Point(floats[0], floats[1]), floats[2], side)
+            elif option == PositionOption.RELATIVE:
+                # template path if optional for RELATIVE option:
+                position = None
+                if len(tokens) == 3:
+                    template_path = tokens[2]
+            elif option == PositionOption.PRESET:
+                position = None
+                template_path = tokens[2]
 
             value: ElementInfo = ElementInfo(
                 annotation,
                 option,
                 position,
+                template_path,
             )
             return value
 
@@ -128,15 +144,18 @@ def app():
     parser.add_argument(
         "-d",
         "--diode",
-        default=ElementInfo("D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION),
+        default=ElementInfo("D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, ""),
         action=ElementInfoAction,
         help=(
             "Diode information, space separated value of ANNOTATION OPTION [POSITION]\n"
-            "Available OPTION choices: DEFAULT, CURRENT_RELATIVE and CUSTOM\n"
-            "When DEFAULT or CURRENT_RELATIVE, then POSITION needs to be omitted,\n"
+            "Available OPTION choices: DEFAULT, RELATIVE, PRESET and CUSTOM\n"
+            "When DEFAULT, then POSITION needs to be omitted,\n"
+            "when RELATIVE, then POSITION is optional path for saving kicad_pcb template file\n"
+            "when PRESET, then POSITION is mandatory path to kicad_pcb template file\n"
             "when CUSTOM, then POSITION is space separated value of X Y ORIENTATION FRONT|BACK\n"
             "for example:\n"
-            "\tD{} CURRENT_RELATIVE\n"
+            "\tD{} RELATIVE\n"
+            "\tD{} PRESET /home/user/project/diode_preset.kicad_pcb\n"
             "\tD{} CUSTOM 5 -4.5 90 BACK\n"
             "equal 'D{} DEFAULT' by default"
         ),
@@ -148,17 +167,19 @@ def app():
                 "ST{}",
                 PositionOption.CUSTOM,
                 ZERO_POSITION,
+                "",
             )
         ],
         action=ElementInfoListAction,
         help=(
             "List of ';' separated additional elements ELEMENT_INFO values\n"
             "ELEMENT_INFO is space separated value of ANNOTATION OPTION POSITION\n"
-            "Available OPTION choices: CURRENT_RELATIVE and CUSTOM\n"
-            "When CURRENT_RELATIVE, then POSITION needs to be omitted,\n"
+            "Available OPTION choices: RELATIVE, PRESET and CUSTOM\n"
+            "when RELATIVE, then POSITION is optional path for saving kicad_pcb template file\n"
+            "when PRESET, then POSITION is mandatory path to kicad_pcb template file\n"
             "when CUSTOM, then POSITION is space separated value of X Y ORIENTATION FRONT|BACK\n"
             "for example:\n"
-            "\tST{} CUSTOM 0 0 180 BACK;LED{} CURRENT_RELATIVE\n"
+            "\tST{} CUSTOM 0 0 180 BACK;LED{} RELATIVE\n"
             "equal 'ST{} CUSTOM 0 0 0 FRONT' by default"
         ),
     )

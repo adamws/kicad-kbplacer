@@ -61,7 +61,7 @@ def pytest_addoption(parser):
 
 
 @pytest.fixture(scope="session")
-def workdir(request):
+def package_path(request):
     if request.config.getoption("--test-plugin-installation"):
         home_directory = Path.home()
         return f"{home_directory}/.local/share/kicad/7.0/3rdparty/plugins"
@@ -118,7 +118,7 @@ def get_references_dir(request, example_name, route_option, diode_option):
 
 def request_to_references_dir(request):
     _, test_parameters = request.node.name.split("[")
-    example_name, route_option, diode_option, _ = test_parameters[:-1].split(";")
+    example_name, route_option, diode_option, *_ = test_parameters[:-1].split(";")
     return get_references_dir(request, example_name, route_option, diode_option)
 
 

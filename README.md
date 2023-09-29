@@ -223,7 +223,7 @@ python -m com_github_adamws_kicad-kbplacer --help
     </td>
   </tr>
   <tr>
-    <td rowspan="7" align="center" style="vertical-align: middle;">Switch diodes settings</td>
+    <td rowspan="8" align="center" style="vertical-align: middle;">Switch diodes settings</td>
     <td align="center" style="vertical-align: middle;">Allow autoplacement</td>
     <td>
       Enables automatic diodes positioning. When turned on, each diode will be placed
@@ -252,8 +252,11 @@ python -m com_github_adamws_kicad-kbplacer --help
       Diode position option with three possible choices:<br>
       &emsp;<code>Default</code> - positions diodes to default position<br>
       &emsp;<code>Custom</code> - positions diodes based on user defined values<br>
-      &emsp;<code>Current relative</code> - uses first switch-diode pair to get relative position
-      between them and uses that as reference position for remaining pairs
+      &emsp;<code>Relative</code> - uses first switch-diode pair to get relative position
+      between them and uses that as reference position for remaining pairs<br>
+      &emsp;<code>Preset</code> - uses provided <code>kicad_pcb</code> template
+      file to get relative position and tracks for replication for all
+      switch-diode pairs
     </td>
   </tr>
   <tr>
@@ -277,6 +280,14 @@ python -m com_github_adamws_kicad-kbplacer --help
     <td>
       Selects <code>Front</code> or <code>Back</code> side of the board.</br>
       Applicable only for <code>Custom</code> position option.
+    </td>
+  </tr>
+  <tr>
+    <td align="center" style="vertical-align: middle;">Load from</br>/</br>Save to</td>
+    <td>
+      The preset <code>kicad_pcb</code> file path to use when position option is equal <code>Preset</code>
+      or optional file path to store current position and tracks when position option
+      is equal <code>Relative</code>.
     </td>
   </tr>
   <tr>
@@ -327,11 +338,12 @@ and define `X/Y offset`, `Orientation` and `Front` or `Back` side:
   ![custom-position-example](resources/custom-position-example.png)
 
 or manually place `D1` diode to desired position in relation to first switch and run plugin with
-`Current relative` `Position` option selected.
+`Relative` `Position` option selected.
 
   ![current-relative-position-example](resources/current-relative-position-example.png)
 
 Remaining switch-diode pairs will be placed same as the first one.
+To save current template, set `Save to` path. This can be later re-used with `Preset` `Position` option.
 
 Before | After
 --- | ---
@@ -349,11 +361,13 @@ if there is a collision, leaving elements unconnected.
 
 If first switch-diode pair is routed before plugin execution, as shown below, `kicad-kbplacer` instead of
 using it's built in routing algorithm, will copy user's track. This allow to circumvent plugin's router
-limitations. This is applicable only for `Current relative` `Position` option.
+limitations. This is applicable only for `Relative` `Position` option. When `Save to` path defined,
+tracks will be stored in template. Then it can be re-used when using `Preset` `Position` option.
 
 Before | After
 --- | ---
 ![custom-with-track-before](resources/custom-with-track-before.png) | ![custom-with-track-after](resources/custom-with-track-after.png)
+
 
 > [!NOTE]
 > Track templating is recommended for more complicated switch footprints, for example reversible kailh.

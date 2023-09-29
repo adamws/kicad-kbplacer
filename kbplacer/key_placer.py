@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import itertools
 import logging
+import os
 import re
+from pathlib import Path
 from typing import List, Optional, Tuple, cast
 
 import pcbnew
@@ -130,25 +133,23 @@ class KeyPlacer(BoardModifier):
             logging.error("Could not find pads with the same net, routing skipped")
 
     def get_current_relative_element_position(
-        self, key_format: str, element_format: str
+        self, element1: pcbnew.FOOTPRINT, element2: pcbnew.FOOTPRINT
     ) -> ElementPosition:
-        # TODO: perhaps add support for using different pair as reference,
-        # we no longer require strict 1-to-1 mapping between switches and diodes
-        # so `D1` does not have to exist
-        key1 = get_footprint(self.board, key_format.format(1))
-        element1 = get_footprint(self.board, element_format.format(1))
-        pos1 = get_position(key1)
-        pos2 = get_position(element1)
+        pos1 = get_position(element1)
+        pos2 = get_position(element2)
         x = cast(float, pcbnew.ToMM(pos2.x - pos1.x))
         y = cast(float, pcbnew.ToMM(pos2.y - pos1.y))
         return ElementPosition(
             Point(x, y),
-            element1.GetOrientationDegrees(),
-            get_side(element1),
+            element2.GetOrientationDegrees(),
+            get_side(element2),
         )
 
     def remove_dangling_tracks(self) -> None:
+        logging.info("Removing dangling tracks")
         connectivity = self.get_connectivity()
+
+        any_removed = False
 
         def _is_dangling(track):
             if KICAD_VERSION >= (7, 0, 7):
@@ -157,10 +158,71 @@ class KeyPlacer(BoardModifier):
 
         for track in self.board.GetTracks():
             if _is_dangling(track):
+                logging.info(f"Removing {track.m_Uuid.AsString()}")
                 self.board.RemoveNative(track)
+                any_removed = True
+
+        if any_removed:
+            self.remove_dangling_tracks()
+
+    def save_connection_template(
+        self,
+        switch: pcbnew.FOOTPRINT,
+        diode: pcbnew.FOOTPRINT,
+        connections: List[pcbnew.PCB_TRACK],
+        destination_path: str,
+    ) -> None:
+        logging.info(f"Saving template to {destination_path}")
+        # can't use `CreateEmptyBoard` when running inside KiCad.
+        # We want new board file but without new project file,
+        # looks like this is not possible with pcbnew API.
+        # So create board with project
+        board = pcbnew.NewBoard(destination_path)
+        # and delete project file
+        os.remove(Path(destination_path).with_suffix(".kicad_pro"))
+
+        switch_copy = pcbnew.Cast_to_FOOTPRINT(switch.Duplicate())
+        set_position(switch_copy, pcbnew.wxPoint(0, 0))
+
+        origin = get_position(switch)
+        diode_copy = pcbnew.Cast_to_FOOTPRINT(diode.Duplicate())
+        set_position(
+            diode_copy,
+            get_position(diode_copy) - pcbnew.wxPoint(origin.x, origin.y),
+        )
+
+        for p in itertools.chain(switch_copy.Pads(), diode_copy.Pads()):
+            if p.GetNetCode() != 0:
+                logging.info(
+                    f"Adding net {p.GetNetname()} with netcode {p.GetNetCode()}"
+                )
+                # adding nets to new board will get them new autoassigned netcodes
+                # (the one set at `NETINFO_ITEM` constructor will be discarded)
+                net = pcbnew.NETINFO_ITEM(board, p.GetNetname(), -1)
+                board.Add(net)
+
+        nets = board.GetNetsByName()
+        # synchronize net codes
+        for p in itertools.chain(switch_copy.Pads(), diode_copy.Pads()):
+            if p.GetNetCode() != 0:
+                before = p.GetNetCode()
+                p.SetNet(nets[p.GetNetname()])
+                logging.info(
+                    f"Updating pad '{p.GetParentAsString()}:{p.GetPadName()}' "
+                    f"net {p.GetNetname()} netcode: {before} -> {p.GetNetCode()}"
+                )
+
+        board.Add(switch_copy)
+        board.Add(diode_copy)
+
+        for item in connections:
+            # using `Duplicate` here to not alter net assignments of original tracks
+            # (which needs to be empty in order to work as template)
+            board.Add(item.Duplicate())
+        pcbnew.SaveBoard(destination_path, board, aSkipSettings=True)
 
     def get_connection_template(
-        self, key_format: str, diode_format: str
+        self, key_format: str, diode_format: str, destination_path: str
     ) -> List[pcbnew.PCB_TRACK]:
         switch = get_footprint(self.board, key_format.format(1))
         diode = get_optional_footprint(self.board, diode_format.format(1))
@@ -211,7 +273,20 @@ class KeyPlacer(BoardModifier):
 
         items_str = ", ".join([_format_item(i) for i in result])
         logging.info(f"Got connection template: {items_str}")
+
+        if destination_path:
+            self.save_connection_template(switch, diode, result, destination_path)
+
         return result
+
+    def load_connection_preset(
+        self, key_format: str, diode_format: str, source_path: str
+    ) -> List[pcbnew.PCB_TRACK]:
+        board = pcbnew.LoadBoard(source_path)
+        tracks = board.GetTracks()
+        for t in tracks:
+            t.SetNetCode(0)
+        return tracks
 
     def place_switches(
         self,
@@ -338,24 +413,56 @@ class KeyPlacer(BoardModifier):
         diode_format = ""
         template_connection = []
 
+        def _normalize_template_path(template_path: str) -> str:
+            if str(Path(template_path).name) == template_path:
+                # if passed filename without directory,
+                # assume that this refers to file in the directory of
+                # current board. This is mostly for CLI convenience
+                template_path = str(
+                    Path(self.board.GetFileName()).parent / template_path
+                )
+            return template_path
+
         if diode_info:
             logging.info(f"Diode info: {diode_info}")
             diode_format = diode_info.annotation_format
-            if route_switches_with_diodes:
-                # check if first switch-diode pair is already routed, if yes,
-                # then reuse its tracks and vias for remaining pairs,
-                # otherwise try to use automatic 'router'
+            if diode_info.position_option == PositionOption.RELATIVE:
                 template_connection = self.get_connection_template(
-                    key_format, diode_format
+                    key_format, diode_format, diode_info.template_path
+                )
+            elif diode_info.position_option == PositionOption.PRESET:
+                logging.info(
+                    f"Loading diode connection preset from {diode_info.template_path}"
+                )
+                template_connection = self.load_connection_preset(
+                    key_format,
+                    diode_format,
+                    _normalize_template_path(diode_info.template_path),
                 )
             additional_elements = [diode_info] + additional_elements
 
         for element_info in additional_elements:
-            if element_info.position_option == PositionOption.CURRENT_RELATIVE:
+            if element_info.position_option in [
+                PositionOption.RELATIVE,
+                PositionOption.PRESET,
+            ]:
+                if element_info.position_option == PositionOption.PRESET:
+                    source = pcbnew.IO_MGR.Load(
+                        pcbnew.IO_MGR.KICAD_SEXP,
+                        _normalize_template_path(element_info.template_path),
+                    )
+                else:
+                    source = self.board
+
+                element1 = get_footprint(source, key_format.format(1))
+                element2 = get_footprint(
+                    source, element_info.annotation_format.format(1)
+                )
                 position = self.get_current_relative_element_position(
-                    key_format, element_info.annotation_format
+                    element1, element2
                 )
                 element_info.position = position
+                logging.info(f"Element info updated: {element_info}")
 
         if layout:
             logging.info(f"User layout: {layout}")

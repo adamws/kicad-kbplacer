@@ -38,7 +38,8 @@ class ElementPosition:
 
 class PositionOption(str, Enum):
     DEFAULT = "Default"
-    CURRENT_RELATIVE = "Current Relative"
+    RELATIVE = "Relative"
+    PRESET = "Preset"
     CUSTOM = "Custom"
 
     def __str__(self) -> str:
@@ -58,6 +59,7 @@ class ElementInfo:
     annotation_format: str
     position_option: PositionOption
     position: Optional[ElementPosition]
+    template_path: str
 
     def to_dict(self) -> dict:
         value = {
@@ -70,6 +72,7 @@ class ElementInfo:
             }
             if self.position
             else None,
+            "template_path": self.template_path,
         }
         return value
 
@@ -85,7 +88,10 @@ class ElementInfo:
                 position = ElementPosition(Point(x, y), orientation, side)
             else:
                 position = None
-            return ElementInfo(annotation_format, position_option, position)
+            template_path = value["template_path"]
+            return ElementInfo(
+                annotation_format, position_option, position, template_path
+            )
         except Exception as e:
             msg = "Failed to create ElementInfo object"
             raise ValueError(msg) from e

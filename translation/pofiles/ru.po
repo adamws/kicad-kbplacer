@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2023-09-25 23:07+0200\n"
+"POT-Creation-Date: 2023-09-30 23:37+0200\n"
 "PO-Revision-Date: 2023-09-04 07:56+0000\n"
 "Last-Translator: xXx <xxx_xxx_xxxxxxxxx@mail.ru>\n"
 "Language-Team: Russian <https://hosted.weblate.org/projects/kicad-kbplacer/"
@@ -34,6 +34,12 @@ msgstr "Сайт проекта - "
 
 msgid "Geekhack forum thread - "
 msgstr "Ветка форума Geekhack - "
+
+msgid "Save to:"
+msgstr ""
+
+msgid "Load from:"
+msgstr ""
 
 msgid "Keyboard layout file:"
 msgstr "Файл раскладки клавиатуры:"

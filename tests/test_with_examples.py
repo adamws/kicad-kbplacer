@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import difflib
+import glob
 import logging
 import shutil
 import subprocess
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 def run_kbplacer_process(
     route,
     diode_position,
-    workdir,
+    package_path,
     package_name,
     layout_file,
     pcb_path,
@@ -54,7 +55,7 @@ def run_kbplacer_process(
 
     p = subprocess.Popen(
         kbplacer_args,
-        cwd=workdir,
+        cwd=package_path,
     )
     p.communicate()
     if p.returncode != 0:
@@ -144,19 +145,30 @@ def __get_parameters():
         param = pytest.param(
             "2x3-rotations-custom-diode-with-track",
             True,
-            "D{} CURRENT_RELATIVE",
+            "D{} RELATIVE",
             layout_option,
             id=test_id,
         )
         test_params.append(param)
 
     # add test with complex footprint
+    example = "2x3-rotations-custom-diode-with-track-and-complex-footprint"
     param = pytest.param(
-        "2x3-rotations-custom-diode-with-track-and-complex-footprint",
+        example,
         True,
-        "D{} CURRENT_RELATIVE",
+        "D{} RELATIVE",
         "kle.json",
-        id="2x3-rotations-custom-diode-with-track-and-complex-footprint;Tracks;DiodeOption2;RAW",
+        id=f"{example};Tracks;DiodeOption2;RAW",
+    )
+    test_params.append(param)
+
+    # add test with complex footprint
+    param = pytest.param(
+        example,
+        True,
+        "D{} PRESET diode_template.kicad_pcb",
+        "kle.json",
+        id=f"{example};Tracks;DiodeOption2;RAW;PRESET",
     )
     test_params.append(param)
 
@@ -193,6 +205,8 @@ def prepare_project(request, tmpdir, example: str, layout_file: str) -> None:
     source_dir = f"{test_dir}/../examples/{example}"
     for filename in ["keyboard-before.kicad_pcb", layout_file]:
         shutil.copy(f"{source_dir}/{filename}", tmpdir)
+    for template in glob.glob(f"{source_dir}/*_template.kicad_pcb"):
+        shutil.copy(template, tmpdir)
 
 
 @pytest.mark.parametrize(
@@ -205,7 +219,7 @@ def test_with_examples(
     layout_option,
     tmpdir,
     request,
-    workdir,
+    package_path,
     package_name,
 ) -> None:
     prepare_project(request, tmpdir, example, layout_option)
@@ -215,7 +229,7 @@ def test_with_examples(
     run_kbplacer_process(
         route,
         diode_position,
-        workdir,
+        package_path,
         package_name,
         f"{tmpdir}/{layout_option}",
         pcb_path,
@@ -227,7 +241,7 @@ def test_with_examples(
     assert_example(tmpdir, references_dir)
 
 
-def test_placing_and_routing_separately(tmpdir, request, workdir, package_name):
+def test_placing_and_routing_separately(tmpdir, request, package_path, package_name):
     # It should be possible to run placing only (in first kbplacer invoke) and
     # then routing only (in second invoke).
     # Result should be the same as running all at once.
@@ -242,7 +256,7 @@ def test_placing_and_routing_separately(tmpdir, request, workdir, package_name):
     run_kbplacer_process(
         False,
         None,
-        workdir,
+        package_path,
         package_name,
         f"{tmpdir}/{layout_file}",
         pcb_path,
@@ -251,7 +265,7 @@ def test_placing_and_routing_separately(tmpdir, request, workdir, package_name):
     run_kbplacer_process(
         True,
         None,
-        workdir,
+        package_path,
         package_name,
         None,
         pcb_path,
@@ -263,7 +277,7 @@ def test_placing_and_routing_separately(tmpdir, request, workdir, package_name):
     assert_example(tmpdir, references_dir)
 
 
-def test_board_creation(tmpdir, request, workdir, package_name):
+def test_board_creation(tmpdir, request, package_path, package_name):
     example = "2x2"
     layout_file = "via.json"
 
@@ -278,7 +292,7 @@ def test_board_creation(tmpdir, request, workdir, package_name):
     run_kbplacer_process(
         True,
         None,
-        workdir,
+        package_path,
         package_name,
         f"{tmpdir}/{layout_file}",
         pcb_path,
