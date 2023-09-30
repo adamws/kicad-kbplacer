@@ -144,7 +144,7 @@ jobs:
             docker build -t admwscki/$IMAGE_NAME:$TAG -f docker/Dockerfile .
             docker run --rm -v $(pwd):/kicad/tmp -w /kicad/tmp admwscki/$IMAGE_NAME:$TAG \
               /bin/bash -c \
-              "pip3 install -r dev-requirements.txt && /kicad/.local/bin/pytest -c /dev/null --test-plugin-installation -k test_with_examples tests/"
+              "pip3 install -r dev-requirements.txt && /kicad/.local/bin/pytest -c /dev/null --test-plugin-installation -k test_with_examples"
       - when: # run only on master or tag
           condition:
             or:
@@ -189,8 +189,8 @@ workflows:
                 - 6.0.11-lunar
                 - 7.0.6-focal
                 - 7.0.6-lunar
-                - 7.0.7-focal
-                - 7.0.7-lunar
+                - 7.0.8-focal
+                - 7.0.8-lunar
       - test-windows:
           matrix:
             parameters:
