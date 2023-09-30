@@ -495,11 +495,9 @@ class ElementSettingsWidget(wx.Panel):
         return ElementInfo(annotation, *position)
 
     def Enable(self):
-        self.annotation_format.Enable()
         self.position_widget.Enable()
 
     def Disable(self):
-        self.annotation_format.Disable()
         self.position_widget.Disable()
 
 
@@ -784,10 +782,7 @@ class KbplacerDialog(wx.Dialog):
     def get_diode_position_info(
         self,
     ) -> Optional[ElementInfo]:
-        if self.__place_diodes_checkbox.GetValue():
-            return self.__diode_settings.GetValue()
-        else:
-            return None
+        return self.__diode_settings.GetValue()
 
     def get_additional_elements_info(
         self,
