@@ -1,5 +1,3 @@
-import logging
-
 import pcbnew
 import pytest
 
@@ -10,9 +8,6 @@ try:
     from kbplacer.template_copier import TemplateCopier
 except:
     pass
-
-
-logger = logging.getLogger(__name__)
 
 
 TRACK_START = pcbnew.wxPointMM(0, 5)
@@ -49,7 +44,7 @@ def test_template_copy(copy_tracks, tmpdir, request):
     source_board_path = prepare_source_board(tmpdir, request)
     target_board, footprints = prepare_target_board(request)
 
-    TemplateCopier(logger, target_board, source_board_path, copy_tracks).run()
+    TemplateCopier(target_board, source_board_path, copy_tracks).run()
 
     target_board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
     generate_render(tmpdir, request)

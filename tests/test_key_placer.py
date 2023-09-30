@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import logging
 from typing import Tuple
 
 import pcbnew
@@ -27,9 +26,6 @@ except:
     class Side(Flag):
         FRONT = False
         BACK = True
-
-
-logger = logging.getLogger(__name__)
 
 
 def equal_ignore_order(a, b):
@@ -143,7 +139,7 @@ def assert_board_tracks(expected: list[Tuple[int, int]] | None, board: pcbnew.BO
 @pytest.mark.parametrize("side", [Side.FRONT, Side.BACK])
 def test_diode_switch_routing(position, orientation, side, expected, tmpdir, request):
     board, switch, diode = get_board_with_one_switch(request, "SW_Cherry_MX_PCB_1.00u")
-    key_placer = KeyPlacer(logger, board)
+    key_placer = KeyPlacer(board)
 
     switch_pad = switch.FindPadByNumber("2")
     switch_pad_position = switch_pad.GetPosition()
@@ -180,7 +176,7 @@ def test_diode_switch_routing_complicated_footprint(
     board, switch, diode = get_board_with_one_switch(
         request, "Kailh_socket_PG1350_optional_reversible"
     )
-    key_placer = KeyPlacer(logger, board)
+    key_placer = KeyPlacer(board)
 
     key_placer.set_position(diode, pcbnew.wxPointMM(*position))
     diode.SetOrientationDegrees(orientation)
@@ -249,7 +245,7 @@ def test_switch_distance(key_distance, tmpdir, request):
     board = get_board_for_2x2_example(request)
     layout = get_2x2_layout(request)
 
-    key_placer = KeyPlacer(logger, board, key_distance)
+    key_placer = KeyPlacer(board, key_distance)
     diode_position = DEFAULT_DIODE_POSITION
     key_placer.run(
         layout, "SW{}", ElementInfo("D{}", PositionOption.DEFAULT, diode_position), True
@@ -272,7 +268,7 @@ def test_diode_placement_ignore(tmpdir, request):
     board = get_board_for_2x2_example(request)
     layout = get_2x2_layout(request)
 
-    key_placer = KeyPlacer(logger, board)
+    key_placer = KeyPlacer(board)
     key_placer.run(layout, "SW{}", None, True)
 
     board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
@@ -288,7 +284,7 @@ def test_diode_placement_ignore(tmpdir, request):
 def test_placer_invalid_layout(request):
     board = get_board_for_2x2_example(request)
 
-    key_placer = KeyPlacer(logger, board)
+    key_placer = KeyPlacer(board)
 
     with pytest.raises(RuntimeError):
         key_placer.run({"some": "urecognized layout format"}, "SW{}", None, True)

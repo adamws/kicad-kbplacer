@@ -214,7 +214,6 @@ def app():
     logging.basicConfig(
         level=logging.DEBUG, format="%(asctime)s: %(message)s", datefmt="%H:%M:%S"
     )
-    logger = logging.getLogger(__name__)
 
     if layout_path:
         with open(layout_path, "r") as f:
@@ -224,11 +223,10 @@ def app():
 
     if create_from_via:
         if os.path.isfile(board_path):
-            logger.error(f"File {board_path} already exist, aborting")
+            logging.error(f"File {board_path} already exist, aborting")
             sys.exit(1)
 
         builder = BoardBuilder(
-            logger,
             switch_footprint=args.switch_footprint,
             diode_footprint=args.diode_footprint,
         )
@@ -237,7 +235,7 @@ def app():
 
     board = pcbnew.LoadBoard(board_path)
 
-    placer = KeyPlacer(logger, board, key_distance)
+    placer = KeyPlacer(board, key_distance)
     placer.run(
         layout,
         "SW{}",
@@ -248,7 +246,7 @@ def app():
     )
 
     if template_path:
-        copier = TemplateCopier(logger, board, template_path, route_rows_and_columns)
+        copier = TemplateCopier(board, template_path, route_rows_and_columns)
         copier.run()
 
     pcbnew.Refresh()

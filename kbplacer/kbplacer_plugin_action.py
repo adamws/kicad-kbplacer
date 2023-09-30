@@ -74,9 +74,8 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
             filemode="w",
             format="[%(filename)s:%(lineno)d]: %(message)s",
         )
-        self.logger = logging.getLogger(__name__)
-        self.logger.info(f"Plugin executed with KiCad version: {version}")
-        self.logger.info(f"Plugin executed with python version: {repr(sys.version)}")
+        logging.info(f"Plugin executed with KiCad version: {version}")
+        logging.info(f"Plugin executed with python version: {repr(sys.version)}")
 
     def Run(self) -> None:
         self.Initialize()
@@ -84,7 +83,7 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
         pcb_frame = [x for x in wx.GetTopLevelWindows() if x.GetName() == "PcbFrame"][0]
 
         if self.window_state_error:
-            self.logger.info(
+            logging.info(
                 "Found corrupted cached window state, skipping state restoration"
             )
             self.window_state = None
@@ -92,7 +91,7 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
         dlg = KbplacerDialog(pcb_frame, "kbplacer", initial_state=self.window_state)
         if dlg.ShowModal() == wx.ID_OK:
             gui_state = dlg.get_window_state()
-            self.logger.info(f"GUI state: {gui_state}")
+            logging.info(f"GUI state: {gui_state}")
 
             if layout_path := dlg.get_layout_path():
                 with open(layout_path, "r") as f:
@@ -104,7 +103,7 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
             diode_info = dlg.get_diode_position_info()
             additional_elements = dlg.get_additional_elements_info()
 
-            placer = KeyPlacer(self.logger, self.board, dlg.get_key_distance())
+            placer = KeyPlacer(self.board, dlg.get_key_distance())
             placer.run(
                 layout,
                 key_format,
@@ -116,12 +115,12 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
 
             if template_path := dlg.get_template_path():
                 template_copier = TemplateCopier(
-                    self.logger, self.board, template_path, dlg.route_rows_and_columns()
+                    self.board, template_path, dlg.route_rows_and_columns()
                 )
                 template_copier.run()
         else:
             gui_state = dlg.get_window_state()
-            self.logger.info(f"GUI state: {gui_state}")
+            logging.info(f"GUI state: {gui_state}")
 
         dlg.Destroy()
         logging.shutdown()

@@ -80,7 +80,7 @@ def test_track_with_pad_collision(footprint, position, side, netlist, tmpdir, re
     if pad_netlist:
         pad.SetNet(netcodes_map[pad_netlist])
 
-    modifier = BoardModifier(logger, board)
+    modifier = BoardModifier(board)
     modifier.set_position_by_points(diode, 0, 0)
     modifier.set_side(diode, Side.BACK)
 
@@ -150,7 +150,7 @@ def add_track_segments_test(steps, tmpdir, request):
     board = pcbnew.CreateEmptyBoard()
     f = add_diode_footprint(board, "D_SOD-323", request)
 
-    modifier = BoardModifier(logger, board)
+    modifier = BoardModifier(board)
     # place footprint
     modifier.set_position_by_points(f, 0, 0)
     modifier.set_side(f, Side.BACK)
@@ -216,7 +216,7 @@ def test_track_with_track_collision_close_to_footprint_many_small_tracks(
 def test_track_with_track_collision(start, end, layer, expected, tmpdir, request):
     board = pcbnew.CreateEmptyBoard()
 
-    modifier = BoardModifier(logger, board)
+    modifier = BoardModifier(board)
     add_track(board, pointMM(2, -2), pointMM(2, 2), pcbnew.B_Cu)
 
     # add track to test:

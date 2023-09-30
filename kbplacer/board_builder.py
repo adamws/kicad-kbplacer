@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
-from logging import Logger
 from typing import Type
 
 import pcbnew
@@ -29,13 +29,10 @@ class Footprint:
 class BoardBuilder:
     def __init__(
         self,
-        logger: Logger,
         *,
         switch_footprint: str,
         diode_footprint: str,
     ) -> None:
-        self.logger = logger
-
         self.switch_footprint = Footprint.from_str(switch_footprint)
         self.diode_footprint = Footprint.from_str(diode_footprint)
 
@@ -45,7 +42,7 @@ class BoardBuilder:
         self.net_count = self.board.GetNetCount()
 
     def add_footprint(self, footprint: pcbnew.FOOTPRINT) -> pcbnew.FOOTPRINT:
-        self.logger.info(f"Add {footprint.GetReference()} footprint")
+        logging.info(f"Add {footprint.GetReference()} footprint")
         self.board.Add(footprint)
         return footprint
 
@@ -66,7 +63,7 @@ class BoardBuilder:
         else:
             net = pcbnew.NETINFO_ITEM(self.board, netname, self.net_count)
             self.net_info.AppendNet(net)
-            self.logger.info(f"Add {netname} net")
+            logging.info(f"Add {netname} net")
             self.board.Add(net)
             self.net_count += 1
             self.nets[netname] = net

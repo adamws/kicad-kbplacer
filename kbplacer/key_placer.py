@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import logging
 import re
-from logging import Logger
 from typing import List, Optional, Tuple, cast
 
 import pcbnew
@@ -41,16 +41,15 @@ class SwitchIterator:
 class KeyPlacer(BoardModifier):
     def __init__(
         self,
-        logger: Logger,
         board: pcbnew.BOARD,
         key_distance: Tuple[float, float] = (19.05, 19.05),
     ) -> None:
-        super().__init__(logger, board)
+        super().__init__(board)
 
         self.__key_distance_x = cast(int, pcbnew.FromMM(key_distance[0]))
         self.__key_distance_y = cast(int, pcbnew.FromMM(key_distance[1]))
 
-        self.logger.debug(
+        logging.debug(
             f"Set key 1U distance: {self.__key_distance_x}/{self.__key_distance_y}"
         )
         self.__reference_coordinate = pcbnew.wxPointMM(25, 25)
@@ -79,12 +78,12 @@ class KeyPlacer(BoardModifier):
         :type angle: float
         :type template_connection: List[pcbnew.PCB_TRACK] | None
         """
-        self.logger.info(f"Routing {switch.GetReference()} with {diode.GetReference()}")
+        logging.info(f"Routing {switch.GetReference()} with {diode.GetReference()}")
 
         if template_connection:
-            self.logger.info("Using template replication method")
+            logging.info("Using template replication method")
             if angle != 0:
-                self.logger.info(f"Routing at {angle} degree angle")
+                logging.info(f"Routing at {angle} degree angle")
             switch_position = self.get_position(switch)
             rejects = []
             for item in template_connection:
@@ -115,11 +114,11 @@ class KeyPlacer(BoardModifier):
             for item in rejects:
                 self.add_track_to_board(item)
         elif result := get_closest_pads_on_same_net(switch, diode):
-            self.logger.info("Using internal autorouter method")
+            logging.info("Using internal autorouter method")
             switch_pad, diode_pad = result
             self.route(switch_pad, diode_pad)
         else:
-            self.logger.error("Could not find pads with the same net, routing skipped")
+            logging.error("Could not find pads with the same net, routing skipped")
 
     def get_current_relative_element_position(
         self, key_format: str, element_format: str
@@ -202,7 +201,7 @@ class KeyPlacer(BoardModifier):
             return f"{name} [{start} {end}]"
 
         items_str = ", ".join([_format_item(i) for i in result])
-        self.logger.info(f"Got connection template: {items_str}")
+        logging.info(f"Got connection template: {items_str}")
         return result
 
     def place_switches(
@@ -327,7 +326,7 @@ class KeyPlacer(BoardModifier):
         template_connection = []
 
         if diode_info:
-            self.logger.info(f"Diode info: {diode_info}")
+            logging.info(f"Diode info: {diode_info}")
             diode_format = diode_info.annotation_format
             if route_switches_with_diodes:
                 # check if first switch-diode pair is already routed, if yes,
@@ -346,7 +345,7 @@ class KeyPlacer(BoardModifier):
                 element_info.position = position
 
         if layout:
-            self.logger.info(f"User layout: {layout}")
+            logging.info(f"User layout: {layout}")
             keyboard = get_keyboard(layout)
             self.place_switches(keyboard, key_format)
 
