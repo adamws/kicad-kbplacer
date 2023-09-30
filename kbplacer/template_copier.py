@@ -2,7 +2,7 @@ import logging
 
 import pcbnew
 
-from .board_modifier import BoardModifier
+from .board_modifier import BoardModifier, get_footprint, set_position
 
 
 class TemplateCopier(BoardModifier):
@@ -25,7 +25,7 @@ class TemplateCopier(BoardModifier):
 
         for footprint in footprints:
             reference = footprint.GetReference()
-            destination_footprint = self.get_footprint(reference)
+            destination_footprint = get_footprint(self.board, reference)
 
             layer = footprint.GetLayerName()
             position = footprint.GetPosition()
@@ -33,7 +33,7 @@ class TemplateCopier(BoardModifier):
 
             if layer == "B.Cu" and destination_footprint.GetLayerName() != "B.Cu":
                 destination_footprint.Flip(destination_footprint.GetCenter(), False)
-            self.set_position(destination_footprint, position)
+            set_position(destination_footprint, position)
             destination_footprint.SetOrientation(orientation)
 
         if self.__route_tracks:

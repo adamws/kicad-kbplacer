@@ -58,32 +58,79 @@ def position_in_cartesian_coordinates(
     return pcbnew.wxPoint(x, y)
 
 
+def get_footprint(board: pcbnew.BOARD, reference: str) -> pcbnew.FOOTPRINT:
+    logging.info(f"Searching for {reference} footprint")
+    footprint = board.FindFootprintByReference(reference)
+    if footprint is None:
+        logging.error("Footprint not found")
+        msg = f"Cannot find footprint {reference}"
+        raise Exception(msg)
+    return footprint
+
+
+def get_optional_footprint(
+    board: pcbnew.BOARD, reference: str
+) -> pcbnew.FOOTPRINT | None:
+    try:
+        footprint = get_footprint(board, reference)
+    except Exception as _:
+        footprint = None
+    return footprint
+
+
 def set_position(footprint: pcbnew.FOOTPRINT, position: pcbnew.wxPoint) -> None:
+    logging.debug(f"Setting {footprint.GetReference()} footprint position: {position}")
     if KICAD_VERSION >= (7, 0, 0):
         footprint.SetPosition(pcbnew.VECTOR2I(position.x, position.y))
     else:
         footprint.SetPosition(position)
 
 
+def set_position_by_points(footprint: pcbnew.FOOTPRINT, x: int, y: int) -> None:
+    set_position(footprint, pcbnew.wxPoint(x, y))
+
+
 def get_position(footprint: pcbnew.FOOTPRINT) -> pcbnew.wxPoint:
     position = footprint.GetPosition()
+    logging.debug(f"Getting {footprint.GetReference()} footprint position: {position}")
     if KICAD_VERSION >= (7, 0, 0):
         return pcbnew.wxPoint(position.x, position.y)
     return position
 
 
+def set_side(footprint: pcbnew.FOOTPRINT, side: Side) -> None:
+    if side ^ get_side(footprint):
+        footprint.Flip(footprint.GetPosition(), False)
+
+
+def get_side(footprint: pcbnew.FOOTPRINT) -> Side:
+    return Side(footprint.IsFlipped())
+
+
+def set_rotation(footprint: pcbnew.FOOTPRINT, angle: float) -> None:
+    footprint.SetOrientationDegrees(angle)
+
+
+def reset_rotation(footprint: pcbnew.FOOTPRINT) -> None:
+    set_rotation(footprint, 0)
+
+
+def get_orientation(footprint: pcbnew.FOOTPRINT) -> float:
+    return footprint.GetOrientationDegrees()
+
+
 def rotate(
-    footprint: pcbnew.BOARD_ITEM,
+    item: pcbnew.BOARD_ITEM,
     rotation_reference: pcbnew.wxPoint,
     angle: float,
 ) -> None:
     if KICAD_VERSION >= (7, 0, 0):
-        footprint.Rotate(
+        item.Rotate(
             pcbnew.VECTOR2I(rotation_reference.x, rotation_reference.y),
             pcbnew.EDA_ANGLE(angle * -1, pcbnew.DEGREES_T),
         )
     else:
-        footprint.Rotate(rotation_reference, angle * -10)
+        item.Rotate(rotation_reference, angle * -10)
 
 
 def get_distance(i1: pcbnew.BOARD_ITEM, i2: pcbnew.BOARD_ITEM) -> int:
@@ -162,42 +209,6 @@ class BoardModifier:
     def get_connectivity(self):
         self.board.BuildConnectivity()
         return self.board.GetConnectivity()
-
-    def get_footprint(self, reference: str) -> pcbnew.FOOTPRINT:
-        logging.info(f"Searching for {reference} footprint")
-        footprint = self.board.FindFootprintByReference(reference)
-        if footprint is None:
-            logging.error("Footprint not found")
-            msg = f"Cannot find footprint {reference}"
-            raise Exception(msg)
-        return footprint
-
-    def get_optional_footprint(self, reference: str) -> pcbnew.FOOTPRINT | None:
-        try:
-            footprint = self.get_footprint(reference)
-        except Exception as _:
-            footprint = None
-        return footprint
-
-    def set_position(
-        self, footprint: pcbnew.FOOTPRINT, position: pcbnew.wxPoint
-    ) -> None:
-        logging.info(
-            f"Setting {footprint.GetReference()} footprint position: {position}"
-        )
-        set_position(footprint, position)
-
-    def set_position_by_points(
-        self, footprint: pcbnew.FOOTPRINT, x: int, y: int
-    ) -> None:
-        self.set_position(footprint, pcbnew.wxPoint(x, y))
-
-    def get_position(self, footprint: pcbnew.FOOTPRINT) -> pcbnew.wxPoint:
-        position = get_position(footprint)
-        logging.info(
-            f"Getting {footprint.GetReference()} footprint position: {position}"
-        )
-        return position
 
     def test_track_collision(self, track: pcbnew.PCB_TRACK) -> bool:
         collide_list = []
@@ -351,34 +362,6 @@ class BoardModifier:
         end = pcbnew.wxPoint(start.x + vector[0], start.y + vector[1])
         return self.add_track_segment_by_points(start, end, layer)
 
-    def rotate(
-        self,
-        footprint: pcbnew.FOOTPRINT,
-        rotation_reference: pcbnew.wxPoint,
-        angle: float,
-    ) -> None:
-        logging.info(
-            f"Rotating {footprint.GetReference()} footprint: "
-            f"rotationReference: {rotation_reference}, rotationAngle: {angle}"
-        )
-        rotate(footprint, rotation_reference, angle)
-
-    def set_side(self, footprint: pcbnew.FOOTPRINT, side: Side) -> None:
-        if side ^ self.get_side(footprint):
-            footprint.Flip(footprint.GetPosition(), False)
-
-    def get_side(self, footprint: pcbnew.FOOTPRINT) -> Side:
-        return Side(footprint.IsFlipped())
-
-    def set_rotation(self, footprint: pcbnew.FOOTPRINT, angle: float) -> None:
-        footprint.SetOrientationDegrees(angle)
-
-    def reset_rotation(self, footprint: pcbnew.FOOTPRINT) -> None:
-        self.set_rotation(footprint, 0)
-
-    def get_orientation(self, footprint: pcbnew.FOOTPRINT) -> float:
-        return footprint.GetOrientationDegrees()
-
     def route(self, pad1: pcbnew.PAD, pad2: pcbnew.PAD) -> None:
         r"""Simple track router
         If pads are collinear, it will use single track segment.
@@ -458,8 +441,8 @@ class BoardModifier:
         pos1 = pad1.GetPosition()
         pos2 = pad2.GetPosition()
 
-        orientation1 = self.get_orientation(pad1.GetParent())
-        orientation2 = self.get_orientation(pad2.GetParent())
+        orientation1 = get_orientation(pad1.GetParent())
+        orientation2 = get_orientation(pad2.GetParent())
 
         if (orientation1 % 90 == 0) and (orientation2 % 90 == 0):
             angle = 0

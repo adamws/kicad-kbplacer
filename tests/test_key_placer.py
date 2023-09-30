@@ -13,6 +13,12 @@ from .conftest import (
 )
 
 try:
+    from kbplacer.board_modifier import (
+        get_footprint,
+        get_position,
+        set_position,
+        set_side,
+    )
     from kbplacer.defaults import DEFAULT_DIODE_POSITION
     from kbplacer.element_position import ElementInfo, PositionOption, Side
     from kbplacer.key_placer import KeyPlacer
@@ -148,8 +154,8 @@ def test_diode_switch_routing(position, orientation, side, expected, tmpdir, req
         switch_pad_position.x + pcbnew.FromMM(position[0]),
         switch_pad_position.y + pcbnew.FromMM(position[1]),
     )
-    key_placer.set_position(diode, diode_position)
-    key_placer.set_side(diode, side)
+    set_position(diode, diode_position)
+    set_side(diode, side)
     diode.SetOrientationDegrees(orientation)
 
     key_placer.route_switch_with_diode(switch, diode, 0)
@@ -178,7 +184,7 @@ def test_diode_switch_routing_complicated_footprint(
     )
     key_placer = KeyPlacer(board)
 
-    key_placer.set_position(diode, pcbnew.wxPointMM(*position))
+    set_position(diode, pcbnew.wxPointMM(*position))
     diode.SetOrientationDegrees(orientation)
 
     key_placer.route_switch_with_diode(switch, diode, 0)
@@ -215,9 +221,9 @@ def get_board_for_2x2_example(request):
     return board
 
 
-def assert_2x2_layout_switches(key_placer, key_distance: Tuple[float, float]):
-    switches = [key_placer.get_footprint(f"SW{i}") for i in range(1, 5)]
-    positions = [key_placer.get_position(switch) for switch in switches]
+def assert_2x2_layout_switches(board: pcbnew.BOARD, key_distance: Tuple[float, float]):
+    switches = [get_footprint(board, f"SW{i}") for i in range(1, 5)]
+    positions = [get_position(switch) for switch in switches]
     assert positions[0] == pcbnew.wxPointMM(25, 25) + pcbnew.wxPointMM(
         key_distance[0] / 2, key_distance[1] / 2
     )
@@ -254,14 +260,12 @@ def test_switch_distance(key_distance, tmpdir, request):
     board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
     generate_render(tmpdir, request)
 
-    assert_2x2_layout_switches(key_placer, key_distance)
-    switches = [key_placer.get_footprint(f"SW{i}") for i in range(1, 5)]
-    diodes = [key_placer.get_footprint(f"D{i}") for i in range(1, 5)]
+    assert_2x2_layout_switches(board, key_distance)
+    switches = [get_footprint(board, f"SW{i}") for i in range(1, 5)]
+    diodes = [get_footprint(board, f"D{i}") for i in range(1, 5)]
     for switch, diode in zip(switches, diodes):
         p = diode_position.relative_position
-        assert key_placer.get_position(diode) == key_placer.get_position(
-            switch
-        ) + pcbnew.wxPointMM(p.x, p.y)
+        assert get_position(diode) == get_position(switch) + pcbnew.wxPointMM(p.x, p.y)
 
 
 def test_diode_placement_ignore(tmpdir, request):
@@ -274,9 +278,9 @@ def test_diode_placement_ignore(tmpdir, request):
     board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
     generate_render(tmpdir, request)
 
-    assert_2x2_layout_switches(key_placer, (19.05, 19.05))
-    diodes = [key_placer.get_footprint(f"D{i}") for i in range(1, 5)]
-    positions = [key_placer.get_position(diode) for diode in diodes]
+    assert_2x2_layout_switches(board, (19.05, 19.05))
+    diodes = [get_footprint(board, f"D{i}") for i in range(1, 5)]
+    positions = [get_position(diode) for diode in diodes]
     for pos in positions:
         assert pos == pcbnew.wxPoint(0, 0)
 

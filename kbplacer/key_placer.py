@@ -11,8 +11,17 @@ from .board_modifier import (
     BoardModifier,
     get_closest_pads_on_same_net,
     get_common_nets,
+    get_footprint,
+    get_optional_footprint,
+    get_orientation,
+    get_position,
+    get_side,
     position_in_rotated_coordinates,
+    reset_rotation,
     rotate,
+    set_position,
+    set_rotation,
+    set_side,
 )
 from .element_position import ElementInfo, ElementPosition, Point, PositionOption
 from .kle_serial import Keyboard, get_keyboard
@@ -84,7 +93,7 @@ class KeyPlacer(BoardModifier):
             logging.info("Using template replication method")
             if angle != 0:
                 logging.info(f"Routing at {angle} degree angle")
-            switch_position = self.get_position(switch)
+            switch_position = get_position(switch)
             rejects = []
             for item in template_connection:
                 # item is either PCB_TRACK or PCB_VIA, since via extends track
@@ -126,16 +135,16 @@ class KeyPlacer(BoardModifier):
         # TODO: perhaps add support for using different pair as reference,
         # we no longer require strict 1-to-1 mapping between switches and diodes
         # so `D1` does not have to exist
-        key1 = self.get_footprint(key_format.format(1))
-        element1 = self.get_footprint(element_format.format(1))
-        pos1 = self.get_position(key1)
-        pos2 = self.get_position(element1)
+        key1 = get_footprint(self.board, key_format.format(1))
+        element1 = get_footprint(self.board, element_format.format(1))
+        pos1 = get_position(key1)
+        pos2 = get_position(element1)
         x = cast(float, pcbnew.ToMM(pos2.x - pos1.x))
         y = cast(float, pcbnew.ToMM(pos2.y - pos1.y))
         return ElementPosition(
             Point(x, y),
             element1.GetOrientationDegrees(),
-            self.get_side(element1),
+            get_side(element1),
         )
 
     def remove_dangling_tracks(self) -> None:
@@ -153,13 +162,13 @@ class KeyPlacer(BoardModifier):
     def get_connection_template(
         self, key_format: str, diode_format: str
     ) -> List[pcbnew.PCB_TRACK]:
-        switch = self.get_footprint(key_format.format(1))
-        diode = self.get_optional_footprint(diode_format.format(1))
+        switch = get_footprint(self.board, key_format.format(1))
+        diode = get_optional_footprint(self.board, diode_format.format(1))
         if not diode:
             return []
 
         result = []
-        origin = self.get_position(switch)
+        origin = get_position(switch)
 
         connectivity = self.get_connectivity()
         common_nets = get_common_nets(switch, diode)
@@ -212,7 +221,7 @@ class KeyPlacer(BoardModifier):
         current_key = 1
 
         for key in keyboard.keys:
-            switch_footprint = self.get_footprint(key_format.format(current_key))
+            switch_footprint = get_footprint(self.board, key_format.format(current_key))
 
             width = key.width
             height = key.height
@@ -225,8 +234,8 @@ class KeyPlacer(BoardModifier):
                 )
                 + self.__reference_coordinate
             )
-            self.set_position(switch_footprint, position)
-            self.reset_rotation(switch_footprint)
+            set_position(switch_footprint, position)
+            reset_rotation(switch_footprint)
 
             angle = key.rotation_angle
             if angle != 0:
@@ -237,7 +246,7 @@ class KeyPlacer(BoardModifier):
                     )
                     + self.__reference_coordinate
                 )
-                self.rotate(switch_footprint, rotation_reference, angle)
+                rotate(switch_footprint, rotation_reference, angle)
 
             current_key += 1
 
@@ -247,16 +256,18 @@ class KeyPlacer(BoardModifier):
         elements: List[ElementInfo],
     ) -> None:
         for i, switch_footprint in SwitchIterator(self.board, key_format):
-            position = self.get_position(switch_footprint)
-            orientation = self.get_orientation(switch_footprint)
+            position = get_position(switch_footprint)
+            orientation = get_orientation(switch_footprint)
             for element_info in elements:
                 annotation_format = element_info.annotation_format
                 element_position = element_info.position
-                footprint = self.get_optional_footprint(annotation_format.format(i))
+                footprint = get_optional_footprint(
+                    self.board, annotation_format.format(i)
+                )
                 if footprint and element_position:
-                    self.reset_rotation(footprint)
-                    self.set_side(footprint, element_position.side)
-                    self.set_rotation(footprint, element_position.orientation)
+                    reset_rotation(footprint)
+                    set_side(footprint, element_position.side)
+                    set_rotation(footprint, element_position.orientation)
 
                     offset = pcbnew.wxPointMM(
                         *element_position.relative_position.to_list()
@@ -264,10 +275,10 @@ class KeyPlacer(BoardModifier):
                     if orientation != 0:
                         offset = position_in_rotated_coordinates(offset, orientation)
 
-                    self.set_position(footprint, position + offset)
+                    set_position(footprint, position + offset)
                     if orientation != 0:
-                        current_position = self.get_position(footprint)
-                        self.rotate(footprint, current_position, -1 * orientation)
+                        current_position = get_position(footprint)
+                        rotate(footprint, current_position, -1 * orientation)
 
     def route_switches_with_diodes(
         self,
@@ -278,7 +289,9 @@ class KeyPlacer(BoardModifier):
         for i, switch_footprint in SwitchIterator(self.board, key_format):
             angle = -1 * switch_footprint.GetOrientationDegrees()
 
-            if diode_footprint := self.get_optional_footprint(diode_format.format(i)):
+            if diode_footprint := get_optional_footprint(
+                self.board, diode_format.format(i)
+            ):
                 self.route_switch_with_diode(
                     switch_footprint, diode_footprint, angle, template_connection
                 )

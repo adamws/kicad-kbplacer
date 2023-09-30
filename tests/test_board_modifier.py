@@ -7,7 +7,12 @@ import pytest
 from .conftest import KICAD_VERSION, add_track, generate_render, get_footprints_dir
 
 try:
-    from kbplacer.board_modifier import DEFAULT_CLEARANCE_MM, BoardModifier
+    from kbplacer.board_modifier import (
+        DEFAULT_CLEARANCE_MM,
+        BoardModifier,
+        set_position_by_points,
+        set_side,
+    )
     from kbplacer.element_position import Side
 except:
     pass
@@ -81,8 +86,8 @@ def test_track_with_pad_collision(footprint, position, side, netlist, tmpdir, re
         pad.SetNet(netcodes_map[pad_netlist])
 
     modifier = BoardModifier(board)
-    modifier.set_position_by_points(diode, 0, 0)
-    modifier.set_side(diode, Side.BACK)
+    set_position_by_points(diode, 0, 0)
+    set_side(diode, Side.BACK)
 
     pad_position = pad.GetPosition()
     if KICAD_VERSION >= (7, 0, 0):
@@ -152,8 +157,8 @@ def add_track_segments_test(steps, tmpdir, request):
 
     modifier = BoardModifier(board)
     # place footprint
-    modifier.set_position_by_points(f, 0, 0)
-    modifier.set_side(f, Side.BACK)
+    set_position_by_points(f, 0, 0)
+    set_side(f, Side.BACK)
 
     start = f.FindPadByNumber("2").GetPosition()
     for step in steps:
