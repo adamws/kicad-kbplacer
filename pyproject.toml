@@ -29,6 +29,7 @@ dynamic = ["readme", "version"]
 [project.urls]
 "Homepage" = "https://github.com/adamws/kicad-kbplacer"
 "Bug Tracker" = "https://github.com/adamws/kicad-kbplacer/issues"
+"Sponsor" = "https://ko-fi.com/adamws"
 
 [project.scripts]
 kbplacer = "kbplacer.__main__:app"
@@ -52,8 +53,9 @@ name = "Keyboard footprints placer"
 description = "Plugin for mechanical keyboard design"
 description_full = [
   "Plugin for mechanical keyboard design.\n",
-  "It features automatic key placement based on popular ",
-  "layout description from www.keyboard-layout-editor.com",
+  "It features automatic key placement and routing based on various ",
+  "layout descriptions like kle (www.keyboard-layout-editor.com), ",
+  "ergogen (https://github.com/ergogen/ergogen) and via (https://www.caniusevia.com)"
 ]
 identifier = "com.github.adamws.kicad-kbplacer"
 author = { name = "adamws", web="https://adamws.github.io" }
