@@ -55,6 +55,24 @@ def get_plugin_translator(lang: str = "en"):
     return trans.gettext
 
 
+def get_file_picker(*args, **kwargs):
+    file_picker = wx.FilePickerCtrl(*args, **kwargs)
+    file_picker.SetTextCtrlGrowable(True)
+
+    def _update_position(_):
+        text_ctrl = file_picker.GetTextCtrl()
+        # when updating from file chooser window we want automatically
+        # move to the end (it looks better when not whole path fits),
+        # but when user updates by typing in text control we don't
+        # want to mess up with it. This can be done by checking
+        # if current insertion point is 0.
+        if text_ctrl.GetInsertionPoint() == 0:
+            text_ctrl.SetInsertionPointEnd()
+
+    file_picker.Bind(wx.EVT_FILEPICKER_CHANGED, _update_position)
+    return file_picker
+
+
 class FloatValidator(wx.Validator):
     def __init__(self) -> None:
         wx.Validator.__init__(self)
@@ -313,7 +331,7 @@ class ElementTemplateSelectionWidget(wx.Panel):
             else self._("Load from:")
         )
         layout_label = wx.StaticText(self, -1, label)
-        layout_picker = self.__get_file_picker(
+        layout_picker = get_file_picker(
             self,
             -1,
             wildcard="KiCad printed circuit board files (*.kicad_pcb)|*.kicad_pcb",
@@ -332,15 +350,6 @@ class ElementTemplateSelectionWidget(wx.Panel):
 
         self.__layout_picker = layout_picker
         self.__picker_type = picker_type
-
-    def __get_file_picker(self, *args, **kwargs):
-        file_picker = wx.FilePickerCtrl(*args, **kwargs)
-        file_picker.SetTextCtrlGrowable(True)
-        file_picker.Bind(
-            wx.EVT_FILEPICKER_CHANGED,
-            lambda _: file_picker.GetTextCtrl().SetInsertionPointEnd(),
-        )
-        return file_picker
 
     def GetValue(self) -> str:
         path = self.__layout_picker.GetPath()
@@ -548,15 +557,6 @@ class KbplacerDialog(wx.Dialog):
 
         self.SetSizerAndFit(box)
 
-    def __get_file_picker(self, *args, **kwargs):
-        file_picker = wx.FilePickerCtrl(*args, **kwargs)
-        file_picker.SetTextCtrlGrowable(True)
-        file_picker.Bind(
-            wx.EVT_FILEPICKER_CHANGED,
-            lambda _: file_picker.GetTextCtrl().SetInsertionPointEnd(),
-        )
-        return file_picker
-
     def get_switch_section(
         self,
         annotation: str = "SW{}",
@@ -569,7 +569,7 @@ class KbplacerDialog(wx.Dialog):
         )
 
         layout_label = wx.StaticText(self, -1, self._("Keyboard layout file:"))
-        layout_picker = self.__get_file_picker(
+        layout_picker = get_file_picker(
             self,
             -1,
             wildcard="JSON files (*.json)|*.json|All files (*)|*",
@@ -732,7 +732,7 @@ class KbplacerDialog(wx.Dialog):
         template_label = wx.StaticText(
             self, -1, self._("Controller circuit template file:")
         )
-        template_picker = self.__get_file_picker(
+        template_picker = get_file_picker(
             self,
             -1,
             wildcard="KiCad printed circuit board files (*.kicad_pcb)|*.kicad_pcb",
