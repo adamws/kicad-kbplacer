@@ -391,7 +391,7 @@ class ElementPositionChoiceWidget(wx.Panel):
         )
         dropdown_sizer.Add(self.dropdown, 0, wx.EXPAND | wx.TOP | wx.BOTTOM, 5)
 
-        self.position = ElementPositionWidget(self, initial_position)
+        self.position = ElementPositionWidget(self, default_position)
         self.load_template = ElementTemplateSelectionWidget(
             self, picker_type=TemplateType.LOAD, initial_path=initial_path
         )
