@@ -43,7 +43,11 @@ class ElementInfoAction(argparse.Action):
             template_path = ""
 
             if len(tokens) == 2:
-                if option not in [PositionOption.RELATIVE, PositionOption.DEFAULT]:
+                if option not in [
+                    PositionOption.RELATIVE,
+                    PositionOption.DEFAULT,
+                    PositionOption.UNCHANGED,
+                ]:
                     err = (
                         f"{option_string} position option needs to be equal "
                         "RELATIVE or DEFAULT if position details not provided"
@@ -69,11 +73,9 @@ class ElementInfoAction(argparse.Action):
                 position = ElementPosition(Point(floats[0], floats[1]), floats[2], side)
             elif option == PositionOption.RELATIVE:
                 # template path if optional for RELATIVE option:
-                position = None
                 if len(tokens) == 3:
                     template_path = tokens[2]
             elif option == PositionOption.PRESET:
-                position = None
                 template_path = tokens[2]
 
             value: ElementInfo = ElementInfo(
@@ -148,8 +150,8 @@ def app():
         action=ElementInfoAction,
         help=(
             "Diode information, space separated value of ANNOTATION OPTION [POSITION]\n"
-            "Available OPTION choices: DEFAULT, RELATIVE, PRESET and CUSTOM\n"
-            "When DEFAULT, then POSITION needs to be omitted,\n"
+            "Available OPTION choices: DEFAULT, UNCHANGED, RELATIVE, PRESET and CUSTOM\n"
+            "When DEFAULT or UNCHAGED, then POSITION needs to be omitted,\n"
             "when RELATIVE, then POSITION is optional path for saving kicad_pcb template file\n"
             "when PRESET, then POSITION is mandatory path to kicad_pcb template file\n"
             "when CUSTOM, then POSITION is space separated value of X Y ORIENTATION FRONT|BACK\n"

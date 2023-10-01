@@ -276,7 +276,11 @@ def test_diode_placement_ignore(tmpdir, request):
     layout = get_2x2_layout(request)
 
     key_placer = KeyPlacer(board)
-    key_placer.run(layout, "SW{}", None, True)
+
+    diode_info = ElementInfo(
+        "D{}", PositionOption.UNCHANGED, DEFAULT_DIODE_POSITION, ""
+    )
+    key_placer.run(layout, "SW{}", diode_info, True)
 
     board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
     generate_render(tmpdir, request)
@@ -292,6 +296,7 @@ def test_placer_invalid_layout(request):
     board = get_board_for_2x2_example(request)
 
     key_placer = KeyPlacer(board)
+    diode_info = ElementInfo("D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, "")
 
     with pytest.raises(RuntimeError):
-        key_placer.run({"some": "urecognized layout format"}, "SW{}", None, True)
+        key_placer.run({"some": "urecognized layout format"}, "SW{}", diode_info, True)

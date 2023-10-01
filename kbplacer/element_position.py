@@ -41,6 +41,7 @@ class PositionOption(str, Enum):
     RELATIVE = "Relative"
     PRESET = "Preset"
     CUSTOM = "Custom"
+    UNCHANGED = "Unchaged"
 
     def __str__(self) -> str:
         return self.value

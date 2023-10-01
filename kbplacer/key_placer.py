@@ -5,7 +5,7 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import List, Optional, Tuple, cast
+from typing import List, Tuple, cast
 
 import pcbnew
 
@@ -405,7 +405,7 @@ class KeyPlacer(BoardModifier):
         self,
         layout: dict,
         key_format: str,
-        diode_info: Optional[ElementInfo],
+        diode_info: ElementInfo,
         route_switches_with_diodes: bool = False,
         route_rows_and_columns: bool = False,
         additional_elements: List[ElementInfo] = [],
@@ -423,9 +423,9 @@ class KeyPlacer(BoardModifier):
                 )
             return template_path
 
-        if diode_info:
-            logging.info(f"Diode info: {diode_info}")
-            diode_format = diode_info.annotation_format
+        logging.info(f"Diode info: {diode_info}")
+        diode_format = diode_info.annotation_format
+        if diode_info.position_option != PositionOption.UNCHANGED:
             if diode_info.position_option == PositionOption.RELATIVE:
                 template_connection = self.get_connection_template(
                     key_format, diode_format, diode_info.template_path
