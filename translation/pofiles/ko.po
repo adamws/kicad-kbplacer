@@ -13,21 +13,23 @@ msgstr ""
 "Plural-Forms: nplurals=1; plural=0;\n"
 
 msgid "<missing>"
-msgstr ""
+msgstr "<정보 없음>"
 
 msgid "development build"
-msgstr ""
+msgstr "개발 버전"
 
 msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
 "based on popular layout description from "
 msgstr ""
+"기계식 키보드 설계용 플러그인입니다. 인기있는 \n"
+"특정 레이아웃 설명을 기반으로 자동 키 배치가 있습니다 "
 
 msgid "Project website - "
-msgstr ""
+msgstr "프로젝트 웹 사이트 - "
 
 msgid "Geekhack forum thread - "
-msgstr ""
+msgstr "Geekhack 포럼 스레드 - "
 
 msgid "Save to:"
 msgstr ""
@@ -36,25 +38,25 @@ msgid "Load from:"
 msgstr ""
 
 msgid "Keyboard layout file:"
-msgstr ""
+msgstr "키보드 레이아웃 파일:"
 
 msgid "Switch settings"
-msgstr ""
+msgstr "설정 변경하기"
 
 msgid "Route with switches"
 msgstr ""
 
 msgid "Switch diodes settings"
-msgstr ""
+msgstr "다이오드 설정 변경하기"
 
 msgid "Additional elements settings"
-msgstr ""
+msgstr "추가 요소 설정하기"
 
 msgid "Route rows and columns"
 msgstr ""
 
 msgid "Controller circuit template file:"
-msgstr ""
+msgstr "컨트롤러 회로 템플릿 파일:"
 
 msgid "Other settings"
-msgstr ""
+msgstr "그 외 설정"
