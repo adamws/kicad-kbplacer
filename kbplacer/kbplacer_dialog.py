@@ -33,13 +33,14 @@ wx_ = wx.GetTranslation
 # in lookup table. This lookup should contain all installed languages defined
 # in translation/pofiles/LINGUAS_INSTALL.
 KICAD_TRANSLATIONS_LOOKUP = {
-    "Set Language": "en",
-    "Ustaw język": "pl",
     "Sprache": "de",
+    "Set Language": "en",
     "Seleccionar idioma": "es",
     "言語設定": "ja",
-    "設定語言": "zh_CN",
+    "언어 설정": "ko",
+    "Ustaw język": "pl",
     "Установить язык": "ru",
+    "設定語言": "zh_CN",
 }
 
 
