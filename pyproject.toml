@@ -54,8 +54,10 @@ description = "Plugin for mechanical keyboard design"
 description_full = [
   "Plugin for mechanical keyboard design.\n",
   "It features automatic key placement and routing based on various ",
-  "layout descriptions like kle (www.keyboard-layout-editor.com), ",
-  "ergogen (https://github.com/ergogen/ergogen) and via (https://www.caniusevia.com)"
+  "layout descriptions like <a href='www.keyboard-layout-editor.com'>kle</a>, ",
+  "<a href='www.github.com/ergogen/ergogen'>ergogen</a> and ",
+  "<a href='www.caniusevia.com'>via</a>.\n",
+  "To learn more visit project's homepage.",
 ]
 identifier = "com.github.adamws.kicad-kbplacer"
 author = { name = "adamws", web="https://adamws.github.io" }
