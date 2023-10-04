@@ -1,4 +1,4 @@
-Pillow==9.4.0
+Pillow==10.0.1
 pytest==7.2.0
 pytest-cov==4.1.0
 pytest-metadata==2.0.4
