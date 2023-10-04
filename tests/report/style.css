@@ -1,7 +1,20 @@
-.log {
-  height: auto;
+.media {
+  width: 30% !important;
+  height: auto !important;
 }
 
-div.image {
-  height: auto;
+.media-container {
+  height: auto !important;
+}
+
+.logwrapper {
+  max-height: unset !important;
+}
+
+.logexpander {
+  display: none !important;
+}
+
+.log {
+  top: 0px !important;
 }

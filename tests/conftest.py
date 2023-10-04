@@ -312,10 +312,10 @@ def to_base64(path):
         return base64.b64encode(f.read()).decode("utf-8")
 
 
-def image_to_base64_html(path):
+def image_to_base64(path):
     b64 = to_base64(path)
     mime = mimetypes.guess_type(path)
-    return f'<div class="image"><img src="data:{mime[0]};base64,{b64}"></div>'
+    return f"data:{mime[0]};base64,{b64}"
 
 
 @pytest.hookimpl(hookwrapper=True)
@@ -331,6 +331,6 @@ def pytest_runtest_makereport(item, call):
             screenshot_path = tmpdir / "screenshot.png"
             for f in [render_path, screenshot_path]:
                 if f.isfile():
-                    render = image_to_base64_html(f)
-                    extra.append(pytest_html.extras.html(render))
+                    render = image_to_base64(f)
+                    extra.append(pytest_html.extras.image(render))
         report.extra = extra
