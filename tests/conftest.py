@@ -323,7 +323,7 @@ def pytest_runtest_makereport(item, call):
     pytest_html = item.config.pluginmanager.getplugin("html")
     outcome = yield
     report = outcome.get_result()
-    extra = getattr(report, "extra", [])
+    extras = getattr(report, "extras", [])
 
     if report.when == "call" and not report.skipped:
         if tmpdir := item.funcargs.get("tmpdir"):
@@ -332,5 +332,5 @@ def pytest_runtest_makereport(item, call):
             for f in [render_path, screenshot_path]:
                 if f.isfile():
                     render = image_to_base64(f)
-                    extra.append(pytest_html.extras.image(render))
-        report.extra = extra
+                    extras.append(pytest_html.extras.image(render))
+        report.extras = extras
