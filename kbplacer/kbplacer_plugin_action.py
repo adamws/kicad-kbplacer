@@ -13,6 +13,8 @@ from .kbplacer_dialog import KbplacerDialog
 from .key_placer import KeyPlacer
 from .template_copier import TemplateCopier
 
+logger = logging.getLogger(__name__)
+
 
 def load_window_state(filepath: str) -> Tuple[Any, bool]:
     with open(filepath, "r") as f:
@@ -74,8 +76,8 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
             filemode="w",
             format="[%(filename)s:%(lineno)d]: %(message)s",
         )
-        logging.info(f"Plugin executed with KiCad version: {version}")
-        logging.info(f"Plugin executed with python version: {repr(sys.version)}")
+        logger.info(f"Plugin executed with KiCad version: {version}")
+        logger.info(f"Plugin executed with python version: {repr(sys.version)}")
 
     def Run(self) -> None:
         self.Initialize()
@@ -83,7 +85,7 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
         pcb_frame = [x for x in wx.GetTopLevelWindows() if x.GetName() == "PcbFrame"][0]
 
         if self.window_state_error:
-            logging.info(
+            logger.info(
                 "Found corrupted cached window state, skipping state restoration"
             )
             self.window_state = None
@@ -91,7 +93,7 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
         dlg = KbplacerDialog(pcb_frame, "kbplacer", initial_state=self.window_state)
         if dlg.ShowModal() == wx.ID_OK:
             gui_state = dlg.get_window_state()
-            logging.info(f"GUI state: {gui_state}")
+            logger.info(f"GUI state: {gui_state}")
 
             if layout_path := dlg.get_layout_path():
                 with open(layout_path, "r") as f:
@@ -120,7 +122,7 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
                 template_copier.run()
         else:
             gui_state = dlg.get_window_state()
-            logging.info(f"GUI state: {gui_state}")
+            logger.info(f"GUI state: {gui_state}")
 
         dlg.Destroy()
         logging.shutdown()

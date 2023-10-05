@@ -4,6 +4,8 @@ import pcbnew
 
 from .board_modifier import BoardModifier, get_footprint, set_position
 
+logger = logging.getLogger(__name__)
+
 
 class TemplateCopier(BoardModifier):
     def __init__(
@@ -46,7 +48,7 @@ class TemplateCopier(BoardModifier):
                 net_name = clone.GetNetname()
                 net_code = clone.GetNetCode()
                 net_info_in_board = self.__board_nets_by_name[net_name]
-                logging.info(
+                logger.info(
                     f"Cloning track from template: {net_name}:{net_code}"
                     f"-> {net_info_in_board.GetNetname()}:"
                     f"{net_info_in_board.GetNetCode()}",

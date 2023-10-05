@@ -14,6 +14,8 @@ from .key_placer import KeyPlacer
 from .kle_serial import parse_via
 from .template_copier import TemplateCopier
 
+logger = logging.getLogger(__name__)
+
 
 class ElementInfoAction(argparse.Action):
     def __call__(self, parser, namespace, values: str, option_string=None) -> None:
@@ -246,7 +248,7 @@ def app():
 
     if create_from_via:
         if os.path.isfile(board_path):
-            logging.error(f"File {board_path} already exist, aborting")
+            logger.error(f"File {board_path} already exist, aborting")
             sys.exit(1)
 
         builder = BoardBuilder(

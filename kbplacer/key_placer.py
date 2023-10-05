@@ -29,6 +29,8 @@ from .board_modifier import (
 from .element_position import ElementInfo, ElementPosition, Point, PositionOption
 from .kle_serial import Keyboard, get_keyboard
 
+logger = logging.getLogger(__name__)
+
 
 class SwitchIterator:
     def __init__(self, board: pcbnew.BOARD, annotation: str) -> None:
@@ -61,7 +63,7 @@ class KeyPlacer(BoardModifier):
         self.__key_distance_x = cast(int, pcbnew.FromMM(key_distance[0]))
         self.__key_distance_y = cast(int, pcbnew.FromMM(key_distance[1]))
 
-        logging.debug(
+        logger.debug(
             f"Set key 1U distance: {self.__key_distance_x}/{self.__key_distance_y}"
         )
         self.__reference_coordinate = pcbnew.wxPointMM(25, 25)
@@ -90,12 +92,12 @@ class KeyPlacer(BoardModifier):
         :type angle: float
         :type template_connection: List[pcbnew.PCB_TRACK] | None
         """
-        logging.info(f"Routing {switch.GetReference()} with {diode.GetReference()}")
+        logger.info(f"Routing {switch.GetReference()} with {diode.GetReference()}")
 
         if template_connection:
-            logging.info("Using template replication method")
+            logger.info("Using template replication method")
             if angle != 0:
-                logging.info(f"Routing at {angle} degree angle")
+                logger.info(f"Routing at {angle} degree angle")
             switch_position = get_position(switch)
             rejects = []
             for item in template_connection:
@@ -126,11 +128,11 @@ class KeyPlacer(BoardModifier):
             for item in rejects:
                 self.add_track_to_board(item)
         elif result := get_closest_pads_on_same_net(switch, diode):
-            logging.info("Using internal autorouter method")
+            logger.info("Using internal autorouter method")
             switch_pad, diode_pad = result
             self.route(switch_pad, diode_pad)
         else:
-            logging.error("Could not find pads with the same net, routing skipped")
+            logger.error("Could not find pads with the same net, routing skipped")
 
     def get_current_relative_element_position(
         self, element1: pcbnew.FOOTPRINT, element2: pcbnew.FOOTPRINT
@@ -146,7 +148,7 @@ class KeyPlacer(BoardModifier):
         )
 
     def remove_dangling_tracks(self) -> None:
-        logging.info("Removing dangling tracks")
+        logger.info("Removing dangling tracks")
         connectivity = self.get_connectivity()
 
         any_removed = False
@@ -158,7 +160,7 @@ class KeyPlacer(BoardModifier):
 
         for track in self.board.GetTracks():
             if _is_dangling(track):
-                logging.info(f"Removing {track.m_Uuid.AsString()}")
+                logger.info(f"Removing {track.m_Uuid.AsString()}")
                 self.board.RemoveNative(track)
                 any_removed = True
 
@@ -172,7 +174,7 @@ class KeyPlacer(BoardModifier):
         connections: List[pcbnew.PCB_TRACK],
         destination_path: str,
     ) -> None:
-        logging.info(f"Saving template to {destination_path}")
+        logger.info(f"Saving template to {destination_path}")
         # can't use `CreateEmptyBoard` when running inside KiCad.
         # We want new board file but without new project file,
         # looks like this is not possible with pcbnew API.
@@ -193,7 +195,7 @@ class KeyPlacer(BoardModifier):
 
         for p in itertools.chain(switch_copy.Pads(), diode_copy.Pads()):
             if p.GetNetCode() != 0:
-                logging.info(
+                logger.info(
                     f"Adding net {p.GetNetname()} with netcode {p.GetNetCode()}"
                 )
                 # adding nets to new board will get them new autoassigned netcodes
@@ -207,7 +209,7 @@ class KeyPlacer(BoardModifier):
             if p.GetNetCode() != 0:
                 before = p.GetNetCode()
                 p.SetNet(nets[p.GetNetname()])
-                logging.info(
+                logger.info(
                     f"Updating pad '{p.GetParentAsString()}:{p.GetPadName()}' "
                     f"net {p.GetNetname()} netcode: {before} -> {p.GetNetCode()}"
                 )
@@ -272,7 +274,7 @@ class KeyPlacer(BoardModifier):
             return f"{name} [{start} {end}]"
 
         items_str = ", ".join([_format_item(i) for i in result])
-        logging.info(f"Got connection template: {items_str}")
+        logger.info(f"Got connection template: {items_str}")
 
         if destination_path:
             self.save_connection_template(switch, diode, result, destination_path)
@@ -423,7 +425,7 @@ class KeyPlacer(BoardModifier):
                 )
             return template_path
 
-        logging.info(f"Diode info: {diode_info}")
+        logger.info(f"Diode info: {diode_info}")
         diode_format = diode_info.annotation_format
         if diode_info.position_option != PositionOption.UNCHANGED:
             if diode_info.position_option == PositionOption.RELATIVE:
@@ -431,7 +433,7 @@ class KeyPlacer(BoardModifier):
                     key_format, diode_format, diode_info.template_path
                 )
             elif diode_info.position_option == PositionOption.PRESET:
-                logging.info(
+                logger.info(
                     f"Loading diode connection preset from {diode_info.template_path}"
                 )
                 template_connection = self.load_connection_preset(
@@ -462,10 +464,10 @@ class KeyPlacer(BoardModifier):
                     element1, element2
                 )
                 element_info.position = position
-                logging.info(f"Element info updated: {element_info}")
+                logger.info(f"Element info updated: {element_info}")
 
         if layout:
-            logging.info(f"User layout: {layout}")
+            logger.info(f"User layout: {layout}")
             keyboard = get_keyboard(layout)
             self.place_switches(keyboard, key_format)
 

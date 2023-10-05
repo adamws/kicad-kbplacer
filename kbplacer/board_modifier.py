@@ -16,6 +16,8 @@ KICAD_VERSION = tuple(
 )
 DEFAULT_CLEARANCE_MM = 0.25
 
+logger = logging.getLogger(__name__)
+
 
 def position_in_rotated_coordinates(
     point: pcbnew.wxPoint, angle: float
@@ -59,10 +61,10 @@ def position_in_cartesian_coordinates(
 
 
 def get_footprint(board: pcbnew.BOARD, reference: str) -> pcbnew.FOOTPRINT:
-    logging.info(f"Searching for {reference} footprint in {board.GetFileName()}")
+    logger.info(f"Searching for {reference} footprint in {board.GetFileName()}")
     footprint = board.FindFootprintByReference(reference)
     if footprint is None:
-        logging.error("Footprint not found")
+        logger.error("Footprint not found")
         msg = f"Cannot find footprint {reference}"
         raise Exception(msg)
     return footprint
@@ -79,7 +81,7 @@ def get_optional_footprint(
 
 
 def set_position(footprint: pcbnew.FOOTPRINT, position: pcbnew.wxPoint) -> None:
-    logging.debug(f"Setting {footprint.GetReference()} footprint position: {position}")
+    logger.debug(f"Setting {footprint.GetReference()} footprint position: {position}")
     if KICAD_VERSION >= (7, 0, 0):
         footprint.SetPosition(pcbnew.VECTOR2I(position.x, position.y))
     else:
@@ -92,7 +94,7 @@ def set_position_by_points(footprint: pcbnew.FOOTPRINT, x: int, y: int) -> None:
 
 def get_position(footprint: pcbnew.FOOTPRINT) -> pcbnew.wxPoint:
     position = footprint.GetPosition()
-    logging.debug(f"Getting {footprint.GetReference()} footprint position: {position}")
+    logger.debug(f"Getting {footprint.GetReference()} footprint position: {position}")
     if KICAD_VERSION >= (7, 0, 0):
         return pcbnew.wxPoint(position.x, position.y)
     return position
@@ -230,7 +232,7 @@ class BoardModifier:
                     # track has non default netlist set so we can skip
                     # collision detection for pad of same netlist:
                     if track_net_code != 0 and track_net_code == p.GetNetCode():
-                        logging.debug(
+                        logger.debug(
                             f"Track collision ignored, pad {reference}:{pad_name} "
                             f"on same netlist: {track.GetNetname()}/{p.GetNetname()}"
                         )
@@ -246,12 +248,12 @@ class BoardModifier:
                             and track_net_code != p.GetNetCode()
                             and p.IsOnLayer(track.GetLayer())
                         ) or p.GetAttribute() == pcbnew.PAD_ATTRIB_NPTH:
-                            logging.debug(
+                            logger.debug(
                                 f"Track collide with pad {reference}:{pad_name}"
                             )
                             collide_list.append(p)
                         else:
-                            logging.debug(
+                            logger.debug(
                                 "Track collision ignored, track starts or ends "
                                 f"in pad {reference}:{pad_name}"
                             )
@@ -261,7 +263,7 @@ class BoardModifier:
                         )
                         on_same_layer = p.IsOnLayer(track.GetLayer())
                         if hit_test_result and on_same_layer:
-                            logging.debug(
+                            logger.debug(
                                 f"Track collide with pad {reference}:{pad_name}"
                             )
                             collide_list.append(p)
@@ -282,7 +284,7 @@ class BoardModifier:
                     or track_end == t.GetStart()
                     or track_end == t.GetEnd()
                 ):
-                    logging.debug(
+                    logger.debug(
                         "Track collision ignored, track starts or ends "
                         f"at the end of {track_uuid} track"
                     )
@@ -297,7 +299,7 @@ class BoardModifier:
                     ]
                     for collision in list(collide_list):
                         if collision.m_Uuid in connected_pads_ids:
-                            logging.debug(
+                            logger.debug(
                                 "Pad collision removed due to connection with track "
                                 "which leads to that pad"
                             )
@@ -305,12 +307,12 @@ class BoardModifier:
                 elif hit_test_result := t.GetEffectiveShape().Collide(
                     track_shape, pcbnew.FromMM(DEFAULT_CLEARANCE_MM)
                 ):
-                    logging.debug(f"Track collide with another track: {track_uuid}")
+                    logger.debug(f"Track collide with another track: {track_uuid}")
                     collide_list.append(t)
         for collision in list(collide_list):
             if collision.m_Uuid in tracks_to_clear:
                 collision_uuid = collision.m_Uuid.AsString()
-                logging.debug(
+                logger.debug(
                     f"Track collision with {collision_uuid} removed due to "
                     "connection with track which leads to it"
                 )
@@ -333,13 +335,13 @@ class BoardModifier:
             layer_name = self.board.GetLayerName(track.GetLayer())
             start = track.GetStart()
             stop = track.GetEnd()
-            logging.info(
+            logger.info(
                 f"Adding track segment ({layer_name}): [{start}, {stop}]",
             )
             self.board.Add(track)
             return stop
         else:
-            logging.warning("Could not add track segment due to detected collision")
+            logger.warning("Could not add track segment due to detected collision")
             return None
 
     def add_track_segment_by_points(
@@ -398,11 +400,11 @@ class BoardModifier:
         """
         layers = get_common_layers(pad1, pad2)
         if not layers:
-            logging.warning("Could not route pads, no common layers found")
+            logger.warning("Could not route pads, no common layers found")
             return
 
         layer = layers[0]
-        logging.debug(f"Routing at {self.board.GetLayerName(layer)} layer")
+        logger.debug(f"Routing at {self.board.GetLayerName(layer)} layer")
 
         def _calculate_corners(
             pos1: pcbnew.wxPoint, pos2: pcbnew.wxPoint
@@ -450,12 +452,12 @@ class BoardModifier:
             # if rotations are considered the same use the angle
             angle = (-1 * orientation1 + 360) % 360
         else:
-            logging.warning(
+            logger.warning(
                 "Could not route pads when parent footprints not rotated the same"
             )
             return
 
-        logging.debug(f"Routing pad {pos1} with pad {pos2} at {angle} degree angle")
+        logger.debug(f"Routing pad {pos1} with pad {pos2} at {angle} degree angle")
 
         # if in line, use one track segment
         if pos1.x == pos2.x or pos1.y == pos2.y:

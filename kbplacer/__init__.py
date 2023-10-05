@@ -1,4 +1,8 @@
 import inspect
+import logging
+from logging import NullHandler
+
+logging.getLogger(__name__).addHandler(NullHandler())
 
 
 def __is_in_call_stack(function_name: str, module_name: str) -> bool:

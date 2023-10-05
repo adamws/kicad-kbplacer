@@ -8,6 +8,8 @@ import pcbnew
 
 from .kle_serial import ViaKeyboard
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class Footprint:
@@ -42,7 +44,7 @@ class BoardBuilder:
         self.net_count = self.board.GetNetCount()
 
     def add_footprint(self, footprint: pcbnew.FOOTPRINT) -> pcbnew.FOOTPRINT:
-        logging.info(f"Add {footprint.GetReference()} footprint")
+        logger.info(f"Add {footprint.GetReference()} footprint")
         self.board.Add(footprint)
         return footprint
 
@@ -63,7 +65,7 @@ class BoardBuilder:
         else:
             net = pcbnew.NETINFO_ITEM(self.board, netname, self.net_count)
             self.net_info.AppendNet(net)
-            logging.info(f"Add {netname} net")
+            logger.info(f"Add {netname} net")
             self.board.Add(net)
             self.net_count += 1
             self.nets[netname] = net
