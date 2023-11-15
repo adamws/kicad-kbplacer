@@ -1,4 +1,4 @@
-FROM admwscki/kicad-kbplacer-primary:7.0.8-lunar
+FROM admwscki/kicad-kbplacer-primary:7.0.9-lunar
 
 RUN userdel -r ubuntu
 
