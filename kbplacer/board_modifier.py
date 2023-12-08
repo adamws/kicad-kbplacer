@@ -196,7 +196,7 @@ def get_closest_pads_on_same_net(
             closest = distance
             result = result_temp
 
-    # We iterated with pads2 so we need to swap reult to keep original
+    # We iterated with pads2 so we need to swap result to keep original
     # order in tuple, first pad should be from f1, second from f2
     # Some caller might require proper order
     if result:
@@ -395,7 +395,7 @@ class BoardModifier:
         route track at that angle.
         Footprint is considered rotated, if its orientation is different than
         0, 90, 180 and 270. When comparing rotations use angle to closest
-        quorter, i.e. footprints with orientation 10 and 190 (190-180=10) are
+        quarter, i.e. footprints with orientation 10 and 190 (190-180=10) are
         considered to be rotated the same.
         """
         layers = get_common_layers(pad1, pad2)
