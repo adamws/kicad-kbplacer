@@ -307,6 +307,20 @@ def add_track(board, start, end, layer):
     return track
 
 
+def rotate(
+    item: pcbnew.BOARD_ITEM,
+    rotation_reference: pcbnew.wxPoint,
+    angle: float,
+) -> None:
+    if KICAD_VERSION >= (7, 0, 0):
+        item.Rotate(
+            pcbnew.VECTOR2I(rotation_reference.x, rotation_reference.y),
+            pcbnew.EDA_ANGLE(angle * -1, pcbnew.DEGREES_T),
+        )
+    else:
+        item.Rotate(rotation_reference, angle * -10)
+
+
 def to_base64(path):
     with open(path, "rb") as f:
         return base64.b64encode(f.read()).decode("utf-8")

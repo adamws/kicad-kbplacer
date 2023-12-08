@@ -137,13 +137,24 @@ class KeyPlacer(BoardModifier):
     def get_current_relative_element_position(
         self, element1: pcbnew.FOOTPRINT, element2: pcbnew.FOOTPRINT
     ) -> ElementPosition:
+        """Returns position of element2 in relation to element1
+        in element1 coordinate system (i.e centered in element1 center
+        and rotated by its rotation)
+        """
         pos1 = get_position(element1)
         pos2 = get_position(element2)
+        rot1 = get_orientation(element1)
+        rot2 = get_orientation(element2)
+        if rot1:
+            pos1 = position_in_rotated_coordinates(pos1, -rot1)
+            pos2 = position_in_rotated_coordinates(pos2, -rot1)
+
         x = cast(float, pcbnew.ToMM(pos2.x - pos1.x))
         y = cast(float, pcbnew.ToMM(pos2.y - pos1.y))
+
         return ElementPosition(
             Point(x, y),
-            element2.GetOrientationDegrees(),
+            rot2 - rot1,
             get_side(element2),
         )
 
@@ -184,10 +195,13 @@ class KeyPlacer(BoardModifier):
         os.remove(Path(destination_path).with_suffix(".kicad_pro"))
 
         switch_copy = pcbnew.Cast_to_FOOTPRINT(switch.Duplicate())
+        reset_rotation(switch_copy)
         set_position(switch_copy, pcbnew.wxPoint(0, 0))
 
         origin = get_position(switch)
         diode_copy = pcbnew.Cast_to_FOOTPRINT(diode.Duplicate())
+        if angle := get_orientation(switch):
+            rotate(diode_copy, origin, angle)
         set_position(
             diode_copy,
             get_position(diode_copy) - pcbnew.wxPoint(origin.x, origin.y),
@@ -226,6 +240,13 @@ class KeyPlacer(BoardModifier):
     def get_connection_template(
         self, key_format: str, diode_format: str, destination_path: str
     ) -> List[pcbnew.PCB_TRACK]:
+        """Returns list of tracks (including vias) connecting first element
+        with reference `key_format` with first element with reference `diode_format`
+        and optionally save it to new `pcbnew` template file.
+        The coordinates of returned elements are normalized to center of `key_format`
+        element. If `key_format` element is rotated, resulting coordinates are rotated
+        back so the template is always in natural (0) orientation.
+        """
         switch = get_footprint(self.board, key_format.format(1))
         diode = get_optional_footprint(self.board, diode_format.format(1))
         if not diode:
@@ -244,6 +265,8 @@ class KeyPlacer(BoardModifier):
             for item in items:
                 item_copy = item.Duplicate()
                 item_copy.SetNetCode(0)
+                if angle := get_orientation(switch):
+                    rotate(item_copy, origin, angle)
                 if KICAD_VERSION >= (7, 0, 0):
                     item_copy.Move(pcbnew.VECTOR2I(-origin.x, -origin.y))
                 else:

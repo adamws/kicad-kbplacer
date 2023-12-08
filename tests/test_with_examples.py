@@ -8,14 +8,17 @@ import subprocess
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+import pcbnew
 import pytest
 from xmldiff import actions, main
 
 from .conftest import (
+    KICAD_VERSION,
     generate_render,
     get_footprints_dir,
     get_references_dir,
     request_to_references_dir,
+    rotate,
 )
 
 logger = logging.getLogger(__name__)
@@ -275,6 +278,49 @@ def test_placing_and_routing_separately(tmpdir, request, package_path, package_n
 
     references_dir = get_references_dir(request, example, "Tracks", "DefaultDiode")
     assert_example(tmpdir, references_dir)
+
+
+@pytest.mark.parametrize(
+    "angle", [90, 180, 270, 360, 60, -60, 30, -30, 10, -10, 5, -5],
+)
+def test_placing_and_routing_when_reference_pair_rotated(tmpdir, request, package_path, package_name, angle):
+    # this scenario reproduces https://github.com/adamws/kicad-kbplacer/issues/17
+    example = "2x3-rotations-custom-diode-with-track"
+    layout_file = "kle.json"
+    prepare_project(request, tmpdir, example, layout_file)
+
+    pcb_path = f"{tmpdir}/keyboard-before.kicad_pcb"
+
+    board = pcbnew.LoadBoard(pcb_path)
+    switch = board.FindFootprintByReference("SW1")
+    diode = board.FindFootprintByReference("D1")
+    rotation_center = switch.GetPosition()
+
+    for footprint in [switch, diode]:
+        rotate(footprint, rotation_center, angle)
+    for track in board.GetTracks():
+        rotate(track, rotation_center, angle)
+
+    board.Save(pcb_path)
+
+    run_kbplacer_process(
+        True,
+        "D{} RELATIVE",
+        package_path,
+        package_name,
+        f"{tmpdir}/{layout_file}",
+        pcb_path,
+    )
+
+    generate_render(tmpdir, request)
+
+    references_dir = get_references_dir(request, example, "Tracks", "DiodeOption2")
+    if KICAD_VERSION < (7, 0, 0) and angle in [60, 10, -60]:
+        # the differences are not noticible, not worth creating dedicated reference files
+        # support for KiCad 6 should be dropped soon anyway.
+        logger.debug("These angles fail on KiCad 6 due to some rounding errors... ignoring")
+    else:
+        assert_example(tmpdir, references_dir)
 
 
 def test_board_creation(tmpdir, request, package_path, package_name):
