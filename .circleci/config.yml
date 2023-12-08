@@ -17,21 +17,45 @@ jobs:
           name: Run tests
           command: |
             pytest --junitxml=test-results/pytest/results.xml tests/
-      - when: # run only on master for latest kicad on lunar
-          condition:
-            and:
-              - equal: [ master, << pipeline.git.branch >> ]
-              - equal: [ 7.0.9-lunar, << parameters.version >> ]
-          steps:
-            - run:
-                name: Publish coverage
-                command: |
-                  pip install coveralls
-                  coveralls
+      - run:
+          name: Move coverage file
+          command: |
+            mv .coverage .coverage-<<parameters.version>>
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .coverage-<<parameters.version>>
       - store_artifacts:
           path: report.html
       - store_test_results:
           path: test-results
+  collect-coverage:
+    docker:
+      - image: cimg/python:3.11
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            python -m pip install coverage
+      - run:
+          name: Generate coverage report
+          command: |
+            python -m coverage combine /tmp/workspace/.coverage-*
+            python -m coverage report
+      - when: # run only on master
+          condition:
+            equal: [ master, << pipeline.git.branch >> ]
+          steps:
+            - run:
+                name: Publish coverage
+                command: |
+                  python -m pip install coveralls
+                  python -m coveralls
+      - store_artifacts:
+          path: .coverage
   test-windows:
     machine:
       image: windows-server-2022-gui:current
@@ -194,6 +218,9 @@ workflows:
                 - 7.0.6-lunar
                 - 7.0.9-focal
                 - 7.0.9-lunar
+      - collect-coverage:
+          requires:
+            - test-linux
       - test-windows:
           matrix:
             parameters:

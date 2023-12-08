@@ -125,3 +125,6 @@ known-first-party = ["hatch_kicad"]
 
 [tool.ruff.flake8-tidy-imports]
 ban-relative-imports = "all"
+
+[tool.coverage.run]
+relative_files = true
