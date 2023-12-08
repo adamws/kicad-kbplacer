@@ -290,6 +290,7 @@ def test_placing_and_routing_when_reference_pair_rotated(tmpdir, request, packag
     prepare_project(request, tmpdir, example, layout_file)
 
     pcb_path = f"{tmpdir}/keyboard-before.kicad_pcb"
+    saved_template_path = f"{tmpdir}/template.kicad_pcb"
 
     board = pcbnew.LoadBoard(pcb_path)
     switch = board.FindFootprintByReference("SW1")
@@ -305,7 +306,7 @@ def test_placing_and_routing_when_reference_pair_rotated(tmpdir, request, packag
 
     run_kbplacer_process(
         True,
-        "D{} RELATIVE",
+        f"D{{}} RELATIVE {saved_template_path}",
         package_path,
         package_name,
         f"{tmpdir}/{layout_file}",
@@ -313,6 +314,31 @@ def test_placing_and_routing_when_reference_pair_rotated(tmpdir, request, packag
     )
 
     generate_render(tmpdir, request)
+
+    # note that template is always the same because we normalize it
+    # (it does not depend on initial rotation)
+    assert Path(saved_template_path).is_file()
+    board = pcbnew.LoadBoard(saved_template_path)
+    switch = board.FindFootprintByReference("SW1")
+    diode = board.FindFootprintByReference("D1")
+    assert switch.GetPosition().x == 0
+    assert switch.GetPosition().y == 0
+    assert diode.GetPosition().x == -5197000
+    assert diode.GetPosition().y == 4503000
+
+    def tracks_to_sets():
+        starts = []
+        ends = []
+        for t in board.GetTracks():
+            start = t.GetStart()
+            end = t.GetEnd()
+            starts.append((start.x, start.y))
+            ends.append((end.x, end.y))
+        return set(starts), set(ends)
+
+    starts, ends = tracks_to_sets()
+    assert starts == {(-5197000, 3403000), (1618000, 3403000), (2540000, 2481000)}
+    assert ends == {(2540000, -5080000), (1618000, 3403000), (2540000, 2481000)}
 
     references_dir = get_references_dir(request, example, "Tracks", "DiodeOption2")
     if KICAD_VERSION < (7, 0, 0) and angle in [60, 10, -60]:
