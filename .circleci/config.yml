@@ -21,7 +21,7 @@ jobs:
           condition:
             and:
               - equal: [ master, << pipeline.git.branch >> ]
-              - equal: [ 7.0.7-lunar, << parameters.version >> ]
+              - equal: [ 7.0.9-lunar, << parameters.version >> ]
           steps:
             - run:
                 name: Publish coverage
