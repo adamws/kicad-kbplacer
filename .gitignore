@@ -2,6 +2,7 @@ __pycache__/
 kbplacer/locale/
 kbplacer/version.txt
 dist/
+*.egg-info/
 
 # Unit test / coverage reports
 .coverage
@@ -17,6 +18,7 @@ tests/report.html
 *.bak
 *.kicad_pcb-bak
 *.kicad_sch-bak
+*.kicad*.lck
 *.sch-bak
 _autosave-*
 *-save.pro
