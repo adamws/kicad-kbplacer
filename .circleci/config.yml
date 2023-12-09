@@ -89,7 +89,7 @@ jobs:
           path: report.html
       - store_test_results:
           path: test-results
-  create-pcm-release:
+  create-pcm-package:
     docker:
       - image: cimg/python:3.11
     steps:
@@ -117,6 +117,10 @@ jobs:
             python -m hatch build --target kicad-package
       - store_artifacts:
           path: dist/repository
+      - persist_to_workspace:
+          root: .
+          paths:
+            - dist/repository/*
       - when: # run only on master
           condition:
             equal: [ master, << pipeline.git.branch >> ]
@@ -128,7 +132,7 @@ jobs:
                 name: Deploy repository to github pages
                 command: |
                   ./release/deploy.sh
-  create-pypi-release:
+  create-pypi-package:
     docker:
       - image: cimg/python:3.11
     steps:
@@ -150,6 +154,37 @@ jobs:
             python -c 'from kbplacer.kle_serial import parse_kle; print(parse_kle([["",""]]))'
       - store_artifacts:
           path: dist
+      - persist_to_workspace:
+          root: .
+          paths:
+            - dist/kbplacer*.tar.gz
+  create-github-release:
+    docker:
+      - image: cimg/base:2023.12
+    steps:
+      - attach_workspace:
+          at: /tmp
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            ./release/install_gh.sh
+      - run:
+          name: Create draft release
+          command: |
+            if [ -z "$CIRCLE_TAG" ]; then exit 1; fi
+            gh config set prompt disabled
+            gh release create $CIRCLE_TAG --prerelease --verify-tag --title $CIRCLE_TAG
+      - run:
+          name: Upload artifacts to release
+          command: |
+            NAME=kbplacer-$(echo $CIRCLE_TAG | cut -c 2-)
+            gh release upload $CIRCLE_TAG \
+              /tmp/dist/$NAME.tar.gz \
+              /tmp/dist/repository/$NAME.zip \
+              /tmp/dist/repository/packages.json \
+              /tmp/dist/repository/repository.json \
+              /tmp/dist/repository/resources.zip
   deploy-image:
     machine:
       image: ubuntu-2204:2022.10.2
@@ -227,29 +262,35 @@ workflows:
               kicad-version:
                 - 6.0.11
                 - 7.0.7
-      - create-pcm-release:
+      - create-pcm-package:
           requires: &required-tests
             - test-linux
             - test-windows
-      - create-pypi-release:
+      - create-pypi-package:
           requires: *required-tests
       - deploy-image:
           requires:
-            - create-pcm-release
+            - create-pcm-package
   kicad-release:
     jobs:
-      - create-pcm-release:
-          filters:
+      - create-pcm-package:
+          filters: &tag-filter
             tags:
               only: /^v[0-9]+(\.[0-9]+)*$/
             branches:
               ignore: /.*/
-      - deploy-image:
+      - create-pypi-package:
+          filters: *tag-filter
+      - create-github-release:
+          filters: *tag-filter
           requires:
-            - create-pcm-release
-          filters:
-            tags:
-              only: /^v[0-9]+(\.[0-9]+)*$/
+            - create-pcm-package
+            - create-pypi-package
+      - deploy-image:
+          filters: *tag-filter
+          requires:
+            - create-pcm-package
+            - create-pypi-package
   nightly:
     triggers:
       - schedule:
