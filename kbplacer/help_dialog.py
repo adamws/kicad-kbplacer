@@ -48,7 +48,7 @@ class HelpDialog(wx.Dialog):
         if os.path.isfile(version_file_name):
             with open(version_file_name, "r") as f:
                 version_str = f.read()
-        if not re.match(r"v\d.\d$", version_str):
+        if not re.match(r"\d.\d$", version_str):
             status = ", " + self._("development build")
         else:
             status = ""
