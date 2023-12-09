@@ -194,7 +194,13 @@ jobs:
           name: Setup environment variables
           command: |
             if [ -z "$CIRCLE_TAG" ]; then
-              echo "export TAG=0.8-circleci" >> $BASH_ENV
+              # when not tag, get minor version number from previous tag,
+              # i.e 0.8-2-gb884521 -> 8 and increment by one. This is current
+              # (next to be relased) version. Assuming that we only increment minor
+              # and major stays 0.
+              PREVIOUS_MINOR=$(git describe | awk -F- '{print $1}' | cut -c 4-)
+              CURRENT_MINOR=$((PREVIOUS_MINOR + 1))
+              echo "export TAG=0.$CURRENT_MINOR-circleci" >> $BASH_ENV
             else
               # tag branch, cut 'v' prefix (only v prefixed tags should trigger this job)
               echo "export TAG=$(echo $CIRCLE_TAG | cut -c 2-)" >> $BASH_ENV
