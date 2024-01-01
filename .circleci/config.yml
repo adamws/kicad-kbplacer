@@ -257,8 +257,8 @@ workflows:
                 - 6.0.11-lunar
                 - 7.0.6-focal
                 - 7.0.6-lunar
-                - 7.0.9-focal
-                - 7.0.9-lunar
+                - 7.0.10-focal
+                - 7.0.10-lunar
       - collect-coverage:
           requires:
             - test-linux
@@ -267,7 +267,7 @@ workflows:
             parameters:
               kicad-version:
                 - 6.0.11
-                - 7.0.7
+                - 7.0.10
       - create-pcm-package:
           requires: &required-tests
             - test-linux

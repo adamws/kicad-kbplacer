@@ -29,7 +29,7 @@ ENV LC_ALL en_US.UTF-8
 RUN add-apt-repository --yes ppa:kicad/kicad-7.0-releases \
   && apt-get update \
   && apt-get install -y --no-install-recommends \
-     kicad=7.0.9~ubuntu20.04.1 \
+     kicad=7.0.10~ubuntu20.04.1 \
      kicad-footprints=7.0.9-0~ubuntu20.04.1 \
      kicad-symbols=7.0.9-0~ubuntu20.04.1 \
   && rm -rf /var/lib/apt/lists/*

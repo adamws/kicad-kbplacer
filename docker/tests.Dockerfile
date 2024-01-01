@@ -1,4 +1,4 @@
-FROM admwscki/kicad-kbplacer-primary:7.0.9-lunar
+FROM admwscki/kicad-kbplacer-primary:7.0.10-lunar
 
 COPY dev-requirements.txt .
 RUN pip3 install --no-cache-dir -r dev-requirements.txt && rm dev-requirements.txt
