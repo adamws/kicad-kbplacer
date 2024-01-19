@@ -3,6 +3,7 @@ import ctypes
 import logging
 import mimetypes
 import os
+import re
 import shutil
 import sys
 import time
@@ -18,10 +19,8 @@ Numeric = Union[int, float]
 Box = Tuple[Numeric, Numeric, Numeric, Numeric]
 
 
-# remove pre-release and build numbers (if present) and split to major-minor-patch tuple
-KICAD_VERSION = tuple(
-    map(int, ((pcbnew.Version().split("+")[0]).split("-")[0]).split("."))
-)
+version_match = re.search(r"(\d+)\.(\d+)\.(\d+)", pcbnew.Version())
+KICAD_VERSION = tuple(map(int, version_match.groups())) if version_match else ()
 logger = logging.getLogger(__name__)
 
 
