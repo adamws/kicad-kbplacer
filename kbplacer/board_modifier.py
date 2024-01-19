@@ -443,8 +443,15 @@ class BoardModifier:
         pos1 = pad1.GetPosition()
         pos2 = pad2.GetPosition()
 
-        orientation1 = get_orientation(pad1.GetParent())
-        orientation2 = get_orientation(pad2.GetParent())
+        parent1 = pad1.GetParent()
+        parent2 = pad2.GetParent()
+
+        if KICAD_VERSION >= (8, 0, 0):
+            parent1 = pcbnew.Cast_to_FOOTPRINT(parent1)
+            parent2 = pcbnew.Cast_to_FOOTPRINT(parent2)
+
+        orientation1 = get_orientation(parent1)
+        orientation2 = get_orientation(parent2)
 
         if (orientation1 % 90 == 0) and (orientation2 % 90 == 0):
             angle = 0
