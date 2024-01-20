@@ -3,10 +3,13 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import logging
 import pprint
 import sys
 from dataclasses import asdict, dataclass, field, fields
 from typing import Any, List, Optional, Tuple, Type, Union
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_KEY_COLOR = "#cccccc"
 DEFAULT_TEXT_COLOR = "#000000"
@@ -389,7 +392,16 @@ def parse_kle(layout) -> Keyboard:
                     new_key.height2 = (
                         current.height if new_key.height2 == 0 else current.height2
                     )
-                    new_key.labels = reorder_items(item.split("\n"), align)
+                    items = item.split("\n")
+                    if len(items) > 12:
+                        msg = repr(
+                            f"Illegal key labels: '{item}'. "
+                            "Labels string can contain 12 '\n' separated items, "
+                            "ignoring redundant values."
+                        )
+                        logger.warning(msg)
+                        items = items[0:11]
+                    new_key.labels = reorder_items(items, align)
                     new_key.textSize = reorder_items(new_key.textSize, align)
 
                     cleanup_key(new_key)
