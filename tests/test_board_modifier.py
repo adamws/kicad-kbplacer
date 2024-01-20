@@ -4,7 +4,13 @@ import logging
 import pcbnew
 import pytest
 
-from .conftest import KICAD_VERSION, add_track, generate_render, get_footprints_dir
+from .conftest import (
+    KICAD_VERSION,
+    add_track,
+    generate_render,
+    get_footprints_dir,
+    update_netinfo,
+)
 
 try:
     from kbplacer.board_modifier import (
@@ -41,11 +47,10 @@ def add_diode_footprint(board, footprint, request):
 
 
 def add_nets(board, netnames):
-    net_info = board.GetNetInfo()
     net_count = board.GetNetCount()
     for i, n in enumerate(netnames):
         net = pcbnew.NETINFO_ITEM(board, n, net_count + i)
-        net_info.AppendNet(net)
+        update_netinfo(board, net)
         board.Add(net)
 
 

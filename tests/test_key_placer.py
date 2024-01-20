@@ -10,6 +10,7 @@ from .conftest import (
     add_diode_footprint,
     add_switch_footprint,
     generate_render,
+    update_netinfo,
 )
 
 try:
@@ -48,10 +49,9 @@ def get_board_with_one_switch(
     request, footprint: str
 ) -> Tuple[pcbnew.BOARD, pcbnew.FOOTPRINT, pcbnew.FOOTPRINT]:
     board = pcbnew.CreateEmptyBoard()
-    net_info = board.GetNetInfo()
     net_count = board.GetNetCount()
     switch_diode_net = pcbnew.NETINFO_ITEM(board, "Net-(D1-Pad2)", net_count)
-    net_info.AppendNet(switch_diode_net)
+    update_netinfo(board, switch_diode_net)
     board.Add(switch_diode_net)
 
     switch = add_switch_footprint(board, request, 1, footprint=footprint)
@@ -63,7 +63,7 @@ def get_board_with_one_switch(
     diode.FindPadByNumber("2").SetNet(switch_diode_net)
 
     column_net = pcbnew.NETINFO_ITEM(board, "COL1", net_count + 1)
-    net_info.AppendNet(column_net)
+    update_netinfo(board, column_net)
     board.Add(column_net)
 
     for p in switch.Pads():
@@ -201,11 +201,10 @@ def get_2x2_layout(request):
 
 
 def add_2x2_nets(board):
-    net_info = board.GetNetInfo()
     net_count = board.GetNetCount()
     for i, n in enumerate(["COL1", "COL2", "ROW1", "ROW2"]):
         net = pcbnew.NETINFO_ITEM(board, n, net_count + i)
-        net_info.AppendNet(net)
+        update_netinfo(board, net)
         board.Add(net)
     return board.GetNetInfo().NetsByName()
 

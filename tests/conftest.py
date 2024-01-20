@@ -320,6 +320,12 @@ def rotate(
         item.Rotate(rotation_reference, angle * -10)
 
 
+def update_netinfo(board: pcbnew.BOARD, net: pcbnew.NETINFO_ITEM) -> None:
+    if KICAD_VERSION < (8, 0, 0):
+        net_info = board.GetNetInfo()
+        net_info.AppendNet(net)
+
+
 def to_base64(path):
     with open(path, "rb") as f:
         return base64.b64encode(f.read()).decode("utf-8")

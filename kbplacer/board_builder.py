@@ -6,6 +6,7 @@ from typing import Type
 
 import pcbnew
 
+from .board_modifier import KICAD_VERSION
 from .kle_serial import ViaKeyboard
 
 logger = logging.getLogger(__name__)
@@ -64,7 +65,8 @@ class BoardBuilder:
             net = self.nets[netname]
         else:
             net = pcbnew.NETINFO_ITEM(self.board, netname, self.net_count)
-            self.net_info.AppendNet(net)
+            if KICAD_VERSION < (8, 0, 0):
+                self.net_info.AppendNet(net)
             logger.info(f"Add {netname} net")
             self.board.Add(net)
             self.net_count += 1
