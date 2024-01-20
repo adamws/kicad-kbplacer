@@ -429,6 +429,11 @@ class KeyPlacer(BoardModifier):
             for pad1, pad2 in zip(pads, pads[1:]):
                 self.route(pad1, pad2)
 
+    def load_template(self, template_path: str) -> pcbnew.BOARD:
+        if KICAD_VERSION >= (8, 0, 0):
+            return pcbnew.PCB_IO_MGR.Load(pcbnew.PCB_IO_MGR.KICAD_SEXP, template_path)  # type: ignore
+        return pcbnew.IO_MGR.Load(pcbnew.IO_MGR.KICAD_SEXP, template_path)  # type: ignore
+
     def run(
         self,
         layout: dict,
@@ -475,9 +480,8 @@ class KeyPlacer(BoardModifier):
                 PositionOption.PRESET,
             ]:
                 if element_info.position_option == PositionOption.PRESET:
-                    source = pcbnew.IO_MGR.Load(
-                        pcbnew.IO_MGR.KICAD_SEXP,
-                        _normalize_template_path(element_info.template_path),
+                    source = self.load_template(
+                        _normalize_template_path(element_info.template_path)
                     )
                 else:
                     source = self.board
