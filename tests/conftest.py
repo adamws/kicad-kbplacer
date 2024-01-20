@@ -106,13 +106,12 @@ def get_footprints_dir(request):
 
 def get_references_dir(request, example_name, route_option, diode_option):
     test_dir = Path(request.module.__file__).parent
-    kicad_dir = "kicad7" if KICAD_VERSION >= (7, 0, 0) else "kicad6"
-    return (
-        test_dir
-        / "data/examples-references"
-        / kicad_dir
-        / f"{example_name}/{route_option}-{diode_option}"
-    )
+    major = KICAD_VERSION[0] if KICAD_VERSION else 0
+    references_dir = test_dir / f"data/examples-references/kicad{major}"
+    if not references_dir.exists():
+        msg = f"Reference directory '{references_dir}' does not exists"
+        raise RuntimeError(msg)
+    return references_dir / f"{example_name}/{route_option}-{diode_option}"
 
 
 def request_to_references_dir(request):
