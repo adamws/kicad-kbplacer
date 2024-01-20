@@ -294,7 +294,7 @@ class ViaKeyboard(Keyboard):
 
     def is_alternative(self, key: Key) -> bool:
         labels = key.labels
-        if key.decal or len(labels) >= 9 and labels[self.LAYOUT_LABEL]:
+        if len(labels) >= self.LAYOUT_LABEL + 1 and labels[self.LAYOUT_LABEL]:
             # check if not default layout:
             if labels[self.LAYOUT_LABEL].split(",")[1] != "0":
                 # alternative layout key

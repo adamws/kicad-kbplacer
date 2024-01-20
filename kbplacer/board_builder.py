@@ -77,6 +77,8 @@ class BoardBuilder:
         current_ref = 1
 
         for key in keyboard.keys:
+            if key.decal:
+                continue
             row, column = key.labels[0].split(",")
 
             switch = self.add_switch_footprint(current_ref)
