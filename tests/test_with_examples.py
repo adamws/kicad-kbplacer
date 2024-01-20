@@ -65,25 +65,25 @@ def run_kbplacer_process(
         raise Exception("Switch placement failed")
 
 
-def assert_group(expected: ET.ElementTree, actual: ET.ElementTree):
-    expected = ET.tostring(expected).decode()
-    actual = ET.tostring(actual).decode()
+def assert_group(expected: ET.Element, actual: ET.Element):
+    expected_str = ET.tostring(expected).decode()
+    actual_str = ET.tostring(actual).decode()
 
     edit_script = None
     try:
         edit_script = main.diff_texts(
-            expected, actual, diff_options={"F": 0, "ratio_mode": "accurate"}
+            expected_str, actual_str, diff_options={"F": 0, "ratio_mode": "accurate"}
         )
     except Exception as e:
         logger.warning(f"Running diff on xml failed: {e}")
-        diff = difflib.unified_diff(expected.splitlines(), actual.splitlines())
+        diff = difflib.unified_diff(expected_str.splitlines(), actual_str.splitlines())
         for d in diff:
             logger.info(d)
         assert False, "Difference probably found"
 
     if edit_script and any(type(node) != actions.MoveNode for node in edit_script):
         logger.info("Difference found")
-        diff = difflib.unified_diff(expected.splitlines(), actual.splitlines())
+        diff = difflib.unified_diff(expected_str.splitlines(), actual_str.splitlines())
         for d in diff:
             logger.info(d)
 
@@ -112,11 +112,28 @@ def assert_kicad_svg(expected: Path, actual: Path):
 
     assert len(expected_groups) == len(actual_groups)
 
-    number_of_groups = len(expected_groups)
+    if KICAD_VERSION < (8, 0, 0):
+        number_of_groups = len(expected_groups)
+        for i in range(0, number_of_groups):
+            logger.info(
+                f"Analyzing {expected.name} file, group {i+1}/{number_of_groups}"
+            )
+            assert_group(expected_groups[i], actual_groups[i])
+    else:
+        # svgs produced by KiCad 8 have less nested groups, for example circle
+        # elements are not grouped together, in order to re-use existing comparison
+        # logic (used for KiCad 6 & 7) we need to wrap everything with additional
+        # parent group:
+        expected_parent_group = ET.Element("g", ns)
+        actual_parent_group = ET.Element("g", ns)
 
-    for i in range(0, number_of_groups):
-        logger.info(f"Analyzing {expected.name} file, group {i+1}/{number_of_groups}")
-        assert_group(expected_groups[i], actual_groups[i])
+        for element in expected_groups:
+            expected_parent_group.append(element)
+        for element in actual_groups:
+            actual_parent_group.append(element)
+
+        logger.info(f"Analyzing {expected.name} file")
+        assert_group(expected_parent_group, actual_parent_group)
 
 
 def assert_example(tmpdir, references_dir: Path) -> None:
@@ -281,9 +298,12 @@ def test_placing_and_routing_separately(tmpdir, request, package_path, package_n
 
 
 @pytest.mark.parametrize(
-    "angle", [90, 180, 270, 360, 60, -60, 30, -30, 10, -10, 5, -5],
+    "angle",
+    [90, 180, 270, 360, 60, -60, 30, -30, 10, -10, 5, -5],
 )
-def test_placing_and_routing_when_reference_pair_rotated(tmpdir, request, package_path, package_name, angle):
+def test_placing_and_routing_when_reference_pair_rotated(
+    tmpdir, request, package_path, package_name, angle
+):
     # this scenario reproduces https://github.com/adamws/kicad-kbplacer/issues/17
     example = "2x3-rotations-custom-diode-with-track"
     layout_file = "kle.json"
@@ -344,7 +364,9 @@ def test_placing_and_routing_when_reference_pair_rotated(tmpdir, request, packag
     if KICAD_VERSION < (7, 0, 0) and angle in [60, 10, -60]:
         # the differences are not noticible, not worth creating dedicated reference files
         # support for KiCad 6 should be dropped soon anyway.
-        logger.debug("These angles fail on KiCad 6 due to some rounding errors... ignoring")
+        logger.debug(
+            "These angles fail on KiCad 6 due to some rounding errors... ignoring"
+        )
     else:
         assert_example(tmpdir, references_dir)
 
