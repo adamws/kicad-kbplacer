@@ -441,6 +441,9 @@ class BoardModifier:
                 return end is not None
             return False
 
+        def _angles_equal(angle1: float, angle2: float) -> bool:
+            return abs(angle1 - angle2) <= 0.1
+
         pos1 = pad1.GetPosition()
         pos2 = pad2.GetPosition()
 
@@ -454,14 +457,17 @@ class BoardModifier:
         orientation1 = get_orientation(parent1)
         orientation2 = get_orientation(parent2)
 
-        if (orientation1 % 90 == 0) and (orientation2 % 90 == 0):
+        if _angles_equal(orientation1 % 90, 0) and _angles_equal(orientation2 % 90, 0):
+            # this could be merged with next elif but being close to zero is special
+            # i.e. we clamp to 0 when near:
             angle = 0
-        elif orientation1 % 90 == orientation2 % 90:
+        elif _angles_equal(orientation1 % 90, orientation2 % 90):
             # if rotations are considered the same use the angle
             angle = (-1 * orientation1 + 360) % 360
         else:
             logger.warning(
-                "Could not route pads when parent footprints not rotated the same"
+                "Could not route pads when parent footprints not rotated the same, "
+                f"orientations: {orientation1} and {orientation2}"
             )
             return
 
