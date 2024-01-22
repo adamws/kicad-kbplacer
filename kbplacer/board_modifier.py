@@ -471,7 +471,11 @@ class BoardModifier:
             )
             return
 
-        logger.debug(f"Routing pad {pos1} with pad {pos2} at {angle} degree angle")
+        logger.debug(
+            f"Routing pad '{pad1.GetParentAsString()}:{pad1.GetPadName()}' at {pos1} "
+            f"with pad '{pad2.GetParentAsString()}:{pad2.GetPadName()}' at {pos2} "
+            f"using coordinate system rotated by {angle} degree(s)"
+        )
 
         # if in line, use one track segment
         if pos1.x == pos2.x or pos1.y == pos2.y:
