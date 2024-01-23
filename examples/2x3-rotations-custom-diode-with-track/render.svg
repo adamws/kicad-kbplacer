@@ -32,6 +32,8 @@
 </svg:g>
 <svg:g style="fill:#C83434; fill-opacity:0.0;  stroke:#C83434; stroke-width:0.250; stroke-opacity:1;  stroke-linecap:round; stroke-linejoin:round;">
 <svg:path d="M30.715 31.985 L30.715 51.035 " />
+<svg:path d="M52.693 52.925 L64.359 46.190 " />
+<svg:path d="M64.359 46.190 L66.824 36.990 " />
 </svg:g>
 </svg:g> 
 <svg:g style="fill:#000000; fill-opacity:0.0;  stroke:#000000; stroke-width:0.000; stroke-opacity:1;  stroke-linecap:round; stroke-linejoin:round;">
@@ -86,23 +88,23 @@
 <svg:path style="fill:#4D7FC4; fill-opacity:1.000;  stroke:#4D7FC4; stroke-width:0.000; stroke-opacity:1;  stroke-linecap:round; stroke-linejoin:round;fill-rule:evenodd;" d="M 68.393,63.543 67.910,63.414 68.039,62.931 68.522,63.060 Z" /> 
 </svg:g>
 <svg:g style="fill:#4D7FC4; fill-opacity:0.0;  stroke:#4D7FC4; stroke-width:0.250; stroke-opacity:1;  stroke-linecap:round; stroke-linejoin:round;">
-<svg:path d="M29.328 37.928 L36.143 37.928 " />
 <svg:path d="M37.065 37.006 L37.065 29.445 " />
 <svg:path d="M36.143 37.928 L37.065 37.006 " />
+<svg:path d="M29.328 37.928 L36.143 37.928 " />
 <svg:path d="M36.143 56.978 L37.065 56.056 " />
-<svg:path d="M37.065 56.056 L37.065 48.495 " />
 <svg:path d="M29.328 56.978 L36.143 56.978 " />
-<svg:path d="M63.946 42.371 L70.529 44.135 " />
+<svg:path d="M37.065 56.056 L37.065 48.495 " />
 <svg:path d="M70.529 44.135 L71.658 43.483 " />
 <svg:path d="M71.658 43.483 L73.615 36.180 " />
+<svg:path d="M63.946 42.371 L70.529 44.135 " />
 <svg:path d="M49.815 58.307 L56.398 60.071 " />
-<svg:path d="M56.398 60.071 L57.527 59.419 " />
 <svg:path d="M57.527 59.419 L59.484 52.115 " />
-<svg:path d="M68.216 63.237 L74.799 65.001 " />
-<svg:path d="M75.928 64.349 L77.885 57.046 " />
+<svg:path d="M56.398 60.071 L57.527 59.419 " />
 <svg:path d="M74.799 65.001 L75.928 64.349 " />
-<svg:path d="M49.246 60.432 L67.647 65.362 " />
+<svg:path d="M75.928 64.349 L77.885 57.046 " />
+<svg:path d="M68.216 63.237 L74.799 65.001 " />
 <svg:path d="M67.647 65.362 L67.647 65.362 " />
+<svg:path d="M49.246 60.432 L67.647 65.362 " />
 </svg:g>
 </svg:g> 
 <svg:g style="fill:#E8B2A7; fill-opacity:0.0;  stroke:#E8B2A7; stroke-width:0.150; stroke-opacity:1;  stroke-linecap:round; stroke-linejoin:round;">

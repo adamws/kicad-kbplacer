@@ -410,27 +410,21 @@ class BoardModifier:
         def _calculate_corners(
             pos1: pcbnew.wxPoint, pos2: pcbnew.wxPoint
         ) -> Tuple[pcbnew.wxPoint, pcbnew.wxPoint]:
-            x_diff = pos1.x - pos2.x
-            y_diff = pos1.y - pos2.y
+            x_diff = pos2.x - pos1.x
+            y_diff = pos2.y - pos1.y
             x_diff_abs = builtins.abs(x_diff)
             y_diff_abs = builtins.abs(y_diff)
             if x_diff_abs < y_diff_abs:
                 up_or_down = -1 if y_diff > 0 else 1
                 return (
-                    pcbnew.wxPoint(
-                        pos2.x + x_diff,
-                        pos2.y - (up_or_down * x_diff_abs),
-                    ),
-                    pcbnew.wxPoint(pos1.x - x_diff, pos1.y - x_diff),
+                    pcbnew.wxPoint(pos1.x, pos2.y + (up_or_down * x_diff_abs)),
+                    pcbnew.wxPoint(pos2.x, pos1.y - (up_or_down * x_diff_abs)),
                 )
             else:
                 left_or_right = -1 if x_diff > 0 else 1
                 return (
-                    pcbnew.wxPoint(
-                        pos2.x - (left_or_right * y_diff_abs),
-                        pos2.y + y_diff,
-                    ),
-                    pcbnew.wxPoint(pos1.x - y_diff, pos1.y - y_diff),
+                    pcbnew.wxPoint(pos2.x + (left_or_right * y_diff_abs), pos1.y),
+                    pcbnew.wxPoint(pos1.x - (left_or_right * y_diff_abs), pos2.y),
                 )
 
         def _route(
