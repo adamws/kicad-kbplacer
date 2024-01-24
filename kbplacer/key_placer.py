@@ -259,12 +259,18 @@ class KeyPlacer(BoardModifier):
         common_nets = get_common_nets(switch, diode)
 
         def _append_normalized_connection_items(netcode: int) -> None:
-            # NOTE: won't work for KiCad 8.0 release candidate,
-            # requires fix in KiCad, see:
-            # https://gitlab.com/kicad/code/kicad/-/issues/15643
-            items = connectivity.GetNetItems(
-                netcode, [pcbnew.PCB_TRACE_T, pcbnew.PCB_VIA_T]
-            )
+            if KICAD_VERSION < (8, 0, 0):
+                items = connectivity.GetNetItems(
+                    netcode, [pcbnew.PCB_TRACE_T, pcbnew.PCB_VIA_T]
+                )
+            else:
+                # NOTE: due to following issue:
+                # https://gitlab.com/kicad/code/kicad/-/issues/15643
+                # we need to get items differently when using kicad 8
+                # (perhaps this method should be used for all
+                # supported kicad versions):
+                items = self.board.TracksInNet(netcode)
+
             for item in items:
                 item_copy = item.Duplicate()
                 item_copy.SetNetCode(0)
