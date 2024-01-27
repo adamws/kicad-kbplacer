@@ -46,7 +46,13 @@ KICAD_TRANSLATIONS_LOOKUP = {
 
 
 def get_current_kicad_language():
-    return KICAD_TRANSLATIONS_LOOKUP.get(wx_("Set Language"), "en")
+    kicad_lang = KICAD_TRANSLATIONS_LOOKUP.get(wx_("Set Language"), "en")
+    # some languages require additional lookup to detect correctly,
+    # for example es vs es_MX:
+    if kicad_lang == "es" and wx_("Enabled:") == "Activado:":
+        # es: Enabled -> Habilitado, es_MX: Enabled -> Activado
+        kicad_lang = "es_MX"
+    return kicad_lang
 
 
 def get_plugin_translator(lang: str = "en"):
