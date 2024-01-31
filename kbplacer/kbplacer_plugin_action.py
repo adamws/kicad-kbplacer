@@ -9,10 +9,10 @@ from typing import Any, Tuple
 import pcbnew
 import wx
 
-from .edge_generator import EdgeGenerator
+from .edge_generator import build_board_outline
 from .kbplacer_dialog import KbplacerDialog
 from .key_placer import KeyPlacer
-from .template_copier import TemplateCopier
+from .template_copier import copy_from_template_to_board
 
 logger = logging.getLogger(__name__)
 
@@ -117,14 +117,12 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
             )
 
             if dlg.generate_outline():
-                edge_generator = EdgeGenerator(self.board, dlg.get_outline_delta())
-                edge_generator.run(key_format)
+                build_board_outline(self.board, dlg.get_outline_delta(), key_format)
 
             if template_path := dlg.get_template_path():
-                template_copier = TemplateCopier(
+                copy_from_template_to_board(
                     self.board, template_path, dlg.route_rows_and_columns()
                 )
-                template_copier.run()
         else:
             gui_state = dlg.get_window_state()
             logger.info(f"GUI state: {gui_state}")

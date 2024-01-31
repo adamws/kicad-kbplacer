@@ -9,11 +9,11 @@ import pcbnew
 
 from .board_builder import BoardBuilder
 from .defaults import DEFAULT_DIODE_POSITION, ZERO_POSITION
-from .edge_generator import EdgeGenerator
+from .edge_generator import build_board_outline
 from .element_position import ElementInfo, ElementPosition, Point, PositionOption, Side
 from .key_placer import KeyPlacer
 from .kle_serial import parse_via
-from .template_copier import TemplateCopier
+from .template_copier import copy_from_template_to_board
 
 logger = logging.getLogger(__name__)
 
@@ -241,15 +241,6 @@ def app():
 
     layout_path = args.layout
     board_path = args.board
-    route_switches_with_diodes = args.route_switches_with_diodes
-    route_rows_and_columns = args.route_rows_and_columns
-    diode = args.diode
-    additional_elements = args.additional_elements
-    key_distance = args.key_distance
-    template_path = args.template
-    build_board_outline = args.build_board_outline
-    outline_delta = args.outline_delta
-    create_from_via = args.create_from_via
 
     # set up logger
     logging.basicConfig(
@@ -262,7 +253,7 @@ def app():
     else:
         layout = {}
 
-    if create_from_via:
+    if args.create_from_via:
         if os.path.isfile(board_path):
             logger.error(f"File {board_path} already exist, aborting")
             sys.exit(1)
@@ -276,23 +267,21 @@ def app():
 
     board = pcbnew.LoadBoard(board_path)
 
-    placer = KeyPlacer(board, key_distance)
+    placer = KeyPlacer(board, args.key_distance)
     placer.run(
         layout,
         "SW{}",
-        diode,
-        route_switches_with_diodes,
-        route_rows_and_columns,
-        additional_elements=additional_elements,
+        args.diode,
+        args.route_switches_with_diodes,
+        args.route_rows_and_columns,
+        additional_elements=args.additional_elements,
     )
 
-    if build_board_outline:
-        edge_generator = EdgeGenerator(board, outline_delta)
-        edge_generator.run("SW{}")
+    if args.build_board_outline:
+        build_board_outline(board, args.outline_delta, "SW{}")
 
-    if template_path:
-        copier = TemplateCopier(board, template_path, route_rows_and_columns)
-        copier.run()
+    if args.template:
+        copy_from_template_to_board(board, args.template, args.route_rows_and_columns)
 
     pcbnew.Refresh()
     pcbnew.SaveBoard(board_path, board)

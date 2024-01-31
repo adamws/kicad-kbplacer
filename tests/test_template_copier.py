@@ -5,7 +5,7 @@ from .conftest import add_switch_footprint, add_track, generate_render
 
 try:
     from kbplacer.board_modifier import get_position, set_position
-    from kbplacer.template_copier import TemplateCopier
+    from kbplacer.template_copier import copy_from_template_to_board
 except:
     pass
 
@@ -44,7 +44,7 @@ def test_template_copy(copy_tracks, tmpdir, request):
     source_board_path = prepare_source_board(tmpdir, request)
     target_board, footprints = prepare_target_board(request)
 
-    TemplateCopier(target_board, source_board_path, copy_tracks).run()
+    copy_from_template_to_board(target_board, source_board_path, copy_tracks)
 
     target_board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
     generate_render(tmpdir, request)

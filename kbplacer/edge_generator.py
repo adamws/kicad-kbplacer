@@ -4,7 +4,7 @@ from typing import cast
 
 import pcbnew
 
-from .board_modifier import KICAD_VERSION, BoardModifier
+from .board_modifier import KICAD_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,6 @@ def convex_hull(points):
     # Sort the points lexicographically (tuples are compared lexicographically).
     # Remove duplicates to detect the case we have just one unique point.
     points = sorted(set(points))
-    # points = sorted(points)
 
     # Boring case: no points or a single point, possibly repeated multiple times.
     if len(points) <= 1:
@@ -54,90 +53,81 @@ def convex_hull(points):
     return lower[:-1] + upper[:-1]
 
 
-class EdgeGenerator(BoardModifier):
-    def __init__(
-        self,
-        board: pcbnew.BOARD,
-        outline_delta: float,
-    ) -> None:
-        super().__init__(board)
-        self.outline_delta = outline_delta
-
-    def run(self, key_format: str) -> None:
-        selected_footprints = []
-        if KICAD_VERSION >= (7, 0, 0):
-            selection: pcbnew.DRAWINGS = pcbnew.GetCurrentSelection()
-            if len(selection) != 0:
-                # else use only selected footprints
-                logger.info("Running board edge generation around selected footprints")
-                selected_footprints = [
-                    f.Cast()
-                    for f in selection
-                    if isinstance(f.Cast(), pcbnew.FOOTPRINT)
-                ]
-                if not selected_footprints:
-                    logger.info("No footprints selected")
-
-        if not selected_footprints:
-            # if nothing selected use all switches
-            logger.info("Running board edge generation around switch footprints")
-            footprints = self.board.GetFootprints()
-            pattern = re.compile(key_format.format("(\\d)+"))
+def build_board_outline(
+    board: pcbnew.BOARD, outline_delta: float, key_format: str
+) -> None:
+    selected_footprints = []
+    if KICAD_VERSION >= (7, 0, 0):
+        selection: pcbnew.DRAWINGS = pcbnew.GetCurrentSelection()
+        if len(selection) != 0:
+            # else use only selected footprints
+            logger.info("Running board edge generation around selected footprints")
             selected_footprints = [
-                f for f in footprints if re.match(pattern, f.GetReference())
+                f.Cast() for f in selection if isinstance(f.Cast(), pcbnew.FOOTPRINT)
             ]
+            if not selected_footprints:
+                logger.info("No footprints selected")
 
-        if not selected_footprints:
-            msg = "No footprints found or selected for generating board edge"
-            raise Exception(msg)
+    if not selected_footprints:
+        # if nothing selected use all switches
+        logger.info("Running board edge generation around switch footprints")
+        footprints = board.GetFootprints()
+        pattern = re.compile(key_format.format("(\\d)+"))
+        selected_footprints = [
+            f for f in footprints if re.match(pattern, f.GetReference())
+        ]
 
-        hulls = [f.GetBoundingHull() for f in selected_footprints]
-        points = []
-        for hull in hulls:
-            for i in range(0, hull.OutlineCount()):
-                for p in hull.Outline(i).CPoints():
-                    points.append((p.x, p.y))
-        result = convex_hull(points)
-        shape_line = pcbnew.SHAPE_LINE_CHAIN()
-        for r in result:
-            shape_line.Append(r[0], r[1])
+    if not selected_footprints:
+        msg = "No footprints found or selected for generating board edge"
+        raise Exception(msg)
 
-        outline = pcbnew.SHAPE_POLY_SET()
-        outline.AddOutline(shape_line)
-
-        def _inflate_outline(outline, delta_mm):
-            if KICAD_VERSION < (8, 0, 0):
-                outline.Inflate(delta_mm, 10, pcbnew.SHAPE_POLY_SET.CHAMFER_ALL_CORNERS)
-            else:
-                outline.Inflate(delta_mm, pcbnew.CORNER_STRATEGY_CHAMFER_ALL_CORNERS, 0)
-
-        def _deflate_outline(outline, delta_mm):
-            if KICAD_VERSION < (8, 0, 0):
-                outline.Deflate(delta_mm, 10, pcbnew.SHAPE_POLY_SET.CHAMFER_ALL_CORNERS)
-            else:
-                outline.Deflate(delta_mm, pcbnew.CORNER_STRATEGY_CHAMFER_ALL_CORNERS, 0)
-
-        delta_mm = cast(int, pcbnew.FromMM(abs(self.outline_delta)))
-        if self.outline_delta > 0:
-            _inflate_outline(outline, delta_mm)
-        elif self.outline_delta < 0:
-            _deflate_outline(outline, delta_mm)
-
-        points = []
-        for i in range(0, outline.OutlineCount()):
-            for p in outline.Outline(i).CPoints():
+    hulls = [f.GetBoundingHull() for f in selected_footprints]
+    points = []
+    for hull in hulls:
+        for i in range(0, hull.OutlineCount()):
+            for p in hull.Outline(i).CPoints():
                 points.append((p.x, p.y))
-        # add first point to the end, easier zip iterate for closed shape:
-        points.append(points[0])
-        for start, end in zip(points, points[1:]):
-            segment = pcbnew.PCB_SHAPE(self.board)
-            segment.SetShape(pcbnew.SHAPE_T_SEGMENT)
-            segment.SetLayer(pcbnew.Edge_Cuts)
-            if KICAD_VERSION >= (7, 0, 0):
-                segment.SetStart(pcbnew.VECTOR2I(start[0], start[1]))
-                segment.SetEnd(pcbnew.VECTOR2I(end[0], end[1]))
-            else:
-                segment.SetStart(pcbnew.wxPoint(start[0], start[1]))
-                segment.SetEnd(pcbnew.wxPoint(end[0], end[1]))
-            segment.SetWidth(pcbnew.FromMM(0.4))
-            self.board.Add(segment)
+    result = convex_hull(points)
+    shape_line = pcbnew.SHAPE_LINE_CHAIN()
+    for r in result:
+        shape_line.Append(r[0], r[1])
+
+    outline = pcbnew.SHAPE_POLY_SET()
+    outline.AddOutline(shape_line)
+
+    def _inflate_outline(outline, delta_mm):
+        if KICAD_VERSION < (8, 0, 0):
+            outline.Inflate(delta_mm, 10, pcbnew.SHAPE_POLY_SET.CHAMFER_ALL_CORNERS)
+        else:
+            outline.Inflate(delta_mm, pcbnew.CORNER_STRATEGY_CHAMFER_ALL_CORNERS, 0)
+
+    def _deflate_outline(outline, delta_mm):
+        if KICAD_VERSION < (8, 0, 0):
+            outline.Deflate(delta_mm, 10, pcbnew.SHAPE_POLY_SET.CHAMFER_ALL_CORNERS)
+        else:
+            outline.Deflate(delta_mm, pcbnew.CORNER_STRATEGY_CHAMFER_ALL_CORNERS, 0)
+
+    delta_mm = cast(int, pcbnew.FromMM(abs(outline_delta)))
+    if outline_delta > 0:
+        _inflate_outline(outline, delta_mm)
+    elif outline_delta < 0:
+        _deflate_outline(outline, delta_mm)
+
+    points = []
+    for i in range(0, outline.OutlineCount()):
+        for p in outline.Outline(i).CPoints():
+            points.append((p.x, p.y))
+    # add first point to the end, easier zip iterate for closed shape:
+    points.append(points[0])
+    for start, end in zip(points, points[1:]):
+        segment = pcbnew.PCB_SHAPE(board)
+        segment.SetShape(pcbnew.SHAPE_T_SEGMENT)
+        segment.SetLayer(pcbnew.Edge_Cuts)
+        if KICAD_VERSION >= (7, 0, 0):
+            segment.SetStart(pcbnew.VECTOR2I(start[0], start[1]))
+            segment.SetEnd(pcbnew.VECTOR2I(end[0], end[1]))
+        else:
+            segment.SetStart(pcbnew.wxPoint(start[0], start[1]))
+            segment.SetEnd(pcbnew.wxPoint(end[0], end[1]))
+        segment.SetWidth(pcbnew.FromMM(0.4))
+        board.Add(segment)
