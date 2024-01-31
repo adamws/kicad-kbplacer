@@ -7,7 +7,7 @@ import os
 import string
 import sys
 from enum import Flag
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import wx
 from wx.lib.embeddedimage import PyEmbeddedImage
@@ -877,6 +877,18 @@ class KbplacerDialog(wx.Dialog):
             },
         }
         return json.dumps(window_state, indent=None)
+
+
+def load_window_state_from_log(filepath: str) -> Tuple[Any, bool]:
+    if os.path.isfile(filepath):
+        with open(filepath, "r") as f:
+            for line in f:
+                if "GUI state:" in line:
+                    try:
+                        return json.loads(line[line.find("{") :]), False
+                    except:
+                        return None, True
+    return None, False
 
 
 # used for tests

@@ -12,6 +12,8 @@ import pytest
 from PIL import ImageGrab
 from pyvirtualdisplay.smartdisplay import DisplayTimeoutError, SmartDisplay
 
+from kbplacer.kbplacer_dialog import load_window_state_from_log
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_WINDOW_STATE = {
@@ -337,3 +339,29 @@ def test_gui_state_restore(
     with open(f"{tmpdir}/window_state.json", "r") as f:
         state = json.load(f)
         assert state == expected
+
+
+def test_load_window_state_from_log(tmpdir) -> None:
+    logfile = f"{tmpdir}/kbplacer.log"
+    with open(logfile, "w") as f:
+        state_str = json.dumps(DEFAULT_WINDOW_STATE, indent=None)
+        f.write(f"GUI state: {state_str}")
+    state, error = load_window_state_from_log(logfile)
+    assert error is False
+    assert state == DEFAULT_WINDOW_STATE
+
+
+def test_load_window_state_from_corrupted_log(tmpdir) -> None:
+    logfile = f"{tmpdir}/kbplacer.log"
+    with open(logfile, "w") as f:
+        f.write("GUI state: Some nonsense")
+    state, error = load_window_state_from_log(logfile)
+    assert error is True
+    assert state is None
+
+
+def test_load_window_state_from_missing_log(tmpdir) -> None:
+    logfile = f"{tmpdir}/kbplacer.log"
+    state, error = load_window_state_from_log(logfile)
+    assert error is False
+    assert state is None

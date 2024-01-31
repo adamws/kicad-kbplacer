@@ -4,28 +4,16 @@ import json
 import logging
 import os
 import sys
-from typing import Any, Tuple
 
 import pcbnew
 import wx
 
 from .edge_generator import build_board_outline
-from .kbplacer_dialog import KbplacerDialog
+from .kbplacer_dialog import KbplacerDialog, load_window_state_from_log
 from .key_placer import KeyPlacer
 from .template_copier import copy_from_template_to_board
 
 logger = logging.getLogger(__name__)
-
-
-def load_window_state(filepath: str) -> Tuple[Any, bool]:
-    with open(filepath, "r") as f:
-        for line in f:
-            if "GUI state:" in line:
-                try:
-                    return json.loads(line[line.find("{") :]), False
-                except:
-                    return None, True
-    return None, False
 
 
 class KbplacerPluginAction(pcbnew.ActionPlugin):
@@ -61,14 +49,11 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
         for handler in logging.root.handlers[:]:
             logging.root.removeHandler(handler)
 
-        self.window_state = None
-        self.window_state_error = False
         log_file = "kbplacer.log"
 
         # if log file already exist (from previous plugin run),
-        # try to get window state from it
-        if os.path.isfile(log_file):
-            self.window_state, self.window_state_error = load_window_state(log_file)
+        # try to get window state from it, must be done before setting up new logger
+        self.window_state, self.window_state_error = load_window_state_from_log(log_file)
 
         # set up logger
         logging.basicConfig(
