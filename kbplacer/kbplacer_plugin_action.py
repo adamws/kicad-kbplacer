@@ -30,9 +30,9 @@ def load_window_state(filepath: str) -> Tuple[Any, bool]:
 
 class KbplacerPluginAction(pcbnew.ActionPlugin):
     def defaults(self) -> None:
-        self.name = "Keyboard placer"
+        self.name = "Keyboard Plugin"
         self.category = "Mechanical Keyboard Helper"
-        self.description = "Auto placement for key switches and diodes"
+        self.description = "Automated placement and routing for keyboard PCBs"
         self.show_toolbar_button = True
         self.icon_file_name = os.path.join(os.path.dirname(__file__), "icon.png")
 
