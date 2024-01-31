@@ -762,6 +762,9 @@ class KbplacerDialog(wx.Dialog):
             self, label=self._("Build board outline")
         )
         generate_outline_checkbox.SetValue(generate_outline)
+        generate_outline_checkbox.Bind(
+            wx.EVT_CHECKBOX, self.on_generate_outline_checkbox
+        )
         outline_delta_ctrl = LabeledTextCtrl(
             self,
             self._("Outline delta:"),
@@ -785,7 +788,19 @@ class KbplacerDialog(wx.Dialog):
         self.__generate_outline_checkbox = generate_outline_checkbox
         self.__outline_delta_ctrl = outline_delta_ctrl
 
+        self.__enable_outline_delta(generate_outline)
+
         return sizer
+
+    def __enable_outline_delta(self, enable):
+        if enable:
+            self.__outline_delta_ctrl.Enable()
+        else:
+            self.__outline_delta_ctrl.Disable()
+
+    def on_generate_outline_checkbox(self, event):
+        is_checked = event.GetEventObject().IsChecked()
+        self.__enable_outline_delta(is_checked)
 
     def on_help_button(self, event):
         del event
