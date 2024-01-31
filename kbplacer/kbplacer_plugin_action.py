@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 import os
 import sys
@@ -81,19 +80,13 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
             gui_state = dlg.get_window_state()
             logger.info(f"GUI state: {gui_state}")
 
-            if layout_path := dlg.get_layout_path():
-                with open(layout_path, "r") as f:
-                    layout = json.load(f)
-            else:
-                layout = {}
-
             key_format = dlg.get_key_annotation_format()
             diode_info = dlg.get_diode_position_info()
             additional_elements = dlg.get_additional_elements_info()
 
             placer = KeyPlacer(self.board, dlg.get_key_distance())
             placer.run(
-                layout,
+                dlg.get_layout_path(),
                 key_format,
                 diode_info,
                 dlg.route_switches_with_diodes(),

@@ -194,10 +194,8 @@ def test_diode_switch_routing_complicated_footprint(
     assert_board_tracks(expected, board)
 
 
-def get_2x2_layout(request):
-    with open(f"{request.fspath.dirname}/../examples/2x2/kle-internal.json", "r") as f:
-        text_input = f.read()
-        return json.loads(text_input)
+def get_2x2_layout_path(request) -> str:
+    return f"{request.fspath.dirname}/../examples/2x2/kle-internal.json"
 
 
 def add_2x2_nets(board):
@@ -248,12 +246,10 @@ def assert_2x2_layout_switches(board: pcbnew.BOARD, key_distance: Tuple[float, f
 )
 def test_switch_distance(key_distance, tmpdir, request):
     board = get_board_for_2x2_example(request)
-    layout = get_2x2_layout(request)
-
     key_placer = KeyPlacer(board, key_distance)
     diode_position = DEFAULT_DIODE_POSITION
     key_placer.run(
-        layout,
+        get_2x2_layout_path(request),
         "SW{}",
         ElementInfo("D{}", PositionOption.DEFAULT, diode_position, ""),
         True,
@@ -272,14 +268,11 @@ def test_switch_distance(key_distance, tmpdir, request):
 
 def test_diode_placement_ignore(tmpdir, request):
     board = get_board_for_2x2_example(request)
-    layout = get_2x2_layout(request)
-
     key_placer = KeyPlacer(board)
-
     diode_info = ElementInfo(
         "D{}", PositionOption.UNCHANGED, DEFAULT_DIODE_POSITION, ""
     )
-    key_placer.run(layout, "SW{}", diode_info, True)
+    key_placer.run(get_2x2_layout_path(request), "SW{}", diode_info, True)
 
     board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
     generate_render(tmpdir, request)
@@ -291,11 +284,14 @@ def test_diode_placement_ignore(tmpdir, request):
         assert pos == pcbnew.wxPoint(0, 0)
 
 
-def test_placer_invalid_layout(request):
+def test_placer_invalid_layout(tmpdir, request):
     board = get_board_for_2x2_example(request)
-
     key_placer = KeyPlacer(board)
     diode_info = ElementInfo("D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, "")
 
+    layout_path = f"{tmpdir}/kle.json"
+    with open(layout_path, "w") as f:
+        json.dump({"some": "urecognized layout format"}, f)
+
     with pytest.raises(RuntimeError):
-        key_placer.run({"some": "urecognized layout format"}, "SW{}", diode_info, True)
+        key_placer.run(layout_path, "SW{}", diode_info, True)

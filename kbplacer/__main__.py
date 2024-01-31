@@ -1,5 +1,4 @@
 import argparse
-import json
 import logging
 import os
 import sys
@@ -12,7 +11,6 @@ from .defaults import DEFAULT_DIODE_POSITION, ZERO_POSITION
 from .edge_generator import build_board_outline
 from .element_position import ElementInfo, ElementPosition, Point, PositionOption, Side
 from .key_placer import KeyPlacer
-from .kle_serial import parse_via
 from .template_copier import copy_from_template_to_board
 
 logger = logging.getLogger(__name__)
@@ -247,12 +245,6 @@ def app():
         level=logging.DEBUG, format="%(asctime)s: %(message)s", datefmt="%H:%M:%S"
     )
 
-    if layout_path:
-        with open(layout_path, "r") as f:
-            layout = json.load(f)
-    else:
-        layout = {}
-
     if args.create_from_via:
         if os.path.isfile(board_path):
             logger.error(f"File {board_path} already exist, aborting")
@@ -262,14 +254,14 @@ def app():
             switch_footprint=args.switch_footprint,
             diode_footprint=args.diode_footprint,
         )
-        board = builder.create_board(parse_via(layout))
+        board = builder.create_board(layout_path)
         board.Save(board_path)
 
     board = pcbnew.LoadBoard(board_path)
 
     placer = KeyPlacer(board, args.key_distance)
     placer.run(
-        layout,
+        layout_path,
         "SW{}",
         args.diode,
         args.route_switches_with_diodes,

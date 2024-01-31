@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import itertools
+import json
 import logging
 import os
 import re
@@ -442,13 +443,18 @@ class KeyPlacer(BoardModifier):
 
     def run(
         self,
-        layout: dict,
+        layout_path: str,
         key_format: str,
         diode_info: ElementInfo,
         route_switches_with_diodes: bool = False,
         route_rows_and_columns: bool = False,
         additional_elements: List[ElementInfo] = [],
     ) -> None:
+        if layout_path:
+            with open(layout_path, "r") as f:
+                layout = json.load(f)
+        else:
+            layout = {}
         diode_format = ""
         template_connection = []
 

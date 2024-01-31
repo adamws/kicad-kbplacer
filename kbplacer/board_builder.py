@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass
 from typing import Type
@@ -7,7 +8,7 @@ from typing import Type
 import pcbnew
 
 from .board_modifier import KICAD_VERSION
-from .kle_serial import ViaKeyboard
+from .kle_serial import ViaKeyboard, parse_via
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +74,10 @@ class BoardBuilder:
             self.nets[netname] = net
         return net
 
-    def create_board(self, keyboard: ViaKeyboard) -> pcbnew.BOARD:
+    def create_board(self, layout_path: str) -> pcbnew.BOARD:
+        with open(layout_path, "r") as f:
+            layout = json.load(f)
+            keyboard: ViaKeyboard = parse_via(layout)
         current_ref = 1
 
         for key in keyboard.keys:
