@@ -467,7 +467,8 @@ print(f"This keyboard has only {len(keyboard.keys)} keys")
 
 It can also create and manipulate `kicad_pcb` files. This enables _non traditional_ KiCad workflows
 where schematic preparation can be completely skipped. For example see
-[keyboard-pcbs](https://github.com/adamws/keyboard-pcbs/blob/master/via_layouts_to_boards.py) repository. It demonstrates how to create `.kicad_pcb` file with switch matrix from scratch.
+[keyboard-pcbs](https://adamws.github.io/keyboard-pcbs/) website and its source [repository](https://github.com/adamws/keyboard-pcbs).
+It demonstrates how to create `.kicad_pcb` file with switch matrix from scratch.
 
 > [!WARNING]
 > This is work in progress. Creating keyboard PCBs without schematic is not recommended
