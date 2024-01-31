@@ -9,6 +9,7 @@ import pcbnew
 
 from .board_builder import BoardBuilder
 from .defaults import DEFAULT_DIODE_POSITION, ZERO_POSITION
+from .edge_generator import EdgeGenerator
 from .element_position import ElementInfo, ElementPosition, Point, PositionOption, Side
 from .key_placer import KeyPlacer
 from .kle_serial import parse_via
@@ -198,6 +199,19 @@ def app():
     )
     parser.add_argument("-t", "--template", help="Controller circuit template")
     parser.add_argument(
+        "--build-board-outline",
+        required=False,
+        action="store_true",
+        help="Enables board outline generation around switch footprints.",
+    )
+    parser.add_argument(
+        "--outline-delta",
+        required=False,
+        default=0.0,
+        type=float,
+        help="The amount (in millimetres) to inflate/deflate board outline.",
+    )
+    parser.add_argument(
         "--create-from-via",
         required=False,
         action="store_true",
@@ -233,6 +247,8 @@ def app():
     additional_elements = args.additional_elements
     key_distance = args.key_distance
     template_path = args.template
+    build_board_outline = args.build_board_outline
+    outline_delta = args.outline_delta
     create_from_via = args.create_from_via
 
     # set up logger
@@ -269,6 +285,10 @@ def app():
         route_rows_and_columns,
         additional_elements=additional_elements,
     )
+
+    if build_board_outline:
+        edge_generator = EdgeGenerator(board, outline_delta)
+        edge_generator.run("SW{}")
 
     if template_path:
         copier = TemplateCopier(board, template_path, route_rows_and_columns)

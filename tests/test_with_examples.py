@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from typing import cast
 
 import pcbnew
 import pytest
@@ -401,3 +402,48 @@ def test_board_creation(tmpdir, request, package_path, package_name):
 
     references_dir = get_references_dir(request, example, "Tracks", "DefaultDiode")
     assert_example(tmpdir, references_dir)
+
+
+# Use area of board edges bounding box to test if outline is generated.
+# Before plugin run, the area must be zero, then it must be approximately equal reference.
+# References were obtained by dry-running and manual inspection of resulting PCBs
+@pytest.mark.parametrize(
+    "delta,expected_area",
+    [(0, 1490), (2, 1815), (-2, 1197)],
+)
+def test_board_outline_building(
+    tmpdir, request, package_path, package_name, delta, expected_area
+):
+    example = "2x2"
+    layout_file = "kle.json"
+
+    prepare_project(request, tmpdir, example, layout_file)
+    pcb_path = f"{tmpdir}/keyboard-before.kicad_pcb"
+
+    def get_area():
+        board = pcbnew.LoadBoard(pcb_path)
+        bbox = board.GetBoardEdgesBoundingBox()
+        width = cast(float, pcbnew.ToMM(bbox.GetWidth()))
+        height = cast(float, pcbnew.ToMM(bbox.GetHeight()))
+        return width * height
+
+    assert get_area() == 0
+
+    run_kbplacer_process(
+        False,
+        None,
+        package_path,
+        package_name,
+        f"{tmpdir}/{layout_file}",
+        pcb_path,
+        flags=["--build-board-outline"],
+        args={"--outline-delta": str(delta)},
+    )
+
+    generate_render(tmpdir, request)
+
+    references_dir = get_references_dir(request, example, "NoTracks", "DefaultDiode")
+    assert_example(tmpdir, references_dir)
+
+    error_margin = expected_area * (1 / 100.0)
+    assert abs(get_area() - expected_area) <= error_margin

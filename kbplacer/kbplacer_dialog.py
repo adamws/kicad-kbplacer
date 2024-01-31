@@ -728,7 +728,11 @@ class KbplacerDialog(wx.Dialog):
         return sizer
 
     def get_misc_section(
-        self, route_rows_and_columns: bool = True, template_path: str = ""
+        self,
+        route_rows_and_columns: bool = True,
+        template_path: str = "",
+        generate_outline: bool = False,
+        outline_delta: float = 0.0,
     ) -> wx.Sizer:
         row_and_columns_tracks_checkbox = wx.CheckBox(
             self, label=self._("Route rows and columns")
@@ -748,16 +752,38 @@ class KbplacerDialog(wx.Dialog):
             template_picker.SetPath(template_path)
             template_picker.GetTextCtrl().SetInsertionPointEnd()
 
-        box = wx.StaticBox(self, label=self._("Other settings"))
-        sizer = wx.StaticBoxSizer(box, wx.HORIZONTAL)
+        row1 = wx.BoxSizer(wx.HORIZONTAL)
+        row1.Add(row_and_columns_tracks_checkbox, 0, wx.EXPAND | wx.ALL, 5)
+        row1.Add(wx.StaticLine(self, style=wx.LI_VERTICAL), 0, wx.EXPAND | wx.ALL, 5)
+        row1.Add(template_label, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5)
+        row1.Add(template_picker, 1, wx.EXPAND | wx.ALL, 5)
 
-        sizer.Add(row_and_columns_tracks_checkbox, 0, wx.EXPAND | wx.ALL, 5)
-        sizer.Add(wx.StaticLine(self, style=wx.LI_VERTICAL), 0, wx.EXPAND | wx.ALL, 5)
-        sizer.Add(template_label, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5)
-        sizer.Add(template_picker, 1, wx.EXPAND | wx.ALL, 5)
+        generate_outline_checkbox = wx.CheckBox(
+            self, label=self._("Build board outline")
+        )
+        generate_outline_checkbox.SetValue(generate_outline)
+        outline_delta_ctrl = LabeledTextCtrl(
+            self,
+            self._("Outline delta:"),
+            value=str(outline_delta),
+            width=5,
+            validator=FloatValidator(),
+        )
+
+        row2 = wx.BoxSizer(wx.HORIZONTAL)
+        row2.Add(generate_outline_checkbox, 0, wx.EXPAND | wx.ALL, 5)
+        row2.Add(wx.StaticLine(self, style=wx.LI_VERTICAL), 0, wx.EXPAND | wx.ALL, 5)
+        row2.Add(outline_delta_ctrl, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+
+        box = wx.StaticBox(self, label=self._("Other settings"))
+        sizer = wx.StaticBoxSizer(box, wx.VERTICAL)
+        sizer.Add(row1, 0, wx.EXPAND | wx.ALL, 5)
+        sizer.Add(row2, 0, wx.EXPAND | wx.ALL, 5)
 
         self.__rows_and_columns_tracks_checkbox = row_and_columns_tracks_checkbox
         self.__template_picker = template_picker
+        self.__generate_outline_checkbox = generate_outline_checkbox
+        self.__outline_delta_ctrl = outline_delta_ctrl
 
         return sizer
 
@@ -804,6 +830,12 @@ class KbplacerDialog(wx.Dialog):
             if e.GetValue().annotation_format != ""
         ]
 
+    def generate_outline(self) -> bool:
+        return self.__generate_outline_checkbox.GetValue()
+
+    def get_outline_delta(self) -> float:
+        return float(self.__outline_delta_ctrl.text.GetValue())
+
     def get_window_state(self):
         window_state = {
             "switch_section": {
@@ -825,6 +857,8 @@ class KbplacerDialog(wx.Dialog):
             "misc_section": {
                 "route_rows_and_columns": self.route_rows_and_columns(),
                 "template_path": self.get_template_path(),
+                "generate_outline": self.generate_outline(),
+                "outline_delta": self.get_outline_delta(),
             },
         }
         return json.dumps(window_state, indent=None)

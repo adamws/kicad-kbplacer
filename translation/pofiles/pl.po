@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2023-09-30 23:37+0200\n"
+"POT-Creation-Date: 2024-01-31 18:38+0100\n"
 "PO-Revision-Date: 2023-10-01 12:24+0000\n"
 "Last-Translator: adamws <adamws@users.noreply.github.com>\n"
 "Language-Team: Polish <https://hosted.weblate.org/projects/kicad-kbplacer/"
@@ -61,6 +61,12 @@ msgstr "Trasuj wiersze i kolumny"
 
 msgid "Controller circuit template file:"
 msgstr "Plik szablonu obwodu kontrolera:"
+
+msgid "Build board outline"
+msgstr ""
+
+msgid "Outline delta:"
+msgstr ""
 
 msgid "Other settings"
 msgstr "Pozostałe ustawiania"

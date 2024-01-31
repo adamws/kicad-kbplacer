@@ -52,6 +52,8 @@ DEFAULT_WINDOW_STATE = {
     "misc_section": {
         "route_rows_and_columns": True,
         "template_path": "",
+        "generate_outline": False,
+        "outline_delta": 0.0,
     },
 }
 
@@ -99,6 +101,8 @@ CUSTOM_WINDOW_STATE_EXAMPLE1 = {
     "misc_section": {
         "route_rows_and_columns": False,
         "template_path": "/home/user/template.kicad_pcb",
+        "generate_outline": True,
+        "outline_delta": 1.5,
     },
 }
 

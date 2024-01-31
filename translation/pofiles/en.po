@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2023-09-30 23:37+0200\n"
+"POT-Creation-Date: 2024-01-31 18:38+0100\n"
 "PO-Revision-Date: 2023-07-14 20:04+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -57,6 +57,12 @@ msgstr "Route rows and columns"
 
 msgid "Controller circuit template file:"
 msgstr "Controller circuit template file:"
+
+msgid "Build board outline"
+msgstr "Build board outline"
+
+msgid "Outline delta:"
+msgstr "Outline delta:"
 
 msgid "Other settings"
 msgstr "Other settings"

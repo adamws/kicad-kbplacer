@@ -9,6 +9,7 @@ from typing import Any, Tuple
 import pcbnew
 import wx
 
+from .edge_generator import EdgeGenerator
 from .kbplacer_dialog import KbplacerDialog
 from .key_placer import KeyPlacer
 from .template_copier import TemplateCopier
@@ -114,6 +115,10 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
                 dlg.route_rows_and_columns(),
                 additional_elements=additional_elements,
             )
+
+            if dlg.generate_outline():
+                edge_generator = EdgeGenerator(self.board, dlg.get_outline_delta())
+                edge_generator.run(key_format)
 
             if template_path := dlg.get_template_path():
                 template_copier = TemplateCopier(

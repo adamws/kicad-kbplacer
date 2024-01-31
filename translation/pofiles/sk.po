@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2023-09-30 23:37+0200\n"
+"POT-Creation-Date: 2024-01-31 18:38+0100\n"
 "PO-Revision-Date: 2023-10-06 22:10+0000\n"
 "Last-Translator: Milan Šalka <salka.milan@googlemail.com>\n"
 "Language-Team: Slovak <https://hosted.weblate.org/projects/kicad-kbplacer/"
@@ -60,6 +60,12 @@ msgstr "Trasy a stĺpce"
 
 msgid "Controller circuit template file:"
 msgstr "Súbor šablóny ovládača:"
+
+msgid "Build board outline"
+msgstr ""
+
+msgid "Outline delta:"
+msgstr ""
 
 msgid "Other settings"
 msgstr "Ďalšie nastavenia"
