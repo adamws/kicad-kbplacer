@@ -20,3 +20,16 @@ def test_if_plugin_loads() -> None:
     pcbnew.LoadPluginModule(dirname, "kbplacer", "")
     not_loaded = pcbnew.GetUnLoadableWizards()
     assert not_loaded == "", pcbnew.GetWizardsBackTrace()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="fails on windows")
+def test_if_plugin_registers() -> None:
+    from kbplacer.kbplacer_plugin_action import KbplacerPluginAction
+
+    action = KbplacerPluginAction()
+    action.register()
+    dirname = Path(os.path.realpath(__file__)).parents[1]
+    assert (
+        action.GetPluginPath()
+        == f"{dirname}/kbplacer/kbplacer_plugin_action.py/KbplacerPluginAction"
+    )
