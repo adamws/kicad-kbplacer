@@ -419,7 +419,7 @@ Outline delta 2.0mm | Outline delta -1.0mm
 --- | ---
 ![board-outline-plus2](resources/board-outline-plus2.png) | ![board-outline-minus1](resources/board-outline-minus1.png)
 
-> [!WARNING]
+> [!IMPORTANT]
 > To build outline using selected footprints, selection must be done before launching plugin
 > and KiCad 7 or above must be used
 
