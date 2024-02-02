@@ -127,14 +127,11 @@ To use this tool in this way, it needs to be installed following [plugin install
 - Create switch matrix schematic which meets following requirements:
   - Each switch has dedicated diode with same annotation number
   - Symbols are ordered by Y position
-  - Diodes are column-to-row configuration (COL = Anode, ROW = Cathode)
+  - Diodes can be connected in either direction. Track router attempts to connect
+    closest (to each other) pads of switch and diode as long as both have same `netname`,
+    i.e. are connected on the schematic
 
   ![schematic-example](resources/schematic-example.png)
-
-  > [!NOTE]
-  > Other matrix configurations are also supported. Track router will attempt
-  > to connect closest (to each other) pads of switch and diode as long as both
-  > have same `netname`, i.e. are connected on the schematic
 
 - Create new PCB and load netlist
 - Obtain json layout file from [keyboard-layout-editor](http://www.keyboard-layout-editor.com/) or
