@@ -407,13 +407,13 @@ def parse_kle(layout) -> Keyboard:
                     )
                     items = item.split("\n")
                     if len(items) > KEY_MAX_LABELS:
-                        msg = repr(
-                            f"Illegal key labels: '{item}'. "
+                        msg = (
+                            f"Illegal key labels: '{repr(item)}'. "
                             f"Labels string can contain {KEY_MAX_LABELS} '\n' "
                             "separated items, ignoring redundant values."
                         )
                         logger.warning(msg)
-                        items = items[0:11]
+                        items = items[0:KEY_MAX_LABELS]
                     new_key.labels = reorder_items(items, align)
                     new_key.textSize = reorder_items(new_key.textSize, align)
 

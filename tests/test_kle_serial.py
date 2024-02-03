@@ -1,4 +1,5 @@
 import json
+import unittest
 from pathlib import Path
 
 import pytest
@@ -41,6 +42,24 @@ def test_labels(layout, expected) -> None:
     assert result.keys[0].labels == expected
     # check if reverse operation works as well:
     assert [json.loads(result.to_kle())] == layout
+
+
+class LabelsTestCase(unittest.TestCase):
+    def test_too_many_labels(self) -> None:
+        labels = "\n".join(13 * ["x"])
+        layout = [[{"a": 0}, labels]]
+        expected = 12 * ["x"]
+        with self.assertLogs("kbplacer.kle_serial", level="INFO") as cm:
+            result = parse_kle(layout)
+        assert result.keys[0].labels == expected
+        self.assertEqual(
+            cm.output,
+            [
+                f"WARNING:kbplacer.kle_serial:Illegal key labels: '{repr(labels)}'. "
+                "Labels string can contain 12 '\n' separated items, "
+                "ignoring redundant values."
+            ],
+        )
 
 
 @pytest.mark.parametrize(
