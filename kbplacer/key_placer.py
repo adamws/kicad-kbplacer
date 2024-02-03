@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import re
+from enum import Enum
 from pathlib import Path
 from typing import List, Tuple, cast
 
@@ -28,7 +29,7 @@ from .board_modifier import (
     set_side,
 )
 from .element_position import ElementInfo, ElementPosition, Point, PositionOption
-from .kle_serial import Keyboard, get_keyboard
+from .kle_serial import Keyboard, ViaKeyboard, get_keyboard
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,64 @@ class SwitchIterator:
             result = self.__current_key, footprint
             self.__current_key += 1
             return result
+        else:
+            raise StopIteration
+
+
+class KeyboardSwitchIterator:
+    ANNOTATION_LABEL = 10
+
+    class Type(str, Enum):
+        DEFAULT = "Default"
+        EXPLICIT_ANNOTATIONS = "Explicit Annotations"
+        VIA_ROW_KEY_LABELS = "VIA Labels"  # not supported yet
+
+        def __str__(self) -> str:
+            return self.value
+
+    def __init__(
+        self, board: pcbnew.BOARD, annotation: str, keyboard: Keyboard
+    ) -> None:
+        self.__board = board
+        self.__annotation = annotation
+        self.__keyboard = keyboard
+        self.__type = self.__get_iteration_type(keyboard)
+
+    def __get_iteration_type(self, keyboard: Keyboard) -> Type:
+        if isinstance(keyboard, ViaKeyboard):
+            return self.Type.VIA_ROW_KEY_LABELS
+        else:
+            number_of_explicit_annotations = sum(
+                str(k.get_label(self.ANNOTATION_LABEL)).isdigit() for k in keyboard.keys
+            )
+            if number_of_explicit_annotations == len(keyboard.keys):
+                return self.Type.EXPLICIT_ANNOTATIONS
+            else:
+                return self.Type.DEFAULT
+
+    def get_type(self) -> str:
+        return str(self.__type)
+
+    def __iter__(self):
+        self.__keys = iter(self.__keyboard.keys)
+        self.__current_key = 1
+        return self
+
+    def __get_footprint(self, key) -> pcbnew.FOOTPRINT:
+        if self.__type == self.Type.EXPLICIT_ANNOTATIONS:
+            return get_footprint(
+                self.__board,
+                self.__annotation.format(key.labels[self.ANNOTATION_LABEL]),
+            )
+        else:
+            annotation = self.__annotation.format(self.__current_key)
+            self.__current_key += 1
+            return get_footprint(self.__board, annotation)
+
+    def __next__(self):
+        key = next(self.__keys)
+        if key:
+            return key, self.__get_footprint(key)
         else:
             raise StopIteration
 
@@ -328,11 +387,9 @@ class KeyPlacer(BoardModifier):
         keyboard: Keyboard,
         key_format: str,
     ) -> None:
-        current_key = 1
-
-        for key in keyboard.keys:
-            switch_footprint = get_footprint(self.board, key_format.format(current_key))
-
+        key_iterator = KeyboardSwitchIterator(self.board, key_format, keyboard)
+        logger.info(f"Placing switches with '{key_iterator.get_type()}' iterator")
+        for key, switch_footprint in key_iterator:
             width = key.width
             height = key.height
             position = (
@@ -357,8 +414,6 @@ class KeyPlacer(BoardModifier):
                     + self.__reference_coordinate
                 )
                 rotate(switch_footprint, rotation_reference, angle)
-
-            current_key += 1
 
     def place_switch_elements(
         self,

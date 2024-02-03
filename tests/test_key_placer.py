@@ -22,7 +22,8 @@ try:
     )
     from kbplacer.defaults import DEFAULT_DIODE_POSITION
     from kbplacer.element_position import ElementInfo, PositionOption, Side
-    from kbplacer.key_placer import KeyPlacer
+    from kbplacer.key_placer import KeyboardSwitchIterator, KeyPlacer
+    from kbplacer.kle_serial import get_keyboard
 except:
     # satisfy import issues when running examples tests
     # in docker image on CI.
@@ -295,3 +296,32 @@ def test_placer_invalid_layout(tmpdir, request):
 
     with pytest.raises(RuntimeError):
         key_placer.run(layout_path, "SW{}", diode_info, True)
+
+
+def test_switch_iterator_default_mode(request):
+    board = get_board_for_2x2_example(request)
+    with open(get_2x2_layout_path(request), "r") as f:
+        layout = json.load(f)
+        keyboard = get_keyboard(layout)
+    iterator = KeyboardSwitchIterator(board, "SW{}", keyboard)
+    expected_keys = iter(keyboard.keys)
+    expected_footprints = iter(["SW1", "SW2", "SW3", "SW4"])
+    for key, footprint in iterator:
+        assert key == next(expected_keys)
+        assert footprint.GetReference() == next(expected_footprints)
+
+
+def test_switch_iterator_explicit_annotation_mode(request):
+    board = get_board_for_2x2_example(request)
+    with open(get_2x2_layout_path(request), "r") as f:
+        layout = json.load(f)
+        keyboard = get_keyboard(layout)
+    expected_order = ["3", "1", "4", "2"]
+    for i, k in enumerate(keyboard.keys):
+        k.set_label(KeyboardSwitchIterator.ANNOTATION_LABEL, expected_order[i])
+    iterator = KeyboardSwitchIterator(board, "SW{}", keyboard)
+    expected_keys = iter(keyboard.keys)
+    expected_footprints = iter([f"SW{i}" for i in expected_order])
+    for key, footprint in iterator:
+        assert key == next(expected_keys)
+        assert footprint.GetReference() == next(expected_footprints)

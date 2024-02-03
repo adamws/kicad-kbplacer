@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_KEY_COLOR = "#cccccc"
 DEFAULT_TEXT_COLOR = "#000000"
 DEFAULT_TEXT_SIZE = 3
+KEY_MAX_LABELS = 12
 
 # Map from serialized label position to normalized position,
 # depending on the alignment flags.
@@ -86,6 +87,19 @@ class Key:
                 new_val = round(value, 6)
                 setattr(self, field, new_val)
 
+    def get_label(self: Key, index: int) -> Optional[str]:
+        if len(self.labels) > index:
+            return self.labels[index]
+        return None
+
+    def set_label(self: Key, index: int, value: str) -> None:
+        if index > KEY_MAX_LABELS - 1 or index < 0:
+            msg = "Illegal key label index"
+            raise RuntimeError(msg)
+        labels_to_add = index + 1 - len(self.labels)
+        self.labels += labels_to_add * [""]
+        self.labels[index] = value
+
 
 @dataclass
 class Background:
@@ -131,7 +145,7 @@ class Keyboard:
         current = copy.copy(current)
         new = copy.copy(new)
         for obj in [current, new]:
-            if len_difference := 12 - len(obj):
+            if len_difference := KEY_MAX_LABELS - len(obj):
                 obj.extend(len_difference * [0])
         return current != new
 
@@ -287,7 +301,8 @@ class Keyboard:
 class ViaKeyboard(Keyboard):
     alternative_keys: List[Key] = field(default_factory=list)
 
-    LAYOUT_LABEL = 8
+    MATRIX_COORDINATES_LABEL = 0
+    LAYOUT_OPTION_LABEL = 8
 
     def __post_init__(self: ViaKeyboard) -> None:
         for key in list(self.keys):
@@ -296,18 +311,16 @@ class ViaKeyboard(Keyboard):
                 self.keys.remove(key)
 
     def is_alternative(self, key: Key) -> bool:
-        labels = key.labels
-        if len(labels) >= self.LAYOUT_LABEL + 1 and labels[self.LAYOUT_LABEL]:
+        if label := key.get_label(self.LAYOUT_OPTION_LABEL):
             # check if not default layout:
-            if labels[self.LAYOUT_LABEL].split(",")[1] != "0":
+            if label.split(",")[1] != "0":
                 # alternative layout key
                 return True
-
         return False
 
 
 def reorder_items(items: List[Any], align: int) -> List[Any]:
-    ret: List[Any] = 12 * [None]
+    ret: List[Any] = KEY_MAX_LABELS * [None]
     for i, item in enumerate(items):
         if item:
             index = LABEL_MAP[align][i]
@@ -318,7 +331,7 @@ def reorder_items(items: List[Any], align: int) -> List[Any]:
 
 
 def reorder_items_kle(items, align) -> List[Any]:
-    ret: List[Any] = 12 * [None]
+    ret: List[Any] = KEY_MAX_LABELS * [None]
     for i, label in enumerate(items):
         if label:
             index = REVERSE_LABEL_MAP[align][i]
@@ -393,11 +406,11 @@ def parse_kle(layout) -> Keyboard:
                         current.height if new_key.height2 == 0 else current.height2
                     )
                     items = item.split("\n")
-                    if len(items) > 12:
+                    if len(items) > KEY_MAX_LABELS:
                         msg = repr(
                             f"Illegal key labels: '{item}'. "
-                            "Labels string can contain 12 '\n' separated items, "
-                            "ignoring redundant values."
+                            f"Labels string can contain {KEY_MAX_LABELS} '\n' "
+                            "separated items, ignoring redundant values."
                         )
                         logger.warning(msg)
                         items = items[0:11]
@@ -444,7 +457,7 @@ def parse_kle(layout) -> Keyboard:
                     if "f2" in item:
                         if len(current.textSize) == 0:
                             current.textSize = [None]
-                        for _ in range(1, 12):
+                        for _ in range(1, KEY_MAX_LABELS):
                             current.textSize.append(item["f2"])
                     if "fa" in item:
                         current.textSize = item["fa"]

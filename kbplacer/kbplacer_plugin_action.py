@@ -52,7 +52,9 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
 
         # if log file already exist (from previous plugin run),
         # try to get window state from it, must be done before setting up new logger
-        self.window_state, self.window_state_error = load_window_state_from_log(log_file)
+        self.window_state, self.window_state_error = load_window_state_from_log(
+            log_file
+        )
 
         # set up logger
         logging.basicConfig(
