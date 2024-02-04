@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass
-from typing import Type
+from typing import Type, Union
 
 import pcbnew
 
@@ -74,13 +74,17 @@ class BoardBuilder:
             self.nets[netname] = net
         return net
 
-    def create_board(self, layout_path: str) -> pcbnew.BOARD:
-        with open(layout_path, "r") as f:
-            layout = json.load(f)
-            keyboard: ViaKeyboard = parse_via(layout)
+    def create_board(self, keyboard: Union[str, ViaKeyboard]) -> pcbnew.BOARD:
+        if isinstance(keyboard, str):
+            with open(keyboard, "r") as f:
+                layout = json.load(f)
+                _keyboard: ViaKeyboard = parse_via(layout)
+        else:
+            _keyboard: ViaKeyboard = keyboard
+
         current_ref = 1
 
-        for key in keyboard.keys:
+        for key in _keyboard.keys:
             if key.decal:
                 continue
             row, column = key.labels[0].split(",")
