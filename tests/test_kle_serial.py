@@ -1,6 +1,12 @@
+from __future__ import annotations
+
 import json
+import os
+import shutil
+import subprocess
 import unittest
 from pathlib import Path
+from typing import Tuple
 
 import pytest
 
@@ -240,3 +246,74 @@ def test_with_ergogen(example, request) -> None:
         layout = json.load(f)
         result = parse_ergogen_points(layout)
         assert result == reference
+
+
+@pytest.fixture()
+def example_isolation(request, tmpdir, example) -> Tuple[str, str]:
+    test_dir = request.fspath.dirname
+    source_dir = f"{test_dir}/../examples/{example}"
+    shutil.copy(f"{source_dir}/kle.json", tmpdir)
+    shutil.copy(f"{source_dir}/kle-internal.json", tmpdir)
+    return f"{tmpdir}/kle.json", f"{tmpdir}/kle-internal.json"
+
+
+@pytest.mark.parametrize(
+    "example", ["2x2", "3x2-sizes", "2x3-rotations", "1x4-rotations-90-step"]
+)
+def test_kle_file_convert(package_path, package_name, example_isolation) -> None:
+    def _run_subprocess(
+        args: dict[str, str] = {},
+    ):
+        kbplacer_args = [
+            "python3",
+            "-m",
+            f"{package_name}.kle_serial",
+        ]
+        for k, v in args.items():
+            kbplacer_args.append(k)
+            if v:
+                kbplacer_args.append(v)
+
+        env = os.environ.copy()
+        p = subprocess.Popen(
+            kbplacer_args,
+            cwd=package_path,
+            env=env,
+        )
+        p.communicate()
+        if p.returncode != 0:
+            raise Exception("kle_serial __main__ failed")
+
+    raw = example_isolation[0]
+    raw_tmp = Path(raw).with_suffix(".json.tmp")
+    with open(raw, "r") as f:
+        raw_json = json.load(f)
+
+    internal = example_isolation[1]
+    internal_tmp = Path(internal).with_suffix(".json.tmp")
+    with open(internal, "r") as f:
+        internal_json = json.load(f)
+
+    _run_subprocess(
+        {
+            "-in": raw,
+            "-inform": "KLE_RAW",
+            "-out": str(internal_tmp),
+            "-outform": "KLE_INTERNAL",
+            "-text": "",
+        }
+    )
+    with open(internal_tmp, "r") as f:
+        assert json.load(f) == internal_json
+
+    _run_subprocess(
+        {
+            "-in": str(internal_tmp),
+            "-inform": "KLE_INTERNAL",
+            "-out": str(raw_tmp),
+            "-outform": "KLE_RAW",
+            "-text": "",
+        }
+    )
+    with open(raw_tmp, "r") as f:
+        assert json.load(f) == raw_json
