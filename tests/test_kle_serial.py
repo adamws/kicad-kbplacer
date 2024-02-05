@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Tuple
 
 import pytest
+import yaml
 
 try:
     from kbplacer.kle_serial import Keyboard, parse_ergogen_points, parse_kle
@@ -248,22 +249,13 @@ def test_with_ergogen(example, request) -> None:
         assert result == reference
 
 
-@pytest.fixture()
-def example_isolation(request, tmpdir, example) -> Tuple[str, str]:
-    test_dir = request.fspath.dirname
-    source_dir = f"{test_dir}/../examples/{example}"
-    shutil.copy(f"{source_dir}/kle.json", tmpdir)
-    shutil.copy(f"{source_dir}/kle-internal.json", tmpdir)
-    return f"{tmpdir}/kle.json", f"{tmpdir}/kle-internal.json"
-
-
-@pytest.mark.parametrize(
-    "example", ["2x2", "3x2-sizes", "2x3-rotations", "1x4-rotations-90-step"]
-)
-def test_kle_file_convert(package_path, package_name, example_isolation) -> None:
+class TestKleSerialCli:
     def _run_subprocess(
+        self,
+        package_path,
+        package_name,
         args: dict[str, str] = {},
-    ):
+    ) -> None:
         kbplacer_args = [
             "python3",
             "-m",
@@ -284,36 +276,85 @@ def test_kle_file_convert(package_path, package_name, example_isolation) -> None
         if p.returncode != 0:
             raise Exception("kle_serial __main__ failed")
 
-    raw = example_isolation[0]
-    raw_tmp = Path(raw).with_suffix(".json.tmp")
-    with open(raw, "r") as f:
-        raw_json = json.load(f)
+    @pytest.fixture()
+    def example_isolation(self, request, tmpdir, example) -> Tuple[str, str]:
+        test_dir = request.fspath.dirname
+        source_dir = f"{test_dir}/../examples/{example}"
+        shutil.copy(f"{source_dir}/kle.json", tmpdir)
+        shutil.copy(f"{source_dir}/kle-internal.json", tmpdir)
+        return f"{tmpdir}/kle.json", f"{tmpdir}/kle-internal.json"
 
-    internal = example_isolation[1]
-    internal_tmp = Path(internal).with_suffix(".json.tmp")
-    with open(internal, "r") as f:
-        internal_json = json.load(f)
-
-    _run_subprocess(
-        {
-            "-in": raw,
-            "-inform": "KLE_RAW",
-            "-out": str(internal_tmp),
-            "-outform": "KLE_INTERNAL",
-            "-text": "",
-        }
+    @pytest.mark.parametrize(
+        "example", ["2x2", "3x2-sizes", "2x3-rotations", "1x4-rotations-90-step"]
     )
-    with open(internal_tmp, "r") as f:
-        assert json.load(f) == internal_json
+    def test_kle_file_convert(
+        self, package_path, package_name, example_isolation
+    ) -> None:
+        raw = example_isolation[0]
+        raw_tmp = Path(raw).with_suffix(".json.tmp")
+        with open(raw, "r") as f:
+            raw_json = json.load(f)
 
-    _run_subprocess(
-        {
-            "-in": str(internal_tmp),
-            "-inform": "KLE_INTERNAL",
-            "-out": str(raw_tmp),
-            "-outform": "KLE_RAW",
-            "-text": "",
-        }
-    )
-    with open(raw_tmp, "r") as f:
-        assert json.load(f) == raw_json
+        internal = example_isolation[1]
+        internal_tmp = Path(internal).with_suffix(".json.tmp")
+        with open(internal, "r") as f:
+            internal_json = json.load(f)
+
+        self._run_subprocess(
+            package_path,
+            package_name,
+            {
+                "-in": raw,
+                "-inform": "KLE_RAW",
+                "-out": str(internal_tmp),
+                "-outform": "KLE_INTERNAL",
+                "-text": "",
+            },
+        )
+        with open(internal_tmp, "r") as f:
+            assert json.load(f) == internal_json
+
+        self._run_subprocess(
+            package_path,
+            package_name,
+            {
+                "-in": str(internal_tmp),
+                "-inform": "KLE_INTERNAL",
+                "-out": str(raw_tmp),
+                "-outform": "KLE_RAW",
+                "-text": "",
+            },
+        )
+        with open(raw_tmp, "r") as f:
+            assert json.load(f) == raw_json
+
+    @pytest.mark.parametrize("example", ["a-dux", "absolem-simple"])
+    def test_ergogen_file_convert(
+        self, request, tmpdir, package_path, package_name, example
+    ) -> None:
+        test_dir = request.fspath.dirname
+        data_dir = f"{test_dir}/data"
+
+        layout_file = f"{tmpdir}/layout.json"
+        with open(f"{data_dir}/ergogen-layouts/{example}-points.yaml", "r") as f:
+            y = yaml.safe_load(f)
+            with open(layout_file, "w") as f2:
+                json.dump(y, f2)
+        with open(f"{data_dir}/ergogen-layouts/{example}-reference.json", "r") as f:
+            reference = json.load(f)
+
+        tmp_file = Path(layout_file).with_suffix(".json.tmp")
+
+        self._run_subprocess(
+            package_path,
+            package_name,
+            {
+                "-in": layout_file,
+                "-inform": "ERGOGEN_INTERNAL",
+                "-out": str(tmp_file),
+                "-outform": "KLE_RAW",
+                "-text": "",
+            },
+        )
+        with open(tmp_file, "r") as f:
+            assert json.load(f) == reference

@@ -4,5 +4,6 @@ pytest-cov==4.1.0
 pytest-metadata==3.0.0
 pytest-html==4.1.1
 PyVirtualDisplay==3.0
+PyYAML==6.0.1
 svgpathtools==1.6.1
 xmldiff==2.6.3
