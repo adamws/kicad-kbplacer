@@ -210,7 +210,7 @@ def app():
         help="The amount (in millimetres) to inflate/deflate board outline.",
     )
     parser.add_argument(
-        "--create-from-via",
+        "--create-from-annotated-layout",
         required=False,
         action="store_true",
         help=(
@@ -245,7 +245,7 @@ def app():
         level=logging.DEBUG, format="%(asctime)s: %(message)s", datefmt="%H:%M:%S"
     )
 
-    if args.create_from_via:
+    if args.create_from_annotated_layout:
         if os.path.isfile(board_path):
             logger.error(f"File {board_path} already exist, aborting")
             sys.exit(1)

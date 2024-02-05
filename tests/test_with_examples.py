@@ -372,9 +372,9 @@ def test_placing_and_routing_when_reference_pair_rotated(
         assert_example(tmpdir, references_dir)
 
 
-def test_board_creation(tmpdir, request, package_path, package_name):
+@pytest.mark.parametrize("layout_file", ["kle.json", "via.json"])
+def test_board_creation(tmpdir, request, package_path, package_name, layout_file):
     example = "2x2"
-    layout_file = "via.json"
 
     test_dir = request.fspath.dirname
 
@@ -391,7 +391,7 @@ def test_board_creation(tmpdir, request, package_path, package_name):
         package_name,
         f"{tmpdir}/{layout_file}",
         pcb_path,
-        flags=["--create-from-via"],
+        flags=["--create-from-annotated-layout"],
         args={
             "--switch-footprint": f"{get_footprints_dir(request)}:SW_Cherry_MX_PCB_1.00u",
             "--diode-footprint": f"{get_footprints_dir(request)}:D_SOD-323F",
