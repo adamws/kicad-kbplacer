@@ -1,5 +1,6 @@
 import base64
 import ctypes
+import glob
 import logging
 import mimetypes
 import os
@@ -265,7 +266,8 @@ def generate_render(tmpdir, request):
     remove_tags(new_root, "{http://www.w3.org/2000/svg}desc")
 
     shrink_svg(new_tree, margin=1)
-    new_tree.write(f"{tmpdir}/render.svg")
+    os.mkdir(f"{tmpdir}/report")
+    new_tree.write(f"{tmpdir}/report/render.svg")
 
 
 def add_switch_footprint(
@@ -345,10 +347,10 @@ def pytest_runtest_makereport(item, call):
 
     if report.when == "call" and not report.skipped:
         if tmpdir := item.funcargs.get("tmpdir"):
-            render_path = tmpdir / "render.svg"
-            screenshot_path = tmpdir / "screenshot.png"
-            for f in [render_path, screenshot_path]:
-                if f.isfile():
-                    render = image_to_base64(f)
-                    extras.append(pytest_html.extras.image(render))
+            images = glob.glob(f"{tmpdir}/report/*png") + glob.glob(
+                f"{tmpdir}/report/*svg"
+            )
+            for f in images:
+                render = image_to_base64(f)
+                extras.append(pytest_html.extras.image(render))
         report.extras = extras

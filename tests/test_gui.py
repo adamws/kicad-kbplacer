@@ -226,7 +226,9 @@ def run_gui_test(tmpdir, screen_manager, window_name, gui_callback) -> None:
     for i in range(0, max_attempts):
         with screen_manager as mgr:
             p = gui_callback()
-            is_ok = mgr.screenshot(window_name, f"{tmpdir}/screenshot.png")
+
+            os.mkdir(f"{tmpdir}/report")
+            is_ok = mgr.screenshot(window_name, f"{tmpdir}/report/screenshot.png")
             try:
                 outs, _ = p.communicate("q\n", timeout=1)
             except subprocess.TimeoutExpired:
