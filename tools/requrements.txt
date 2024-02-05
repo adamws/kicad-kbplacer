@@ -1,0 +1,3 @@
+drawsvg==2.3.0
+kbplacer
+PyYAML==6.0.1
