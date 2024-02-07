@@ -525,8 +525,11 @@ class KeyPlacer(BoardModifier):
 
         logger.info(f"Diode info: {diode_info}")
         diode_format = diode_info.annotation_format
-        if diode_info.position_option != PositionOption.UNCHANGED:
-            if diode_info.position_option == PositionOption.RELATIVE:
+        if route_switches_with_diodes:
+            if diode_info.position_option in [
+                PositionOption.RELATIVE,
+                PositionOption.UNCHANGED,
+            ]:
                 template_connection = self.get_connection_template(
                     key_format, diode_format, diode_info.template_path
                 )
@@ -539,6 +542,8 @@ class KeyPlacer(BoardModifier):
                     diode_format,
                     _normalize_template_path(diode_info.template_path),
                 )
+
+        if diode_info.position_option != PositionOption.UNCHANGED:
             additional_elements = [diode_info] + additional_elements
 
         for element_info in additional_elements:
