@@ -15,6 +15,7 @@ from xmldiff import actions, main
 
 from .conftest import (
     KICAD_VERSION,
+    generate_drc,
     generate_render,
     get_footprints_dir,
     get_references_dir,
@@ -257,6 +258,7 @@ def test_with_examples(
     )
 
     generate_render(tmpdir, request)
+    generate_drc(tmpdir, pcb_path)
 
     references_dir = request_to_references_dir(request)
     assert_example(tmpdir, references_dir)
@@ -293,6 +295,7 @@ def test_placing_and_routing_separately(tmpdir, request, package_path, package_n
     )
 
     generate_render(tmpdir, request)
+    generate_drc(tmpdir, pcb_path)
 
     references_dir = get_references_dir(request, example, "Tracks", "DefaultDiode")
     assert_example(tmpdir, references_dir)
@@ -335,6 +338,7 @@ def test_placing_and_routing_when_reference_pair_rotated(
     )
 
     generate_render(tmpdir, request)
+    generate_drc(tmpdir, pcb_path)
 
     # note that template is always the same because we normalize it
     # (it does not depend on initial rotation)
@@ -399,6 +403,7 @@ def test_board_creation(tmpdir, request, package_path, package_name, layout_file
     )
 
     generate_render(tmpdir, request)
+    generate_drc(tmpdir, pcb_path)
 
     references_dir = get_references_dir(request, example, "Tracks", "DefaultDiode")
     assert_example(tmpdir, references_dir)
@@ -441,6 +446,7 @@ def test_board_outline_building(
     )
 
     generate_render(tmpdir, request)
+    generate_drc(tmpdir, pcb_path)
 
     references_dir = get_references_dir(request, example, "NoTracks", "DefaultDiode")
     assert_example(tmpdir, references_dir)

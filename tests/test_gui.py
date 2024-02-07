@@ -227,7 +227,6 @@ def run_gui_test(tmpdir, screen_manager, window_name, gui_callback) -> None:
         with screen_manager as mgr:
             p = gui_callback()
 
-            os.mkdir(f"{tmpdir}/report")
             is_ok = mgr.screenshot(window_name, f"{tmpdir}/report/screenshot.png")
             try:
                 outs, _ = p.communicate("q\n", timeout=1)

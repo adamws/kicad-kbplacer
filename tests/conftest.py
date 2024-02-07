@@ -100,6 +100,11 @@ def prepare_kicad_config():
         shutil.copy(f"{test_dir}/colors/user.json", colors_path)
 
 
+@pytest.fixture(autouse=True, scope="function")
+def prepare_report_dir(tmpdir):
+    os.mkdir(f"{tmpdir}/report")
+
+
 def get_footprints_dir(request):
     test_dir = Path(request.module.__file__).parent
     return test_dir / "data/footprints/tests.pretty"
@@ -266,8 +271,15 @@ def generate_render(tmpdir, request):
     remove_tags(new_root, "{http://www.w3.org/2000/svg}desc")
 
     shrink_svg(new_tree, margin=1)
-    os.mkdir(f"{tmpdir}/report")
     new_tree.write(f"{tmpdir}/report/render.svg")
+
+
+def generate_drc(tmpdir, board_path: str) -> None:
+    board = pcbnew.LoadBoard(board_path)
+    drc_path = tmpdir / "report/drc.log"
+    pcbnew.WriteDRCReport(board, drc_path, pcbnew.EDA_UNITS_MILLIMETRES, True)
+    with open(drc_path, "r") as f:
+        logger.debug(f.read())
 
 
 def add_switch_footprint(
