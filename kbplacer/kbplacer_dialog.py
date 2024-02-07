@@ -459,10 +459,14 @@ class ElementPositionChoiceWidget(wx.Panel):
         self.dropdown.Enable()
         if self.dropdown.GetValue() == PositionOption.CUSTOM:
             self.position.Enable()
+        self.load_template.Enable()
+        self.save_template.Enable()
 
     def Disable(self):
         self.dropdown.Disable()
         self.position.Disable()
+        self.load_template.Disable()
+        self.save_template.Disable()
 
 
 class ElementSettingsWidget(wx.Panel):
