@@ -17,8 +17,6 @@ KICAD_VERSION = tuple(map(int, version_match.groups())) if version_match else ()
 if KICAD_VERSION == ():
     logger.warning("Could not determine KiCad version")
 
-DEFAULT_CLEARANCE_MM = 0.25
-
 
 def position_in_rotated_coordinates(
     point: pcbnew.wxPoint, angle: float
@@ -205,6 +203,26 @@ def get_closest_pads_on_same_net(
     return result
 
 
+def get_clearance(
+    i1: pcbnew.BOARD_CONNECTED_ITEM, i2: pcbnew.BOARD_CONNECTED_ITEM
+) -> int:
+    if KICAD_VERSION < (7, 0, 0):
+        # workaround for bug in KiCad 6.x python wrapper:
+        import _pcbnew
+
+        def _own_clearance(item: pcbnew.BOARD_CONNECTED_ITEM) -> int:
+            if item.Type() == pcbnew.PCB_PAD_T:
+                return _pcbnew.PAD_GetOwnClearance(item, item.GetLayer())
+            else:
+                return _pcbnew.BOARD_CONNECTED_ITEM_GetOwnClearance(
+                    item, item.GetLayer()
+                )
+
+        return max(_own_clearance(i1), _own_clearance(i2))
+    else:
+        return max(i1.GetOwnClearance(i1.GetLayer()), i2.GetOwnClearance(i2.GetLayer()))
+
+
 class BoardModifier:
     def __init__(self, board: pcbnew.BOARD) -> None:
         self.board = board
@@ -260,7 +278,7 @@ class BoardModifier:
                             )
                     else:
                         hit_test_result = pad_shape.Collide(
-                            track_shape, pcbnew.FromMM(DEFAULT_CLEARANCE_MM)
+                            track_shape, get_clearance(p, track)
                         )
                         on_same_layer = p.IsOnLayer(track.GetLayer())
                         if hit_test_result and on_same_layer:
@@ -306,7 +324,7 @@ class BoardModifier:
                             )
                             collide_list.remove(collision)
                 elif hit_test_result := t.GetEffectiveShape().Collide(
-                    track_shape, pcbnew.FromMM(DEFAULT_CLEARANCE_MM)
+                    track_shape, get_clearance(t, track)
                 ):
                     logger.debug(f"Track collide with another track: {track_uuid}")
                     collide_list.append(t)

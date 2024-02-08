@@ -14,7 +14,6 @@ from .conftest import (
 
 try:
     from kbplacer.board_modifier import (
-        DEFAULT_CLEARANCE_MM,
         BoardModifier,
         set_position_by_points,
         set_side,
@@ -101,16 +100,12 @@ def test_track_with_pad_collision(footprint, position, side, netlist, tmpdir, re
     # create track to test
     if position == TrackToElementPosition.APART:
         start = pad_position.__add__(pcbnew.wxPoint(pad.GetSizeX() / 2, 0))
-        start = start.__add__(
-            pcbnew.wxPoint(pcbnew.FromMM(DEFAULT_CLEARANCE_MM + 0.2), 0)
-        )
+        start = start.__add__(pcbnew.wxPoint(pcbnew.FromMM(0.5), 0))
     elif position == TrackToElementPosition.STARTS_AT:
         start = pad_position
     elif position == TrackToElementPosition.GOES_THROUGH:
         start = pad_position.__sub__(pcbnew.wxPoint(pad.GetSizeX() / 2, 0))
-        start = start.__sub__(
-            pcbnew.wxPoint(pcbnew.FromMM(DEFAULT_CLEARANCE_MM + 0.2), 0)
-        )
+        start = start.__sub__(pcbnew.wxPoint(pcbnew.FromMM(0.5), 0))
     else:
         assert False, "Unexpected position option"
 
