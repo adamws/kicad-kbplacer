@@ -241,7 +241,7 @@ class KeyPlacer(BoardModifier):
     def save_connection_template(
         self,
         switch: pcbnew.FOOTPRINT,
-        diode: pcbnew.FOOTPRINT,
+        diodes: List[pcbnew.FOOTPRINT],
         connections: List[pcbnew.PCB_TRACK],
         destination_path: str,
     ) -> None:
@@ -259,15 +259,21 @@ class KeyPlacer(BoardModifier):
         set_position(switch_copy, pcbnew.wxPoint(0, 0))
 
         origin = get_position(switch)
-        diode_copy = pcbnew.Cast_to_FOOTPRINT(diode.Duplicate())
-        if angle := get_orientation(switch):
-            rotate(diode_copy, origin, angle)
-        set_position(
-            diode_copy,
-            get_position(diode_copy) - pcbnew.wxPoint(origin.x, origin.y),
-        )
+        diode_copies = []
+        for d in diodes:
+            diode_copy = pcbnew.Cast_to_FOOTPRINT(d.Duplicate())
+            if angle := get_orientation(switch):
+                rotate(diode_copy, origin, angle)
+            set_position(
+                diode_copy,
+                get_position(diode_copy) - pcbnew.wxPoint(origin.x, origin.y),
+            )
+            diode_copies.append(diode_copy)
 
-        for p in itertools.chain(switch_copy.Pads(), diode_copy.Pads()):
+        for p in itertools.chain(
+            switch_copy.Pads(),
+            itertools.chain.from_iterable((d.Pads() for d in diode_copies)),
+        ):
             if p.GetNetCode() != 0:
                 logger.info(
                     f"Adding net {p.GetNetname()} with netcode {p.GetNetCode()}"
@@ -279,7 +285,10 @@ class KeyPlacer(BoardModifier):
 
         nets = board.GetNetsByName()
         # synchronize net codes
-        for p in itertools.chain(switch_copy.Pads(), diode_copy.Pads()):
+        for p in itertools.chain(
+            switch_copy.Pads(),
+            itertools.chain.from_iterable((d.Pads() for d in diode_copies)),
+        ):
             if p.GetNetCode() != 0:
                 before = p.GetNetCode()
                 p.SetNet(nets[p.GetNetname()])
@@ -289,7 +298,8 @@ class KeyPlacer(BoardModifier):
                 )
 
         board.Add(switch_copy)
-        board.Add(diode_copy)
+        for d in diode_copies:
+            board.Add(d)
 
         for item in connections:
             # using `Duplicate` here to not alter net assignments of original tracks
@@ -301,60 +311,46 @@ class KeyPlacer(BoardModifier):
         self, key_format: str, diode_format: str, destination_path: str
     ) -> List[pcbnew.PCB_TRACK]:
         """Returns list of tracks (including vias) connecting first element
-        with reference `key_format` with first element with reference `diode_format`
+        with reference `key_format` to itself or any other element
         and optionally save it to new `pcbnew` template file.
         The coordinates of returned elements are normalized to center of `key_format`
         element. If `key_format` element is rotated, resulting coordinates are rotated
         back so the template is always in natural (0) orientation.
         """
         switch = get_footprint(self.board, key_format.format(1))
-        diode = get_optional_footprint(self.board, diode_format.format(1))
-        if not diode:
-            return []
 
+        logger.info(
+            "Looking for connection template between "
+            f"{switch.GetReference()} and other elements"
+        )
         result = []
         origin = get_position(switch)
 
         connectivity = self.get_connectivity()
-        common_nets = get_common_nets(switch, diode)
+        _tracks: dict[str, pcbnew.PCB_TRACE_T] = {}
 
-        def _append_normalized_connection_items(netcode: int) -> None:
-            if KICAD_VERSION < (8, 0, 0):
-                items = connectivity.GetNetItems(
-                    netcode, [pcbnew.PCB_TRACE_T, pcbnew.PCB_VIA_T]
-                )
+        def _get_connected_tracks(item: pcbnew.BOARD_CONNECTED_ITEM) -> None:
+            for t in connectivity.GetConnectedTracks(item):
+                uid = t.m_Uuid.AsString()
+                if uid not in _tracks:
+                    _tracks[uid] = t
+                    _get_connected_tracks(t)
+
+        for p in switch.Pads():
+            _get_connected_tracks(p)
+
+        for item in _tracks.values():
+            item_copy = item.Duplicate()
+            item_copy.SetNetCode(0)
+            if angle := get_orientation(switch):
+                rotate(item_copy, origin, angle)
+            if KICAD_VERSION >= (7, 0, 0):
+                item_copy.Move(pcbnew.VECTOR2I(-origin.x, -origin.y))
             else:
-                # NOTE: due to following issue:
-                # https://gitlab.com/kicad/code/kicad/-/issues/15643
-                # we need to get items differently when using kicad 8
-                # (perhaps this method should be used for all
-                # supported kicad versions):
-                items = self.board.TracksInNet(netcode)
+                item_copy.Move(pcbnew.wxPoint(-origin.x, -origin.y))
 
-            for item in items:
-                item_copy = item.Duplicate()
-                item_copy.SetNetCode(0)
-                if angle := get_orientation(switch):
-                    rotate(item_copy, origin, angle)
-                if KICAD_VERSION >= (7, 0, 0):
-                    item_copy.Move(pcbnew.VECTOR2I(-origin.x, -origin.y))
-                else:
-                    item_copy.Move(pcbnew.wxPoint(-origin.x, -origin.y))
-
-                self.board.RemoveNative(item)
-                result.append(item_copy)
-
-        for net in common_nets:
-            _append_normalized_connection_items(net)
-
-        # some switch footprints (for example reversible) can have multiple pads
-        # with the same netcode which might 'pre-routed' as well.
-        # get nets unique to switch (not shared with diode) and collect connection
-        # temple from them as well.
-        switch_nets = [p.GetNetCode() for p in switch.Pads()]
-        switch_unique_nets = list(set(switch_nets) - set(common_nets))
-        for net in switch_unique_nets:
-            _append_normalized_connection_items(net)
+            self.board.RemoveNative(item)
+            result.append(item_copy)
 
         def _format_item(item: pcbnew.PCB_TRACK) -> str:
             if KICAD_VERSION >= (7, 0, 0):
@@ -369,7 +365,13 @@ class KeyPlacer(BoardModifier):
         logger.info(f"Got connection template: {items_str}")
 
         if destination_path:
-            self.save_connection_template(switch, diode, result, destination_path)
+            pattern = re.compile(diode_format.format("(\\d)+"))
+            diodes = [
+                f
+                for f in self.board.GetFootprints()
+                if get_common_nets(f, switch) and re.match(pattern, f.GetReference())
+            ]
+            self.save_connection_template(switch, diodes, result, destination_path)
 
         return result
 
