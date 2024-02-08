@@ -262,6 +262,40 @@ def test_with_examples(
 
     references_dir = request_to_references_dir(request)
     assert_example(tmpdir, references_dir)
+    for t in pcbnew.LoadBoard(pcb_path).GetTracks():
+        assert t.GetNetCode() != 0
+
+
+def test_saving_connection_template(
+    tmpdir,
+    request,
+    package_path,
+    package_name,
+) -> None:
+    example = "2x3-rotations-custom-diode-with-track-and-complex-footprint"
+    layout_option = "kle.json"
+    prepare_project(request, tmpdir, example, layout_option)
+
+    pcb_path = f"{tmpdir}/keyboard-before.kicad_pcb"
+    template_destination = f"{tmpdir}/temp.kicad_pcb"
+
+    run_kbplacer_process(
+        True,
+        f"D{{}} RELATIVE {template_destination}",
+        package_path,
+        package_name,
+        f"{tmpdir}/{layout_option}",
+        pcb_path,
+    )
+
+    # must replace actual board with template in order to use `generate_render`
+    # which still supports hardcoded path only
+    shutil.copy(template_destination, pcb_path)
+    generate_render(tmpdir, request)
+
+    board = pcbnew.LoadBoard(template_destination)
+    for t in board.GetTracks():
+        assert t.GetNetCode() != 0
 
 
 def test_placing_and_routing_separately(tmpdir, request, package_path, package_name):
