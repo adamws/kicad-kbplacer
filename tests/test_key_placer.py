@@ -22,7 +22,11 @@ try:
     )
     from kbplacer.defaults import DEFAULT_DIODE_POSITION
     from kbplacer.element_position import ElementInfo, PositionOption, Side
-    from kbplacer.key_placer import KeyboardSwitchIterator, KeyPlacer
+    from kbplacer.key_placer import (
+        KeyboardSwitchIterator,
+        KeyMatrix,
+        KeyPlacer,
+    )
     from kbplacer.kle_serial import get_keyboard
 except:
     # satisfy import issues when running examples tests
@@ -159,7 +163,7 @@ def test_diode_switch_routing(position, orientation, side, expected, tmpdir, req
     set_side(diode, side)
     diode.SetOrientationDegrees(orientation)
 
-    key_placer.route_switch_with_diode(switch, diode, 0)
+    key_placer.route_switch_with_diode(switch, [diode], 0)
     key_placer.remove_dangling_tracks()
 
     board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
@@ -188,7 +192,7 @@ def test_diode_switch_routing_complicated_footprint(
     set_position(diode, pcbnew.wxPointMM(*position))
     diode.SetOrientationDegrees(orientation)
 
-    key_placer.route_switch_with_diode(switch, diode, 0)
+    key_placer.route_switch_with_diode(switch, [diode], 0)
 
     board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
     generate_render(tmpdir, request)
@@ -316,10 +320,12 @@ def test_placer_invalid_layout(tmpdir, request):
 
 def test_switch_iterator_default_mode(request):
     board = get_board_for_2x2_example(request)
+    key_matrix = KeyMatrix(board, "SW{}", "D{}")
     with open(get_2x2_layout_path(request), "r") as f:
         layout = json.load(f)
         keyboard = get_keyboard(layout)
-    iterator = KeyboardSwitchIterator(board, "SW{}", keyboard)
+
+    iterator = KeyboardSwitchIterator(keyboard, key_matrix)
     expected_keys = iter(keyboard.keys)
     expected_footprints = iter(["SW1", "SW2", "SW3", "SW4"])
     for key, footprint in iterator:
@@ -329,13 +335,14 @@ def test_switch_iterator_default_mode(request):
 
 def test_switch_iterator_explicit_annotation_mode(request):
     board = get_board_for_2x2_example(request)
+    key_matrix = KeyMatrix(board, "SW{}", "D{}")
     with open(get_2x2_layout_path(request), "r") as f:
         layout = json.load(f)
         keyboard = get_keyboard(layout)
     expected_order = ["3", "1", "4", "2"]
     for i, k in enumerate(keyboard.keys):
         k.set_label(KeyboardSwitchIterator.ANNOTATION_LABEL, expected_order[i])
-    iterator = KeyboardSwitchIterator(board, "SW{}", keyboard)
+    iterator = KeyboardSwitchIterator(keyboard, key_matrix)
     expected_keys = iter(keyboard.keys)
     expected_footprints = iter([f"SW{i}" for i in expected_order])
     for key, footprint in iterator:

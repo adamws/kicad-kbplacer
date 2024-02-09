@@ -266,6 +266,42 @@ def test_with_examples(
         assert t.GetNetCode() != 0
 
 
+def test_with_examples_offset_diode_annotations(
+    tmpdir,
+    request,
+    package_path,
+    package_name,
+) -> None:
+    example = "2x3-rotations"
+    layout_option = "kle.json"
+    prepare_project(request, tmpdir, example, layout_option)
+
+    pcb_path = f"{tmpdir}/keyboard-before.kicad_pcb"
+    board = pcbnew.LoadBoard(pcb_path)
+    # diode annotations no longer must match 1-to-1 with key annotations
+    for i, f in enumerate(board.GetFootprints()):
+        if f.GetReference().startswith("D"):
+            f.SetReference(f"D{10 + i}")
+    pcbnew.SaveBoard(pcb_path, board)
+
+    run_kbplacer_process(
+        True,
+        None,
+        package_path,
+        package_name,
+        f"{tmpdir}/{layout_option}",
+        pcb_path,
+    )
+
+    generate_render(tmpdir, request)
+    generate_drc(tmpdir, pcb_path)
+
+    references_dir = get_references_dir(request, example, "Tracks", "DefaultDiode")
+    assert_example(tmpdir, references_dir)
+    for t in pcbnew.LoadBoard(pcb_path).GetTracks():
+        assert t.GetNetCode() != 0
+
+
 def test_saving_connection_template(
     tmpdir,
     request,

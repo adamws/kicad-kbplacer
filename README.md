@@ -125,13 +125,13 @@ plugin in GUI mode from KiCad and run it with selected options.
 To use this tool in this way, it needs to be installed following [plugin installation guide](#as-kicad-plugin).
 
 - Create switch matrix schematic which meets following requirements:
-  - Each switch has dedicated diode with same annotation number
+  - Each switch has connected diode
+    - Diodes can be connected in either direction. Track router attempts to connect
+      closest (to each other) pads of switch and diode as long as both have same `netname`,
+      i.e. are connected on the schematic
   - Symbols are ordered by Y position.
       - :warning: This annotation scheme might not work well for certain 'ergo' layouts.
         The problem and possible solutions are described in [annotation guide](./docs/annotation_guide.md).
-  - Diodes can be connected in either direction. Track router attempts to connect
-    closest (to each other) pads of switch and diode as long as both have same `netname`,
-    i.e. are connected on the schematic
 
   ![schematic-example](resources/schematic-example.png)
 

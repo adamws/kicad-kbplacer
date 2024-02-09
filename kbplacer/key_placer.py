@@ -5,9 +5,10 @@ import json
 import logging
 import os
 import re
+from collections import defaultdict
 from enum import Enum
 from pathlib import Path
-from typing import List, Tuple, cast
+from typing import Dict, List, Tuple, cast
 
 import pcbnew
 
@@ -34,24 +35,41 @@ from .kle_serial import Keyboard, ViaKeyboard, get_keyboard
 logger = logging.getLogger(__name__)
 
 
-class SwitchIterator:
-    def __init__(self, board: pcbnew.BOARD, annotation: str) -> None:
-        self.__board = board
-        self.__annotation = annotation
+class KeyMatrix:
+    def __init__(self, board: pcbnew.BOARD, key_format: str, diode_format: str) -> None:
+        self.__key_format = key_format
 
-    def __iter__(self):
-        self.__current_key = 1
-        return self
+        self.switches: Dict[str, pcbnew.FOOTPRINT] = {}
+        self.switches_by_number: Dict[int, pcbnew.FOOTPRINT] = {}
+        self.diodes: Dict[str, List[pcbnew.FOOTPRINT]] = defaultdict(list)
+        if key_format:
+            key_pattern = re.compile(key_format.format("((\\d)+)"))
+            for f in board.GetFootprints():
+                reference = f.GetReference()
+                if match := re.match(key_pattern, reference):
+                    if reference in self.switches:
+                        msg = "Duplicate switch reference, footprint reference must be unique"
+                        raise Exception(msg)
+                    self.switches[reference] = f
+                    self.switches_by_number[int(match.group(1))] = f
 
-    def __next__(self):
-        reference = self.__annotation.format(self.__current_key)
-        footprint = self.__board.FindFootprintByReference(reference)
-        if footprint:
-            result = self.__current_key, footprint
-            self.__current_key += 1
-            return result
-        else:
-            raise StopIteration
+        # each switch can have 0 or more diodes
+        if diode_format:
+            diode_pattern = re.compile(diode_format.format("((\\d)+)"))
+            for f in board.GetFootprints():
+                if re.match(diode_pattern, f.GetReference()):
+                    for switch_reference, key in self.switches.items():
+                        if get_common_nets(key, f):
+                            self.diodes[switch_reference].append(f)
+
+    def __str__(self) -> str:
+        mapping: Dict[str, str] = {}
+        for reference, diodes in self.diodes.items():
+            mapping[reference] = ", ".join([d.GetReference() for d in diodes])
+        return "KeyMatrix: " + "; ".join(f"{k}-{v}" for k, v in mapping.items())
+
+    def switch(self, index: int) -> pcbnew.FOOTPRINT:
+        return self.switches[self.__key_format.format(index)]
 
 
 class KeyboardSwitchIterator:
@@ -66,11 +84,12 @@ class KeyboardSwitchIterator:
             return self.value
 
     def __init__(
-        self, board: pcbnew.BOARD, annotation: str, keyboard: Keyboard
+        self,
+        keyboard: Keyboard,
+        key_matrix: KeyMatrix,
     ) -> None:
-        self.__board = board
-        self.__annotation = annotation
         self.__keyboard = keyboard
+        self.__key_matrix = key_matrix
         self.__type = self.__get_iteration_type(keyboard)
 
     def __get_iteration_type(self, keyboard: Keyboard) -> Type:
@@ -95,14 +114,11 @@ class KeyboardSwitchIterator:
 
     def __get_footprint(self, key) -> pcbnew.FOOTPRINT:
         if self.__type == self.Type.EXPLICIT_ANNOTATIONS:
-            return get_footprint(
-                self.__board,
-                self.__annotation.format(key.labels[self.ANNOTATION_LABEL]),
-            )
+            return self.__key_matrix.switch(int(key.labels[self.ANNOTATION_LABEL]))
         else:
-            annotation = self.__annotation.format(self.__current_key)
+            sw = self.__key_matrix.switch(self.__current_key)
             self.__current_key += 1
-            return get_footprint(self.__board, annotation)
+            return sw
 
     def __next__(self):
         key = next(self.__keys)
@@ -131,7 +147,7 @@ class KeyPlacer(BoardModifier):
     def route_switch_with_diode(
         self,
         switch: pcbnew.FOOTPRINT,
-        diode: pcbnew.FOOTPRINT,
+        diodes: List[pcbnew.FOOTPRINT],
         angle: float,
         template_connection: List[pcbnew.PCB_TRACK] | None = None,
     ) -> None:
@@ -152,6 +168,10 @@ class KeyPlacer(BoardModifier):
         :type angle: float
         :type template_connection: List[pcbnew.PCB_TRACK] | None
         """
+        # not supporting multiple diodes placement yet
+        if not len(diodes):
+            return
+        diode = diodes[0]
         logger.info(f"Routing {switch.GetReference()} with {diode.GetReference()}")
 
         if template_connection:
@@ -327,7 +347,7 @@ class KeyPlacer(BoardModifier):
         origin = get_position(switch)
 
         connectivity = self.get_connectivity()
-        _tracks: dict[str, pcbnew.PCB_TRACE_T] = {}
+        _tracks: Dict[str, pcbnew.PCB_TRACE_T] = {}
 
         def _get_connected_tracks(item: pcbnew.BOARD_CONNECTED_ITEM) -> None:
             for t in connectivity.GetConnectedTracks(item):
@@ -387,9 +407,9 @@ class KeyPlacer(BoardModifier):
     def place_switches(
         self,
         keyboard: Keyboard,
-        key_format: str,
+        key_matrix: KeyMatrix,
     ) -> None:
-        key_iterator = KeyboardSwitchIterator(self.board, key_format, keyboard)
+        key_iterator = KeyboardSwitchIterator(keyboard, key_matrix)
         logger.info(f"Placing switches with '{key_iterator.get_type()}' iterator")
         for key, switch_footprint in key_iterator:
             width = key.width
@@ -417,51 +437,79 @@ class KeyPlacer(BoardModifier):
                 )
                 rotate(switch_footprint, rotation_reference, angle)
 
+    def place_element(
+        self,
+        footprint: pcbnew.FOOTPRINT,
+        element_position: ElementPosition,
+        reference_position: pcbnew.wxPoint,
+        reference_orientation: float,
+    ) -> None:
+        reset_rotation(footprint)
+        set_side(footprint, element_position.side)
+        set_rotation(footprint, element_position.orientation)
+
+        offset = pcbnew.wxPointMM(*element_position.relative_position.to_list())
+        if reference_orientation != 0:
+            offset = position_in_rotated_coordinates(offset, reference_orientation)
+
+        set_position(footprint, reference_position + offset)
+        if reference_orientation != 0:
+            current_position = get_position(footprint)
+            rotate(footprint, current_position, -1 * reference_orientation)
+
+    def place_diodes(
+        self,
+        diode_info: ElementInfo,
+        key_matrix: KeyMatrix,
+    ) -> None:
+        for reference, footprints in key_matrix.diodes.items():
+            switch_footprint = key_matrix.switches[reference]
+            switch_position = get_position(switch_footprint)
+            switch_orientation = get_orientation(switch_footprint)
+
+            # each switch can have 0 or more diodes, placing more than 1 is not supported
+            # yet but this approach is preparation for that and also allows for
+            # different annotation numbers i.e. D1 can be connected to SW2
+            if len(footprints) and diode_info.position:
+                self.place_element(
+                    footprints[0],
+                    diode_info.position,
+                    switch_position,
+                    switch_orientation,
+                )
+
     def place_switch_elements(
         self,
-        key_format: str,
         elements: List[ElementInfo],
+        key_matrix: KeyMatrix,
     ) -> None:
-        for i, switch_footprint in SwitchIterator(self.board, key_format):
-            position = get_position(switch_footprint)
-            orientation = get_orientation(switch_footprint)
+        for number, switch_footprint in key_matrix.switches_by_number.items():
+            switch_position = get_position(switch_footprint)
+            switch_orientation = get_orientation(switch_footprint)
             for element_info in elements:
-                annotation_format = element_info.annotation_format
-                element_position = element_info.position
                 footprint = get_optional_footprint(
-                    self.board, annotation_format.format(i)
+                    self.board,
+                    element_info.annotation_format.format(number),
                 )
-                if footprint and element_position:
-                    reset_rotation(footprint)
-                    set_side(footprint, element_position.side)
-                    set_rotation(footprint, element_position.orientation)
-
-                    offset = pcbnew.wxPointMM(
-                        *element_position.relative_position.to_list()
+                if footprint and element_info.position:
+                    self.place_element(
+                        footprint,
+                        element_info.position,
+                        switch_position,
+                        switch_orientation,
                     )
-                    if orientation != 0:
-                        offset = position_in_rotated_coordinates(offset, orientation)
-
-                    set_position(footprint, position + offset)
-                    if orientation != 0:
-                        current_position = get_position(footprint)
-                        rotate(footprint, current_position, -1 * orientation)
 
     def route_switches_with_diodes(
         self,
-        key_format: str,
-        diode_format: str,
+        key_matrix: KeyMatrix,
         template_connection: List[pcbnew.PCB_TRACK],
     ) -> None:
-        for i, switch_footprint in SwitchIterator(self.board, key_format):
+        for reference, footprints in key_matrix.diodes.items():
+            switch_footprint = key_matrix.switches[reference]
             angle = -1 * switch_footprint.GetOrientationDegrees()
-
-            if diode_footprint := get_optional_footprint(
-                self.board, diode_format.format(i)
-            ):
-                self.route_switch_with_diode(
-                    switch_footprint, diode_footprint, angle, template_connection
-                )
+            self.route_switch_with_diode(
+                switch_footprint, footprints, angle, template_connection
+            )
         # when done, delete all template items
         for item in template_connection:
             self.board.RemoveNative(item)
@@ -498,6 +546,55 @@ class KeyPlacer(BoardModifier):
             return pcbnew.PCB_IO_MGR.Load(pcbnew.PCB_IO_MGR.KICAD_SEXP, template_path)  # type: ignore
         return pcbnew.IO_MGR.Load(pcbnew.IO_MGR.KICAD_SEXP, template_path)  # type: ignore
 
+    def _normalize_template_path(self, template_path: str) -> str:
+        if str(Path(template_path).name) == template_path:
+            # if passed filename without directory,
+            # assume that this refers to file in the directory of
+            # current board. This is mostly for CLI convenience
+            template_path = str(Path(self.board.GetFileName()).parent / template_path)
+        return template_path
+
+    def _update_element_position(self, key_format: str, element: ElementInfo) -> None:
+        if element.position_option in [
+            PositionOption.RELATIVE,
+            PositionOption.PRESET,
+        ]:
+            if element.position_option == PositionOption.PRESET:
+                source = self.load_template(
+                    self._normalize_template_path(element.template_path)
+                )
+            else:
+                source = self.board
+
+            element1 = get_footprint(source, key_format.format(1))
+            element2 = get_footprint(source, element.annotation_format.format(1))
+            element.position = self.get_current_relative_element_position(
+                element1, element2
+            )
+            logger.info(f"Element info updated: {element}")
+
+    def _get_template_connection(
+        self, key_format: str, diode_info: ElementInfo
+    ) -> List[pcbnew.PCB_TRACK]:
+        if diode_info.position_option in [
+            PositionOption.RELATIVE,
+            PositionOption.UNCHANGED,
+        ]:
+            return self.get_connection_template(
+                key_format, diode_info.annotation_format, diode_info.template_path
+            )
+        elif diode_info.position_option == PositionOption.PRESET:
+            logger.info(
+                f"Loading diode connection preset from {diode_info.template_path}"
+            )
+            return self.load_connection_preset(
+                key_format,
+                diode_info.annotation_format,
+                self._normalize_template_path(diode_info.template_path),
+            )
+        else:
+            return []
+
     def run(
         self,
         layout_path: str,
@@ -507,81 +604,34 @@ class KeyPlacer(BoardModifier):
         route_rows_and_columns: bool = False,
         additional_elements: List[ElementInfo] = [],
     ) -> None:
+        # stage 1 - prepare
+        key_matrix = KeyMatrix(self.board, key_format, diode_info.annotation_format)
+        logger.info(f"Keyboard matrix: {key_matrix}")
+
+        # it is important to get template connection
+        # and relative positions before moving any elements
+        template_connection = self._get_template_connection(key_format, diode_info)
+        self._update_element_position(key_format, diode_info)
+        for element_info in additional_elements:
+            self._update_element_position(key_format, element_info)
+
+        # stage 2 - place elements
         if layout_path:
             with open(layout_path, "r") as f:
                 layout = json.load(f)
-        else:
-            layout = {}
-        diode_format = ""
-        template_connection = []
-
-        def _normalize_template_path(template_path: str) -> str:
-            if str(Path(template_path).name) == template_path:
-                # if passed filename without directory,
-                # assume that this refers to file in the directory of
-                # current board. This is mostly for CLI convenience
-                template_path = str(
-                    Path(self.board.GetFileName()).parent / template_path
-                )
-            return template_path
+            logger.info(f"User layout: {layout}")
+            self.place_switches(get_keyboard(layout), key_matrix)
 
         logger.info(f"Diode info: {diode_info}")
-        diode_format = diode_info.annotation_format
-        if route_switches_with_diodes:
-            if diode_info.position_option in [
-                PositionOption.RELATIVE,
-                PositionOption.UNCHANGED,
-            ]:
-                template_connection = self.get_connection_template(
-                    key_format, diode_format, diode_info.template_path
-                )
-            elif diode_info.position_option == PositionOption.PRESET:
-                logger.info(
-                    f"Loading diode connection preset from {diode_info.template_path}"
-                )
-                template_connection = self.load_connection_preset(
-                    key_format,
-                    diode_format,
-                    _normalize_template_path(diode_info.template_path),
-                )
-
         if diode_info.position_option != PositionOption.UNCHANGED:
-            additional_elements = [diode_info] + additional_elements
-
-        for element_info in additional_elements:
-            if element_info.position_option in [
-                PositionOption.RELATIVE,
-                PositionOption.PRESET,
-            ]:
-                if element_info.position_option == PositionOption.PRESET:
-                    source = self.load_template(
-                        _normalize_template_path(element_info.template_path)
-                    )
-                else:
-                    source = self.board
-
-                element1 = get_footprint(source, key_format.format(1))
-                element2 = get_footprint(
-                    source, element_info.annotation_format.format(1)
-                )
-                position = self.get_current_relative_element_position(
-                    element1, element2
-                )
-                element_info.position = position
-                logger.info(f"Element info updated: {element_info}")
-
-        if layout:
-            logger.info(f"User layout: {layout}")
-            keyboard = get_keyboard(layout)
-            self.place_switches(keyboard, key_format)
+            self.place_diodes(diode_info, key_matrix)
 
         if additional_elements:
-            self.place_switch_elements(key_format, additional_elements)
+            self.place_switch_elements(additional_elements, key_matrix)
 
+        # stage 3 - route elements
         if route_switches_with_diodes:
-            self.route_switches_with_diodes(
-                key_format, diode_format, template_connection
-            )
+            self.route_switches_with_diodes(key_matrix, template_connection)
 
         if route_rows_and_columns:
             self.route_rows_and_columns()
