@@ -201,7 +201,18 @@ def get_2x2_layout_path(request) -> str:
 
 def add_2x2_nets(board):
     net_count = board.GetNetCount()
-    for i, n in enumerate(["COL1", "COL2", "ROW1", "ROW2"]):
+    for i, n in enumerate(
+        [
+            "COL1",
+            "COL2",
+            "ROW1",
+            "ROW2",
+            "Net-D1-Pad2",
+            "Net-D2-Pad2",
+            "Net-D3-Pad2",
+            "Net-D4-Pad2",
+        ]
+    ):
         net = pcbnew.NETINFO_ITEM(board, n, net_count + i)
         update_netinfo(board, net)
         board.Add(net)
@@ -214,8 +225,10 @@ def get_board_for_2x2_example(request):
     for i in range(1, 5):
         switch = add_switch_footprint(board, request, i)
         switch.FindPadByNumber("1").SetNet(netcodes_map[f"COL{i % 2 + 1}"])
+        switch.FindPadByNumber("2").SetNet(netcodes_map[f"Net-D{i}-Pad2"])
         diode = add_diode_footprint(board, request, i)
-        diode.FindPadByNumber("2").SetNet(netcodes_map[f"ROW{i // 3 + 1}"])
+        diode.FindPadByNumber("1").SetNet(netcodes_map[f"ROW{i // 3 + 1}"])
+        diode.FindPadByNumber("2").SetNet(netcodes_map[f"Net-D{i}-Pad2"])
     return board
 
 
@@ -273,7 +286,7 @@ def test_diode_placement_ignore(tmpdir, request):
     diode_info = ElementInfo(
         "D{}", PositionOption.UNCHANGED, DEFAULT_DIODE_POSITION, ""
     )
-    key_placer.run(get_2x2_layout_path(request), "SW{}", diode_info, True)
+    key_placer.run(get_2x2_layout_path(request), "SW{}", diode_info, False)
 
     board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
     generate_render(tmpdir, request)
@@ -283,6 +296,9 @@ def test_diode_placement_ignore(tmpdir, request):
     positions = [get_position(diode) for diode in diodes]
     for pos in positions:
         assert pos == pcbnew.wxPoint(0, 0)
+    # running without routing enabled, 'router' is not that good yet to correctly
+    # handle illegal (overlapping) diodes
+    assert len(board.GetTracks()) == 0
 
 
 def test_placer_invalid_layout(tmpdir, request):
