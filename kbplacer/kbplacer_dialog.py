@@ -838,6 +838,7 @@ class KbplacerDialog(wx.Dialog):
         element_info = self.__diode_settings.GetValue()
         if not self.__place_diodes_checkbox.GetValue():
             element_info.position_option = PositionOption.UNCHANGED
+            element_info.template_path = ""
         return element_info
 
     def get_additional_elements_info(
