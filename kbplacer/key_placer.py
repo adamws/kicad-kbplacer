@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import itertools
 import json
 import logging
@@ -37,7 +38,8 @@ logger = logging.getLogger(__name__)
 
 class KeyMatrix:
     def __init__(self, board: pcbnew.BOARD, key_format: str, diode_format: str) -> None:
-        self.__key_format = key_format
+        self.key_format = key_format
+        self.diode_format = diode_format
 
         self.switches: Dict[str, pcbnew.FOOTPRINT] = {}
         self.switches_by_number: Dict[int, pcbnew.FOOTPRINT] = {}
@@ -69,7 +71,7 @@ class KeyMatrix:
         return "KeyMatrix: " + "; ".join(f"{k}-{v}" for k, v in mapping.items())
 
     def switch(self, index: int) -> pcbnew.FOOTPRINT:
-        return self.switches[self.__key_format.format(index)]
+        return self.switches[self.key_format.format(index)]
 
 
 class KeyboardSwitchIterator:
@@ -459,24 +461,22 @@ class KeyPlacer(BoardModifier):
 
     def place_diodes(
         self,
-        diode_info: ElementInfo,
+        diode_infos: List[ElementInfo],
         key_matrix: KeyMatrix,
     ) -> None:
-        for reference, footprints in key_matrix.diodes.items():
-            switch_footprint = key_matrix.switches[reference]
-            switch_position = get_position(switch_footprint)
-            switch_orientation = get_orientation(switch_footprint)
-
-            # each switch can have 0 or more diodes, placing more than 1 is not supported
-            # yet but this approach is preparation for that and also allows for
-            # different annotation numbers i.e. D1 can be connected to SW2
-            if len(footprints) and diode_info.position:
-                self.place_element(
-                    footprints[0],
-                    diode_info.position,
-                    switch_position,
-                    switch_orientation,
-                )
+        if diode_infos and diode_infos[0].position:
+            for reference, footprints in key_matrix.diodes.items():
+                switch_footprint = key_matrix.switches[reference]
+                switch_position = get_position(switch_footprint)
+                switch_orientation = get_orientation(switch_footprint)
+                for diode, info in zip(footprints, diode_infos):
+                    if info.position:
+                        self.place_element(
+                            diode,
+                            info.position,
+                            switch_position,
+                            switch_orientation,
+                        )
 
     def place_switch_elements(
         self,
@@ -554,24 +554,59 @@ class KeyPlacer(BoardModifier):
             template_path = str(Path(self.board.GetFileName()).parent / template_path)
         return template_path
 
+    def _get_relative_position_source(self, element: ElementInfo) -> pcbnew.BOARD:
+        if element.position_option == PositionOption.PRESET:
+            return self.load_template(
+                self._normalize_template_path(element.template_path)
+            )
+        else:
+            return self.board
+
     def _update_element_position(self, key_format: str, element: ElementInfo) -> None:
         if element.position_option in [
             PositionOption.RELATIVE,
             PositionOption.PRESET,
         ]:
-            if element.position_option == PositionOption.PRESET:
-                source = self.load_template(
-                    self._normalize_template_path(element.template_path)
-                )
-            else:
-                source = self.board
-
+            source = self._get_relative_position_source(element)
             element1 = get_footprint(source, key_format.format(1))
             element2 = get_footprint(source, element.annotation_format.format(1))
             element.position = self.get_current_relative_element_position(
                 element1, element2
             )
             logger.info(f"Element info updated: {element}")
+
+    def _prepare_diode_infos(
+        self, key_matrix: KeyMatrix, diode_info: ElementInfo
+    ) -> List[ElementInfo]:
+        infos = []
+        if diode_info.position_option in [
+            PositionOption.RELATIVE,
+            PositionOption.PRESET,
+        ]:
+            source = self._get_relative_position_source(diode_info)
+            template_matrix = KeyMatrix(
+                source, key_matrix.key_format, diode_info.annotation_format
+            )
+            if (
+                diode_info.position_option == PositionOption.PRESET
+                and len(template_matrix.switches) != 1
+            ):
+                msg = f"Template file '{diode_info.template_path}' must have exactly one switch"
+                raise RuntimeError(msg)
+            first_switch = min(template_matrix.switches_by_number.keys())
+            switch_reference = template_matrix.key_format.format(first_switch)
+            switch = template_matrix.switches[switch_reference]
+            diodes = template_matrix.diodes[switch_reference]
+            for diode in diodes:
+                temp_info = copy.copy(diode_info)
+                temp_info.position = self.get_current_relative_element_position(
+                    switch, diode
+                )
+                logger.info(f"Element info updated: {temp_info}")
+                infos.append(temp_info)
+        else:
+            infos.append(diode_info)
+        return infos
 
     def _get_template_connection(
         self, key_format: str, diode_info: ElementInfo
@@ -607,11 +642,23 @@ class KeyPlacer(BoardModifier):
         # stage 1 - prepare
         key_matrix = KeyMatrix(self.board, key_format, diode_info.annotation_format)
         logger.info(f"Keyboard matrix: {key_matrix}")
+        if any(
+            len(diodes) > 1 for diodes in key_matrix.diodes.values()
+        ) and diode_info.position_option in [
+            PositionOption.DEFAULT,
+            PositionOption.CUSTOM,
+        ]:
+            msg = (
+                f"The '{diode_info.position_option}' position not supported for "
+                f"multiple diodes per switch layouts, use '{PositionOption.RELATIVE}' "
+                f"or '{PositionOption.PRESET}' position option"
+            )
+            raise RuntimeError(msg)
 
         # it is important to get template connection
         # and relative positions before moving any elements
         template_connection = self._get_template_connection(key_format, diode_info)
-        self._update_element_position(key_format, diode_info)
+        diode_infos = self._prepare_diode_infos(key_matrix, diode_info)
         for element_info in additional_elements:
             self._update_element_position(key_format, element_info)
 
@@ -622,9 +669,9 @@ class KeyPlacer(BoardModifier):
             logger.info(f"User layout: {layout}")
             self.place_switches(get_keyboard(layout), key_matrix)
 
-        logger.info(f"Diode info: {diode_info}")
+        logger.info(f"Diode info: {diode_infos}")
         if diode_info.position_option != PositionOption.UNCHANGED:
-            self.place_diodes(diode_info, key_matrix)
+            self.place_diodes(diode_infos, key_matrix)
 
         if additional_elements:
             self.place_switch_elements(additional_elements, key_matrix)

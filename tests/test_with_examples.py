@@ -204,6 +204,16 @@ def __get_parameters():
     )
     test_params.append(param)
 
+    # add one test with layout where each switch have two diodes
+    param = pytest.param(
+        "2x3-rotations-double-diodes",
+        True,
+        "D{} RELATIVE",
+        "kle.json",
+        id="2x3-rotations-double-diodes;Tracks;DiodeOption2;RAW",
+    )
+    test_params.append(param)
+
     return test_params
 
 

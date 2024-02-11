@@ -129,6 +129,7 @@ To use this tool in this way, it needs to be installed following [plugin install
     - Diodes can be connected in either direction. Track router attempts to connect
       closest (to each other) pads of switch and diode as long as both have same `netname`,
       i.e. are connected on the schematic
+    - Each switch can have multiple diodes
   - Symbols are ordered by Y position.
       - :warning: This annotation scheme might not work well for certain 'ergo' layouts.
         The problem and possible solutions are described in [annotation guide](./docs/annotation_guide.md).
@@ -228,8 +229,10 @@ python -m com_github_adamws_kicad-kbplacer --help
     <td align="center" style="vertical-align: middle;">Allow autoplacement</td>
     <td>
       Enables automatic diodes positioning. When turned on, each diode will be placed
-      next to the switch footprint of the same annotation number, according to the position
-      settings. When disabled, diodes will not be moved.
+      next to the switch footprint with common net, according to the position
+      settings. When disabled, diodes will not be moved.</br>
+      If any switch has more than one diode, then <code>Default</code> and <code>Custom</code>
+      position options are not supported.
     </td>
   </tr>
   <tr>
@@ -406,6 +409,7 @@ In case additional elements need to be automatically placed next to correspondin
 stabilizer footprints if not integral part of switch footprint, or RGB LEDs), define entries
 in `Additional elements settings` section. It behaves very similarly to switch diodes options with few exceptions:
 
+- corresponding switch is matched based on annotation number and not net code
 - there is no default position defined
 - there is no track routing
 
