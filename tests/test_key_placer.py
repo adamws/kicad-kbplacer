@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 import json
-from typing import Tuple
+from typing import List, Tuple
 
 import pcbnew
 import pytest
@@ -54,21 +54,24 @@ def equal_ignore_order(a, b):
 
 
 def get_board_with_one_switch(
-    request, footprint: str
-) -> Tuple[pcbnew.BOARD, pcbnew.FOOTPRINT, pcbnew.FOOTPRINT]:
+    request, footprint: str, number_of_diodes: int = 1
+) -> Tuple[pcbnew.BOARD, pcbnew.FOOTPRINT, List[pcbnew.FOOTPRINT]]:
     board = pcbnew.CreateEmptyBoard()
     net_count = board.GetNetCount()
-    switch_diode_net = pcbnew.NETINFO_ITEM(board, "Net-(D1-Pad2)", net_count)
+    switch_diode_net = pcbnew.NETINFO_ITEM(board, "Net-(D-Pad2)", net_count)
     update_netinfo(board, switch_diode_net)
     board.Add(switch_diode_net)
 
     switch = add_switch_footprint(board, request, 1, footprint=footprint)
-    diode = add_diode_footprint(board, request, 1)
-
     for p in switch.Pads():
         if p.GetNumber() == "2":
             p.SetNet(switch_diode_net)
-    diode.FindPadByNumber("2").SetNet(switch_diode_net)
+
+    diodes = []
+    for i in range(number_of_diodes):
+        diode = add_diode_footprint(board, request, i + 1)
+        diode.FindPadByNumber("2").SetNet(switch_diode_net)
+        diodes.append(diode)
 
     column_net = pcbnew.NETINFO_ITEM(board, "COL1", net_count + 1)
     update_netinfo(board, column_net)
@@ -78,7 +81,7 @@ def get_board_with_one_switch(
         if p.GetNumber() == "1":
             p.SetNet(column_net)
 
-    return board, switch, diode
+    return board, switch, diodes
 
 
 def assert_board_tracks(expected: list[Tuple[int, int]] | None, board: pcbnew.BOARD):
@@ -152,7 +155,7 @@ def assert_board_tracks(expected: list[Tuple[int, int]] | None, board: pcbnew.BO
 )
 @pytest.mark.parametrize("side", [Side.FRONT, Side.BACK])
 def test_diode_switch_routing(position, orientation, side, expected, tmpdir, request):
-    board, switch, diode = get_board_with_one_switch(request, "SW_Cherry_MX_PCB_1.00u")
+    board, switch, diodes = get_board_with_one_switch(request, "SW_Cherry_MX_PCB_1.00u")
     key_placer = KeyPlacer(board)
 
     switch_pad = switch.FindPadByNumber("2")
@@ -162,11 +165,11 @@ def test_diode_switch_routing(position, orientation, side, expected, tmpdir, req
         switch_pad_position.x + pcbnew.FromMM(position[0]),
         switch_pad_position.y + pcbnew.FromMM(position[1]),
     )
-    set_position(diode, diode_position)
-    set_side(diode, side)
-    diode.SetOrientationDegrees(orientation)
+    set_position(diodes[0], diode_position)
+    set_side(diodes[0], side)
+    diodes[0].SetOrientationDegrees(orientation)
 
-    key_placer.route_switch_with_diode(switch, [diode], 0)
+    key_placer.route_switch_with_diode(switch, diodes)
     key_placer.remove_dangling_tracks()
 
     board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
@@ -187,18 +190,41 @@ def test_diode_switch_routing(position, orientation, side, expected, tmpdir, req
 def test_diode_switch_routing_complicated_footprint(
     position, orientation, expected, tmpdir, request
 ):
-    board, switch, diode = get_board_with_one_switch(
+    board, switch, diodes = get_board_with_one_switch(
         request, "Kailh_socket_PG1350_optional_reversible"
     )
     key_placer = KeyPlacer(board)
 
-    set_position(diode, pcbnew.wxPointMM(*position))
-    diode.SetOrientationDegrees(orientation)
+    set_position(diodes[0], pcbnew.wxPointMM(*position))
+    diodes[0].SetOrientationDegrees(orientation)
 
-    key_placer.route_switch_with_diode(switch, [diode], 0)
+    key_placer.route_switch_with_diode(switch, diodes)
 
     board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
     generate_render(tmpdir, request)
+    assert_board_tracks(expected, board)
+
+
+def test_multi_diode_switch_routing(tmpdir, request):
+    board, switch, diodes = get_board_with_one_switch(
+        request, "SW_Cherry_MX_PCB_1.00u", number_of_diodes=2
+    )
+    key_placer = KeyPlacer(board)
+    diode_positions = [(0, 5), (0, -10)]
+    for position, diode in zip(diode_positions, diodes):
+        set_position(diode, pcbnew.wxPointMM(*position))
+        diode.SetOrientationDegrees(0)
+    key_placer.route_switch_with_diode(switch, diodes)
+
+    board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
+    generate_render(tmpdir, request)
+    expected = [
+        (2540000, -8510000),
+        (1050000, -10000000),
+        (2540000, -5080000),
+        (2540000, 3510000),
+        (1050000, 5000000),
+    ]
     assert_board_tracks(expected, board)
 
 

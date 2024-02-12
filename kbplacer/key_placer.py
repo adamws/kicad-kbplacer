@@ -148,18 +148,14 @@ class KeyPlacer(BoardModifier):
         )
         self.__reference_coordinate = pcbnew.wxPointMM(25, 25)
 
-    def route_switch_with_diode(
+    def apply_switch_connection_template(
         self,
         switch: pcbnew.FOOTPRINT,
-        diodes: List[pcbnew.FOOTPRINT],
         angle: float,
-        template_connection: List[pcbnew.PCB_TRACK] | None = None,
+        template_connection: List[pcbnew.PCB_TRACK],
     ) -> None:
-        """Performs routing between switch and diode elements.
-        It uses two closest (to each other) pads of the same net.
-
+        """
         :param switch: Switch footprint to be routed.
-        :param diode: Diode footprint to be routed.
         :param angle: Rotation angle (in degrees) of switch footprint
                       (diode rotation is assumed to be the same)
         :param template_connection: List of template elements (tracks and vias) for
@@ -167,56 +163,57 @@ class KeyPlacer(BoardModifier):
                                     switch position coordinate. Templates
                                     items must not have netcodes assigned.
                                     If None, use automatic routing algorithm.
-        :type switch: FOOTPRINT
-        :type diode: FOOTPRINT
-        :type angle: float
-        :type template_connection: List[pcbnew.PCB_TRACK] | None
         """
-        # not supporting multiple diodes placement yet
-        if not len(diodes):
-            return
-        diode = diodes[0]
-        logger.info(f"Routing {switch.GetReference()} with {diode.GetReference()}")
-
-        if template_connection:
-            logger.info("Using template replication method")
+        logger.info("Using template replication method")
+        if angle != 0:
+            logger.info(f"Routing at {angle} degree angle")
+        switch_position = get_position(switch)
+        rejects = []
+        for item in template_connection:
+            # item is either PCB_TRACK or PCB_VIA, since via extends track
+            # we should be safe with `Cast_to_PCB_TRACK` (not doing any via
+            # specific operations here)
+            track = pcbnew.Cast_to_PCB_TRACK(item)
+            new_track = track.Duplicate()
+            if KICAD_VERSION >= (7, 0, 0):
+                new_track.Move(pcbnew.VECTOR2I(switch_position.x, switch_position.y))
+            else:
+                new_track.Move(switch_position)
             if angle != 0:
-                logger.info(f"Routing at {angle} degree angle")
-            switch_position = get_position(switch)
-            rejects = []
-            for item in template_connection:
-                # item is either PCB_TRACK or PCB_VIA, since via extends track
-                # we should be safe with `Cast_to_PCB_TRACK` (not doing any via
-                # specific operations here)
-                track = pcbnew.Cast_to_PCB_TRACK(item)
-                new_track = track.Duplicate()
-                if KICAD_VERSION >= (7, 0, 0):
-                    new_track.Move(
-                        pcbnew.VECTOR2I(switch_position.x, switch_position.y)
-                    )
-                else:
-                    new_track.Move(switch_position)
-                if angle != 0:
-                    rotate(new_track, switch_position, angle)
-                result = self.add_track_to_board(new_track)
-                # depending on the order of track elements placement, some may not pass
-                # collision check (for example when starting from middle segment,
-                # if it ends to close to a pad). To avoid rejecting false positives,
-                # collect rejects and give them a second chance. Only the 'middle' segments
-                # (i.e. not starting in a pad) should be in this list, others should
-                # get placed properly (unless indeed colliding with some footprints,
-                # for example optional stabilizer holes), so running placement of rejects
-                # a second time should succeed.
-                if result is None:
-                    rejects.append(new_track)
-            for item in rejects:
-                self.add_track_to_board(item)
-        elif result := get_closest_pads_on_same_net(switch, diode):
-            logger.info("Using internal autorouter method")
-            switch_pad, diode_pad = result
-            self.route(switch_pad, diode_pad)
-        else:
-            logger.error("Could not find pads with the same net, routing skipped")
+                rotate(new_track, switch_position, angle)
+            result = self.add_track_to_board(new_track)
+            # depending on the order of track elements placement, some may not pass
+            # collision check (for example when starting from middle segment,
+            # if it ends to close to a pad). To avoid rejecting false positives,
+            # collect rejects and give them a second chance. Only the 'middle' segments
+            # (i.e. not starting in a pad) should be in this list, others should
+            # get placed properly (unless indeed colliding with some footprints,
+            # for example optional stabilizer holes), so running placement of rejects
+            # a second time should succeed.
+            if result is None:
+                rejects.append(new_track)
+        for item in rejects:
+            self.add_track_to_board(item)
+
+    def route_switch_with_diode(
+        self,
+        switch: pcbnew.FOOTPRINT,
+        diodes: List[pcbnew.FOOTPRINT],
+    ) -> None:
+        """Performs routing between switch and diode elements.
+        It uses two closest (to each other) pads of the same net.
+
+        :param switch: Switch footprint to be routed.
+        :param diodes: Diodes footprints to be routed.
+        """
+        for diode in diodes:
+            logger.info(f"Routing {switch.GetReference()} with {diode.GetReference()}")
+            if result := get_closest_pads_on_same_net(switch, diode):
+                logger.info("Using internal autorouter method")
+                switch_pad, diode_pad = result
+                self.route(switch_pad, diode_pad)
+            else:
+                logger.error("Could not find pads with the same net, routing skipped")
 
     def get_current_relative_element_position(
         self, element1: pcbnew.FOOTPRINT, element2: pcbnew.FOOTPRINT
@@ -511,15 +508,19 @@ class KeyPlacer(BoardModifier):
         key_matrix: KeyMatrix,
         template_connection: List[pcbnew.PCB_TRACK],
     ) -> None:
-        for reference, footprints in key_matrix.diodes.items():
-            switch_footprint = key_matrix.switches[reference]
-            angle = -1 * switch_footprint.GetOrientationDegrees()
-            self.route_switch_with_diode(
-                switch_footprint, footprints, angle, template_connection
-            )
-        # when done, delete all template items
-        for item in template_connection:
-            self.board.RemoveNative(item)
+        if template_connection:
+            for footprint in key_matrix.switches.values():
+                angle = -1 * footprint.GetOrientationDegrees()
+                self.apply_switch_connection_template(
+                    footprint, angle, template_connection
+                )
+            # when done, delete all template items
+            for item in template_connection:
+                self.board.RemoveNative(item)
+        else:
+            for reference, footprints in key_matrix.diodes.items():
+                switch_footprint = key_matrix.switches[reference]
+                self.route_switch_with_diode(switch_footprint, footprints)
 
     def route_rows_and_columns(self) -> None:
         column_pads = {}
