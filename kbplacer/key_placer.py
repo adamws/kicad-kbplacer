@@ -9,7 +9,7 @@ import re
 from collections import defaultdict
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Tuple, cast
+from typing import Dict, List, Optional, Tuple, cast
 
 import pcbnew
 
@@ -410,10 +410,16 @@ class KeyPlacer(BoardModifier):
         self,
         keyboard: Keyboard,
         key_matrix: KeyMatrix,
+        key_position: Optional[ElementPosition],
     ) -> None:
         key_iterator = KeyboardSwitchIterator(keyboard, key_matrix)
         logger.info(f"Placing switches with '{key_iterator.get_type()}' iterator")
         for key, switch_footprint in key_iterator:
+            reset_rotation(switch_footprint)
+            if key_position:
+                set_side(switch_footprint, key_position.side)
+                set_rotation(switch_footprint, key_position.orientation)
+
             width = key.width
             height = key.height
             position = (
@@ -426,7 +432,6 @@ class KeyPlacer(BoardModifier):
                 + self.__reference_coordinate
             )
             set_position(switch_footprint, position)
-            reset_rotation(switch_footprint)
 
             angle = key.rotation_angle
             if angle != 0:
@@ -562,13 +567,15 @@ class KeyPlacer(BoardModifier):
         else:
             return self.board
 
-    def _update_element_position(self, key_format: str, element: ElementInfo) -> None:
+    def _update_element_position(
+        self, key_info: ElementInfo, element: ElementInfo
+    ) -> None:
         if element.position_option in [
             PositionOption.RELATIVE,
             PositionOption.PRESET,
         ]:
             source = self._get_relative_position_source(element)
-            element1 = get_footprint(source, key_format.format(1))
+            element1 = get_footprint(source, key_info.annotation_format.format(1))
             element2 = get_footprint(source, element.annotation_format.format(1))
             element.position = self.get_current_relative_element_position(
                 element1, element2
@@ -633,14 +640,16 @@ class KeyPlacer(BoardModifier):
     def run(
         self,
         layout_path: str,
-        key_format: str,
+        key_info: ElementInfo,
         diode_info: ElementInfo,
         route_switches_with_diodes: bool = False,
         route_rows_and_columns: bool = False,
         additional_elements: List[ElementInfo] = [],
     ) -> None:
         # stage 1 - prepare
-        key_matrix = KeyMatrix(self.board, key_format, diode_info.annotation_format)
+        key_matrix = KeyMatrix(
+            self.board, key_info.annotation_format, diode_info.annotation_format
+        )
         logger.info(f"Keyboard matrix: {key_matrix}")
         if any(
             len(diodes) > 1 for diodes in key_matrix.diodes.values()
@@ -657,17 +666,19 @@ class KeyPlacer(BoardModifier):
 
         # it is important to get template connection
         # and relative positions before moving any elements
-        template_connection = self._get_template_connection(key_format, diode_info)
+        template_connection = self._get_template_connection(
+            key_info.annotation_format, diode_info
+        )
         diode_infos = self._prepare_diode_infos(key_matrix, diode_info)
         for element_info in additional_elements:
-            self._update_element_position(key_format, element_info)
+            self._update_element_position(key_info, element_info)
 
         # stage 2 - place elements
         if layout_path:
             with open(layout_path, "r") as f:
                 layout = json.load(f)
             logger.info(f"User layout: {layout}")
-            self.place_switches(get_keyboard(layout), key_matrix)
+            self.place_switches(get_keyboard(layout), key_matrix, key_info.position)
 
         logger.info(f"Diode info: {diode_infos}")
         if diode_info.position_option != PositionOption.UNCHANGED:

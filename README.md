@@ -200,15 +200,7 @@ python -m com_github_adamws_kicad-kbplacer --help
     <th align="center"><b>Description</b></th>
   </tr>
   <tr>
-    <td rowspan="3" align="center" style="vertical-align: middle;">Switch settings</td>
-    <td align="center" style="vertical-align: middle;">Footprint Annotation</td>
-    <td>
-      The switch footprint annotation format with single replacement field <code>{}</code>
-      which will get replaced with incremented footprint number.
-      This string is internally used by python's <code>str.format</code> function.
-    </td>
-  </tr>
-  <tr>
+    <td rowspan="5" align="center" style="vertical-align: middle;">Switch settings</td>
     <td align="center" style="vertical-align: middle;">Keyboard layout file</td>
     <td>
       Layout file path. Supports <a href="http://www.keyboard-layout-editor.com/">keyboard-leyout-editor</a>
@@ -222,6 +214,26 @@ python -m com_github_adamws_kicad-kbplacer --help
     <td align="center" style="vertical-align: middle;">Step X / Step Y</td>
     <td>
       Distance (in millimeters) of 1U between two switches in X and Y directions.
+    </td>
+  </tr>
+  <tr>
+    <td align="center" style="vertical-align: middle;">Footprint Annotation</td>
+    <td>
+      The switch footprint annotation format with single replacement field <code>{}</code>
+      which will get replaced with incremented footprint number.
+      This string is internally used by python's <code>str.format</code> function.
+    </td>
+  </tr>
+  <tr>
+    <td align="center" style="vertical-align: middle;">Orientation</td>
+    <td>
+      Angle (in degrees) of switch footprints.
+    </td>
+  </tr>
+  <tr>
+    <td align="center" style="vertical-align: middle;">Side</td>
+    <td>
+      Selects <code>Front</code> or <code>Back</code> side of the board.
     </td>
   </tr>
   <tr>

@@ -6,6 +6,8 @@ from typing import Tuple
 import pcbnew
 import pytest
 
+from kbplacer.defaults import ZERO_POSITION
+
 from .conftest import (
     add_diode_footprint,
     add_switch_footprint,
@@ -268,7 +270,7 @@ def test_switch_distance(key_distance, tmpdir, request):
     diode_position = DEFAULT_DIODE_POSITION
     key_placer.run(
         get_2x2_layout_path(request),
-        "SW{}",
+        ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, ""),
         ElementInfo("D{}", PositionOption.DEFAULT, diode_position, ""),
         True,
     )
@@ -287,10 +289,11 @@ def test_switch_distance(key_distance, tmpdir, request):
 def test_diode_placement_ignore(tmpdir, request):
     board = get_board_for_2x2_example(request)
     key_placer = KeyPlacer(board)
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
     diode_info = ElementInfo(
         "D{}", PositionOption.UNCHANGED, DEFAULT_DIODE_POSITION, ""
     )
-    key_placer.run(get_2x2_layout_path(request), "SW{}", diode_info, False)
+    key_placer.run(get_2x2_layout_path(request), key_info, diode_info, False)
 
     board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
     generate_render(tmpdir, request)
@@ -308,6 +311,7 @@ def test_diode_placement_ignore(tmpdir, request):
 def test_placer_invalid_layout(tmpdir, request):
     board = get_board_for_2x2_example(request)
     key_placer = KeyPlacer(board)
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
     diode_info = ElementInfo("D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, "")
 
     layout_path = f"{tmpdir}/kle.json"
@@ -315,7 +319,7 @@ def test_placer_invalid_layout(tmpdir, request):
         json.dump({"some": "urecognized layout format"}, f)
 
     with pytest.raises(RuntimeError):
-        key_placer.run(layout_path, "SW{}", diode_info, True)
+        key_placer.run(layout_path, key_info, diode_info, True)
 
 
 def test_switch_iterator_default_mode(request):

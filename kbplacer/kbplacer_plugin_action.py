@@ -82,14 +82,14 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
             gui_state = dlg.get_window_state()
             logger.info(f"GUI state: {gui_state}")
 
-            key_format = dlg.get_key_annotation_format()
+            key_info = dlg.get_key_position_info()
             diode_info = dlg.get_diode_position_info()
             additional_elements = dlg.get_additional_elements_info()
 
             placer = KeyPlacer(self.board, dlg.get_key_distance())
             placer.run(
                 dlg.get_layout_path(),
-                key_format,
+                key_info,
                 diode_info,
                 dlg.route_switches_with_diodes(),
                 dlg.route_rows_and_columns(),
@@ -97,7 +97,9 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
             )
 
             if dlg.generate_outline():
-                build_board_outline(self.board, dlg.get_outline_delta(), key_format)
+                build_board_outline(
+                    self.board, dlg.get_outline_delta(), key_info.annotation_format
+                )
 
             if template_path := dlg.get_template_path():
                 copy_from_template_to_board(

@@ -18,10 +18,19 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_WINDOW_STATE = {
     "switch_section": {
-        "annotation": "SW{}",
         "layout_path": "",
         "x_distance": "19.05",
         "y_distance": "19.05",
+        "element_info": {
+            "annotation_format": "SW{}",
+            "position": {
+                "orientation": 0.0,
+                "relative_position": [0.0, 0.0],
+                "side": "FRONT",
+            },
+            "position_option": "Default",
+            "template_path": "",
+        },
     },
     "switch_diodes_section": {
         "enable": True,
@@ -61,10 +70,19 @@ DEFAULT_WINDOW_STATE = {
 
 CUSTOM_WINDOW_STATE_EXAMPLE1 = {
     "switch_section": {
-        "annotation": "KEY{}",
         "layout_path": "/home/user/kle.json",
         "x_distance": "18",
         "y_distance": "18",
+        "element_info": {
+            "annotation_format": "KEY{}",
+            "position": {
+                "orientation": 90.0,
+                "relative_position": [0.0, 0.0],
+                "side": "BACK",
+            },
+            "position_option": "Default",
+            "template_path": "",
+        },
     },
     "switch_diodes_section": {
         "enable": False,
@@ -319,7 +337,19 @@ def get_state_data(state: dict, name: str):
     [
         # fmt: off
         ("{}",DEFAULT_WINDOW_STATE),  # state has no values defined, should fallback to default
-        get_state_data({"switch_section": {"annotation": "KEY{}"}}, "non-default-key-annotation"),
+        get_state_data({"switch_section": {
+            "element_info": {
+                    "annotation_format": "KEY{}",
+                    "position_option": "Default",
+                    "position": {
+                        "relative_position": [0, 0],
+                        "orientation": 90,
+                        "side": "BACK"
+                    },
+                    "template_path": ""
+                }
+            }
+        }, "non-default-key-annotation-and-position"),
         get_state_data({"switch_section": {"x_distance": "18"}}, "non-default-x-distance"),
         get_state_data({"additional_elements": {"elements_info": []}}, "no-additional-elements"),
         get_state_data(CUSTOM_WINDOW_STATE_EXAMPLE1, "custom-state-1"),

@@ -182,6 +182,10 @@ class LabeledTextCtrl(wx.Panel):
         self.label.Disable()
         self.text.Disable()
 
+    def Hide(self):
+        self.label.Hide()
+        self.text.Hide()
+
 
 class CustomRadioBox(wx.Panel):
     def __init__(self, parent, choices: List[str]) -> None:
@@ -223,6 +227,7 @@ class ElementPositionWidget(wx.Panel):
         self,
         parent,
         default_position: Optional[ElementPosition] = None,
+        disable_offsets: bool = False,
     ) -> None:
         super().__init__(parent)
 
@@ -236,12 +241,16 @@ class ElementPositionWidget(wx.Panel):
         self.orientation = LabeledTextCtrl(
             self, wx_("Orientation:"), value="", width=5, validator=FloatValidator()
         )
+        if disable_offsets:
+            self.x.Hide()
+            self.y.Hide()
         self.side_label = wx.StaticText(self, -1, wx_("Side:"))
         self.side = CustomRadioBox(self, choices=[wx_("Front"), wx_("Back")])
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.x, 0, wx.EXPAND | wx.LEFT, 5)
-        sizer.Add(self.y, 0, wx.EXPAND | wx.LEFT, 5)
+        if not disable_offsets:
+            sizer.Add(self.x, 0, wx.EXPAND | wx.LEFT, 5)
+            sizer.Add(self.y, 0, wx.EXPAND | wx.LEFT, 5)
         sizer.Add(self.orientation, 0, wx.EXPAND | wx.LEFT, 5)
         sizer.Add(self.side_label, 0, wx.LEFT | wx.ALIGN_CENTER_VERTICAL, 5)
         sizer.Add(self.side, 0, wx.EXPAND | wx.LEFT, 5)
@@ -525,15 +534,21 @@ class KbplacerDialog(wx.Dialog):
         def __get_params(name) -> dict:
             return initial_state.get(name, {}) if initial_state else {}
 
+        def __parse_element_info(params: dict) -> None:
+            if "element_info" in params:
+                try:
+                    params["element_info"] = ElementInfo.from_dict(
+                        params["element_info"]
+                    )
+                except:
+                    params = {}
+
         params: dict = __get_params("switch_section")
+        __parse_element_info(params)
         switch_section: wx.Sizer = self.get_switch_section(**params)
 
         params: dict = __get_params("switch_diodes_section")
-        if "element_info" in params:
-            try:
-                params["element_info"] = ElementInfo.from_dict(params["element_info"])
-            except:
-                params = {}
+        __parse_element_info(params)
         switch_diodes_section: wx.Sizer = self.get_switch_diodes_section(**params)
 
         params: dict = __get_params("additional_elements")
@@ -569,13 +584,15 @@ class KbplacerDialog(wx.Dialog):
 
     def get_switch_section(
         self,
-        annotation: str = "SW{}",
         layout_path: str = "",
         x_distance: str = "19.05",
         y_distance: str = "19.05",
+        element_info: ElementInfo = ElementInfo(
+            "SW{}", PositionOption.DEFAULT, ZERO_POSITION, ""
+        ),
     ) -> wx.Sizer:
         key_annotation = LabeledTextCtrl(
-            self, wx_("Footprint Annotation") + ":", annotation
+            self, wx_("Footprint Annotation") + ":", element_info.annotation_format
         )
 
         layout_label = wx.StaticText(self, -1, self._("Keyboard layout file:"))
@@ -585,6 +602,7 @@ class KbplacerDialog(wx.Dialog):
             wildcard="JSON files (*.json)|*.json|All files (*)|*",
             style=wx.FLP_USE_TEXTCTRL,
         )
+        layout_picker.SetMinSize((400, -1))
         if layout_path:
             layout_picker.SetPath(layout_path)
             layout_picker.GetTextCtrl().SetInsertionPointEnd()
@@ -596,18 +614,30 @@ class KbplacerDialog(wx.Dialog):
             self, wx_("Step Y:"), value=y_distance, width=5, validator=FloatValidator()
         )
 
-        box = wx.StaticBox(self, label=self._("Switch settings"))
-        sizer = wx.StaticBoxSizer(box, wx.HORIZONTAL)
-        sizer.Add(key_annotation, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
-        sizer.Add(layout_label, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5)
-        sizer.Add(layout_picker, 1, wx.ALL, 5)
-        sizer.Add(key_distance_x, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
-        sizer.Add(key_distance_y, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        key_position = ElementPositionWidget(self, ZERO_POSITION, disable_offsets=True)
+        if element_info.position:
+            key_position.set_position(element_info.position)
 
-        self.__key_annotation_format = key_annotation.text
+        box = wx.StaticBox(self, label=self._("Switch settings"))
+        sizer = wx.StaticBoxSizer(box, wx.VERTICAL)
+
+        row1 = wx.BoxSizer(wx.HORIZONTAL)
+        row1.Add(layout_label, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5)
+        row1.Add(layout_picker, 1, wx.ALL, 5)
+        row1.Add(key_distance_x, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        row1.Add(key_distance_y, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        sizer.Add(row1, 0, wx.EXPAND | wx.ALL, 5)
+
+        row2 = wx.BoxSizer(wx.HORIZONTAL)
+        row2.Add(key_annotation, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        row2.Add(key_position, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        sizer.Add(row2, 0, wx.EXPAND | wx.ALL, 5)
+
         self.__layout_picker = layout_picker
         self.__key_distance_x = key_distance_x.text
         self.__key_distance_y = key_distance_y.text
+        self.__key_annotation_format = key_annotation.text
+        self.__key_position = key_position
 
         return sizer
 
@@ -832,6 +862,16 @@ class KbplacerDialog(wx.Dialog):
     def get_template_path(self) -> str:
         return self.__template_picker.GetPath()
 
+    def get_key_position_info(
+        self,
+    ) -> ElementInfo:
+        return ElementInfo(
+            self.get_key_annotation_format(),
+            PositionOption.DEFAULT,
+            self.__key_position.GetValue(),
+            "",
+        )
+
     def get_diode_position_info(
         self,
     ) -> ElementInfo:
@@ -859,10 +899,10 @@ class KbplacerDialog(wx.Dialog):
     def get_window_state(self):
         window_state = {
             "switch_section": {
-                "annotation": self.get_key_annotation_format(),
                 "layout_path": self.get_layout_path(),
                 "x_distance": self.__key_distance_x.GetValue(),
                 "y_distance": self.__key_distance_y.GetValue(),
+                "element_info": self.get_key_position_info().to_dict(),
             },
             "switch_diodes_section": {
                 "enable": self.__place_diodes_checkbox.GetValue(),

@@ -262,7 +262,7 @@ def app():
     placer = KeyPlacer(board, args.key_distance)
     placer.run(
         layout_path,
-        "SW{}",
+        ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, ""),
         args.diode,
         args.route_switches_with_diodes,
         args.route_rows_and_columns,
