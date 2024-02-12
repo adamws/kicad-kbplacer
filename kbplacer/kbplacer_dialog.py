@@ -366,15 +366,9 @@ class ElementTemplateSelectionWidget(wx.Panel):
         self.SetSizer(sizer)
 
         self.__layout_picker = layout_picker
-        self.__picker_type = picker_type
 
     def GetValue(self) -> str:
-        path = self.__layout_picker.GetPath()
-        if self.__picker_type == TemplateType.LOAD and not path:
-            # can't be empty when running in `LOAD` mode
-            msg = "'Load from:' file picker can't be empty"
-            raise ValueError(msg)
-        return path
+        return self.__layout_picker.GetPath()
 
 
 class ElementPositionChoiceWidget(wx.Panel):

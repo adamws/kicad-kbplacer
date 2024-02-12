@@ -552,6 +552,9 @@ class KeyPlacer(BoardModifier):
         return pcbnew.IO_MGR.Load(pcbnew.IO_MGR.KICAD_SEXP, template_path)  # type: ignore
 
     def _normalize_template_path(self, template_path: str) -> str:
+        if not template_path:
+            msg = "Template path can't be empty"
+            raise ValueError(msg)
         if str(Path(template_path).name) == template_path:
             # if passed filename without directory,
             # assume that this refers to file in the directory of
