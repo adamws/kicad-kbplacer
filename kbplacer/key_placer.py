@@ -125,6 +125,8 @@ class KeyboardSwitchIterator:
     def __next__(self):
         key = next(self.__keys)
         if key:
+            if key.decal:
+                return self.__next__()
             return key, self.__get_footprint(key)
         else:
             raise StopIteration

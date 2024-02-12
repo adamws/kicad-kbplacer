@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 from typing import Tuple
 
@@ -349,6 +350,26 @@ def test_switch_iterator_explicit_annotation_mode(request):
     iterator = KeyboardSwitchIterator(keyboard, key_matrix)
     expected_keys = iter(keyboard.keys)
     expected_footprints = iter([f"SW{i}" for i in expected_order])
+    for key, footprint in iterator:
+        assert key == next(expected_keys)
+        assert footprint.GetReference() == next(expected_footprints)
+
+
+def test_switch_iterator_default_mode_ignore_decal(request):
+    board = get_board_for_2x2_example(request)
+    key_matrix = KeyMatrix(board, "SW{}", "D{}")
+    with open(get_2x2_layout_path(request), "r") as f:
+        layout = json.load(f)
+        # add some decal keys
+        for key in list(layout["keys"]):
+            k = copy.copy(key)
+            k["decal"] = True
+            layout["keys"].append(k)
+        keyboard = get_keyboard(layout)
+
+    iterator = KeyboardSwitchIterator(keyboard, key_matrix)
+    expected_keys = iter(keyboard.keys[0:4])
+    expected_footprints = iter(["SW1", "SW2", "SW3", "SW4"])
     for key, footprint in iterator:
         assert key == next(expected_keys)
         assert footprint.GetReference() == next(expected_footprints)
