@@ -391,8 +391,10 @@ if there is a collision, leaving elements unconnected.
 
 If first switch-diode pair is routed before plugin execution, as shown below, `kicad-kbplacer` instead of
 using it's built in routing algorithm, will copy user's track. This allow to circumvent plugin's router
-limitations. This is applicable only for `Relative` `Position` option. When `Save to` path defined,
-tracks will be stored in template. Then it can be re-used when using `Preset` `Position` option.
+limitations. This is applicable only for `Relative` `Position` option or when diode placement disabled
+(with `Allow autoplacement` unticked). The latter is suited mostly for routing boards generated with
+`ergogen`. When using `Relative Position` and `Save to` path defined, tracks will be stored in template.
+Then it can be re-used when using `Preset` `Position` option.
 
 Before | After
 --- | ---
