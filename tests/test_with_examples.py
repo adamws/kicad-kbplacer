@@ -15,10 +15,12 @@ from xmldiff import actions, main
 
 from .conftest import (
     KICAD_VERSION,
+    add_track,
     generate_drc,
     generate_render,
     get_footprints_dir,
     get_references_dir,
+    pointMM,
     request_to_references_dir,
     rotate,
 )
@@ -378,6 +380,54 @@ def test_placing_and_routing_separately(tmpdir, request, package_path, package_n
     generate_drc(tmpdir, pcb_path)
 
     references_dir = get_references_dir(request, example, "Tracks", "DefaultDiode")
+    assert_example(tmpdir, references_dir)
+
+
+def test_routing_with_template_without_diode_placement(
+    tmpdir, request, package_path, package_name
+):
+    example = "2x3-rotations-custom-diode-with-track"
+    layout_file = "kle.json"
+    prepare_project(request, tmpdir, example, layout_file)
+
+    pcb_path = f"{tmpdir}/keyboard-before.kicad_pcb"
+
+    # run without routing:
+    run_kbplacer_process(
+        False,
+        "D{} CUSTOM -5.197 4.503 90 BACK",
+        package_path,
+        package_name,
+        f"{tmpdir}/{layout_file}",
+        pcb_path,
+    )
+
+    # add expected tracks template
+    board = pcbnew.LoadBoard(pcb_path)
+    for track in board.GetTracks():
+        board.RemoveNative(track)
+    assert len(board.GetTracks()) == 0
+
+    add_track(board, pointMM(29.328, 37.928), pointMM(36.143, 37.928), pcbnew.B_Cu)
+    add_track(board, pointMM(36.143, 37.928), pointMM(37.065, 37.006), pcbnew.B_Cu)
+    add_track(board, pointMM(37.065, 37.006), pointMM(37.065, 29.445), pcbnew.B_Cu)
+
+    board.Save(pcb_path)
+
+    # run with routing, without layout and without diode placement, template should be applied
+    run_kbplacer_process(
+        True,
+        "D{} UNCHANGED",
+        package_path,
+        package_name,
+        None,
+        pcb_path,
+    )
+
+    generate_render(tmpdir, request)
+    generate_drc(tmpdir, pcb_path)
+
+    references_dir = get_references_dir(request, example, "Tracks", "DiodeOption2")
     assert_example(tmpdir, references_dir)
 
 

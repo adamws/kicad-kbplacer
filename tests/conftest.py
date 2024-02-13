@@ -282,6 +282,10 @@ def generate_drc(tmpdir, board_path: str) -> None:
         logger.debug(f.read())
 
 
+def pointMM(x, y) -> pcbnew.wxPoint:
+    return pcbnew.wxPoint(pcbnew.FromMM(x), pcbnew.FromMM(y))
+
+
 def add_switch_footprint(
     board, request, ref_count, footprint: str = "SW_Cherry_MX_PCB_1.00u"
 ) -> pcbnew.FOOTPRINT:

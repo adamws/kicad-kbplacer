@@ -9,6 +9,7 @@ from .conftest import (
     add_track,
     generate_render,
     get_footprints_dir,
+    pointMM,
     update_netinfo,
 )
 
@@ -51,10 +52,6 @@ def add_nets(board, netnames):
         net = pcbnew.NETINFO_ITEM(board, n, net_count + i)
         update_netinfo(board, net)
         board.Add(net)
-
-
-def pointMM(x, y):
-    return pcbnew.wxPoint(pcbnew.FromMM(x), pcbnew.FromMM(y))
 
 
 def __get_parameters():
