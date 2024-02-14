@@ -2,12 +2,10 @@ from __future__ import annotations
 
 import copy
 import itertools
-import json
 import logging
 import os
 import re
 from collections import defaultdict
-from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, cast
 
@@ -31,7 +29,7 @@ from .board_modifier import (
     set_side,
 )
 from .element_position import ElementInfo, ElementPosition, Point, PositionOption
-from .kle_serial import Keyboard, ViaKeyboard, get_keyboard
+from .kle_serial import Keyboard, MatrixAnnotatedKeyboard, get_keyboard_from_file
 
 logger = logging.getLogger(__name__)
 
@@ -75,15 +73,7 @@ class KeyMatrix:
 
 
 class KeyboardSwitchIterator:
-    ANNOTATION_LABEL = 10
-
-    class Type(str, Enum):
-        DEFAULT = "Default"
-        EXPLICIT_ANNOTATIONS = "Explicit Annotations"
-        VIA_ROW_KEY_LABELS = "VIA Labels"  # not supported yet
-
-        def __str__(self) -> str:
-            return self.value
+    EXPLICIT_ANNOTATION_LABEL = 10
 
     def __init__(
         self,
@@ -92,22 +82,14 @@ class KeyboardSwitchIterator:
     ) -> None:
         self.__keyboard = keyboard
         self.__key_matrix = key_matrix
-        self.__type = self.__get_iteration_type(keyboard)
+        self.__explicit_annotations = self.__check_explicit_annotations(keyboard)
 
-    def __get_iteration_type(self, keyboard: Keyboard) -> Type:
-        if isinstance(keyboard, ViaKeyboard):
-            return self.Type.VIA_ROW_KEY_LABELS
-        else:
-            number_of_explicit_annotations = sum(
-                str(k.get_label(self.ANNOTATION_LABEL)).isdigit() for k in keyboard.keys
-            )
-            if number_of_explicit_annotations == len(keyboard.keys):
-                return self.Type.EXPLICIT_ANNOTATIONS
-            else:
-                return self.Type.DEFAULT
-
-    def get_type(self) -> str:
-        return str(self.__type)
+    def __check_explicit_annotations(self, keyboard: Keyboard) -> bool:
+        number_of_explicit_annotations = sum(
+            str(k.get_label(self.EXPLICIT_ANNOTATION_LABEL)).isdigit()
+            for k in keyboard.keys
+        )
+        return number_of_explicit_annotations == len(keyboard.keys)
 
     def __iter__(self):
         self.__keys = iter(self.__keyboard.keys)
@@ -115,8 +97,10 @@ class KeyboardSwitchIterator:
         return self
 
     def __get_footprint(self, key) -> pcbnew.FOOTPRINT:
-        if self.__type == self.Type.EXPLICIT_ANNOTATIONS:
-            return self.__key_matrix.switch(int(key.labels[self.ANNOTATION_LABEL]))
+        if self.__explicit_annotations:
+            return self.__key_matrix.switch(
+                int(key.labels[self.EXPLICIT_ANNOTATION_LABEL])
+            )
         else:
             sw = self.__key_matrix.switch(self.__current_key)
             self.__current_key += 1
@@ -412,7 +396,6 @@ class KeyPlacer(BoardModifier):
         key_position: Optional[ElementPosition],
     ) -> None:
         key_iterator = KeyboardSwitchIterator(keyboard, key_matrix)
-        logger.info(f"Placing switches with '{key_iterator.get_type()}' iterator")
         for key, switch_footprint in key_iterator:
             reset_rotation(switch_footprint)
             if key_position:
@@ -681,10 +664,18 @@ class KeyPlacer(BoardModifier):
 
         # stage 2 - place elements
         if layout_path:
-            with open(layout_path, "r") as f:
-                layout = json.load(f)
-            logger.info(f"User layout: {layout}")
-            self.place_switches(get_keyboard(layout), key_matrix, key_info.position)
+            keyboard = get_keyboard_from_file(layout_path)
+            if not isinstance(keyboard, MatrixAnnotatedKeyboard):
+                # if not MatrixAnnotatedKeyboard already,
+                # check if it is possible to convert
+                try:
+                    keyboard = MatrixAnnotatedKeyboard(keyboard.meta, keyboard.keys)
+                    logger.info(
+                        "Detected layout convertable to matrix annotated keyboard"
+                    )
+                except:
+                    pass
+            self.place_switches(keyboard, key_matrix, key_info.position)
 
         logger.info(f"Diode info: {diode_infos}")
         if diode_info.position_option != PositionOption.UNCHANGED:

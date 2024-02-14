@@ -298,25 +298,46 @@ class Keyboard:
 
 
 @dataclass
-class ViaKeyboard(Keyboard):
-    alternative_keys: List[Key] = field(default_factory=list)
-
+class MatrixAnnotatedKeyboard(Keyboard):
     MATRIX_COORDINATES_LABEL = 0
     LAYOUT_OPTION_LABEL = 8
 
-    def __post_init__(self: ViaKeyboard) -> None:
+    alternative_keys: List[Key] = field(default_factory=list)
+
+    def __post_init__(self: MatrixAnnotatedKeyboard) -> None:
         for key in list(self.keys):
-            if self.is_alternative(key):
+            if not key.decal:
+                # check if required labels defined correctly
+                MatrixAnnotatedKeyboard.get_matrix_position(key)
+                MatrixAnnotatedKeyboard.get_layout_option(key)
+            if self.__is_alternative(key):
                 self.alternative_keys.append(copy.deepcopy(key))
                 self.keys.remove(key)
 
-    def is_alternative(self, key: Key) -> bool:
+    def __is_alternative(self, key: Key) -> bool:
         if label := key.get_label(self.LAYOUT_OPTION_LABEL):
             # check if not default layout:
             if label.split(",")[1] != "0":
                 # alternative layout key
                 return True
         return False
+
+    @staticmethod
+    def get_matrix_position(key: Key) -> Tuple[int, int]:
+        try:
+            label = key.get_label(MatrixAnnotatedKeyboard.MATRIX_COORDINATES_LABEL)
+            return tuple(map(int, str(label).split(",")))
+        except Exception as e:
+            msg = "Matrix coordinates label missing or invalid"
+            raise RuntimeError(msg) from e
+
+    @staticmethod
+    def get_layout_option(key: Key) -> int:
+        if layout_option_label := key.get_label(
+            MatrixAnnotatedKeyboard.LAYOUT_OPTION_LABEL
+        ):
+            return int(layout_option_label.split(",")[1])
+        return 0
 
 
 def reorder_items(items: List[Any], align: int) -> List[Any]:
@@ -371,9 +392,9 @@ def cleanup_key(key: Key):
         setattr(key, attribute_name, attribute)
 
 
-def parse_via(layout) -> ViaKeyboard:
+def parse_via(layout) -> MatrixAnnotatedKeyboard:
     keyboard = parse_kle(layout["layouts"]["keymap"])
-    return ViaKeyboard(meta=keyboard.meta, keys=keyboard.keys)
+    return MatrixAnnotatedKeyboard(meta=keyboard.meta, keys=keyboard.keys)
 
 
 def parse_kle(layout) -> Keyboard:
@@ -633,6 +654,13 @@ def get_keyboard(layout: dict) -> Keyboard:
         pass
     msg = "Unable to get keyboard layout"
     raise RuntimeError(msg)
+
+
+def get_keyboard_from_file(layout_path: str) -> Keyboard:
+    with open(layout_path, "r") as f:
+        layout = json.load(f)
+    logger.info(f"User layout: {layout}")
+    return get_keyboard(layout)
 
 
 if __name__ == "__main__":

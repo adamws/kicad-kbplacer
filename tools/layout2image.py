@@ -12,7 +12,7 @@ from typing import Iterator, Union
 import drawsvg as dw
 import yaml
 
-from kbplacer.kle_serial import Key, Keyboard, ViaKeyboard, get_keyboard
+from kbplacer.kle_serial import Key, Keyboard, MatrixAnnotatedKeyboard, get_keyboard
 
 ORIGIN_X = 4
 ORIGIN_Y = 4
@@ -156,7 +156,7 @@ def create_images(keyboard: Union[str, Keyboard], output_path):
         _keyboard: Keyboard = keyboard
 
     def _get_iterator():
-        if isinstance(_keyboard, ViaKeyboard):
+        if isinstance(_keyboard, MatrixAnnotatedKeyboard):
             return itertools.chain(_keyboard.keys, _keyboard.alternative_keys)
         else:
             return iter(_keyboard.keys)

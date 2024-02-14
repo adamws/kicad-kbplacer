@@ -8,7 +8,7 @@ from typing import Type, Union
 import pcbnew
 
 from .board_modifier import KICAD_VERSION
-from .kle_serial import Keyboard, get_keyboard
+from .kle_serial import Keyboard, MatrixAnnotatedKeyboard, get_keyboard
 
 logger = logging.getLogger(__name__)
 
@@ -74,13 +74,26 @@ class BoardBuilder:
             self.nets[netname] = net
         return net
 
-    def create_board(self, keyboard: Union[str, Keyboard]) -> pcbnew.BOARD:
+    def create_board(
+        self, keyboard: Union[str, MatrixAnnotatedKeyboard]
+    ) -> pcbnew.BOARD:
         if isinstance(keyboard, str):
             with open(keyboard, "r") as f:
                 layout = json.load(f)
-                _keyboard: Keyboard = get_keyboard(layout)
+                tmp: Keyboard = get_keyboard(layout)
+                if not isinstance(tmp, MatrixAnnotatedKeyboard):
+                    try:
+                        _keyboard = MatrixAnnotatedKeyboard(tmp.meta, tmp.keys)
+                    except Exception as e:
+                        msg = (
+                            f"Layout from {keyboard} is not convertable to "
+                            "matrix annotated keyboard which is required for board create"
+                        )
+                        raise RuntimeError(msg) from e
+                else:
+                    _keyboard = tmp
         else:
-            _keyboard: Keyboard = keyboard
+            _keyboard: MatrixAnnotatedKeyboard = keyboard
 
         current_ref = 1
 

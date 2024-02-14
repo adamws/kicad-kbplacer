@@ -372,7 +372,7 @@ def test_switch_iterator_explicit_annotation_mode(request):
         keyboard = get_keyboard(layout)
     expected_order = ["3", "1", "4", "2"]
     for i, k in enumerate(keyboard.keys):
-        k.set_label(KeyboardSwitchIterator.ANNOTATION_LABEL, expected_order[i])
+        k.set_label(KeyboardSwitchIterator.EXPLICIT_ANNOTATION_LABEL, expected_order[i])
     iterator = KeyboardSwitchIterator(keyboard, key_matrix)
     expected_keys = iter(keyboard.keys)
     expected_footprints = iter([f"SW{i}" for i in expected_order])
