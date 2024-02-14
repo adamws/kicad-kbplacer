@@ -236,10 +236,10 @@ def add_2x2_nets(board):
     net_count = board.GetNetCount()
     for i, n in enumerate(
         [
+            "COL0",
             "COL1",
-            "COL2",
+            "ROW0",
             "ROW1",
-            "ROW2",
             "Net-D1-Pad2",
             "Net-D2-Pad2",
             "Net-D3-Pad2",
@@ -257,10 +257,10 @@ def get_board_for_2x2_example(request):
     netcodes_map = add_2x2_nets(board)
     for i in range(1, 5):
         switch = add_switch_footprint(board, request, i)
-        switch.FindPadByNumber("1").SetNet(netcodes_map[f"COL{i % 2 + 1}"])
+        switch.FindPadByNumber("1").SetNet(netcodes_map[f"COL{(i - 1) & 0x01}"])
         switch.FindPadByNumber("2").SetNet(netcodes_map[f"Net-D{i}-Pad2"])
         diode = add_diode_footprint(board, request, i)
-        diode.FindPadByNumber("1").SetNet(netcodes_map[f"ROW{i // 3 + 1}"])
+        diode.FindPadByNumber("1").SetNet(netcodes_map[f"ROW{i // 3}"])
         diode.FindPadByNumber("2").SetNet(netcodes_map[f"Net-D{i}-Pad2"])
     return board
 

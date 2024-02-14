@@ -151,7 +151,7 @@ def __get_parameters():
     examples = ["2x2", "3x2-sizes", "2x3-rotations", "1x4-rotations-90-step"]
     route_options = {"NoTracks": False, "Tracks": True}
     diode_options = {"DefaultDiode": None, "DiodeOption1": "D{} CUSTOM 0 4.5 0 BACK"}
-    layout_options = {"RAW": "kle.json", "INTERNAL": "kle-internal.json"}
+    layout_options = {"RAW": "kle.json", "RAW_ANNOTATED": "kle-annotated.json"}
     test_params = []
     for example in examples:
         for route_option_name, route_option in route_options.items():
@@ -278,22 +278,71 @@ def test_with_examples(
         assert t.GetNetCode() != 0
 
 
-def test_with_examples_offset_diode_annotations(
+def test_with_examples_offset_diode_references(
     tmpdir,
     request,
     package_path,
     package_name,
 ) -> None:
     example = "2x3-rotations"
-    layout_option = "kle.json"
+    layout_option = "kle-annotated.json"
     prepare_project(request, tmpdir, example, layout_option)
 
     pcb_path = f"{tmpdir}/keyboard-before.kicad_pcb"
     board = pcbnew.LoadBoard(pcb_path)
-    # diode annotations no longer must match 1-to-1 with key annotations
+    # diode references no longer must match 1-to-1 with key annotations
+    # the diode-switch associated is inferred from netlists
     for i, f in enumerate(board.GetFootprints()):
         if f.GetReference().startswith("D"):
             f.SetReference(f"D{10 + i}")
+    pcbnew.SaveBoard(pcb_path, board)
+
+    run_kbplacer_process(
+        True,
+        None,
+        package_path,
+        package_name,
+        f"{tmpdir}/{layout_option}",
+        pcb_path,
+    )
+
+    generate_render(tmpdir, request)
+    generate_drc(tmpdir, pcb_path)
+
+    references_dir = get_references_dir(request, example, "Tracks", "DefaultDiode")
+    assert_example(tmpdir, references_dir)
+    for t in pcbnew.LoadBoard(pcb_path).GetTracks():
+        assert t.GetNetCode() != 0
+
+
+def test_with_examples_annotated_layout_shuffled_references(
+    tmpdir,
+    request,
+    package_path,
+    package_name,
+) -> None:
+    example = "2x3-rotations"
+    layout_option = "kle-annotated.json"
+    prepare_project(request, tmpdir, example, layout_option)
+
+    pcb_path = f"{tmpdir}/keyboard-before.kicad_pcb"
+    board = pcbnew.LoadBoard(pcb_path)
+
+    # switches references no longer must match kle order if kle
+    # file has row,column annotation labels
+    def _swap_references(ref1, ref2) -> None:
+        f1 = board.FindFootprintByReference(ref1)
+        f2 = board.FindFootprintByReference(ref2)
+        f1.SetReference("temp")
+        f2.SetReference(ref1)
+        f1.SetReference(ref2)
+
+    _swap_references("SW1", "SW5")
+    _swap_references("SW2", "SW3")
+
+    # remember to modify stabilizer reference number which must match key
+    board.FindFootprintByReference("ST3").SetReference("ST2")
+
     pcbnew.SaveBoard(pcb_path, board)
 
     run_kbplacer_process(
@@ -506,7 +555,7 @@ def test_placing_and_routing_when_reference_pair_rotated(
         assert_example(tmpdir, references_dir)
 
 
-@pytest.mark.parametrize("layout_file", ["kle.json", "via.json"])
+@pytest.mark.parametrize("layout_file", ["kle-annotated.json", "via.json"])
 def test_board_creation(tmpdir, request, package_path, package_name, layout_file):
     example = "2x2"
 

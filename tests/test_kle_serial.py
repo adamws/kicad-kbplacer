@@ -210,7 +210,9 @@ def __get_parameters():
     examples = ["2x2", "3x2-sizes", "2x3-rotations", "1x4-rotations-90-step"]
     for e in examples:
         param = pytest.param(
-            f"../examples/{e}/kle.json", f"../examples/{e}/kle-internal.json", id=e
+            f"../examples/{e}/kle-annotated.json",
+            f"../examples/{e}/kle-internal.json",
+            id=e,
         )
         test_params.append(param)
 
@@ -280,9 +282,9 @@ class TestKleSerialCli:
     def example_isolation(self, request, tmpdir, example) -> Tuple[str, str]:
         test_dir = request.fspath.dirname
         source_dir = f"{test_dir}/../examples/{example}"
-        shutil.copy(f"{source_dir}/kle.json", tmpdir)
+        shutil.copy(f"{source_dir}/kle-annotated.json", tmpdir)
         shutil.copy(f"{source_dir}/kle-internal.json", tmpdir)
-        return f"{tmpdir}/kle.json", f"{tmpdir}/kle-internal.json"
+        return f"{tmpdir}/kle-annotated.json", f"{tmpdir}/kle-internal.json"
 
     @pytest.mark.parametrize(
         "example", ["2x2", "3x2-sizes", "2x3-rotations", "1x4-rotations-90-step"]

@@ -254,7 +254,10 @@ def app():
             switch_footprint=args.switch_footprint,
             diode_footprint=args.diode_footprint,
         )
-        board = builder.create_board(layout_path)
+        board = builder.create_board(
+            layout_path,
+            ignore_alternative_layouts=True,  # not supported yet
+        )
         board.Save(board_path)
 
     board = pcbnew.LoadBoard(board_path)

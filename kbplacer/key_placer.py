@@ -7,7 +7,7 @@ import os
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, cast
+from typing import Dict, FrozenSet, Iterable, List, Optional, Set, Tuple, cast
 
 import pcbnew
 
@@ -39,37 +39,128 @@ class KeyMatrix:
         self.key_format = key_format
         self.diode_format = diode_format
 
-        self.switches: Dict[str, pcbnew.FOOTPRINT] = {}
-        self.switches_by_number: Dict[int, pcbnew.FOOTPRINT] = {}
-        self.diodes: Dict[str, List[pcbnew.FOOTPRINT]] = defaultdict(list)
+        self._row_format = ""
+        self._column_format = ""
+
+        self._switches: Dict[str, pcbnew.FOOTPRINT] = {}
+        self._switches_by_number: Dict[int, pcbnew.FOOTPRINT] = {}
+        self._switches_references_by_net: Dict[FrozenSet[str], List[str]] = defaultdict(
+            list
+        )
+        self._diodes_by_switch: Dict[str, List[pcbnew.FOOTPRINT]] = defaultdict(list)
+
+        diodes: List[pcbnew.FOOTPRINT] = []
+
+        switches_nets: Dict[str, Set[str]] = defaultdict(set)
+        all_switches_nets: Set[str] = set()
+        diodes_nets_by_reference: Dict[str, Set[str]] = defaultdict(set)
+        diodes_unique_nets: Dict[str, Set[str]] = {}
+
+        key_pattern = None
+        diode_pattern = None
+
         if key_format:
             key_pattern = re.compile(key_format.format("((\\d)+)"))
-            for f in board.GetFootprints():
-                reference = f.GetReference()
-                if match := re.match(key_pattern, reference):
-                    if reference in self.switches:
-                        msg = "Duplicate switch reference, footprint reference must be unique"
-                        raise Exception(msg)
-                    self.switches[reference] = f
-                    self.switches_by_number[int(match.group(1))] = f
-
-        # each switch can have 0 or more diodes
         if diode_format:
             diode_pattern = re.compile(diode_format.format("((\\d)+)"))
-            for f in board.GetFootprints():
-                if re.match(diode_pattern, f.GetReference()):
-                    for switch_reference, key in self.switches.items():
-                        if get_common_nets(key, f):
-                            self.diodes[switch_reference].append(f)
 
-    def __str__(self) -> str:
-        mapping: Dict[str, str] = {}
-        for reference, diodes in self.diodes.items():
-            mapping[reference] = ", ".join([d.GetReference() for d in diodes])
-        return "KeyMatrix: " + "; ".join(f"{k}-{v}" for k, v in mapping.items())
+        def _get_nets(f: pcbnew.FOOTPRINT) -> List[str]:
+            return [p.GetNetname() for p in f.Pads() if p.GetNetname() != ""]
 
-    def switch(self, index: int) -> pcbnew.FOOTPRINT:
-        return self.switches[self.key_format.format(index)]
+        for f in board.GetFootprints():
+            reference = f.GetReference()
+            if key_pattern and (match := re.match(key_pattern, reference)):
+                self._switches[reference] = f
+                self._switches_by_number[int(match.group(1))] = f
+                nets = _get_nets(f)
+                switches_nets[reference].update(nets)
+                all_switches_nets.update(nets)
+            elif diode_pattern and re.match(diode_pattern, reference):
+                diodes.append(f)
+                diodes_nets_by_reference[reference].update(_get_nets(f))
+
+        # reduce diode_nets to contain only diode-unique nets (i.e. not common with any switch)
+        for k, v in diodes_nets_by_reference.items():
+            diodes_unique_nets[k] = v.difference(all_switches_nets)
+
+        # each switch can have 0 or more diodes
+        for f in diodes:
+            reference = f.GetReference()
+            for switch_reference, key in self._switches.items():
+                diodes_nets = diodes_nets_by_reference[reference]
+                switch_nets = [p.GetNetname() for p in key.Pads()]
+                if common_nets := list(diodes_nets.intersection(switch_nets)):
+                    self._diodes_by_switch[switch_reference].append(f)
+                    # remove common switch-diode net and add diode-unique net instead,
+                    # this way we should get key-matrix nets:
+                    switches_nets[switch_reference].discard(*common_nets)
+                    switches_nets[switch_reference].update(
+                        diodes_unique_nets[reference]
+                    )
+
+        for k, v in switches_nets.items():
+            if len(list(v)) == 2:
+                self._switches_references_by_net[frozenset(v)].append(k)
+            else:
+                logger.error(
+                    "Unexpected switch net position detected, "
+                    "each switch should have two unique nets unambiguously defining "
+                    "position in key matrix"
+                )
+        logger.debug(f"Switches by nets: {self._switches_references_by_net}")
+        diodes_by_switch = {
+            k: [f.GetReference() for f in v] for k, v in self._diodes_by_switch.items()
+        }
+        logger.debug(f"Diodes by switch: {diodes_by_switch}")
+
+    def first_switch_number(self) -> int:
+        return min(self._switches_by_number.keys())
+
+    def switch_by_number(self, number: int) -> pcbnew.FOOTPRINT:
+        return self._switches_by_number[number]
+
+    def switches_by_number(self) -> Iterable[Tuple[int, pcbnew.FOOTPRINT]]:
+        return self._switches_by_number.items()
+
+    def switch_by_reference(self, reference: str) -> pcbnew.FOOTPRINT:
+        return self._switches[reference]
+
+    def switches_by_reference(self) -> Iterable[Tuple[str, pcbnew.FOOTPRINT]]:
+        return self._switches.items()
+
+    def __guess_format(self, guesses: List[str]) -> str:
+        for guess in guesses:
+            pattern = re.compile(guess.format("(\\d)+"))
+            for net in list(self.matrix_nets()):
+                if re.match(pattern, net):
+                    return guess
+        # out of luck, getting switches by row,column annotation won't work
+        return ""
+
+    @property
+    def row_format(self) -> str:
+        if not self._row_format:
+            self._row_format = self.__guess_format(["ROW{}", "R{}"])
+        return self._row_format
+
+    @property
+    def column_format(self) -> str:
+        if not self._column_format:
+            self._column_format = self.__guess_format(["COLUMN{}", "COL{}", "C{}"])
+        return self._column_format
+
+    def switches_references_by_coordinates(self, row: int, column: int) -> List[str]:
+        nets = (self.row_format.format(row), self.column_format.format(column))
+        return self._switches_references_by_net[frozenset(nets)]
+
+    def diodes_by_switch_reference(self, reference: str) -> List[pcbnew.FOOTPRINT]:
+        return self._diodes_by_switch[reference]
+
+    def any_switch_with_multiple_diodes(self) -> bool:
+        return any(len(d) > 1 for d in self._diodes_by_switch.values())
+
+    def matrix_nets(self) -> Set[str]:
+        return set().union(*self._switches_references_by_net.keys())
 
 
 class KeyboardSwitchIterator:
@@ -80,9 +171,9 @@ class KeyboardSwitchIterator:
         keyboard: Keyboard,
         key_matrix: KeyMatrix,
     ) -> None:
-        self.__keyboard = keyboard
-        self.__key_matrix = key_matrix
-        self.__explicit_annotations = self.__check_explicit_annotations(keyboard)
+        self._keyboard = keyboard
+        self._key_matrix = key_matrix
+        self._explicit_annotations = self.__check_explicit_annotations(keyboard)
 
     def __check_explicit_annotations(self, keyboard: Keyboard) -> bool:
         number_of_explicit_annotations = sum(
@@ -92,28 +183,87 @@ class KeyboardSwitchIterator:
         return number_of_explicit_annotations == len(keyboard.keys)
 
     def __iter__(self):
-        self.__keys = iter(self.__keyboard.keys)
-        self.__current_key = 1
+        self._keys = iter(self._keyboard.keys)
+        self._current_key = 1
         return self
 
     def __get_footprint(self, key) -> pcbnew.FOOTPRINT:
-        if self.__explicit_annotations:
-            return self.__key_matrix.switch(
+        if self._explicit_annotations:
+            return self._key_matrix.switch_by_number(
                 int(key.labels[self.EXPLICIT_ANNOTATION_LABEL])
             )
         else:
-            sw = self.__key_matrix.switch(self.__current_key)
-            self.__current_key += 1
+            sw = self._key_matrix.switch_by_number(self._current_key)
+            self._current_key += 1
             return sw
 
     def __next__(self):
-        key = next(self.__keys)
+        key = next(self._keys)
         if key:
             if key.decal:
                 return self.__next__()
             return key, self.__get_footprint(key)
         else:
             raise StopIteration
+
+
+class MatrixAnnotatedKeyboardSwitchIterator:
+    def __init__(
+        self,
+        keyboard: MatrixAnnotatedKeyboard,
+        key_matrix: KeyMatrix,
+        ignore_alternative_layouts=False,
+    ) -> None:
+        self._keyboard = keyboard
+        self._key_matrix = key_matrix
+        self._ignore_alternative_layouts = ignore_alternative_layouts
+
+    def __iter__(self):
+        self._keys = self._keyboard.key_iterator(self._ignore_alternative_layouts)
+        return self
+
+    def __get_footprint(self, key) -> Optional[pcbnew.FOOTPRINT]:
+        matrix_coordinates = MatrixAnnotatedKeyboard.get_matrix_position(key)
+        switches = self._key_matrix.switches_references_by_coordinates(
+            *matrix_coordinates
+        )
+        switches = sorted(switches)
+        logger.debug(f"Got {switches} for {matrix_coordinates} position")
+        # assume thar alternative keys have same annotation with
+        # some sort of suffix so after sorting
+        # the option index would get us correct footprint
+        option = MatrixAnnotatedKeyboard.get_layout_option(key)
+        try:
+            if len(switches) > 1:
+                switch = switches[option]
+            else:
+                switch = switches[0]
+            return self._key_matrix.switch_by_reference(switch)
+        except Exception:
+            logger.warning(f"Could not locate footprint using layout option {option}")
+            return None
+
+    def __next__(self):
+        key = next(self._keys)
+        if key:
+            if key.decal:
+                return self.__next__()
+            if not (footprint := self.__get_footprint(key)):
+                return self.__next__()
+            return key, footprint
+        else:
+            raise StopIteration
+
+
+def get_key_iterator(
+    keyboard: Keyboard,
+    key_matrix: KeyMatrix,
+):
+    if isinstance(keyboard, MatrixAnnotatedKeyboard):
+        return MatrixAnnotatedKeyboardSwitchIterator(
+            keyboard, key_matrix, ignore_alternative_layouts=True
+        )
+    return KeyboardSwitchIterator(keyboard, key_matrix)
 
 
 class KeyPlacer(BoardModifier):
@@ -395,7 +545,7 @@ class KeyPlacer(BoardModifier):
         key_matrix: KeyMatrix,
         key_position: Optional[ElementPosition],
     ) -> None:
-        key_iterator = KeyboardSwitchIterator(keyboard, key_matrix)
+        key_iterator = get_key_iterator(keyboard, key_matrix)
         for key, switch_footprint in key_iterator:
             reset_rotation(switch_footprint)
             if key_position:
@@ -452,11 +602,11 @@ class KeyPlacer(BoardModifier):
         key_matrix: KeyMatrix,
     ) -> None:
         if diode_infos and diode_infos[0].position:
-            for reference, footprints in key_matrix.diodes.items():
-                switch_footprint = key_matrix.switches[reference]
+            for reference, switch_footprint in key_matrix.switches_by_reference():
+                diodes = key_matrix.diodes_by_switch_reference(reference)
                 switch_position = get_position(switch_footprint)
                 switch_orientation = get_orientation(switch_footprint)
-                for diode, info in zip(footprints, diode_infos):
+                for diode, info in zip(diodes, diode_infos):
                     if info.position:
                         self.place_element(
                             diode,
@@ -470,7 +620,7 @@ class KeyPlacer(BoardModifier):
         elements: List[ElementInfo],
         key_matrix: KeyMatrix,
     ) -> None:
-        for number, switch_footprint in key_matrix.switches_by_number.items():
+        for number, switch_footprint in key_matrix.switches_by_number():
             switch_position = get_position(switch_footprint)
             switch_orientation = get_orientation(switch_footprint)
             for element_info in elements:
@@ -492,44 +642,37 @@ class KeyPlacer(BoardModifier):
         template_connection: List[pcbnew.PCB_TRACK],
     ) -> None:
         if template_connection:
-            for footprint in key_matrix.switches.values():
-                angle = -1 * footprint.GetOrientationDegrees()
+            for _, switch_footprint in key_matrix.switches_by_reference():
+                angle = -1 * switch_footprint.GetOrientationDegrees()
                 self.apply_switch_connection_template(
-                    footprint, angle, template_connection
+                    switch_footprint, angle, template_connection
                 )
             # when done, delete all template items
             for item in template_connection:
                 self.board.RemoveNative(item)
         else:
-            for reference, footprints in key_matrix.diodes.items():
-                switch_footprint = key_matrix.switches[reference]
-                self.route_switch_with_diode(switch_footprint, footprints)
+            for reference, switch_footprint in key_matrix.switches_by_reference():
+                diodes = key_matrix.diodes_by_switch_reference(reference)
+                self.route_switch_with_diode(switch_footprint, diodes)
 
-    def route_rows_and_columns(self) -> None:
-        column_pads = {}
-        row_pads = {}
+    def route_rows_and_columns(self, key_matrix: KeyMatrix) -> None:
+        matrix_pads: Dict[str, List[pcbnew.PAD]] = defaultdict(list)
 
         sorted_pads = pcbnew.PADS_VEC()
         self.board.GetSortedPadListByXthenYCoord(sorted_pads)
+
+        matrix_net_names = key_matrix.matrix_nets()
         for pad in sorted_pads:
             net_name = pad.GetNetname()
-            if match := re.match(r"^COL(\d+)$", net_name, re.IGNORECASE):
-                column_number = match.groups()[0]
-                column_pads.setdefault(column_number, []).append(pad)
-            elif match := re.match(r"^ROW(\d+)$", net_name, re.IGNORECASE):
-                row_number = match.groups()[0]
-                row_pads.setdefault(row_number, []).append(pad)
+            if net_name in matrix_net_names:
+                matrix_pads[net_name].append(pad)
 
         # very naive routing approach, will fail in some scenarios:
-        for pads in column_pads.values():
+        for pads in matrix_pads.values():
             for pad1, pad2 in zip(pads, pads[1:]):
                 if pad1.GetParentAsString() == pad2.GetParentAsString():
                     # do not connect pads of the same footprint
                     continue
-                self.route(pad1, pad2)
-
-        for pads in row_pads.values():
-            for pad1, pad2 in zip(pads, pads[1:]):
                 self.route(pad1, pad2)
 
     def load_template(self, template_path: str) -> pcbnew.BOARD:
@@ -585,14 +728,13 @@ class KeyPlacer(BoardModifier):
             )
             if (
                 diode_info.position_option == PositionOption.PRESET
-                and len(template_matrix.switches) != 1
+                and len(template_matrix._switches) != 1
             ):
                 msg = f"Template file '{diode_info.template_path}' must have exactly one switch"
                 raise RuntimeError(msg)
-            first_switch = min(template_matrix.switches_by_number.keys())
-            switch_reference = template_matrix.key_format.format(first_switch)
-            switch = template_matrix.switches[switch_reference]
-            diodes = template_matrix.diodes[switch_reference]
+            first_switch = template_matrix.first_switch_number()
+            switch = template_matrix.switch_by_number(first_switch)
+            diodes = template_matrix.diodes_by_switch_reference(switch.GetReference())
             for diode in diodes:
                 temp_info = copy.copy(diode_info)
                 temp_info.position = self.get_current_relative_element_position(
@@ -639,13 +781,14 @@ class KeyPlacer(BoardModifier):
         key_matrix = KeyMatrix(
             self.board, key_info.annotation_format, diode_info.annotation_format
         )
-        logger.info(f"Keyboard matrix: {key_matrix}")
-        if any(
-            len(diodes) > 1 for diodes in key_matrix.diodes.values()
-        ) and diode_info.position_option in [
-            PositionOption.DEFAULT,
-            PositionOption.CUSTOM,
-        ]:
+        if (
+            key_matrix.any_switch_with_multiple_diodes()
+            and diode_info.position_option
+            in [
+                PositionOption.DEFAULT,
+                PositionOption.CUSTOM,
+            ]
+        ):
             msg = (
                 f"The '{diode_info.position_option}' position not supported for "
                 f"multiple diodes per switch layouts, use '{PositionOption.RELATIVE}' "
@@ -689,7 +832,7 @@ class KeyPlacer(BoardModifier):
             self.route_switches_with_diodes(key_matrix, template_connection)
 
         if route_rows_and_columns:
-            self.route_rows_and_columns()
+            self.route_rows_and_columns(key_matrix)
 
         if route_switches_with_diodes or route_rows_and_columns:
             self.remove_dangling_tracks()

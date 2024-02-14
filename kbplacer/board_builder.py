@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import json
 import logging
+from collections import defaultdict
 from dataclasses import dataclass
-from typing import Type, Union
+from string import ascii_lowercase
+from typing import Dict, List, Tuple, Type, Union
 
 import pcbnew
 
@@ -50,14 +52,14 @@ class BoardBuilder:
         self.board.Add(footprint)
         return footprint
 
-    def add_switch_footprint(self, ref_count: int) -> pcbnew.FOOTPRINT:
+    def add_switch_footprint(self, ref: str) -> pcbnew.FOOTPRINT:
         f = self.switch_footprint.load()
-        f.SetReference(f"SW{ref_count}")
+        f.SetReference(ref)
         return self.add_footprint(f)
 
-    def add_diode_footprint(self, ref_count: int) -> pcbnew.FOOTPRINT:
+    def add_diode_footprint(self, ref: str) -> pcbnew.FOOTPRINT:
         f = self.diode_footprint.load()
-        f.SetReference(f"D{ref_count}")
+        f.SetReference(ref)
         return self.add_footprint(f)
 
     def add_net(self, netname: str) -> pcbnew.NETINFO_ITEM:
@@ -75,7 +77,9 @@ class BoardBuilder:
         return net
 
     def create_board(
-        self, keyboard: Union[str, MatrixAnnotatedKeyboard]
+        self,
+        keyboard: Union[str, MatrixAnnotatedKeyboard],
+        ignore_alternative_layouts=False,
     ) -> pcbnew.BOARD:
         if isinstance(keyboard, str):
             with open(keyboard, "r") as f:
@@ -96,25 +100,44 @@ class BoardBuilder:
             _keyboard: MatrixAnnotatedKeyboard = keyboard
 
         current_ref = 1
+        items: List[Tuple[int, int]] = []
+        key_iterator = _keyboard.key_iterator(ignore_alternative_layouts)
 
-        for key in _keyboard.keys:
+        for key in key_iterator:
             if key.decal:
                 continue
-            row, column = key.labels[0].split(",")
+            items.append(MatrixAnnotatedKeyboard.get_matrix_position(key))
 
-            switch = self.add_switch_footprint(current_ref)
-            diode = self.add_diode_footprint(current_ref)
+        progress: Dict[Tuple[int, int], List[pcbnew.FOOTPRINT]] = defaultdict(list)
+        for row, column in sorted(items):
+            position = (row, column)
+            if position not in progress:
+                switch = self.add_switch_footprint(f"SW{current_ref}")
+                diode = self.add_diode_footprint(f"D{current_ref}")
 
-            net = self.add_net(f"COL{column}")
-            switch.FindPadByNumber("1").SetNet(net)
+                net = self.add_net(f"COL{column}")
+                switch.FindPadByNumber("1").SetNet(net)
 
-            net = self.add_net(f"ROW{row}")
-            diode.FindPadByNumber("1").SetNet(net)
+                net = self.add_net(f"ROW{row}")
+                diode.FindPadByNumber("1").SetNet(net)
 
-            net = self.add_net(f"Net-(D{current_ref})-Pad2")
-            switch.FindPadByNumber("2").SetNet(net)
-            diode.FindPadByNumber("2").SetNet(net)
+                net = self.add_net(f"Net-(D{current_ref})-Pad2")
+                switch.FindPadByNumber("2").SetNet(net)
+                diode.FindPadByNumber("2").SetNet(net)
 
-            current_ref += 1
+                current_ref += 1
+                progress[position].append(switch)
+            else:
+                # this must be alternative layout key, do not need to create nets
+                # or add diode for it. Just add duplicate and add suffix to reference
+                switches = progress[position]
+                default_switch = switches[0]
+
+                suffix = ascii_lowercase[len(switches) - 1]
+                switch = pcbnew.Cast_to_FOOTPRINT(default_switch.Duplicate())
+                switch.SetReference(default_switch.GetReference() + suffix)
+                self.add_footprint(switch)
+
+                progress[position].append(switch)
 
         return self.board

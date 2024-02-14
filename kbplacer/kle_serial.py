@@ -7,7 +7,8 @@ import logging
 import pprint
 import sys
 from dataclasses import asdict, dataclass, field, fields
-from typing import Any, List, Optional, Tuple, Type, Union
+from itertools import chain
+from typing import Any, Iterator, List, Optional, Tuple, Type, Union
 
 logger = logging.getLogger(__name__)
 
@@ -321,6 +322,12 @@ class MatrixAnnotatedKeyboard(Keyboard):
                 # alternative layout key
                 return True
         return False
+
+    def key_iterator(self, ignore_alternative: bool) -> Iterator[Key]:
+        if ignore_alternative:
+            return iter(self.keys)
+        else:
+            return chain(self.keys, self.alternative_keys)
 
     @staticmethod
     def get_matrix_position(key: Key) -> Tuple[int, int]:
