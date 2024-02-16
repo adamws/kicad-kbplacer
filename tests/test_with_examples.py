@@ -3,9 +3,11 @@ from __future__ import annotations
 import difflib
 import glob
 import logging
+import os
 import shutil
 import subprocess
 import xml.etree.ElementTree as ET
+from contextlib import contextmanager
 from pathlib import Path
 from typing import cast
 
@@ -21,52 +23,56 @@ from .conftest import (
     get_footprints_dir,
     get_references_dir,
     pointMM,
-    request_to_references_dir,
     rotate,
 )
 
 logger = logging.getLogger(__name__)
 
 
-def run_kbplacer_process(
-    route,
-    diode_position,
+@pytest.fixture
+def kbplacer_process(
     package_path,
     package_name,
-    layout_file,
-    pcb_path,
-    flags: list[str] = [],
-    args: dict[str, str] = {},
 ):
-    kbplacer_args = [
-        "python3",
-        "-m",
-        package_name,
-        "-b",
+    def _process(
+        route,
+        diode_position,
+        layout_file,
         pcb_path,
-    ]
-    if layout_file:
-        kbplacer_args.append("-l")
-        kbplacer_args.append(layout_file)
-    if route:
-        kbplacer_args.append("--route-switches-with-diodes")
-        kbplacer_args.append("--route-rows-and-columns")
-    if diode_position:
-        kbplacer_args.append("--diode")
-        kbplacer_args.append(diode_position)
-    for v in flags:
-        kbplacer_args.append(v)
-    for k, v in args.items():
-        kbplacer_args.append(k)
-        kbplacer_args.append(v)
+        flags: list[str] = [],
+        args: dict[str, str] = {},
+    ):
+        kbplacer_args = [
+            "python3",
+            "-m",
+            package_name,
+            "-b",
+            pcb_path,
+        ]
+        if layout_file:
+            kbplacer_args.append("-l")
+            kbplacer_args.append(layout_file)
+        if route:
+            kbplacer_args.append("--route-switches-with-diodes")
+            kbplacer_args.append("--route-rows-and-columns")
+        if diode_position:
+            kbplacer_args.append("--diode")
+            kbplacer_args.append(diode_position)
+        for v in flags:
+            kbplacer_args.append(v)
+        for k, v in args.items():
+            kbplacer_args.append(k)
+            kbplacer_args.append(v)
 
-    p = subprocess.Popen(
-        kbplacer_args,
-        cwd=package_path,
-    )
-    p.communicate()
-    if p.returncode != 0:
-        raise Exception("Switch placement failed")
+        p = subprocess.Popen(
+            kbplacer_args,
+            cwd=package_path,
+        )
+        p.communicate()
+        if p.returncode != 0:
+            raise Exception("Switch placement failed")
+
+    return _process
 
 
 def assert_group(expected: ET.Element, actual: ET.Element):
@@ -159,7 +165,11 @@ def __get_parameters():
                 for layout_option_name, layout_option in layout_options.items():
                     test_id = f"{example};{route_option_name};{diode_option_name};{layout_option_name}"
                     param = pytest.param(
-                        example, route_option, diode_option, layout_option, id=test_id
+                        example,
+                        (route_option_name, route_option),
+                        (diode_option_name, diode_option),
+                        layout_option,
+                        id=test_id,
                     )
                     test_params.append(param)
 
@@ -168,8 +178,8 @@ def __get_parameters():
         test_id = f"2x3-rotations-custom-diode-with-track;Tracks;DiodeOption2;{layout_option_name}"
         param = pytest.param(
             "2x3-rotations-custom-diode-with-track",
-            True,
-            "D{} RELATIVE",
+            ("Tracks", True),
+            ("DiodeOption2", "D{} RELATIVE"),
             layout_option,
             id=test_id,
         )
@@ -179,8 +189,8 @@ def __get_parameters():
     example = "2x3-rotations-custom-diode-with-track-and-complex-footprint"
     param = pytest.param(
         example,
-        True,
-        "D{} RELATIVE",
+        ("Tracks", True),
+        ("DiodeOption2", "D{} RELATIVE"),
         "kle.json",
         id=f"{example};Tracks;DiodeOption2;RAW",
     )
@@ -189,8 +199,8 @@ def __get_parameters():
     # add test with complex footprint
     param = pytest.param(
         example,
-        True,
-        "D{} PRESET diode_template.kicad_pcb",
+        ("Tracks", True),
+        ("DiodeOption2", "D{} PRESET diode_template.kicad_pcb"),
         "kle.json",
         id=f"{example};Tracks;DiodeOption2;RAW;PRESET",
     )
@@ -199,8 +209,8 @@ def __get_parameters():
     # add one test for via layout
     param = pytest.param(
         "2x2",
-        True,
-        None,
+        ("Tracks", True),
+        ("DefaultDiode", None),
         "via.json",
         id="2x2;Tracks;DefaultDiode;VIA",
     )
@@ -209,8 +219,8 @@ def __get_parameters():
     # add one test with layout where each switch have two diodes
     param = pytest.param(
         "2x3-rotations-double-diodes",
-        True,
-        "D{} RELATIVE",
+        ("Tracks", True),
+        ("DiodeOption2", "D{} RELATIVE"),
         "kle.json",
         id="2x3-rotations-double-diodes;Tracks;DiodeOption2;RAW",
     )
@@ -243,241 +253,154 @@ def prepare_project(request, tmpdir, example: str, layout_file: str) -> None:
         shutil.copy(template, tmpdir)
 
 
+def common_board_checks(pcb_path: str) -> None:
+    for t in pcbnew.LoadBoard(pcb_path).GetTracks():
+        assert t.GetNetCode() != 0
+
+
+@pytest.fixture
+def example_isolation(request, tmpdir):
+    @contextmanager
+    def _isolation(
+        example: str, layout_file: str, tracks_variant: str, diode_variant: str
+    ):
+        prepare_project(request, tmpdir, example, layout_file)
+        pcb_path = f"{tmpdir}/keyboard-before.kicad_pcb"
+        layout_path = f"{tmpdir}/{layout_file}"
+
+        yield layout_path, pcb_path
+
+        generate_render(tmpdir, request)
+        generate_drc(tmpdir, pcb_path)
+        references_dir = get_references_dir(
+            request, example, tracks_variant, diode_variant
+        )
+        assert_example(tmpdir, references_dir)
+        common_board_checks(pcb_path)
+
+    yield _isolation
+
+
 @pytest.mark.parametrize(
     "example,route,diode_position,layout_option", __get_parameters()
 )
 def test_with_examples(
-    example,
-    route,
-    diode_position,
-    layout_option,
-    tmpdir,
-    request,
-    package_path,
-    package_name,
+    example, route, diode_position, layout_option, example_isolation, kbplacer_process
 ) -> None:
-    prepare_project(request, tmpdir, example, layout_option)
-
-    pcb_path = f"{tmpdir}/keyboard-before.kicad_pcb"
-
-    run_kbplacer_process(
-        route,
-        diode_position,
-        package_path,
-        package_name,
-        f"{tmpdir}/{layout_option}",
-        pcb_path,
-    )
-
-    generate_render(tmpdir, request)
-    generate_drc(tmpdir, pcb_path)
-
-    references_dir = request_to_references_dir(request)
-    assert_example(tmpdir, references_dir)
-    for t in pcbnew.LoadBoard(pcb_path).GetTracks():
-        assert t.GetNetCode() != 0
+    with example_isolation(example, layout_option, route[0], diode_position[0]) as e:
+        layout_path, pcb_path = e
+        kbplacer_process(route[1], diode_position[1], layout_path, pcb_path)
 
 
 def test_with_examples_offset_diode_references(
-    tmpdir,
-    request,
-    package_path,
-    package_name,
+    example_isolation, kbplacer_process
 ) -> None:
     example = "2x3-rotations"
-    layout_option = "kle-annotated.json"
-    prepare_project(request, tmpdir, example, layout_option)
+    layout_file = "kle-annotated.json"
+    with example_isolation(example, layout_file, "Tracks", "DefaultDiode") as e:
+        layout_path, pcb_path = e
+        board = pcbnew.LoadBoard(pcb_path)
+        # diode references no longer must match 1-to-1 with key annotations
+        # the diode-switch associated is inferred from netlists
+        for i, f in enumerate(board.GetFootprints()):
+            if f.GetReference().startswith("D"):
+                f.SetReference(f"D{10 + i}")
+        pcbnew.SaveBoard(pcb_path, board)
 
-    pcb_path = f"{tmpdir}/keyboard-before.kicad_pcb"
-    board = pcbnew.LoadBoard(pcb_path)
-    # diode references no longer must match 1-to-1 with key annotations
-    # the diode-switch associated is inferred from netlists
-    for i, f in enumerate(board.GetFootprints()):
-        if f.GetReference().startswith("D"):
-            f.SetReference(f"D{10 + i}")
-    pcbnew.SaveBoard(pcb_path, board)
-
-    run_kbplacer_process(
-        True,
-        None,
-        package_path,
-        package_name,
-        f"{tmpdir}/{layout_option}",
-        pcb_path,
-    )
-
-    generate_render(tmpdir, request)
-    generate_drc(tmpdir, pcb_path)
-
-    references_dir = get_references_dir(request, example, "Tracks", "DefaultDiode")
-    assert_example(tmpdir, references_dir)
-    for t in pcbnew.LoadBoard(pcb_path).GetTracks():
-        assert t.GetNetCode() != 0
+        kbplacer_process(True, None, layout_path, pcb_path)
 
 
 def test_with_examples_annotated_layout_shuffled_references(
-    tmpdir,
-    request,
-    package_path,
-    package_name,
+    example_isolation, kbplacer_process
 ) -> None:
     example = "2x3-rotations"
-    layout_option = "kle-annotated.json"
-    prepare_project(request, tmpdir, example, layout_option)
+    layout_file = "kle-annotated.json"
+    with example_isolation(example, layout_file, "Tracks", "DefaultDiode") as e:
+        layout_path, pcb_path = e
+        board = pcbnew.LoadBoard(pcb_path)
 
-    pcb_path = f"{tmpdir}/keyboard-before.kicad_pcb"
-    board = pcbnew.LoadBoard(pcb_path)
+        # switches references no longer must match kle order if kle
+        # file has row,column annotation labels
+        def _swap_references(ref1, ref2) -> None:
+            f1 = board.FindFootprintByReference(ref1)
+            f2 = board.FindFootprintByReference(ref2)
+            f1.SetReference("temp")
+            f2.SetReference(ref1)
+            f1.SetReference(ref2)
 
-    # switches references no longer must match kle order if kle
-    # file has row,column annotation labels
-    def _swap_references(ref1, ref2) -> None:
-        f1 = board.FindFootprintByReference(ref1)
-        f2 = board.FindFootprintByReference(ref2)
-        f1.SetReference("temp")
-        f2.SetReference(ref1)
-        f1.SetReference(ref2)
+        _swap_references("SW1", "SW5")
+        _swap_references("SW2", "SW3")
+        # remember to modify stabilizer reference number which must match key
+        board.FindFootprintByReference("ST3").SetReference("ST2")
+        pcbnew.SaveBoard(pcb_path, board)
 
-    _swap_references("SW1", "SW5")
-    _swap_references("SW2", "SW3")
-
-    # remember to modify stabilizer reference number which must match key
-    board.FindFootprintByReference("ST3").SetReference("ST2")
-
-    pcbnew.SaveBoard(pcb_path, board)
-
-    run_kbplacer_process(
-        True,
-        None,
-        package_path,
-        package_name,
-        f"{tmpdir}/{layout_option}",
-        pcb_path,
-    )
-
-    generate_render(tmpdir, request)
-    generate_drc(tmpdir, pcb_path)
-
-    references_dir = get_references_dir(request, example, "Tracks", "DefaultDiode")
-    assert_example(tmpdir, references_dir)
-    for t in pcbnew.LoadBoard(pcb_path).GetTracks():
-        assert t.GetNetCode() != 0
+        kbplacer_process(True, None, layout_path, pcb_path)
 
 
 def test_saving_connection_template(
-    tmpdir,
-    request,
-    package_path,
-    package_name,
+    request, tmpdir, example_isolation, kbplacer_process
 ) -> None:
     example = "2x3-rotations-custom-diode-with-track-and-complex-footprint"
     layout_option = "kle.json"
-    prepare_project(request, tmpdir, example, layout_option)
+    with example_isolation(example, layout_option, "Tracks", "DiodeOption2") as e:
+        layout_path, pcb_path = e
 
-    pcb_path = f"{tmpdir}/keyboard-before.kicad_pcb"
-    template_destination = f"{tmpdir}/temp.kicad_pcb"
-
-    run_kbplacer_process(
-        True,
-        f"D{{}} RELATIVE {template_destination}",
-        package_path,
-        package_name,
-        f"{tmpdir}/{layout_option}",
-        pcb_path,
-    )
-
+        template_destination = Path(pcb_path).parent / "temp.kicad_pcb"
+        kbplacer_process(
+            True, f"D{{}} RELATIVE {template_destination}", layout_path, pcb_path
+        )
+        board = pcbnew.LoadBoard(str(template_destination))
+        for t in board.GetTracks():
+            assert t.GetNetCode() != 0
+    # Override render for html report:
     # must replace actual board with template in order to use `generate_render`
     # which still supports hardcoded path only
     shutil.copy(template_destination, pcb_path)
     generate_render(tmpdir, request)
 
-    board = pcbnew.LoadBoard(template_destination)
-    for t in board.GetTracks():
-        assert t.GetNetCode() != 0
 
-
-def test_placing_and_routing_separately(tmpdir, request, package_path, package_name):
+def test_placing_and_routing_separately(example_isolation, kbplacer_process):
     # It should be possible to run placing only (in first kbplacer invoke) and
     # then routing only (in second invoke).
     # Result should be the same as running all at once.
     # This tests if running routing without layout defined works
     example = "2x3-rotations"
     layout_file = "kle.json"
-    prepare_project(request, tmpdir, example, layout_file)
-
-    pcb_path = f"{tmpdir}/keyboard-before.kicad_pcb"
-
-    # run without routing:
-    run_kbplacer_process(
-        False,
-        None,
-        package_path,
-        package_name,
-        f"{tmpdir}/{layout_file}",
-        pcb_path,
-    )
-    # run with routing, without layout
-    run_kbplacer_process(
-        True,
-        None,
-        package_path,
-        package_name,
-        None,
-        pcb_path,
-    )
-
-    generate_render(tmpdir, request)
-    generate_drc(tmpdir, pcb_path)
-
-    references_dir = get_references_dir(request, example, "Tracks", "DefaultDiode")
-    assert_example(tmpdir, references_dir)
+    with example_isolation(example, layout_file, "Tracks", "DefaultDiode") as e:
+        layout_path, pcb_path = e
+        # run without routing:
+        kbplacer_process(False, None, layout_path, pcb_path)
+        # run with routing, without layout
+        kbplacer_process(True, None, None, pcb_path)
 
 
 def test_routing_with_template_without_diode_placement(
-    tmpdir, request, package_path, package_name
+    example_isolation, kbplacer_process
 ):
     example = "2x3-rotations-custom-diode-with-track"
     layout_file = "kle.json"
-    prepare_project(request, tmpdir, example, layout_file)
+    with example_isolation(example, layout_file, "Tracks", "DiodeOption2") as e:
+        layout_path, pcb_path = e
 
-    pcb_path = f"{tmpdir}/keyboard-before.kicad_pcb"
+        # run without routing:
+        kbplacer_process(
+            False, "D{} CUSTOM -5.197 4.503 90 BACK", layout_path, pcb_path
+        )
 
-    # run without routing:
-    run_kbplacer_process(
-        False,
-        "D{} CUSTOM -5.197 4.503 90 BACK",
-        package_path,
-        package_name,
-        f"{tmpdir}/{layout_file}",
-        pcb_path,
-    )
+        # add expected tracks template
+        board = pcbnew.LoadBoard(pcb_path)
+        for track in board.GetTracks():
+            board.RemoveNative(track)
+        assert len(board.GetTracks()) == 0
 
-    # add expected tracks template
-    board = pcbnew.LoadBoard(pcb_path)
-    for track in board.GetTracks():
-        board.RemoveNative(track)
-    assert len(board.GetTracks()) == 0
+        add_track(board, pointMM(29.328, 37.928), pointMM(36.143, 37.928), pcbnew.B_Cu)
+        add_track(board, pointMM(36.143, 37.928), pointMM(37.065, 37.006), pcbnew.B_Cu)
+        add_track(board, pointMM(37.065, 37.006), pointMM(37.065, 29.445), pcbnew.B_Cu)
 
-    add_track(board, pointMM(29.328, 37.928), pointMM(36.143, 37.928), pcbnew.B_Cu)
-    add_track(board, pointMM(36.143, 37.928), pointMM(37.065, 37.006), pcbnew.B_Cu)
-    add_track(board, pointMM(37.065, 37.006), pointMM(37.065, 29.445), pcbnew.B_Cu)
+        board.Save(pcb_path)
 
-    board.Save(pcb_path)
-
-    # run with routing, without layout and without diode placement, template should be applied
-    run_kbplacer_process(
-        True,
-        "D{} UNCHANGED",
-        package_path,
-        package_name,
-        None,
-        pcb_path,
-    )
-
-    generate_render(tmpdir, request)
-    generate_drc(tmpdir, pcb_path)
-
-    references_dir = get_references_dir(request, example, "Tracks", "DiodeOption2")
-    assert_example(tmpdir, references_dir)
+        # run with routing, without layout and without diode placement, template should be applied
+        kbplacer_process(True, "D{} UNCHANGED", None, pcb_path)
 
 
 @pytest.mark.parametrize(
@@ -485,44 +408,42 @@ def test_routing_with_template_without_diode_placement(
     [90, 180, 270, 360, 60, -60, 30, -30, 10, -10, 5, -5],
 )
 def test_placing_and_routing_when_reference_pair_rotated(
-    tmpdir, request, package_path, package_name, angle
+    example_isolation, kbplacer_process, angle
 ):
+    if KICAD_VERSION < (7, 0, 0) and angle in [60, 10, -60]:
+        # the differences are not noticible, not worth creating dedicated reference files
+        # support for KiCad 6 should be dropped soon anyway.
+        pytest.skip(
+            "These angles fail on KiCad 6 due to some rounding errors... ignoring"
+        )
+
     # this scenario reproduces https://github.com/adamws/kicad-kbplacer/issues/17
     example = "2x3-rotations-custom-diode-with-track"
     layout_file = "kle.json"
-    prepare_project(request, tmpdir, example, layout_file)
+    with example_isolation(example, layout_file, "Tracks", "DiodeOption2") as e:
+        layout_path, pcb_path = e
+        saved_template_path = Path(pcb_path).parent / "template.kicad_pcb"
 
-    pcb_path = f"{tmpdir}/keyboard-before.kicad_pcb"
-    saved_template_path = f"{tmpdir}/template.kicad_pcb"
+        board = pcbnew.LoadBoard(pcb_path)
+        switch = board.FindFootprintByReference("SW1")
+        diode = board.FindFootprintByReference("D1")
+        rotation_center = switch.GetPosition()
 
-    board = pcbnew.LoadBoard(pcb_path)
-    switch = board.FindFootprintByReference("SW1")
-    diode = board.FindFootprintByReference("D1")
-    rotation_center = switch.GetPosition()
+        for footprint in [switch, diode]:
+            rotate(footprint, rotation_center, angle)
+        for track in board.GetTracks():
+            rotate(track, rotation_center, angle)
 
-    for footprint in [switch, diode]:
-        rotate(footprint, rotation_center, angle)
-    for track in board.GetTracks():
-        rotate(track, rotation_center, angle)
+        board.Save(pcb_path)
 
-    board.Save(pcb_path)
-
-    run_kbplacer_process(
-        True,
-        f"D{{}} RELATIVE {saved_template_path}",
-        package_path,
-        package_name,
-        f"{tmpdir}/{layout_file}",
-        pcb_path,
-    )
-
-    generate_render(tmpdir, request)
-    generate_drc(tmpdir, pcb_path)
+        kbplacer_process(
+            True, f"D{{}} RELATIVE {saved_template_path}", layout_path, pcb_path
+        )
 
     # note that template is always the same because we normalize it
     # (it does not depend on initial rotation)
     assert Path(saved_template_path).is_file()
-    board = pcbnew.LoadBoard(saved_template_path)
+    board = pcbnew.LoadBoard(str(saved_template_path))
     switch = board.FindFootprintByReference("SW1")
     diode = board.FindFootprintByReference("D1")
     assert switch.GetPosition().x == 0
@@ -544,48 +465,26 @@ def test_placing_and_routing_when_reference_pair_rotated(
     assert starts == {(-5197000, 3403000), (1618000, 3403000), (2540000, 2481000)}
     assert ends == {(2540000, -5080000), (1618000, 3403000), (2540000, 2481000)}
 
-    references_dir = get_references_dir(request, example, "Tracks", "DiodeOption2")
-    if KICAD_VERSION < (7, 0, 0) and angle in [60, 10, -60]:
-        # the differences are not noticible, not worth creating dedicated reference files
-        # support for KiCad 6 should be dropped soon anyway.
-        logger.debug(
-            "These angles fail on KiCad 6 due to some rounding errors... ignoring"
-        )
-    else:
-        assert_example(tmpdir, references_dir)
-
 
 @pytest.mark.parametrize("layout_file", ["kle-annotated.json", "via.json"])
-def test_board_creation(tmpdir, request, package_path, package_name, layout_file):
+def test_board_creation(request, example_isolation, kbplacer_process, layout_file):
     example = "2x2"
+    with example_isolation(example, layout_file, "Tracks", "DefaultDiode") as e:
+        layout_path, pcb_path = e
+        # remove board file, it should be created from scratch
+        os.remove(pcb_path)
 
-    test_dir = request.fspath.dirname
-
-    source_dir = f"{test_dir}/../examples/{example}"
-    shutil.copy(f"{source_dir}/{layout_file}", tmpdir)
-
-    pcb_path = f"{tmpdir}/keyboard-before.kicad_pcb"
-
-    # run without routing:
-    run_kbplacer_process(
-        True,
-        None,
-        package_path,
-        package_name,
-        f"{tmpdir}/{layout_file}",
-        pcb_path,
-        flags=["--create-from-annotated-layout"],
-        args={
-            "--switch-footprint": f"{get_footprints_dir(request)}:SW_Cherry_MX_PCB_1.00u",
-            "--diode-footprint": f"{get_footprints_dir(request)}:D_SOD-323F",
-        },
-    )
-
-    generate_render(tmpdir, request)
-    generate_drc(tmpdir, pcb_path)
-
-    references_dir = get_references_dir(request, example, "Tracks", "DefaultDiode")
-    assert_example(tmpdir, references_dir)
+        kbplacer_process(
+            True,
+            None,
+            layout_path,
+            pcb_path,
+            flags=["--create-from-annotated-layout"],
+            args={
+                "--switch-footprint": f"{get_footprints_dir(request)}:SW_Cherry_MX_PCB_1.00u",
+                "--diode-footprint": f"{get_footprints_dir(request)}:D_SOD-323F",
+            },
+        )
 
 
 # Use area of board edges bounding box to test if outline is generated.
@@ -596,14 +495,8 @@ def test_board_creation(tmpdir, request, package_path, package_name, layout_file
     [(0, 1490), (2, 1815), (-2, 1197)],
 )
 def test_board_outline_building(
-    tmpdir, request, package_path, package_name, delta, expected_area
+    example_isolation, kbplacer_process, delta, expected_area
 ):
-    example = "2x2"
-    layout_file = "kle.json"
-
-    prepare_project(request, tmpdir, example, layout_file)
-    pcb_path = f"{tmpdir}/keyboard-before.kicad_pcb"
-
     def get_area():
         board = pcbnew.LoadBoard(pcb_path)
         bbox = board.GetBoardEdgesBoundingBox()
@@ -611,24 +504,20 @@ def test_board_outline_building(
         height = cast(float, pcbnew.ToMM(bbox.GetHeight()))
         return width * height
 
-    assert get_area() == 0
+    example = "2x2"
+    layout_file = "kle.json"
+    with example_isolation(example, layout_file, "NoTracks", "DefaultDiode") as e:
+        layout_path, pcb_path = e
+        assert get_area() == 0
 
-    run_kbplacer_process(
-        False,
-        None,
-        package_path,
-        package_name,
-        f"{tmpdir}/{layout_file}",
-        pcb_path,
-        flags=["--build-board-outline"],
-        args={"--outline-delta": str(delta)},
-    )
+        kbplacer_process(
+            False,
+            None,
+            layout_path,
+            pcb_path,
+            flags=["--build-board-outline"],
+            args={"--outline-delta": str(delta)},
+        )
 
-    generate_render(tmpdir, request)
-    generate_drc(tmpdir, pcb_path)
-
-    references_dir = get_references_dir(request, example, "NoTracks", "DefaultDiode")
-    assert_example(tmpdir, references_dir)
-
-    error_margin = expected_area * (1 / 100.0)
-    assert abs(get_area() - expected_area) <= error_margin
+        error_margin = expected_area * (1 / 100.0)
+        assert abs(get_area() - expected_area) <= error_margin
