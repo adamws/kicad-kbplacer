@@ -168,8 +168,11 @@ class Keyboard:
             props: dict[str, Any] = {}
 
             def add_prop(name: str, value: Any, default: Any) -> Any:
-                if isinstance(value, float):
-                    value = round(value, 6)
+                def _round(v: Any) -> Any:
+                    return round(v, 6) if isinstance(v, float) else v
+
+                value = _round(value)
+                default = _round(default)
                 if value != default:
                     props[name] = value
                 return value
