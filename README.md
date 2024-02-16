@@ -470,6 +470,20 @@ python -m kbplacer
 This is command line equivalent of running this tool as KiCad plugin but without GUI interface.
 Run it with `--help` option to get more details about options and CLI usage.
 
+#### Layout format conversion script
+
+The `kbplacer` is capable to convert ergogen point files to KLE layout files,
+for example:
+
+```shell
+python -m kbplacer.kle_serial \
+  -in tests/data/ergogen-layouts/absolem-simple-points.yaml -inform ERGOGEN_INTERNAL \
+  -out $(pwd)/absolem-kle.json -outform KLE_RAW
+```
+
+This command generates [this](./tests/data/ergogen-layouts/absolem-simple-reference.json) file
+which can be loaded by keyboard-layout-editor website.
+
 <!-- TOC --><a name="use-in-python-projects"></a>
 ### Use in python projects
 
