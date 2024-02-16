@@ -1,4 +1,7 @@
 *.kicad_pcb-bak
+*.kicad_prl
+*.kicad_pro
 fp-info-cache
 keyautoplace.log
+kbplacer.log
 *.pro
