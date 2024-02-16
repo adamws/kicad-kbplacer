@@ -367,3 +367,27 @@ class TestKleSerialCli:
 
         with open(tmp_file, "r") as f:
             assert json.load(f) == reference
+
+    def test_ergogen_file_convert_direct_yaml(
+        self, request, tmpdir, package_path, package_name
+    ) -> None:
+        test_dir = request.fspath.dirname
+        data_dir = f"{test_dir}/data"
+        example = "absolem-simple"
+        shutil.copy(f"{data_dir}/ergogen-layouts/{example}-points.yaml", tmpdir)
+        layout_file = f"{tmpdir}/{example}-points.yaml"
+        tmp_file = Path(layout_file).with_suffix(".json.tmp")
+        args = {
+            "-in": layout_file,
+            "-inform": "ERGOGEN_INTERNAL",
+            "-out": str(tmp_file),
+            "-outform": "KLE_RAW",
+            "-text": "",
+        }
+        self._run_subprocess(package_path, package_name, args)
+
+        with open(f"{data_dir}/ergogen-layouts/{example}-reference.json", "r") as f:
+            reference = json.load(f)
+
+        with open(tmp_file, "r") as f:
+            assert json.load(f) == reference
