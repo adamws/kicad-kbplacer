@@ -330,9 +330,16 @@ class TestKleSerialCli:
         with open(raw_tmp, "r") as f:
             assert json.load(f) == raw_json
 
-    @pytest.mark.parametrize("example", ["a-dux", "absolem-simple"])
+    @pytest.mark.parametrize(
+        "example,ergogen_filter",
+        [
+            ("a-dux", ""),
+            ("absolem-simple", ""),
+            ("corney-island", "^(matrix|thumbfan)"),
+        ],
+    )
     def test_ergogen_file_convert(
-        self, request, tmpdir, package_path, package_name, example
+        self, request, tmpdir, package_path, package_name, example, ergogen_filter
     ) -> None:
         test_dir = request.fspath.dirname
         data_dir = f"{test_dir}/data"
@@ -342,21 +349,21 @@ class TestKleSerialCli:
             y = yaml.safe_load(f)
             with open(layout_file, "w") as f2:
                 json.dump(y, f2)
+        tmp_file = Path(layout_file).with_suffix(".json.tmp")
+
+        args = {
+            "-in": layout_file,
+            "-inform": "ERGOGEN_INTERNAL",
+            "-out": str(tmp_file),
+            "-outform": "KLE_RAW",
+            "-text": "",
+        }
+        if ergogen_filter:
+            args["-ergogen-filter"] = ergogen_filter
+        self._run_subprocess(package_path, package_name, args)
+
         with open(f"{data_dir}/ergogen-layouts/{example}-reference.json", "r") as f:
             reference = json.load(f)
 
-        tmp_file = Path(layout_file).with_suffix(".json.tmp")
-
-        self._run_subprocess(
-            package_path,
-            package_name,
-            {
-                "-in": layout_file,
-                "-inform": "ERGOGEN_INTERNAL",
-                "-out": str(tmp_file),
-                "-outform": "KLE_RAW",
-                "-text": "",
-            },
-        )
         with open(tmp_file, "r") as f:
             assert json.load(f) == reference

@@ -5,6 +5,7 @@ import copy
 import json
 import logging
 import pprint
+import re
 import sys
 from dataclasses import asdict, dataclass, field, fields
 from itertools import chain
@@ -551,7 +552,7 @@ def parse_kle(layout) -> Keyboard:
     return Keyboard(meta=metadata, keys=keys)
 
 
-def parse_ergogen_points(layout: dict) -> Keyboard:
+def parse_ergogen_points(layout: dict, *, zone_filter: str = "") -> Keyboard:
     if not isinstance(layout, dict):
         msg = "Expected an object with nested objects"
         raise RuntimeError(msg)
@@ -577,7 +578,11 @@ def parse_ergogen_points(layout: dict) -> Keyboard:
     def __int(value: float) -> Union[int, float]:
         return int(value) if int(value) == value else value
 
-    for item in layout.values():
+    pattern = re.compile(zone_filter) if zone_filter else None
+
+    for name, item in layout.items():
+        if pattern and not re.match(pattern, name):
+            continue
         if "meta" not in item:
             msg = "Item needs to have meta defined"
             raise RuntimeError(msg)
@@ -694,6 +699,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "-text", required=False, action="store_true", help="Print result"
     )
+    parser.add_argument(
+        "-ergogen-filter",
+        required=False,
+        type=str,
+        help="Ergogen zone filter regular expression, applicable only when -inform ERGOGEN_INTERNAL",
+    )
 
     args = parser.parse_args()
     input_path = getattr(args, "in")
@@ -701,6 +712,7 @@ if __name__ == "__main__":
     output_path = getattr(args, "out")
     output_format = args.outform
     print_result = args.text
+    ergogen_filter = args.ergogen_filter
 
     if input_format == output_format:
         print("Output format equal input format, nothing to do...")
@@ -731,7 +743,7 @@ if __name__ == "__main__":
             result = "[" + result + "]"
             result = json.loads(result)
         else:  # ERGOGEN convert to KLE_RAW or KLE_INTERNAL
-            result = parse_ergogen_points(layout)
+            result = parse_ergogen_points(layout, zone_filter=ergogen_filter)
             if output_format == "KLE_INTERNAL":
                 result = json.loads(result.to_json())
                 if print_result:
