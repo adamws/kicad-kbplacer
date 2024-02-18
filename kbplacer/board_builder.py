@@ -100,7 +100,7 @@ class BoardBuilder:
             _keyboard: MatrixAnnotatedKeyboard = keyboard
 
         current_ref = 1
-        items: List[Tuple[int, int]] = []
+        items: List[Tuple[str, str]] = []
         key_iterator = _keyboard.key_iterator(ignore_alternative_layouts)
 
         for key in key_iterator:
@@ -108,17 +108,19 @@ class BoardBuilder:
                 continue
             items.append(MatrixAnnotatedKeyboard.get_matrix_position(key))
 
-        progress: Dict[Tuple[int, int], List[pcbnew.FOOTPRINT]] = defaultdict(list)
+        progress: Dict[Tuple[str, str], List[pcbnew.FOOTPRINT]] = defaultdict(list)
         for row, column in sorted(items):
             position = (row, column)
             if position not in progress:
                 switch = self.add_switch_footprint(f"SW{current_ref}")
                 diode = self.add_diode_footprint(f"D{current_ref}")
 
-                net = self.add_net(f"COL{column}")
+                column_name = f"COL{column}" if column.isdigit() else column
+                net = self.add_net(column_name)
                 switch.FindPadByNumber("1").SetNet(net)
 
-                net = self.add_net(f"ROW{row}")
+                row_name = f"ROW{row}" if row.isdigit() else row
+                net = self.add_net(row_name)
                 diode.FindPadByNumber("1").SetNet(net)
 
                 net = self.add_net(f"Net-(D{current_ref})-Pad2")

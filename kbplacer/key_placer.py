@@ -7,7 +7,7 @@ import os
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, FrozenSet, Iterable, List, Optional, Set, Tuple, cast
+from typing import Dict, FrozenSet, Iterable, Iterator, List, Optional, Set, Tuple, cast
 
 import pcbnew
 
@@ -150,7 +150,14 @@ class KeyMatrix:
         return self._column_format
 
     def switches_references_by_coordinates(self, row: int, column: int) -> List[str]:
-        nets = (self.row_format.format(row), self.column_format.format(column))
+        return self.switches_references_by_netnames(
+            self.row_format.format(row), self.column_format.format(column)
+        )
+
+    def switches_references_by_netnames(
+        self, row_net: str, column_net: str
+    ) -> List[str]:
+        nets = (row_net, column_net)
         return self._switches_references_by_net[frozenset(nets)]
 
     def diodes_by_switch_reference(self, reference: str) -> List[pcbnew.FOOTPRINT]:
@@ -224,9 +231,14 @@ class MatrixAnnotatedKeyboardSwitchIterator:
 
     def __get_footprint(self, key) -> Optional[pcbnew.FOOTPRINT]:
         matrix_coordinates = MatrixAnnotatedKeyboard.get_matrix_position(key)
-        switches = self._key_matrix.switches_references_by_coordinates(
-            *matrix_coordinates
-        )
+        if all(c.isdigit() for c in matrix_coordinates):
+            switches = self._key_matrix.switches_references_by_coordinates(
+                *map(int, matrix_coordinates)
+            )
+        else:
+            switches = self._key_matrix.switches_references_by_netnames(
+                *matrix_coordinates
+            )
         switches = sorted(switches)
         logger.debug(f"Got {switches} for {matrix_coordinates} position")
         # assume thar alternative keys have same annotation with
@@ -258,12 +270,14 @@ class MatrixAnnotatedKeyboardSwitchIterator:
 def get_key_iterator(
     keyboard: Keyboard,
     key_matrix: KeyMatrix,
-):
+) -> Iterator:
     if isinstance(keyboard, MatrixAnnotatedKeyboard):
-        return MatrixAnnotatedKeyboardSwitchIterator(
+        _iter = MatrixAnnotatedKeyboardSwitchIterator(
             keyboard, key_matrix, ignore_alternative_layouts=True
         )
-    return KeyboardSwitchIterator(keyboard, key_matrix)
+    else:
+        _iter = KeyboardSwitchIterator(keyboard, key_matrix)
+    return iter(_iter)
 
 
 class KeyPlacer(BoardModifier):

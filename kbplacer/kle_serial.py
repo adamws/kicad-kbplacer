@@ -334,10 +334,13 @@ class MatrixAnnotatedKeyboard(Keyboard):
             return chain(self.keys, self.alternative_keys)
 
     @staticmethod
-    def get_matrix_position(key: Key) -> Tuple[int, int]:
+    def get_matrix_position(key: Key) -> Tuple[str, str]:
         try:
             label = key.get_label(MatrixAnnotatedKeyboard.MATRIX_COORDINATES_LABEL)
-            return tuple(map(int, str(label).split(",")))
+            split = str(label).split(",")
+            if len(split) != 2:
+                raise RuntimeError
+            return (split[0], split[1])
         except Exception as e:
             msg = "Matrix coordinates label missing or invalid"
             raise RuntimeError(msg) from e
@@ -618,6 +621,12 @@ def parse_ergogen_points(layout: dict, *, zone_filter: str = "") -> Keyboard:
         # kle and ergogen rotate in opposite directions
         key.rotation_angle = -1 * item["r"]
 
+        # if column_net and row_net defined, add it to label
+        row = meta.get("row_net", "")
+        column = meta.get("column_net", "")
+        if row and column:
+            key.labels.append(f"{row},{column}")
+
         keys.append(key)
 
     # do some cleanup to be kle compatible
@@ -722,6 +731,7 @@ if __name__ == "__main__":
         if input_path.endswith("yaml") or input_path.endswith("yml"):
             try:
                 import yaml
+
                 layout = yaml.safe_load(f)
             except Exception as e:
                 msg = (
