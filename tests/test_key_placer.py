@@ -268,9 +268,7 @@ def get_board_for_2x2_example(request):
 def assert_2x2_layout_switches(board: pcbnew.BOARD, key_distance: Tuple[float, float]):
     switches = [get_footprint(board, f"SW{i}") for i in range(1, 5)]
     positions = [get_position(switch) for switch in switches]
-    assert positions[0] == pcbnew.wxPointMM(25, 25) + pcbnew.wxPointMM(
-        key_distance[0] / 2, key_distance[1] / 2
-    )
+    assert positions[0] == pcbnew.wxPointMM(key_distance[0] * 2, key_distance[1] * 2)
     assert positions[1] - positions[0] == pcbnew.wxPointMM(key_distance[0], 0)
     assert positions[2] - positions[0] == pcbnew.wxPointMM(0, key_distance[1])
     assert positions[3] - positions[2] == pcbnew.wxPointMM(key_distance[0], 0)

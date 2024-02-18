@@ -393,9 +393,9 @@ def test_routing_with_template_without_diode_placement(
             board.RemoveNative(track)
         assert len(board.GetTracks()) == 0
 
-        add_track(board, pointMM(29.328, 37.928), pointMM(36.143, 37.928), pcbnew.B_Cu)
-        add_track(board, pointMM(36.143, 37.928), pointMM(37.065, 37.006), pcbnew.B_Cu)
-        add_track(board, pointMM(37.065, 37.006), pointMM(37.065, 29.445), pcbnew.B_Cu)
+        add_track(board, pointMM(32.903, 41.503), pointMM(39.718, 41.503), pcbnew.B_Cu)
+        add_track(board, pointMM(39.718, 41.503), pointMM(40.64, 40.581), pcbnew.B_Cu)
+        add_track(board, pointMM(40.64, 40.581), pointMM(40.64, 33.02), pcbnew.B_Cu)
 
         board.Save(pcb_path)
 

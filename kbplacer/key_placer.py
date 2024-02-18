@@ -294,7 +294,6 @@ class KeyPlacer(BoardModifier):
         logger.debug(
             f"Set key 1U distance: {self.__key_distance_x}/{self.__key_distance_y}"
         )
-        self.__reference_coordinate = pcbnew.wxPointMM(25, 25)
 
     def apply_switch_connection_template(
         self,
@@ -553,13 +552,41 @@ class KeyPlacer(BoardModifier):
             t.SetNetCode(0)
         return tracks
 
+    def _calculate_reference_coordinate(
+        self,
+        keyboard: Keyboard,
+        key_matrix: KeyMatrix,
+    ) -> pcbnew.wxPoint:
+        """Calculates value of offset vector to be applied to key coordinates
+        in order to align first key center with defined x/y grid
+        """
+        def _offset(grid, coordinate, size):
+            if not grid:
+                return 0
+            pos = (grid * coordinate) + (grid * size // 2)
+            quotient = pos // grid
+            # add to avoid placing next to drawing sheet borders (it just looks better):
+            margin = 2
+            return grid * (quotient + margin) - pos
+
+        offset_x = 0
+        offset_y = 0
+        key_iterator: Iterator = get_key_iterator(keyboard, key_matrix)
+        first_key, _ = next(key_iterator)
+        if first_key:
+            offset_x = _offset(self.__key_distance_x, first_key.x, first_key.width)
+            offset_y = _offset(self.__key_distance_y, first_key.y, first_key.height)
+        return pcbnew.wxPoint(offset_x, offset_y)
+
     def place_switches(
         self,
         keyboard: Keyboard,
         key_matrix: KeyMatrix,
         key_position: Optional[ElementPosition],
     ) -> None:
-        key_iterator = get_key_iterator(keyboard, key_matrix)
+        offset = self._calculate_reference_coordinate(keyboard, key_matrix)
+        logger.debug(f"Layout offset: {offset}")
+        key_iterator: Iterator = get_key_iterator(keyboard, key_matrix)
         for key, switch_footprint in key_iterator:
             reset_rotation(switch_footprint)
             if key_position:
@@ -575,7 +602,7 @@ class KeyPlacer(BoardModifier):
                     (self.__key_distance_y * key.y)
                     + (self.__key_distance_y * height // 2),
                 )
-                + self.__reference_coordinate
+                + offset
             )
             set_position(switch_footprint, position)
 
@@ -586,7 +613,7 @@ class KeyPlacer(BoardModifier):
                         (self.__key_distance_x * key.rotation_x),
                         (self.__key_distance_y * key.rotation_y),
                     )
-                    + self.__reference_coordinate
+                    + offset
                 )
                 rotate(switch_footprint, rotation_reference, angle)
 
