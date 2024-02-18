@@ -12,7 +12,13 @@ import pytest
 import yaml
 
 try:
-    from kbplacer.kle_serial import Keyboard, parse_ergogen_points, parse_kle
+    from kbplacer.kle_serial import (
+        Keyboard,
+        MatrixAnnotatedKeyboard,
+        parse_ergogen_points,
+        parse_kle,
+        parse_via,
+    )
 except:
     pass
 
@@ -248,6 +254,19 @@ def test_with_ergogen(example, request) -> None:
     with open(Path(test_dir) / f"data/ergogen-layouts/{example}.json", "r") as f:
         layout = json.load(f)
         result = parse_ergogen_points(layout)
+        assert result == reference
+
+
+def test_with_via_layouts(request) -> None:
+    test_dir = request.fspath.dirname
+    example = "wt60_a"
+    reference = get_reference(
+        Path(test_dir) / f"data/via-layouts/{example}-internal.json"
+    )
+    reference = MatrixAnnotatedKeyboard(reference.meta, reference.keys)
+    with open(Path(test_dir) / f"data/via-layouts/{example}.json", "r") as f:
+        layout = json.load(f)
+        result = parse_via(layout)
         assert result == reference
 
 
