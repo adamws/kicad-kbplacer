@@ -11,6 +11,8 @@ from typing import Tuple
 import pytest
 import yaml
 
+from .conftest import equal_ignore_order
+
 try:
     from kbplacer.kle_serial import (
         Keyboard,
@@ -260,14 +262,22 @@ def test_with_ergogen(example, request) -> None:
 def test_with_via_layouts(request) -> None:
     test_dir = request.fspath.dirname
     example = "wt60_a"
-    reference = get_reference(
-        Path(test_dir) / f"data/via-layouts/{example}-internal.json"
-    )
-    reference = MatrixAnnotatedKeyboard(reference.meta, reference.keys)
+
+    def _reference_keyboard(filename: str) -> MatrixAnnotatedKeyboard:
+        reference = get_reference(Path(test_dir) / "data/via-layouts" / filename)
+        return MatrixAnnotatedKeyboard(reference.meta, reference.keys)
+
     with open(Path(test_dir) / f"data/via-layouts/{example}.json", "r") as f:
         layout = json.load(f)
         result = parse_via(layout)
-        assert result == reference
+        assert result == _reference_keyboard(f"{example}-internal.json")
+        result.collapse()
+        reference_collapsed = _reference_keyboard(f"{example}-internal-collapsed.json")
+        assert result.keys == reference_collapsed.keys
+        # order might be different but that's not important right now.
+        assert equal_ignore_order(
+            result.alternative_keys, reference_collapsed.alternative_keys
+        )
 
 
 class TestKleSerialCli:

@@ -286,6 +286,16 @@ def pointMM(x, y) -> pcbnew.wxPoint:
     return pcbnew.wxPoint(pcbnew.FromMM(x), pcbnew.FromMM(y))
 
 
+def equal_ignore_order(a, b):
+    unmatched = list(b)
+    for element in a:
+        try:
+            unmatched.remove(element)
+        except ValueError:
+            return False
+    return not unmatched
+
+
 def add_switch_footprint(
     board, request, ref_count, footprint: str = "SW_Cherry_MX_PCB_1.00u"
 ) -> pcbnew.FOOTPRINT:

@@ -7,9 +7,10 @@ import logging
 import pprint
 import re
 import sys
+from collections import defaultdict
 from dataclasses import asdict, dataclass, field, fields
 from itertools import chain
-from typing import Any, Iterator, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
 
 logger = logging.getLogger(__name__)
 
@@ -332,6 +333,75 @@ class MatrixAnnotatedKeyboard(Keyboard):
             return iter(self.keys)
         else:
             return chain(self.keys, self.alternative_keys)
+
+    def _get_layout_option_or_none(self, key: Key) -> Optional[Tuple[int, int]]:
+        if label := key.get_label(self.LAYOUT_OPTION_LABEL):
+            return tuple(map(int, label.split(",")))
+        return None
+
+    def _get_sorted_alternative_by_option(self) -> Dict[Tuple[int, int], List[Key]]:
+        keys: Dict[Tuple[int, int], List[Key]] = defaultdict(list)
+        for key in self.alternative_keys:
+            option = self._get_layout_option_or_none(key)
+            if option is None:
+                msg = (
+                    "Alternative key must have option label defined, "
+                    f"found '{key.labels}' labels"
+                )
+                raise RuntimeError(msg)
+            keys[option].append(key)
+        for k in keys:
+            keys[k].sort(key=lambda key: (key.x, key.y))
+        return keys
+
+    def collapse(self) -> None:
+        """Modify positions of alternative_keys to destination positions
+        i.e. the positions they would take as 'non alternative'
+        and de-duplicate items with equal matrix coordinates and size
+        """
+        # get layout options and its positions, not using `get_layout_option`
+        # because we must detect only explictly defined groups
+        positions = {}
+        for alt_key in self.keys:
+            layout_option = self._get_layout_option_or_none(alt_key)
+            if layout_option is not None:
+                option = layout_option[0]
+                position = (alt_key.x, alt_key.y)
+                if (
+                    option in positions and positions[option] > position
+                ) or option not in positions:
+                    positions[option] = position
+        alts = self._get_sorted_alternative_by_option()
+
+        def __int(value: float) -> Union[int, float]:
+            return int(value) if int(value) == value else value
+
+        for option, keys in alts.items():
+            x, y = positions[option[0]]
+            x, y = __int(x), __int(y)
+            for k in keys:
+                k.x = x
+                k.y = y
+                x += k.width
+                x = __int(x)
+        seen = {}
+        new_alternatives = []
+        for alt_key in list(self.alternative_keys):
+            props: Tuple[str, float, float, float, float, bool] = (
+                alt_key.labels[self.MATRIX_COORDINATES_LABEL],
+                alt_key.width,
+                alt_key.height,
+                alt_key.width2,
+                alt_key.height2,
+                alt_key.decal,
+            )
+            if props not in seen:
+                seen[props] = True
+                new_alternatives.append(alt_key)
+        for alt_key in list(new_alternatives):
+            if alt_key.decal:
+                new_alternatives.remove(alt_key)
+        self.alternative_keys = new_alternatives
 
     @staticmethod
     def get_matrix_position(key: Key) -> Tuple[str, str]:
