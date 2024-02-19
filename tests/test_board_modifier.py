@@ -1,5 +1,6 @@
 import enum
 import logging
+from typing import List, Tuple, cast
 
 import pcbnew
 import pytest
@@ -148,7 +149,7 @@ def test_track_with_pad_collision(footprint, position, side, netlist, tmpdir, re
     assert collide == expected_collision_result, "Unexpected track collision result"
 
 
-def add_track_segments_test(steps, tmpdir, request):
+def add_track_segments_test(steps: List[Tuple[pcbnew.wxPoint, bool]], tmpdir, request):
     board = pcbnew.CreateEmptyBoard()
     f = add_diode_footprint(board, "D_SOD-323", request)
 
@@ -160,7 +161,9 @@ def add_track_segments_test(steps, tmpdir, request):
     start = f.FindPadByNumber("2").GetPosition()
     for step in steps:
         direction, should_succeed = step
-        start = modifier.add_track_segment(start, direction)
+        start = cast(pcbnew.wxPoint, start)
+        end = pcbnew.wxPoint(start.x + direction[0], start.y + direction[1])
+        start = modifier.add_track_segment_by_points(start, end)
         if should_succeed:
             assert type(start) != type(None), "Unexpected track add failure"
         else:
@@ -175,8 +178,8 @@ def test_track_with_track_collision_close_to_footprint(tmpdir, request):
     # adding track which starts at pad but is so short it barely
     # reaches out of it meaning that next track starting there might
     # be incorrectly detected as colliding with pad
-    steps.append((pcbnew.wxPoint(-pcbnew.FromMM(0.4), 0), True))
-    steps.append((pcbnew.wxPoint(0, pcbnew.FromMM(1)), True))
+    steps.append((pcbnew.wxPointMM(-0.4, 0), True))
+    steps.append((pcbnew.wxPointMM(0, 1), True))
     add_track_segments_test(steps, tmpdir, request)
 
 
@@ -188,8 +191,8 @@ def test_track_with_track_collision_close_to_footprints_one_good_one_bad(
     # instead going down (where there is nothing to collide with), it goes to left and
     # reaches second pad of diode which should be detected as collision,
     # hence segment should not be added
-    steps.append((pcbnew.wxPoint(-pcbnew.FromMM(0.4), 0), True))
-    steps.append((pcbnew.wxPoint(-pcbnew.FromMM(5), 0), False))
+    steps.append((pcbnew.wxPointMM(-0.4, 0), True))
+    steps.append((pcbnew.wxPointMM(-5, 0), False))
     add_track_segments_test(steps, tmpdir, request)
 
 
@@ -199,10 +202,10 @@ def test_track_with_track_collision_close_to_footprint_many_small_tracks(
     steps = []
     # kind of ridiculous example but all tracks here should succeed, such
     # scenario should never happen under normal circumstances
-    steps.append((pcbnew.wxPoint(-pcbnew.FromMM(0.4), 0), True))
-    steps.append((pcbnew.wxPoint(0, -pcbnew.FromMM(0.4)), True))
-    steps.append((pcbnew.wxPoint(pcbnew.FromMM(0.4), 0), True))
-    steps.append((pcbnew.wxPoint(0, pcbnew.FromMM(0.4)), True))
+    steps.append((pcbnew.wxPointMM(-0.4, 0), True))
+    steps.append((pcbnew.wxPointMM(0, -0.4), True))
+    steps.append((pcbnew.wxPointMM(0.4, 0), True))
+    steps.append((pcbnew.wxPointMM(0, 0.4), True))
     add_track_segments_test(steps, tmpdir, request)
 
 

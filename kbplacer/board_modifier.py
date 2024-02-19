@@ -231,12 +231,11 @@ class BoardModifier:
         self.board.BuildConnectivity()
         return self.board.GetConnectivity()
 
-    def test_track_collision(self, track: pcbnew.PCB_TRACK) -> bool:
+    def _test_collision_track_without_net(self, track: pcbnew.PCB_TRACK) -> bool:
         collide_list = []
         track_shape = track.GetEffectiveShape()
         track_start = track.GetStart()
         track_end = track.GetEnd()
-        track_net_code = track.GetNetCode()
         # connectivity needs to be last,
         # otherwise it will update track net name before we want it to:
         connectivity = self.get_connectivity()
@@ -248,34 +247,15 @@ class BoardModifier:
                     pad_name = p.GetName()
                     pad_shape = p.GetEffectiveShape()
 
-                    # track has non default netlist set so we can skip
-                    # collision detection for pad of same netlist:
-                    if track_net_code != 0 and track_net_code == p.GetNetCode():
-                        logger.debug(
-                            f"Track collision ignored, pad {reference}:{pad_name} "
-                            f"on same netlist: {track.GetNetname()}/{p.GetNetname()}"
-                        )
-                        continue
-
                     # if track starts or ends in pad then assume that
                     # this collision is expected, with the exception of case
                     # where track already has netlist set and it is different
                     # than pad's netlist or pad has `NPTH` attribute
                     if p.HitTest(track_start) or p.HitTest(track_end):
-                        if (
-                            track_net_code != 0
-                            and track_net_code != p.GetNetCode()
-                            and p.IsOnLayer(track.GetLayer())
-                        ) or p.GetAttribute() == pcbnew.PAD_ATTRIB_NPTH:
-                            logger.debug(
-                                f"Track collide with pad {reference}:{pad_name}"
-                            )
-                            collide_list.append(p)
-                        else:
-                            logger.debug(
-                                "Track collision ignored, track starts or ends "
-                                f"in pad {reference}:{pad_name}"
-                            )
+                        logger.debug(
+                            "Track collision ignored, track starts or ends "
+                            f"in pad {reference}:{pad_name}"
+                        )
                     else:
                         hit_test_result = pad_shape.Collide(
                             track_shape, get_clearance(p, track)
@@ -289,13 +269,8 @@ class BoardModifier:
         # track ids to clear at the end:
         tracks_to_clear = []
         for t in self.board.GetTracks():
-            # check collision if not itself, on same layer and with different netlist
-            # (unless 'trackNetCode' is default '0' netlist):
-            if (
-                t.m_Uuid != track.m_Uuid
-                and t.IsOnLayer(track.GetLayer())
-                and (track_net_code != t.GetNetCode() or track_net_code == 0)
-            ):
+            # check collision if not itself and on same layer
+            if t.m_Uuid != track.m_Uuid and t.IsOnLayer(track.GetLayer()):
                 track_uuid = t.m_Uuid.AsString()
                 if (
                     track_start == t.GetStart()
@@ -338,6 +313,34 @@ class BoardModifier:
                 collide_list.remove(collision)
         return len(collide_list) != 0
 
+    def _test_collision_track_with_net(self, track: pcbnew.PCB_TRACK) -> bool:
+        track_netcode = track.GetNetCode()
+        track_shape = track.GetEffectiveShape()
+        track_layer = track.GetLayer()
+        for item in self.board.AllConnectedItems():
+            if track_netcode == item.GetNetCode():
+                continue
+
+            item_shape = item.GetEffectiveShape()
+            if item_shape.Collide(track_shape, get_clearance(item, track)):
+                if isinstance(item.Cast(), pcbnew.PCB_TRACK):
+                    if item.GetLayer() == track_layer:
+                        return True
+                elif isinstance(item.Cast(), pcbnew.PAD):
+                    pad = pcbnew.Cast_to_PAD(item)
+                    if (
+                        pad.IsOnLayer(track_layer)
+                        or pad.GetAttribute == pcbnew.PAD_ATTRIB_NPTH
+                    ):
+                        return True
+                # pcbnew.ZONE is remaining possibility but we do not handle it
+        return False
+
+    def test_track_collision(self, track: pcbnew.PCB_TRACK) -> bool:
+        if track.GetNetCode() == 0:
+            return self._test_collision_track_without_net(track)
+        return self._test_collision_track_with_net(track)
+
     def add_track_to_board(self, track: pcbnew.PCB_TRACK):
         """Add track to the board if track passes collision check.
         If track has no set netlist, it would get netlist of a pad
@@ -350,25 +353,32 @@ class BoardModifier:
         :param track: A track to be added to board
         :return: End position of added track or None if failed to add.
         """
+        layer_name = self.board.GetLayerName(track.GetLayer())
+        start = track.GetStart()
+        stop = track.GetEnd()
+        logger.info(
+            f"Adding track segment ({layer_name}): [{start}, {stop}]",
+        )
         if not self.test_track_collision(track):
-            layer_name = self.board.GetLayerName(track.GetLayer())
-            start = track.GetStart()
-            stop = track.GetEnd()
-            logger.info(
-                f"Adding track segment ({layer_name}): [{start}, {stop}]",
-            )
             self.board.Add(track)
+            logger.info("Track added")
             return stop
         else:
             logger.warning("Could not add track segment due to detected collision")
             return None
 
     def add_track_segment_by_points(
-        self, start: pcbnew.wxPoint, end: pcbnew.wxPoint, layer=pcbnew.B_Cu
+        self,
+        start: pcbnew.wxPoint,
+        end: pcbnew.wxPoint,
+        layer=pcbnew.B_Cu,
+        netcode: int = 0,
     ):
         track = pcbnew.PCB_TRACK(self.board)
         track.SetWidth(pcbnew.FromMM(0.25))
         track.SetLayer(layer)
+        if netcode:
+            track.SetNetCode(netcode)
         if KICAD_VERSION >= (7, 0, 0):
             track.SetStart(pcbnew.VECTOR2I(start.x, start.y))
             track.SetEnd(pcbnew.VECTOR2I(end.x, end.y))
@@ -376,12 +386,6 @@ class BoardModifier:
             track.SetStart(start)
             track.SetEnd(end)
         return self.add_track_to_board(track)
-
-    def add_track_segment(
-        self, start: pcbnew.wxPoint, vector: list[int], layer=pcbnew.B_Cu
-    ):
-        end = pcbnew.wxPoint(start.x + vector[0], start.y + vector[1])
-        return self.add_track_segment_by_points(start, end, layer)
 
     def route(self, pad1: pcbnew.PAD, pad2: pcbnew.PAD) -> None:
         r"""Simple track router
@@ -425,6 +429,12 @@ class BoardModifier:
         layer = layers[0]
         logger.debug(f"Routing at {self.board.GetLayerName(layer)} layer")
 
+        if pad1.GetNetCode() != pad2.GetNetCode():
+            logger.warning("Could not route pads of different nets")
+            return
+
+        netcode = pad1.GetNetCode()
+
         def _calculate_corners(
             pos1: pcbnew.wxPoint, pos2: pcbnew.wxPoint
         ) -> Tuple[pcbnew.wxPoint, pcbnew.wxPoint]:
@@ -448,8 +458,8 @@ class BoardModifier:
         def _route(
             pos1: pcbnew.wxPoint, pos2: pcbnew.wxPoint, corner: pcbnew.wxPoint
         ) -> bool:
-            if end := self.add_track_segment_by_points(pos1, corner, layer):
-                end = self.add_track_segment_by_points(end, pos2, layer)
+            if end := self.add_track_segment_by_points(pos1, corner, layer, netcode):
+                end = self.add_track_segment_by_points(end, pos2, layer, netcode)
                 return end is not None
             return False
 
@@ -491,7 +501,7 @@ class BoardModifier:
 
         # if in line, use one track segment
         if pos1.x == pos2.x or pos1.y == pos2.y:
-            self.add_track_segment_by_points(pos1, pos2, layer)
+            self.add_track_segment_by_points(pos1, pos2, layer, netcode)
         else:
             # pads are not in single line, attempt routing with two segment track
             if angle != 0:

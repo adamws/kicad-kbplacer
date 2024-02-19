@@ -309,7 +309,6 @@ class KeyPlacer(BoardModifier):
                                     routing switch and diode pads. Normalised to
                                     switch position coordinate. Templates
                                     items must not have netcodes assigned.
-                                    If None, use automatic routing algorithm.
         """
         logger.info("Using template replication method")
         if angle != 0:
@@ -560,6 +559,7 @@ class KeyPlacer(BoardModifier):
         """Calculates value of offset vector to be applied to key coordinates
         in order to align first key center with defined x/y grid
         """
+
         def _offset(grid, coordinate, size):
             if not grid:
                 return 0
