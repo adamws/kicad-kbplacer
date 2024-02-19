@@ -259,9 +259,72 @@ def test_with_ergogen(example, request) -> None:
         assert result == reference
 
 
-def test_with_via_layouts(request) -> None:
+def _layout_collapse(layout) -> MatrixAnnotatedKeyboard:
+    tmp = parse_kle(layout)
+    keyboard = MatrixAnnotatedKeyboard(meta=tmp.meta, keys=tmp.keys)
+    keyboard.collapse()
+    return keyboard
+
+
+def test_iso_enter_layout_collapse() -> None:
+    # fmt: off
+    layout =  [
+        [{"x":1.25},"1,12",{"w":1.5},"1,13\n\n\n1,0",{"x":1.25,"w":1.25,"h":2,"w2":1.5,"h2":1,"x2":-0.25},"1,13\n\n\n1,1"],
+        [{"x":0.5},"2,11",{"w":2.25},"2,12\n\n\n1,0",{"x":0.25},"2,12\n\n\n1,1"],
+        ["3,11",{"w":2.75},"3,12\n\n\n3,0",{"x":0.25,"w":1.75},"3,12\n\n\n3,1","3,13\n\n\n3,1"]
+    ]
+    expected = [
+        [{"x":1.25},"1,12",{"w":1.5},"1,13\n\n\n1,0",{"x":-1.25,"w":1.25,"h":2,"w2":1.5,"h2":1,"x2":-0.25},"1,13\n\n\n1,1"],
+        [{"x":0.5},"2,11",{"w":2.25},"2,12\n\n\n1,0",{"x":-2.25},"2,12\n\n\n1,1"],
+        ["3,11",{"w":2.75},"3,12\n\n\n3,0",{"x":-2.75,"w":1.75},"3,12\n\n\n3,1","3,13\n\n\n3,1"]
+    ]
+    # fmt: on
+    result = _layout_collapse(layout)
+    expected_keyboard = parse_kle(expected)
+    expected_keyboard = MatrixAnnotatedKeyboard(meta=expected_keyboard.meta, keys=expected_keyboard.keys)
+    assert result == expected_keyboard
+
+
+def test_bottom_row_collapse_no_extra_keys() -> None:
+    # this alternative layout does not introduce any new keys
+    # because all are duplicate of original bottom row with the except
+    # of two which are missing (and proper alignment forced by decals)
+    # fmt: off
+    layout = [
+        [{"w":1.5},"4,0\n\n\n0,0","4,1\n\n\n0,0",{"w":1.5},"4,2\n\n\n0,0",{"w":7},"4,6\n\n\n0,0",{"w":1.5},"4,10\n\n\n0,0","4,11\n\n\n0,0",{"w":1.5},"4,12\n\n\n0,0"],
+        [{"y":0.75,"w":1.5,"d":True},"\n\n\n0,1","4,1\n\n\n0,1",{"w":1.5},"4,2\n\n\n0,1",{"w":7},"4,6\n\n\n0,1",{"w":1.5},"4,10\n\n\n0,1","4,11\n\n\n0,1",{"w":1.5,"d":True},"\n\n\n0,1"]
+    ]
+    expected = [
+        [{"w":1.5},"4,0\n\n\n0,0","4,1\n\n\n0,0",{"w":1.5},"4,2\n\n\n0,0",{"w":7},"4,6\n\n\n0,0",{"w":1.5},"4,10\n\n\n0,0","4,11\n\n\n0,0",{"w":1.5},"4,12\n\n\n0,0"],
+    ]
+    # fmt: on
+    result = _layout_collapse(layout)
+    expected_keyboard = parse_kle(expected)
+    expected_keyboard = MatrixAnnotatedKeyboard(meta=expected_keyboard.meta, keys=expected_keyboard.keys)
+    assert result == expected_keyboard
+    assert len(result.alternative_keys) == 0
+
+
+def test_bottom_row_decal_handling() -> None:
+    # fmt: off
+    layout = [
+        [{"w":1.5},"4,0\n\n\n0,0","4,1\n\n\n0,0",{"w":1.5},"4,2\n\n\n0,0"],
+        [{"y":0.75,"w":1.5,"d":True},"\n\n\n0,1",{"w":2.5},"4,1\n\n\n0,1"]
+    ]
+    expected = [
+        [{"w":1.5},"4,0\n\n\n0,0","4,1\n\n\n0,0",{"x":-1,"w":2.5},"4,1\n\n\n0,1",{"x":-1.5,"w":1.5},"4,2\n\n\n0,0"]
+    ]
+    # fmt: on
+    result = _layout_collapse(layout)
+    expected_keyboard = parse_kle(expected)
+    expected_keyboard = MatrixAnnotatedKeyboard(meta=expected_keyboard.meta, keys=expected_keyboard.keys)
+    assert result == expected_keyboard
+    assert len(result.alternative_keys) == 1
+
+
+@pytest.mark.parametrize("example", ["0_sixty", "wt60_a", "wt60_d"])
+def test_with_via_layouts(request, example) -> None:
     test_dir = request.fspath.dirname
-    example = "wt60_a"
 
     def _reference_keyboard(filename: str) -> MatrixAnnotatedKeyboard:
         reference = get_reference(Path(test_dir) / "data/via-layouts" / filename)
@@ -274,7 +337,7 @@ def test_with_via_layouts(request) -> None:
         result.collapse()
         reference_collapsed = _reference_keyboard(f"{example}-internal-collapsed.json")
         assert result.keys == reference_collapsed.keys
-        # order might be different but that's not important right now.
+        # order after collapsing might be different but that's not important right now.
         assert equal_ignore_order(
             result.alternative_keys, reference_collapsed.alternative_keys
         )

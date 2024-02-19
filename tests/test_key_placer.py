@@ -12,6 +12,7 @@ from kbplacer.defaults import ZERO_POSITION
 from .conftest import (
     add_diode_footprint,
     add_switch_footprint,
+    equal_ignore_order,
     generate_render,
     update_netinfo,
 )
@@ -41,16 +42,6 @@ except:
     class Side(Flag):
         FRONT = False
         BACK = True
-
-
-def equal_ignore_order(a, b):
-    unmatched = list(b)
-    for element in a:
-        try:
-            unmatched.remove(element)
-        except ValueError:
-            return False
-    return not unmatched
 
 
 def get_board_with_one_switch(

@@ -226,6 +226,16 @@ def __get_parameters():
     )
     test_params.append(param)
 
+    # add one test alternative keys and via annotated layout
+    param = pytest.param(
+        "2x2-with-alternative-layout",
+        ("Tracks", True),
+        ("DefaultDiode", None),
+        "via.json",
+        id="2x2-with-alternative-layout;Tracks;DefaultDiode;VIA",
+    )
+    test_params.append(param)
+
     return test_params
 
 
@@ -466,23 +476,49 @@ def test_placing_and_routing_when_reference_pair_rotated(
     assert ends == {(2540000, -5080000), (1618000, 3403000), (2540000, 2481000)}
 
 
-@pytest.mark.parametrize("layout_file", ["kle-annotated.json", "via.json"])
-def test_board_creation(request, example_isolation, kbplacer_process, layout_file):
-    example = "2x2"
-    with example_isolation(example, layout_file, "Tracks", "DefaultDiode") as e:
+def __filter_for_board_creation(parameters):
+    new_parameters = []
+    for p in parameters:
+        example, route_option, diode_option, layout_option = p.values
+        # 2x3-rotations excluded because adding stabilizers not yet supported
+        if (
+            example != "2x3-rotations"
+            and route_option[0] == "Tracks"
+            and diode_option[0] != "DiodeOption2"
+            and layout_option in ["kle-annotated.json", "via.json"]
+        ):
+            new_parameters.append(p)
+    return new_parameters
+
+
+@pytest.mark.parametrize(
+    "example,route,diode_position,layout_option",
+    __filter_for_board_creation(__get_parameters()),
+)
+def test_board_creation(
+    request,
+    example,
+    route,
+    diode_position,
+    layout_option,
+    example_isolation,
+    kbplacer_process,
+) -> None:
+    with example_isolation(example, layout_option, route[0], diode_position[0]) as e:
         layout_path, pcb_path = e
         # remove board file, it should be created from scratch
         os.remove(pcb_path)
 
         kbplacer_process(
-            True,
-            None,
+            route[1],
+            diode_position[1],
             layout_path,
             pcb_path,
             flags=["--create-from-annotated-layout"],
             args={
                 "--switch-footprint": f"{get_footprints_dir(request)}:SW_Cherry_MX_PCB_1.00u",
                 "--diode-footprint": f"{get_footprints_dir(request)}:D_SOD-323F",
+                # TODO: handle stabilizer footprints
             },
         )
 

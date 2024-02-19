@@ -328,7 +328,7 @@ class MatrixAnnotatedKeyboard(Keyboard):
                 return True
         return False
 
-    def key_iterator(self, ignore_alternative: bool) -> Iterator[Key]:
+    def key_iterator(self, *, ignore_alternative: bool) -> Iterator[Key]:
         if ignore_alternative:
             return iter(self.keys)
         else:
@@ -339,19 +339,12 @@ class MatrixAnnotatedKeyboard(Keyboard):
             return tuple(map(int, label.split(",")))
         return None
 
-    def _get_sorted_alternative_by_option(self) -> Dict[Tuple[int, int], List[Key]]:
-        keys: Dict[Tuple[int, int], List[Key]] = defaultdict(list)
-        for key in self.alternative_keys:
+    def _get_layout_options(self) -> Dict[int, Dict[int, List[Key]]]:
+        keys: Dict[int, Dict[int, List[Key]]] = defaultdict(lambda: defaultdict(list))
+        for key in self.key_iterator(ignore_alternative=False):
             option = self._get_layout_option_or_none(key)
-            if option is None:
-                msg = (
-                    "Alternative key must have option label defined, "
-                    f"found '{key.labels}' labels"
-                )
-                raise RuntimeError(msg)
-            keys[option].append(key)
-        for k in keys:
-            keys[k].sort(key=lambda key: (key.x, key.y))
+            if option:
+                keys[option[0]][option[1]].append(key)
         return keys
 
     def collapse(self) -> None:
@@ -359,48 +352,49 @@ class MatrixAnnotatedKeyboard(Keyboard):
         i.e. the positions they would take as 'non alternative'
         and de-duplicate items with equal matrix coordinates and size
         """
-        # get layout options and its positions, not using `get_layout_option`
-        # because we must detect only explictly defined groups
-        positions = {}
-        for alt_key in self.keys:
-            layout_option = self._get_layout_option_or_none(alt_key)
-            if layout_option is not None:
-                option = layout_option[0]
-                position = (alt_key.x, alt_key.y)
-                if (
-                    option in positions and positions[option] > position
-                ) or option not in positions:
-                    positions[option] = position
-        alts = self._get_sorted_alternative_by_option()
+        seen = {}
+        new_alternatives = []
+
+        def _key_props(key: Key):
+            props = (
+                key.labels[self.MATRIX_COORDINATES_LABEL],
+                key.x,
+                key.y,
+                key.x2,
+                key.y2,
+                key.width,
+                key.height,
+                key.width2,
+                key.height2,
+                key.decal,
+            )
+            return props
 
         def __int(value: float) -> Union[int, float]:
             return int(value) if int(value) == value else value
 
-        for option, keys in alts.items():
-            x, y = positions[option[0]]
-            x, y = __int(x), __int(y)
-            for k in keys:
-                k.x = x
-                k.y = y
-                x += k.width
-                x = __int(x)
-        seen = {}
-        new_alternatives = []
-        for alt_key in list(self.alternative_keys):
-            props: Tuple[str, float, float, float, float, bool] = (
-                alt_key.labels[self.MATRIX_COORDINATES_LABEL],
-                alt_key.width,
-                alt_key.height,
-                alt_key.width2,
-                alt_key.height2,
-                alt_key.decal,
-            )
-            if props not in seen:
-                seen[props] = True
-                new_alternatives.append(alt_key)
-        for alt_key in list(new_alternatives):
-            if alt_key.decal:
-                new_alternatives.remove(alt_key)
+        for k in self.keys:
+            seen[_key_props(k)] = True
+
+        layout_keys = self._get_layout_options()
+        for choices in layout_keys.values():
+            anchor = min(choices[0], key=lambda key: (key.x, key.y))
+            for choice, keys in choices.items():
+                if choice != 0:
+                    group_anchor = min(keys, key=lambda key: (key.x, key.y))
+                    move_x = anchor.x - group_anchor.x
+                    move_y = anchor.y - group_anchor.y
+                    for k in keys:
+                        k.x = __int(k.x + move_x)
+                        k.y = __int(k.y + move_y)
+                        props = _key_props(k)
+                        if props not in seen:
+                            seen[props] = True
+                            new_alternatives.append(k)
+
+        for key in list(new_alternatives):
+            if key.decal:
+                new_alternatives.remove(key)
         self.alternative_keys = new_alternatives
 
     @staticmethod

@@ -128,6 +128,9 @@ class KeyMatrix:
     def switches_by_reference(self) -> Iterable[Tuple[str, pcbnew.FOOTPRINT]]:
         return self._switches.items()
 
+    def switches_by_reference_ordered(self) -> Iterable[Tuple[str, pcbnew.FOOTPRINT]]:
+        return sorted(self._switches.items(), key=lambda x: x[0])
+
     def __guess_format(self, guesses: List[str]) -> str:
         for guess in guesses:
             pattern = re.compile(guess.format("(\\d)+"))
@@ -219,14 +222,13 @@ class MatrixAnnotatedKeyboardSwitchIterator:
         self,
         keyboard: MatrixAnnotatedKeyboard,
         key_matrix: KeyMatrix,
-        ignore_alternative_layouts=False,
     ) -> None:
         self._keyboard = keyboard
         self._key_matrix = key_matrix
-        self._ignore_alternative_layouts = ignore_alternative_layouts
 
     def __iter__(self):
-        self._keys = self._keyboard.key_iterator(self._ignore_alternative_layouts)
+        self._keys = self._keyboard.key_iterator(ignore_alternative=False)
+        self._seen: List[Tuple[str, str]] = []
         return self
 
     def __get_footprint(self, key) -> Optional[pcbnew.FOOTPRINT]:
@@ -244,15 +246,15 @@ class MatrixAnnotatedKeyboardSwitchIterator:
         # assume thar alternative keys have same annotation with
         # some sort of suffix so after sorting
         # the option index would get us correct footprint
-        option = MatrixAnnotatedKeyboard.get_layout_option(key)
         try:
-            if len(switches) > 1:
-                switch = switches[option]
-            else:
-                switch = switches[0]
-            return self._key_matrix.switch_by_reference(switch)
+            # due to layout collapsing the choices might be missing,
+            # instead of using choice value use number of already seen switches
+            switch = switches[self._seen.count(matrix_coordinates)]
+            fp = self._key_matrix.switch_by_reference(switch)
+            self._seen.append(matrix_coordinates)
+            return fp
         except Exception:
-            logger.warning(f"Could not locate footprint using layout option {option}")
+            logger.warning(f"Could not locate footprint")
             return None
 
     def __next__(self):
@@ -272,9 +274,7 @@ def get_key_iterator(
     key_matrix: KeyMatrix,
 ) -> Iterator:
     if isinstance(keyboard, MatrixAnnotatedKeyboard):
-        _iter = MatrixAnnotatedKeyboardSwitchIterator(
-            keyboard, key_matrix, ignore_alternative_layouts=True
-        )
+        _iter = MatrixAnnotatedKeyboardSwitchIterator(keyboard, key_matrix)
     else:
         _iter = KeyboardSwitchIterator(keyboard, key_matrix)
     return iter(_iter)
@@ -643,18 +643,27 @@ class KeyPlacer(BoardModifier):
         key_matrix: KeyMatrix,
     ) -> None:
         if diode_infos and diode_infos[0].position:
-            for reference, switch_footprint in key_matrix.switches_by_reference():
+            # one diode can be associated with more than one switch,
+            # for example for via-annotated alternative keys or when using
+            # SOT-23 package or similar, keep track of placed diodes to avoid
+            # placing one diode twice.
+            placed_diodes: List[pcbnew.FOOTPRINT] = []
+            for (
+                reference,
+                switch_footprint,
+            ) in key_matrix.switches_by_reference_ordered():
                 diodes = key_matrix.diodes_by_switch_reference(reference)
                 switch_position = get_position(switch_footprint)
                 switch_orientation = get_orientation(switch_footprint)
                 for diode, info in zip(diodes, diode_infos):
-                    if info.position:
+                    if info.position and diode not in placed_diodes:
                         self.place_element(
                             diode,
                             info.position,
                             switch_position,
                             switch_orientation,
                         )
+                        placed_diodes.append(diode)
 
     def place_switch_elements(
         self,
@@ -855,10 +864,13 @@ class KeyPlacer(BoardModifier):
                 try:
                     keyboard = MatrixAnnotatedKeyboard(keyboard.meta, keyboard.keys)
                     logger.info(
-                        "Detected layout convertable to matrix annotated keyboard"
+                        "Detected layout convertible to matrix annotated keyboard"
                     )
                 except:
                     pass
+            if isinstance(keyboard, MatrixAnnotatedKeyboard):
+                # can be called only once:
+                keyboard.collapse()
             self.place_switches(keyboard, key_matrix, key_info.position)
 
         logger.info(f"Diode info: {diode_infos}")

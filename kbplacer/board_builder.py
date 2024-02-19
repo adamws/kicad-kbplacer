@@ -79,7 +79,6 @@ class BoardBuilder:
     def create_board(
         self,
         keyboard: Union[str, MatrixAnnotatedKeyboard],
-        ignore_alternative_layouts=False,
     ) -> pcbnew.BOARD:
         if isinstance(keyboard, str):
             with open(keyboard, "r") as f:
@@ -99,9 +98,11 @@ class BoardBuilder:
         else:
             _keyboard: MatrixAnnotatedKeyboard = keyboard
 
+        _keyboard.collapse()
+
         current_ref = 1
         items: List[Tuple[str, str]] = []
-        key_iterator = _keyboard.key_iterator(ignore_alternative_layouts)
+        key_iterator = _keyboard.key_iterator(ignore_alternative=False)
 
         for key in key_iterator:
             if key.decal:
