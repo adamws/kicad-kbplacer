@@ -281,7 +281,9 @@ def test_iso_enter_layout_collapse() -> None:
     # fmt: on
     result = _layout_collapse(layout)
     expected_keyboard = parse_kle(expected)
-    expected_keyboard = MatrixAnnotatedKeyboard(meta=expected_keyboard.meta, keys=expected_keyboard.keys)
+    expected_keyboard = MatrixAnnotatedKeyboard(
+        meta=expected_keyboard.meta, keys=expected_keyboard.keys
+    )
     assert result == expected_keyboard
 
 
@@ -300,7 +302,9 @@ def test_bottom_row_collapse_no_extra_keys() -> None:
     # fmt: on
     result = _layout_collapse(layout)
     expected_keyboard = parse_kle(expected)
-    expected_keyboard = MatrixAnnotatedKeyboard(meta=expected_keyboard.meta, keys=expected_keyboard.keys)
+    expected_keyboard = MatrixAnnotatedKeyboard(
+        meta=expected_keyboard.meta, keys=expected_keyboard.keys
+    )
     assert result == expected_keyboard
     assert len(result.alternative_keys) == 0
 
@@ -317,9 +321,33 @@ def test_bottom_row_decal_handling() -> None:
     # fmt: on
     result = _layout_collapse(layout)
     expected_keyboard = parse_kle(expected)
-    expected_keyboard = MatrixAnnotatedKeyboard(meta=expected_keyboard.meta, keys=expected_keyboard.keys)
+    expected_keyboard = MatrixAnnotatedKeyboard(
+        meta=expected_keyboard.meta, keys=expected_keyboard.keys
+    )
     assert result == expected_keyboard
     assert len(result.alternative_keys) == 1
+
+
+def test_collapse_detects_duplicated_keys() -> None:
+    # middle alternative key should be removed because it belongs to the same net,
+    # and although it is different size than default choice, the center of a switch
+    # is in the same place (so using both would result in overlapping/duplicated footprint)
+    # fmt: off
+    layout = [
+        [{"w":7},"4,6\n\n\n2,0"],
+        [{"y":0.5,"w":3},"4,4\n\n\n2,1","4,6\n\n\n2,1",{"w":3},"4,8\n\n\n2,1"]
+    ]
+    expected = [
+        [{"w":7},"4,6\n\n\n2,0",{"x":-7,"w":3},"4,4\n\n\n2,1",{"x":1,"w":3},"4,8\n\n\n2,1"]
+    ]
+    # fmt: on
+    result = _layout_collapse(layout)
+    expected_keyboard = parse_kle(expected)
+    expected_keyboard = MatrixAnnotatedKeyboard(
+        meta=expected_keyboard.meta, keys=expected_keyboard.keys
+    )
+    assert result == expected_keyboard
+    assert len(result.alternative_keys) == 2
 
 
 @pytest.mark.parametrize("example", ["0_sixty", "wt60_a", "wt60_d"])

@@ -355,23 +355,19 @@ class MatrixAnnotatedKeyboard(Keyboard):
         seen = {}
         new_alternatives = []
 
+        def _int(value: float) -> Union[int, float]:
+            return int(value) if int(value) == value else value
+
+        def _key_center(key: Key) -> Tuple[Union[int, float], Union[int, float]]:
+            return (_int(key.x + key.width / 2), _int(key.y + key.height / 2))
+
         def _key_props(key: Key):
             props = (
                 key.labels[self.MATRIX_COORDINATES_LABEL],
-                key.x,
-                key.y,
-                key.x2,
-                key.y2,
-                key.width,
-                key.height,
-                key.width2,
-                key.height2,
+                *_key_center(key),
                 key.decal,
             )
             return props
-
-        def __int(value: float) -> Union[int, float]:
-            return int(value) if int(value) == value else value
 
         for k in self.keys:
             seen[_key_props(k)] = True
@@ -385,8 +381,8 @@ class MatrixAnnotatedKeyboard(Keyboard):
                     move_x = anchor.x - group_anchor.x
                     move_y = anchor.y - group_anchor.y
                     for k in keys:
-                        k.x = __int(k.x + move_x)
-                        k.y = __int(k.y + move_y)
+                        k.x = _int(k.x + move_x)
+                        k.y = _int(k.y + move_y)
                         props = _key_props(k)
                         if props not in seen:
                             seen[props] = True
