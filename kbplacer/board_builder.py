@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from collections import defaultdict
 from dataclasses import dataclass
 from string import ascii_lowercase
@@ -109,8 +110,18 @@ class BoardBuilder:
                 continue
             items.append(MatrixAnnotatedKeyboard.get_matrix_position(key))
 
+        def _sort_matrix(item):
+            row_match = re.search(r"\d+", item[0])
+            column_match = re.search(r"\d+", item[1])
+
+            if row_match is None or column_match is None:
+                msg = f"No numeric part for row or column found in '{item}'"
+                raise ValueError(msg)
+
+            return int(row_match.group()), int(column_match.group())
+
         progress: Dict[Tuple[str, str], List[pcbnew.FOOTPRINT]] = defaultdict(list)
-        for row, column in sorted(items):
+        for row, column in sorted(items, key=_sort_matrix):
             position = (row, column)
             if position not in progress:
                 switch = self.add_switch_footprint(f"SW{current_ref}")
