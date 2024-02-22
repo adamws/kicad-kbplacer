@@ -132,7 +132,11 @@ To use this tool in this way, it needs to be installed following [plugin install
     - Each switch can have multiple diodes
   - Symbols are ordered by Y position.
       - :warning: This annotation scheme might not work well for certain 'ergo' layouts.
-        The problem and possible solutions are described in [annotation guide](./docs/annotation_guide.md).
+      - Annotation order is ignored when using layout with mapping to matrix defined
+        (see [VIA](https://www.caniusevia.com/docs/layouts#switch-matrix-co-ordinates)
+        specification).
+
+    To learn more see [annotation guide](./docs/annotation_guide.md).
 
   ![schematic-example](resources/schematic-example.png)
 

@@ -70,3 +70,36 @@ There are two ways to ensure matching order between schematic and KLE:
    in the above picture, then it takes priority over default (KLE) ordering.
    The front center label has been chosen because it is unlikely that it
    interferes with already defined layouts.
+
+## Using VIA annotated layouts
+
+The `kbplacer` automatically detects and handles [VIA](https://www.caniusevia.com/docs/layouts) layouts
+and raw KLE layouts with via-like matrix coordinates labels.
+When such file provided, then the annotations on the schematic can be out of order
+because `kbplacer` will search for footprints using net names derived from
+defined `row,col` key legend.
+
+This solves the problem of missing layout to schematic mapping.
+
+The only requirement is that rows and columns **must** use one of the following
+names: `R, ROW, C, COL, COLUMN` (case insensitive).
+
+### Layout options
+
+The VIA supports multiple layout options for physical layout of keys.
+This is supported by `kbplacer` as well. Consider following example:
+
+![soyuz-layout](../resources/souyz-layout.png)
+[(open in keyboard-layout-editor)](http://www.keyboard-layout-editor.com/##@@_c=%23777777%3B&=0,0&_c=%23aaaaaa%3B&=0,1&=0,2&=0,3%3B&@_c=%23cccccc%3B&=1,0&=1,1&=1,2&_c=%23aaaaaa&h:2%3B&=2,3%0A%0A%0A0,0%3B&@_c=%23cccccc%3B&=2,0&=2,1&=2,2%3B&@=3,0&=3,1&=3,2&_c=%23777777&h:2%3B&=4,3%0A%0A%0A1,0%3B&@_c=%23cccccc&w:2%3B&=4,1%0A%0A%0A2,0&=4,2%3B&@_x:4.5&y:-4&c=%23aaaaaa%3B&=1,3%0A%0A%0A0,1%3B&@_x:4.5%3B&=2,3%0A%0A%0A0,1%3B&@_x:4.5&c=%23777777%3B&=3,3%0A%0A%0A1,1%3B&@_x:4.5%3B&=4,3%0A%0A%0A1,1%3B&@_y:0.5&c=%23cccccc%3B&=4,0%0A%0A%0A2,1&=4,1%0A%0A%0A2,1)
+
+This layout uses three 2U keys which can be independently replaced with two 1U keys instead.
+Schematic for such keyboard and resulting PCB should look something like this:
+
+![annotation-guide-6](../resources/annotation-guide-6.png)
+
+Note that keys for nets `2,3`, `4,1` and `4,3` are doubled. The alternative keys
+are automatically 'collapsed' into proper physical place so there is no need to adjust
+any position on above layout.
+
+Because layout provides mapping between switch (on layout) and its footprint, the schematic
+annotations can be sorted by X position (or not sorted at all).
