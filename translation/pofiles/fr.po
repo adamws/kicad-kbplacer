@@ -13,7 +13,7 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
 msgid "<missing>"
-msgstr ""
+msgstr "<manquant>"
 
 msgid "development build"
 msgstr ""
