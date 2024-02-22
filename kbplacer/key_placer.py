@@ -16,6 +16,7 @@ from .board_modifier import (
     BoardModifier,
     get_closest_pads_on_same_net,
     get_common_nets,
+    get_distance,
     get_footprint,
     get_optional_footprint,
     get_orientation,
@@ -254,7 +255,7 @@ class MatrixAnnotatedKeyboardSwitchIterator:
             self._seen.append(matrix_coordinates)
             return fp
         except Exception:
-            logger.warning(f"Could not locate footprint")
+            logger.warning("Could not locate footprint")
             return None
 
     def __next__(self):
@@ -708,22 +709,27 @@ class KeyPlacer(BoardModifier):
     def route_rows_and_columns(self, key_matrix: KeyMatrix) -> None:
         matrix_pads: Dict[str, List[pcbnew.PAD]] = defaultdict(list)
 
-        sorted_pads = pcbnew.PADS_VEC()
-        self.board.GetSortedPadListByXthenYCoord(sorted_pads)
+        xy_sorted_pads = pcbnew.PADS_VEC()
+        self.board.GetSortedPadListByXthenYCoord(xy_sorted_pads)
 
         matrix_net_names = key_matrix.matrix_nets()
-        for pad in sorted_pads:
+        for pad in xy_sorted_pads:
             net_name = pad.GetNetname()
             if net_name in matrix_net_names:
                 matrix_pads[net_name].append(pad)
 
-        # very naive routing approach, will fail in some scenarios:
+        def _get_closest(pad: pcbnew.PAD, pads: List[pcbnew.PAD]) -> pcbnew.PAD:
+            return min(pads, key=lambda x: get_distance(pad, x))
+
         for pads in matrix_pads.values():
-            for pad1, pad2 in zip(pads, pads[1:]):
-                if pad1.GetParentAsString() == pad2.GetParentAsString():
-                    # do not connect pads of the same footprint
-                    continue
-                self.route(pad1, pad2)
+            len_pads = len(pads)
+            i = 0
+            while i < len_pads - 1:
+                pad1 = pads[i]
+                pad2 = _get_closest(pad1, pads[i + 1 :])
+                if pad1.GetParentAsString() != pad2.GetParentAsString():
+                    self.route(pad1, pad2)
+                i += 1
 
     def load_template(self, template_path: str) -> pcbnew.BOARD:
         if KICAD_VERSION >= (8, 0, 0):
