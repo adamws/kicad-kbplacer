@@ -43,12 +43,12 @@ by reducing tedious element placement and routing tasks.
 <!-- TOC --><a name="features"></a>
 ## Features
 
-- [x] Automatic keys and diodes placement
-- [x] Key rotation support
-- [x] Basic track routing
-- [x] User selectable diode position in relation to key position
-- [x] Configurable additional elements placement
-- [x] Board outline generation
+- Automatic keys and diodes placement
+- Track routing and track template replication
+- Support for KLE, [VIA](https://www.caniusevia.com/docs/layouts) and [ergogen](https://github.com/ergogen/ergogen) inputs
+- User selectable diode position in relation to key position
+- Configurable additional elements placement
+- Board outline generation
 
 > [!WARNING]
 > Ergogen support is new experimental feature and it has not been tested extensively
