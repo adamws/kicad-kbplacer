@@ -1,4 +1,4 @@
-FROM ubuntu:lunar
+FROM ubuntu:mantic
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -35,4 +35,4 @@ RUN add-apt-repository --yes ppa:kicad/kicad-dev-nightly \
   && rm -rf /var/lib/apt/lists/*
 
 ENV LD_LIBRARY_PATH "/usr/lib/kicad-nightly/lib/x86_64-linux-gnu"
-ENV PYTHONPATH "${PYTHONPATH}:/usr/lib/kicad-nightly/local/lib/python3.11/dist-packages"
+ENV PYTHONPATH "${PYTHONPATH}:/usr/lib/kicad-nightly/lib/python3/dist-packages"

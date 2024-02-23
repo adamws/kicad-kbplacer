@@ -234,10 +234,10 @@ jobs:
       - run:
           name: Build and push KiCad nightly docker image
           command: |
-            docker build -t admwscki/kicad-kbplacer-primary:nightly-lunar -f nightly.Dockerfile .
+            docker build -t admwscki/kicad-kbplacer-primary:nightly-mantic -f nightly.Dockerfile .
             echo $DOCKERHUB_PASSWORD | docker login -u $DOCKERHUB_LOGIN --password-stdin
-            docker push admwscki/kicad-kbplacer-primary:nightly-lunar
-          working_directory: .circleci/images/lunar
+            docker push admwscki/kicad-kbplacer-primary:nightly-mantic
+          working_directory: .circleci/images/mantic
   test-linux-kicad-nightly:
     parameters:
       version:
@@ -308,6 +308,6 @@ workflows:
     jobs:
       - build-nightly-image
       - test-linux-kicad-nightly:
-          version: nightly-lunar
+          version: nightly-mantic
           requires:
             - build-nightly-image
