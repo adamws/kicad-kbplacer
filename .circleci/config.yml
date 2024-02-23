@@ -257,8 +257,8 @@ workflows:
                 - 6.0.11-lunar
                 - 7.0.6-focal
                 - 7.0.6-lunar
-                - 7.0.10-focal
-                - 7.0.10-lunar
+                - 7.0.11-focal
+                - 7.0.11-mantic
       - collect-coverage:
           requires:
             - test-linux
