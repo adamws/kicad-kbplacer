@@ -1,4 +1,4 @@
-FROM admwscki/kicad-kbplacer-primary:7.0.11-mantic
+FROM admwscki/kicad-kbplacer-primary:8.0.0-mantic
 
 RUN userdel -r ubuntu
 
@@ -11,7 +11,7 @@ RUN groupadd -g $GID -o kicad \
 USER kicad
 WORKDIR /kicad
 
-ARG PLUGINS_PATH=/kicad/.local/share/kicad/7.0/3rdparty/plugins
+ARG PLUGINS_PATH=/kicad/.local/share/kicad/8.0/3rdparty/plugins
 RUN mkdir -p $PLUGINS_PATH
 COPY --chown=kicad:kicad kbplacer/ $PLUGINS_PATH/com_github_adamws_kicad-kbplacer/
 
