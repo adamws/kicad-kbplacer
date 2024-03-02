@@ -87,13 +87,13 @@ def create_schematic(input_path, output_path) -> None:
     occurences = [[0 for _ in range(columns)] for _ in range(rows)]
 
     current_ref = 1
-    first_row = True
-    first_column = True
+    labels = set()
 
     for row, column in matrix:
         print(f"row: {row} column: {column}")
-        first_row = row == 0
-        first_column = column == 0
+        row_label = f"ROW{row}"
+        column_label = f"COL{column}"
+
         used_slots = occurences[row][column]
         if used_slots > 3:
             msg = "Too many switches per matrix slot"
@@ -108,15 +108,16 @@ def create_schematic(input_path, output_path) -> None:
         wire.start_at(switch.pin.n1)
         wire.delta_x = -1 * UNIT
         wire.delta_y = 0
-        if first_row and used_slots == 0:
+        if column_label not in labels and used_slots == 0:
             column_wire = sch.wire.new()
             column_wire.start_at(wire.end)
             column_wire.delta_x = 0
-            column_wire.delta_y = (ROW_DISTANCE * (rows - 1) + 13) * UNIT
+            column_wire.delta_y = (ROW_DISTANCE * (rows - row - 1) + 13) * UNIT
 
             label = sch.global_label.new()
             label.move(column_wire.end.value[0], column_wire.end.value[1], 270)
-            label.value = f"COL{column}"
+            label.value = column_label
+            labels.add(column_label)
         else:
             junc = sch.junction.new()
             junc.move(wire.end)
@@ -134,16 +135,17 @@ def create_schematic(input_path, output_path) -> None:
             wire.start_at(diode.pin.A)
             wire.delta_x = 0
             wire.delta_y = 1 * UNIT
-            if first_column:
+            if row_label not in labels:
                 row_wire = sch.wire.new()
                 row_wire.start_at(wire.end)
-                row_wire.delta_x = (COLUMN_DISTANCE * (columns - 1) + 5) * UNIT
+                row_wire.delta_x = (COLUMN_DISTANCE * (columns - column - 1) + 5) * UNIT
                 row_wire.delta_y = 0
 
                 label = sch.global_label.new()
                 label.move(row_wire.end.value[0], row_wire.end.value[1], 0)
                 label.effects.justify.value = "left"
-                label.value = f"ROW{row}"
+                label.value = row_label
+                labels.add(row_label)
             else:
                 junc = sch.junction.new()
                 junc.move(wire.end)
