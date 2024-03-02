@@ -47,14 +47,14 @@ def load_keyboard(layout_path) -> MatrixAnnotatedKeyboard:
         return _keyboard
 
 
-def get_matrix(keyboard: MatrixAnnotatedKeyboard) -> list[tuple[str, str]]:
+def get_matrix(keyboard: MatrixAnnotatedKeyboard) -> list[tuple[int, int]]:
     items: list[tuple[str, str]] = []
     for key in keyboard.key_iterator(ignore_alternative=False):
         if key.decal:
             continue
         items.append(MatrixAnnotatedKeyboard.get_matrix_position(key))
 
-    def _sort_matrix(item):
+    def _to_ints(item):
         row_match = re.search(r"\d+", item[0])
         column_match = re.search(r"\d+", item[1])
 
@@ -64,13 +64,12 @@ def get_matrix(keyboard: MatrixAnnotatedKeyboard) -> list[tuple[str, str]]:
 
         return int(row_match.group()), int(column_match.group())
 
-    return sorted(items, key=_sort_matrix)
+    return sorted(list(map(_to_ints, items)))
 
 
 def create_schematic(input_path, output_path) -> None:
     keyboard = load_keyboard(input_path)
     matrix = get_matrix(keyboard)
-    matrix = [tuple(map(int, label)) for label in matrix]
     print(matrix)
 
     with open(output_path, "w") as f:
