@@ -6,9 +6,9 @@ import sys
 from pathlib import Path
 
 import yaml
+from skip import Schematic
 
 from kbplacer.kle_serial import MatrixAnnotatedKeyboard, get_keyboard
-from skip import Schematic
 
 ORIGIN = (18, 18)
 UNIT = 1.27
@@ -67,7 +67,9 @@ def get_matrix(keyboard: MatrixAnnotatedKeyboard) -> list[tuple[int, int]]:
     return sorted(list(map(_to_ints, items)))
 
 
-def create_schematic(input_path, output_path) -> None:
+def create_schematic(
+    input_path, output_path, switch_footprint="", diode_footprint=""
+) -> None:
     keyboard = load_keyboard(input_path)
     matrix = get_matrix(keyboard)
     print(matrix)
@@ -77,7 +79,11 @@ def create_schematic(input_path, output_path) -> None:
 
     sch = Schematic(output_path)
     base_switch = sch.symbol.reference_startswith("SW")[0]
+    if switch_footprint:
+        base_switch.property.Footprint.value = switch_footprint
     base_diode = sch.symbol.reference_startswith("D")[0]
+    if diode_footprint:
+        base_diode.property.Footprint.value = diode_footprint
 
     rows = len(set([x[0] for x in matrix]))
     columns = len(set([x[1] for x in matrix]))
@@ -171,11 +177,15 @@ if __name__ == "__main__":
         action="store_true",
         help="Override output if already exists",
     )
+    parser.add_argument("-swf", required=False, help="Switch footprint")
+    parser.add_argument("-df", required=False, help="Diode footprint")
 
     args = parser.parse_args()
     input_path = getattr(args, "in")
     output_path = getattr(args, "out")
     force = args.force
+    switch_footprint = getattr(args, "swf")
+    diode_footprint = getattr(args, "df")
 
     if force:
         shutil.rmtree(output_path, ignore_errors=True)
@@ -183,4 +193,4 @@ if __name__ == "__main__":
         print(f"Output file '{output_path}' already exists, exiting...")
         sys.exit(1)
 
-    create_schematic(input_path, output_path)
+    create_schematic(input_path, output_path, switch_footprint, diode_footprint)
