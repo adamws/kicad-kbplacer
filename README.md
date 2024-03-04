@@ -57,6 +57,10 @@ by reducing tedious element placement and routing tasks.
 
 Some examples can be found in [examples](./examples) directory.
 
+**See also:**
+
+:link: [Keyboard PCB design with ergogen and kbplacer](https://adamws.github.io/keyboard-pcb-design-with-ergogen-and-kbplacer/)
+
 <!-- TOC --><a name="installation"></a>
 ## Installation
 
