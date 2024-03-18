@@ -275,6 +275,11 @@ def generate_render(tmpdir, request):
 
 
 def generate_drc(tmpdir, board_path: str) -> None:
+    if KICAD_VERSION == (8, 0, 1):
+        # there is some kind of KiCad regression, this function
+        # causes segmentation fault randomly
+        return
+
     board = pcbnew.LoadBoard(board_path)
     drc_path = tmpdir / "report/drc.log"
     pcbnew.WriteDRCReport(board, drc_path, pcbnew.EDA_UNITS_MILLIMETRES, True)
