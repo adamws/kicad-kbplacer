@@ -384,6 +384,20 @@ def test_placing_and_routing_separately(example_isolation, kbplacer_process):
         kbplacer_process(True, None, None, pcb_path)
 
 
+def test_empty_run_after_placing_and_routing(example_isolation, kbplacer_process):
+    # The 'empty run' is when user deselects all options but still clicks OK instead of Cancel
+    # (if using GUI). This should not change the state of previously placed & routed PCB.
+    # Simulate this scenario with CLI subprocess:
+    example = "2x3-rotations"
+    layout_file = "kle.json"
+    with example_isolation(example, layout_file, "Tracks", "DefaultDiode") as e:
+        layout_path, pcb_path = e
+        # run without routing:
+        kbplacer_process(True, None, layout_path, pcb_path)
+        # 'empty run':
+        kbplacer_process(False, "D{} UNCHANGED", None, pcb_path)
+
+
 def test_routing_with_template_without_diode_placement(
     example_isolation, kbplacer_process
 ):

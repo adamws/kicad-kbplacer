@@ -476,7 +476,7 @@ class KeyPlacer(BoardModifier):
         pcbnew.SaveBoard(destination_path, board, aSkipSettings=True)
 
     def get_connection_template(
-        self, key_format: str, diode_format: str, destination_path: str
+        self, key_format: str, diode_format: str, destination_path: str, route: bool
     ) -> List[pcbnew.PCB_TRACK]:
         """Returns list of tracks (including vias) connecting first element
         with reference `key_format` to itself or any other element
@@ -517,7 +517,8 @@ class KeyPlacer(BoardModifier):
             else:
                 item_copy.Move(pcbnew.wxPoint(-origin.x, -origin.y))
 
-            self.board.RemoveNative(item)
+            if route:
+                self.board.RemoveNative(item)
             result.append(item_copy)
 
         def _format_item(item: pcbnew.PCB_TRACK) -> str:
@@ -803,14 +804,17 @@ class KeyPlacer(BoardModifier):
         return infos
 
     def _get_template_connection(
-        self, key_format: str, diode_info: ElementInfo
+        self, key_format: str, diode_info: ElementInfo, route: bool
     ) -> List[pcbnew.PCB_TRACK]:
         if diode_info.position_option in [
             PositionOption.RELATIVE,
             PositionOption.UNCHANGED,
         ]:
             return self.get_connection_template(
-                key_format, diode_info.annotation_format, diode_info.template_path
+                key_format,
+                diode_info.annotation_format,
+                diode_info.template_path,
+                route,
             )
         elif diode_info.position_option == PositionOption.PRESET:
             logger.info(
@@ -855,8 +859,9 @@ class KeyPlacer(BoardModifier):
         # it is important to get template connection
         # and relative positions before moving any elements
         template_connection = self._get_template_connection(
-            key_info.annotation_format, diode_info
+            key_info.annotation_format, diode_info, route_switches_with_diodes
         )
+
         diode_infos = self._prepare_diode_infos(key_matrix, diode_info)
         for element_info in additional_elements:
             self._update_element_position(key_info, element_info)
