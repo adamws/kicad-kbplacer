@@ -75,7 +75,9 @@ def get_board_with_one_switch(
     return board, switch, diodes
 
 
-def assert_board_tracks(expected: list[Tuple[int, int]] | None, board: pcbnew.BOARD):
+def assert_board_tracks(
+    expected: list[Tuple[int, int]] | None, board: pcbnew.BOARD
+) -> None:
     expected_wx = [pcbnew.wxPoint(x[0], x[1]) for x in expected] if expected else None
     points = []
     for track in board.GetTracks():
@@ -145,7 +147,9 @@ def assert_board_tracks(expected: list[Tuple[int, int]] | None, board: pcbnew.BO
     ],
 )
 @pytest.mark.parametrize("side", [Side.FRONT, Side.BACK])
-def test_diode_switch_routing(position, orientation, side, expected, tmpdir, request):
+def test_diode_switch_routing(
+    position, orientation, side, expected, tmpdir, request
+) -> None:
     board, switch, diodes = get_board_with_one_switch(request, "SW_Cherry_MX_PCB_1.00u")
     key_placer = KeyPlacer(board)
 
@@ -180,7 +184,7 @@ def test_diode_switch_routing(position, orientation, side, expected, tmpdir, req
 )
 def test_diode_switch_routing_complicated_footprint(
     position, orientation, expected, tmpdir, request
-):
+) -> None:
     board, switch, diodes = get_board_with_one_switch(
         request, "Kailh_socket_PG1350_optional_reversible"
     )
@@ -196,7 +200,7 @@ def test_diode_switch_routing_complicated_footprint(
     assert_board_tracks(expected, board)
 
 
-def test_multi_diode_switch_routing(tmpdir, request):
+def test_multi_diode_switch_routing(tmpdir, request) -> None:
     board, switch, diodes = get_board_with_one_switch(
         request, "SW_Cherry_MX_PCB_1.00u", number_of_diodes=2
     )
@@ -256,7 +260,9 @@ def get_board_for_2x2_example(request):
     return board
 
 
-def assert_2x2_layout_switches(board: pcbnew.BOARD, key_distance: Tuple[float, float]):
+def assert_2x2_layout_switches(
+    board: pcbnew.BOARD, key_distance: Tuple[float, float]
+) -> None:
     switches = [get_footprint(board, f"SW{i}") for i in range(1, 5)]
     positions = [get_position(switch) for switch in switches]
     assert positions[0] == pcbnew.wxPointMM(key_distance[0] * 2, key_distance[1] * 2)
@@ -280,7 +286,7 @@ def assert_2x2_layout_switches(board: pcbnew.BOARD, key_distance: Tuple[float, f
         (18, 19),
     ],
 )
-def test_switch_distance(key_distance, tmpdir, request):
+def test_switch_distance(key_distance, tmpdir, request) -> None:
     board = get_board_for_2x2_example(request)
     key_placer = KeyPlacer(board, key_distance)
     diode_position = DEFAULT_DIODE_POSITION
@@ -302,7 +308,7 @@ def test_switch_distance(key_distance, tmpdir, request):
         assert get_position(diode) == get_position(switch) + pcbnew.wxPointMM(p.x, p.y)
 
 
-def test_diode_placement_ignore(tmpdir, request):
+def test_diode_placement_ignore(tmpdir, request) -> None:
     board = get_board_for_2x2_example(request)
     key_placer = KeyPlacer(board)
     key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
@@ -324,7 +330,7 @@ def test_diode_placement_ignore(tmpdir, request):
     assert len(board.GetTracks()) == 0
 
 
-def test_placer_invalid_layout(tmpdir, request):
+def test_placer_invalid_layout(tmpdir, request) -> None:
     board = get_board_for_2x2_example(request)
     key_placer = KeyPlacer(board)
     key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
@@ -338,7 +344,7 @@ def test_placer_invalid_layout(tmpdir, request):
         key_placer.run(layout_path, key_info, diode_info, True)
 
 
-def test_switch_iterator_default_mode(request):
+def test_switch_iterator_default_mode(request) -> None:
     board = get_board_for_2x2_example(request)
     key_matrix = KeyMatrix(board, "SW{}", "D{}")
     with open(get_2x2_layout_path(request), "r") as f:
@@ -353,7 +359,7 @@ def test_switch_iterator_default_mode(request):
         assert footprint.GetReference() == next(expected_footprints)
 
 
-def test_switch_iterator_explicit_annotation_mode(request):
+def test_switch_iterator_explicit_annotation_mode(request) -> None:
     board = get_board_for_2x2_example(request)
     key_matrix = KeyMatrix(board, "SW{}", "D{}")
     with open(get_2x2_layout_path(request), "r") as f:
@@ -370,7 +376,7 @@ def test_switch_iterator_explicit_annotation_mode(request):
         assert footprint.GetReference() == next(expected_footprints)
 
 
-def test_switch_iterator_default_mode_ignore_decal(request):
+def test_switch_iterator_default_mode_ignore_decal(request) -> None:
     board = get_board_for_2x2_example(request)
     key_matrix = KeyMatrix(board, "SW{}", "D{}")
     with open(get_2x2_layout_path(request), "r") as f:

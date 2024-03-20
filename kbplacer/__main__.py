@@ -119,7 +119,7 @@ class XYAction(argparse.Action):
         setattr(namespace, self.dest, value)
 
 
-def app():
+def app() -> None:
     parser = argparse.ArgumentParser(
         description="Keyboard's key autoplacer",
         formatter_class=argparse.RawTextHelpFormatter,

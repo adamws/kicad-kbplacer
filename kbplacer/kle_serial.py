@@ -452,7 +452,7 @@ def find_best_label_alignment(labels) -> Tuple[int, List[Any]]:
         return 0, []
 
 
-def cleanup_key(key: Key):
+def cleanup_key(key: Key) -> None:
     for attribute_name in ["textSize", "textColor"]:
         attribute = getattr(key, attribute_name)
         attribute = attribute[0 : len(key.labels)]

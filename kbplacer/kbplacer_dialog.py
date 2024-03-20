@@ -69,7 +69,7 @@ def get_file_picker(*args, **kwargs):
     file_picker = wx.FilePickerCtrl(*args, **kwargs)
     file_picker.SetTextCtrlGrowable(True)
 
-    def _update_position(_):
+    def _update_position(_) -> None:
         text_ctrl = file_picker.GetTextCtrl()
         # when updating from file chooser window we want automatically
         # move to the end (it looks better when not whole path fits),
@@ -114,7 +114,7 @@ class FloatValidator(wx.Validator):
     def TransferFromWindow(self):
         return True
 
-    def OnChar(self, event):
+    def OnChar(self, event) -> None:
         text_ctrl = self.GetWindow()
         current_position = text_ctrl.GetInsertionPoint()
         keycode = int(event.GetKeyCode())
@@ -176,15 +176,15 @@ class LabeledTextCtrl(wx.Panel):
 
         self.SetSizer(sizer)
 
-    def Enable(self):
+    def Enable(self) -> None:
         self.label.Enable()
         self.text.Enable()
 
-    def Disable(self):
+    def Disable(self) -> None:
         self.label.Disable()
         self.text.Disable()
 
-    def Hide(self):
+    def Hide(self) -> None:
         self.label.Hide()
         self.text.Hide()
 
@@ -210,10 +210,10 @@ class CustomRadioBox(wx.Panel):
 
         self.SetSizer(sizer)
 
-    def Select(self, choice):
+    def Select(self, choice) -> None:
         self.radio_buttons[choice].SetValue(True)
 
-    def Clear(self):
+    def Clear(self) -> None:
         self.none_button.SetValue(True)
 
     def GetValue(self) -> Optional[str]:
@@ -317,14 +317,14 @@ class ElementPositionWidget(wx.Panel):
         side_str = self.side.GetValue()
         return ElementPosition(Point(x, y), orientation, Side(side_str == wx_("Back")))
 
-    def Enable(self):
+    def Enable(self) -> None:
         self.x.Enable()
         self.y.Enable()
         self.orientation.Enable()
         self.side_label.Enable()
         self.side.Enable()
 
-    def Disable(self):
+    def Disable(self) -> None:
         self.x.Disable()
         self.y.Disable()
         self.orientation.Disable()
@@ -460,14 +460,14 @@ class ElementPositionChoiceWidget(wx.Panel):
             return self.choice, None, template_path
         return self.choice, self.position.GetValue(), template_path
 
-    def Enable(self):
+    def Enable(self) -> None:
         self.dropdown.Enable()
         if self.dropdown.GetValue() == PositionOption.CUSTOM:
             self.position.Enable()
         self.load_template.Enable()
         self.save_template.Enable()
 
-    def Disable(self):
+    def Disable(self) -> None:
         self.dropdown.Disable()
         self.position.Disable()
         self.load_template.Disable()
@@ -511,10 +511,10 @@ class ElementSettingsWidget(wx.Panel):
         position = self.position_widget.GetValue()
         return ElementInfo(annotation, *position)
 
-    def Enable(self):
+    def Enable(self) -> None:
         self.position_widget.Enable()
 
-    def Disable(self):
+    def Disable(self) -> None:
         self.position_widget.Disable()
 
 
@@ -679,13 +679,13 @@ class KbplacerDialog(wx.Dialog):
 
         return sizer
 
-    def __enable_diode_settings(self, enable):
+    def __enable_diode_settings(self, enable) -> None:
         if enable:
             self.__diode_settings.Enable()
         else:
             self.__diode_settings.Disable()
 
-    def on_diode_place_checkbox(self, event):
+    def on_diode_place_checkbox(self, event) -> None:
         is_checked = event.GetEventObject().IsChecked()
         self.__enable_diode_settings(is_checked)
 
@@ -822,17 +822,17 @@ class KbplacerDialog(wx.Dialog):
 
         return sizer
 
-    def __enable_outline_delta(self, enable):
+    def __enable_outline_delta(self, enable) -> None:
         if enable:
             self.__outline_delta_ctrl.Enable()
         else:
             self.__outline_delta_ctrl.Disable()
 
-    def on_generate_outline_checkbox(self, event):
+    def on_generate_outline_checkbox(self, event) -> None:
         is_checked = event.GetEventObject().IsChecked()
         self.__enable_outline_delta(is_checked)
 
-    def on_help_button(self, event):
+    def on_help_button(self, event) -> None:
         del event
         help_dialog = HelpDialog(self)
         help_dialog.ShowModal()

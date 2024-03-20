@@ -47,7 +47,7 @@ def add_diode_footprint(board, footprint, request):
     return f
 
 
-def add_nets(board, netnames):
+def add_nets(board, netnames) -> None:
     net_count = board.GetNetCount()
     for i, n in enumerate(netnames):
         net = pcbnew.NETINFO_ITEM(board, n, net_count + i)
@@ -71,7 +71,9 @@ def __get_parameters():
 
 
 @pytest.mark.parametrize("footprint,position,side,netlist", __get_parameters())
-def test_track_with_pad_collision(footprint, position, side, netlist, tmpdir, request):
+def test_track_with_pad_collision(
+    footprint, position, side, netlist, tmpdir, request
+) -> None:
     board = pcbnew.CreateEmptyBoard()
     netnames = [n for n in netlist if n != ""]
     add_nets(board, netnames)
@@ -149,7 +151,9 @@ def test_track_with_pad_collision(footprint, position, side, netlist, tmpdir, re
     assert collide == expected_collision_result, "Unexpected track collision result"
 
 
-def add_track_segments_test(steps: List[Tuple[pcbnew.wxPoint, bool]], tmpdir, request):
+def add_track_segments_test(
+    steps: List[Tuple[pcbnew.wxPoint, bool]], tmpdir, request
+) -> None:
     board = pcbnew.CreateEmptyBoard()
     f = add_diode_footprint(board, "D_SOD-323", request)
 
@@ -173,7 +177,7 @@ def add_track_segments_test(steps: List[Tuple[pcbnew.wxPoint, bool]], tmpdir, re
     generate_render(tmpdir, request)
 
 
-def test_track_with_track_collision_close_to_footprint(tmpdir, request):
+def test_track_with_track_collision_close_to_footprint(tmpdir, request) -> None:
     steps = []
     # adding track which starts at pad but is so short it barely
     # reaches out of it meaning that next track starting there might
@@ -185,7 +189,7 @@ def test_track_with_track_collision_close_to_footprint(tmpdir, request):
 
 def test_track_with_track_collision_close_to_footprints_one_good_one_bad(
     tmpdir, request
-):
+) -> None:
     steps = []
     # same as 'test_track_with_track_collision_close_to_footprint' but second segment
     # instead going down (where there is nothing to collide with), it goes to left and
@@ -198,7 +202,7 @@ def test_track_with_track_collision_close_to_footprints_one_good_one_bad(
 
 def test_track_with_track_collision_close_to_footprint_many_small_tracks(
     tmpdir, request
-):
+) -> None:
     steps = []
     # kind of ridiculous example but all tracks here should succeed, such
     # scenario should never happen under normal circumstances
@@ -218,7 +222,9 @@ def test_track_with_track_collision_close_to_footprint_many_small_tracks(
         (pointMM(2, 2), pointMM(4, 2), pcbnew.B_Cu, False),
     ],
 )
-def test_track_with_track_collision(start, end, layer, expected, tmpdir, request):
+def test_track_with_track_collision(
+    start, end, layer, expected, tmpdir, request
+) -> None:
     board = pcbnew.CreateEmptyBoard()
 
     modifier = BoardModifier(board)

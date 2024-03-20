@@ -25,7 +25,7 @@ KICAD_VERSION = tuple(map(int, version_match.groups())) if version_match else ()
 logger = logging.getLogger(__name__)
 
 
-def pytest_collection_modifyitems(items):
+def pytest_collection_modifyitems(items) -> None:
     try:
         is_nightly = pcbnew.IsNightlyVersion()
     except AttributeError:
@@ -44,7 +44,7 @@ def pytest_collection_modifyitems(items):
                 )
 
 
-def pytest_addoption(parser):
+def pytest_addoption(parser) -> None:
     parser.addoption(
         "--test-plugin-installation",
         action="store_true",
@@ -76,7 +76,7 @@ def package_name(request):
 
 
 @pytest.fixture(autouse=True, scope="session")
-def prepare_ci_machine():
+def prepare_ci_machine() -> None:
     # when running on CircleCI's Windows machine, there is annoying
     # notification po-up opened which may obstruct tested plugin window
     # when GUI testing. When running on Windows and CI, simulate single
@@ -92,7 +92,7 @@ def prepare_ci_machine():
 
 
 @pytest.fixture(autouse=True, scope="session")
-def prepare_kicad_config():
+def prepare_kicad_config() -> None:
     test_dir = Path(__file__).parent
     config_path = pcbnew.SETTINGS_MANAGER.GetUserSettingsPath()
     colors_path = f"{config_path}/colors"
@@ -102,7 +102,7 @@ def prepare_kicad_config():
 
 
 @pytest.fixture(autouse=True, scope="function")
-def prepare_report_dir(tmpdir):
+def prepare_report_dir(tmpdir) -> None:
     os.mkdir(f"{tmpdir}/report")
 
 
@@ -161,7 +161,7 @@ def shrink_svg(svg: ET.ElementTree, margin: int = 0) -> None:
     root.set("height", f"{float(bbox[3] - bbox[2])}mm")
 
 
-def remove_empty_groups(root):
+def remove_empty_groups(root) -> None:
     name = "{http://www.w3.org/2000/svg}g"
     for elem in root.findall(name):
         if len(elem) == 0:
@@ -170,14 +170,14 @@ def remove_empty_groups(root):
         remove_empty_groups(child)
 
 
-def remove_tags(root, name):
+def remove_tags(root, name) -> None:
     for elem in root.findall(name):
         root.remove(elem)
 
 
 # pcb plotting based on https://github.com/kitspace/kitspace-v2/tree/master/processor/src/tasks/processKicadPCB
 # and https://gitlab.com/kicad/code/kicad/-/blob/master/demos/python_scripts_examples/plot_board.py
-def generate_render(tmpdir, request):
+def generate_render(tmpdir, request) -> None:
     project_name = "keyboard-before"
     pcb_path = f"{tmpdir}/{project_name}.kicad_pcb"
     board = pcbnew.LoadBoard(pcb_path)
