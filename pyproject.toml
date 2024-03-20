@@ -116,9 +116,15 @@ line-length = 88
 
 [tool.ruff]
 select = ["ANN", "E", "F", "I", "N", "PL", "W"]
+ignore = [
+  # Ignore missing type annotations for `self` in method and `cls` in classmethod
+  "ANN101", "ANN102",
+]
 
 [tool.ruff.per-file-ignores]
 "kbplacer/kbplacer_plugin_action.py" = ["N802"]
+"kbplacer/kbplacer_dialog.py" = ["N802"]
+"kbplacer/help_dialog.py" = ["N802"]
 
 [tool.ruff.isort]
 known-first-party = ["hatch_kicad"]
