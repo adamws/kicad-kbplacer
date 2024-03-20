@@ -38,6 +38,7 @@ KICAD_TRANSLATIONS_LOOKUP = {
     "Seleccionar idioma": "es",
     "言語設定": "ja",
     "언어 설정": "ko",
+    "Taal instellen": "nl",
     "Ustaw język": "pl",
     "Установить язык": "ru",
     "Nastaviť jazyk": "sk",
