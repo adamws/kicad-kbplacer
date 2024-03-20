@@ -47,7 +47,7 @@ KICAD_TRANSLATIONS_LOOKUP = {
 }
 
 
-def get_current_kicad_language():
+def get_current_kicad_language() -> str:
     kicad_lang = KICAD_TRANSLATIONS_LOOKUP.get(wx_("Set Language"), "en")
     # some languages require additional lookup to detect correctly,
     # for example es vs es_MX:
@@ -65,7 +65,7 @@ def get_plugin_translator(lang: str = "en"):
     return trans.gettext
 
 
-def get_file_picker(*args, **kwargs):
+def get_file_picker(*args, **kwargs) -> wx.FilePickerCtrl:
     file_picker = wx.FilePickerCtrl(*args, **kwargs)
     file_picker.SetTextCtrlGrowable(True)
 
@@ -91,7 +91,7 @@ class FloatValidator(wx.Validator):
     def Clone(self) -> FloatValidator:
         return FloatValidator()
 
-    def Validate(self, _):
+    def Validate(self, _) -> bool:
         text_ctrl = self.GetWindow()
         if not text_ctrl.IsEnabled():
             return True
@@ -108,13 +108,13 @@ class FloatValidator(wx.Validator):
             text_ctrl.SetFocus()
             return False
 
-    def TransferToWindow(self):
+    def TransferToWindow(self) -> bool:
         return True
 
-    def TransferFromWindow(self):
+    def TransferFromWindow(self) -> bool:
         return True
 
-    def OnChar(self, event) -> None:
+    def OnChar(self, event: wx.KeyEvent) -> None:
         text_ctrl = self.GetWindow()
         current_position = text_ctrl.GetInsertionPoint()
         keycode = int(event.GetKeyCode())
@@ -145,7 +145,7 @@ class FloatValidator(wx.Validator):
 class LabeledTextCtrl(wx.Panel):
     def __init__(
         self,
-        parent,
+        parent: wx.Window,
         label: str,
         value: str,
         width: int = -1,
@@ -190,7 +190,7 @@ class LabeledTextCtrl(wx.Panel):
 
 
 class CustomRadioBox(wx.Panel):
-    def __init__(self, parent, choices: List[str]) -> None:
+    def __init__(self, parent: wx.Window, choices: List[str]) -> None:
         super().__init__(parent)
         self.radio_buttons: dict[str, wx.RadioButton] = {}
 
@@ -210,7 +210,7 @@ class CustomRadioBox(wx.Panel):
 
         self.SetSizer(sizer)
 
-    def Select(self, choice) -> None:
+    def Select(self, choice: str) -> None:
         self.radio_buttons[choice].SetValue(True)
 
     def Clear(self) -> None:
@@ -227,7 +227,7 @@ class CustomRadioBox(wx.Panel):
 class ElementPositionWidget(wx.Panel):
     def __init__(
         self,
-        parent,
+        parent: wx.Window,
         default_position: Optional[ElementPosition] = None,
         disable_offsets: bool = False,
     ) -> None:
@@ -339,7 +339,7 @@ class TemplateType(Flag):
 
 class ElementTemplateSelectionWidget(wx.Panel):
     def __init__(
-        self, parent, picker_type: TemplateType, initial_path: str = ""
+        self, parent: wx.Window, picker_type: TemplateType, initial_path: str = ""
     ) -> None:
         super().__init__(parent)
         self._ = self.GetTopLevelParent()._
@@ -376,7 +376,7 @@ class ElementTemplateSelectionWidget(wx.Panel):
 class ElementPositionChoiceWidget(wx.Panel):
     def __init__(
         self,
-        parent,
+        parent: wx.Window,
         initial_choice: PositionOption,
         initial_position: Optional[ElementPosition] = None,
         default_position: Optional[ElementPosition] = None,
@@ -424,11 +424,11 @@ class ElementPositionChoiceWidget(wx.Panel):
 
         self.SetSizer(sizer)
 
-    def __set_initial_state(self, choice) -> None:
+    def __set_initial_state(self, choice: str) -> None:
         self.dropdown.SetValue(choice)
         self.__set_position_by_choice(choice)
 
-    def __on_position_choice_change(self, event) -> None:
+    def __on_position_choice_change(self, event: wx.CommandEvent) -> None:
         choice = event.GetString()
         self.__set_position_by_choice(choice)
 
@@ -477,7 +477,7 @@ class ElementPositionChoiceWidget(wx.Panel):
 class ElementSettingsWidget(wx.Panel):
     def __init__(
         self,
-        parent,
+        parent: wx.Window,
         element_info: ElementInfo,
         default_position: Optional[ElementPosition] = None,
     ) -> None:
@@ -519,7 +519,12 @@ class ElementSettingsWidget(wx.Panel):
 
 
 class KbplacerDialog(wx.Dialog):
-    def __init__(self, parent, title, initial_state: Optional[dict] = None) -> None:
+    def __init__(
+        self,
+        parent: Optional[wx.Window],
+        title: str,
+        initial_state: Optional[dict] = None,
+    ) -> None:
         style = wx.DEFAULT_DIALOG_STYLE
         super(KbplacerDialog, self).__init__(parent, -1, title, style=style)
 
@@ -527,7 +532,7 @@ class KbplacerDialog(wx.Dialog):
         logger.info(f"Language: {language}")
         self._ = get_plugin_translator(language)
 
-        def __get_params(name) -> dict:
+        def __get_params(name: str) -> dict:
             return initial_state.get(name, {}) if initial_state else {}
 
         def __parse_element_info(params: dict) -> None:
@@ -679,13 +684,13 @@ class KbplacerDialog(wx.Dialog):
 
         return sizer
 
-    def __enable_diode_settings(self, enable) -> None:
+    def __enable_diode_settings(self, enable: bool) -> None:
         if enable:
             self.__diode_settings.Enable()
         else:
             self.__diode_settings.Disable()
 
-    def on_diode_place_checkbox(self, event) -> None:
+    def on_diode_place_checkbox(self, event: wx.CommandEvent) -> None:
         is_checked = event.GetEventObject().IsChecked()
         self.__enable_diode_settings(is_checked)
 
@@ -822,17 +827,17 @@ class KbplacerDialog(wx.Dialog):
 
         return sizer
 
-    def __enable_outline_delta(self, enable) -> None:
+    def __enable_outline_delta(self, enable: bool) -> None:
         if enable:
             self.__outline_delta_ctrl.Enable()
         else:
             self.__outline_delta_ctrl.Disable()
 
-    def on_generate_outline_checkbox(self, event) -> None:
+    def on_generate_outline_checkbox(self, event: wx.CommandEvent) -> None:
         is_checked = event.GetEventObject().IsChecked()
         self.__enable_outline_delta(is_checked)
 
-    def on_help_button(self, event) -> None:
+    def on_help_button(self, event: wx.CommandEvent) -> None:
         del event
         help_dialog = HelpDialog(self)
         help_dialog.ShowModal()
@@ -892,7 +897,7 @@ class KbplacerDialog(wx.Dialog):
     def get_outline_delta(self) -> float:
         return float(self.__outline_delta_ctrl.text.GetValue())
 
-    def get_window_state(self):
+    def get_window_state(self) -> str:
         window_state = {
             "switch_section": {
                 "layout_path": self.get_layout_path(),

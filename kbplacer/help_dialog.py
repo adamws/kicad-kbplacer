@@ -30,7 +30,7 @@ class HelpDialog(wx.Dialog):
 
         self.SetSizerAndFit(box)
 
-    def get_information_section(self):
+    def get_information_section(self) -> wx.BoxSizer:
         source_dir = os.path.dirname(__file__)
         icon_file_name = os.path.join(source_dir, "icon.png")
         icon = wx.Image(icon_file_name, wx.BITMAP_TYPE_ANY)
@@ -64,12 +64,12 @@ class HelpDialog(wx.Dialog):
 
         return box
 
-    def get_actions_section(self):
+    def get_actions_section(self) -> wx.BoxSizer:
         box = wx.BoxSizer(wx.VERTICAL)
 
         report_bug_button = wx.Button(self, label=wx_("Report Bug"))
 
-        def on_report_bug(_) -> None:
+        def on_report_bug(_: wx.Event) -> None:
             webbrowser.open(
                 "https://github.com/adamws/kicad-kbplacer/issues/new?template=bug_report.md&title="
             )
@@ -78,7 +78,7 @@ class HelpDialog(wx.Dialog):
 
         donate_button = wx.Button(self, label=wx_("Donate"))
 
-        def on_donate(_) -> None:
+        def on_donate(_: wx.Event) -> None:
             webbrowser.open("https://ko-fi.com/adamws")
 
         donate_button.Bind(wx.EVT_BUTTON, on_donate)
@@ -88,7 +88,7 @@ class HelpDialog(wx.Dialog):
 
         return box
 
-    def get_help_section(self):
+    def get_help_section(self) -> wx.BoxSizer:
         box = wx.BoxSizer(wx.VERTICAL)
         help_message = wx.TextCtrl(
             self, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_AUTO_URL | wx.HSCROLL
@@ -118,7 +118,7 @@ class HelpDialog(wx.Dialog):
         help_message.SetDefaultStyle(wx.TextAttr(wx.BLUE))
         help_message.AppendText("www.keyboard-layout-editor.com")
 
-        def on_open_url(event) -> None:
+        def on_open_url(event: wx.TextUrlEvent) -> None:
             url = help_message.GetValue()[event.GetURLStart() : event.GetURLEnd()]
             if event.MouseEvent.LeftDown():
                 webbrowser.open(url)
