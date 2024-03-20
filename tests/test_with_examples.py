@@ -75,7 +75,7 @@ def kbplacer_process(
     return _process
 
 
-def assert_group(expected: ET.Element, actual: ET.Element):
+def assert_group(expected: ET.Element, actual: ET.Element) -> None:
     expected_str = ET.tostring(expected).decode()
     actual_str = ET.tostring(actual).decode()
 
@@ -112,7 +112,7 @@ def assert_group(expected: ET.Element, actual: ET.Element):
         logger.info("No differences found")
 
 
-def assert_kicad_svg(expected: Path, actual: Path):
+def assert_kicad_svg(expected: Path, actual: Path) -> None:
     ns = {"svg": "http://www.w3.org/2000/svg"}
     expected_root = ET.parse(expected).getroot()
     expected_groups = expected_root.findall("svg:g", ns)
@@ -377,7 +377,7 @@ def test_saving_connection_template(
     generate_render(tmpdir, request)
 
 
-def test_placing_and_routing_separately(example_isolation, kbplacer_process):
+def test_placing_and_routing_separately(example_isolation, kbplacer_process) -> None:
     # It should be possible to run placing only (in first kbplacer invoke) and
     # then routing only (in second invoke).
     # Result should be the same as running all at once.
@@ -392,7 +392,9 @@ def test_placing_and_routing_separately(example_isolation, kbplacer_process):
         kbplacer_process(True, None, None, pcb_path)
 
 
-def test_empty_run_after_placing_and_routing(example_isolation, kbplacer_process):
+def test_empty_run_after_placing_and_routing(
+    example_isolation, kbplacer_process
+) -> None:
     # The 'empty run' is when user deselects all options but still clicks OK
     # instead of Cancel (if using GUI). This should not change the state of
     # previously placed & routed PCB. Simulate this scenario with CLI subprocess:
@@ -408,7 +410,7 @@ def test_empty_run_after_placing_and_routing(example_isolation, kbplacer_process
 
 def test_routing_with_template_without_diode_placement(
     example_isolation, kbplacer_process
-):
+) -> None:
     example = "2x3-rotations-custom-diode-with-track"
     layout_file = "kle.json"
     with example_isolation(example, layout_file, "Tracks", "DiodeOption2") as e:
@@ -442,7 +444,7 @@ def test_routing_with_template_without_diode_placement(
 )
 def test_placing_and_routing_when_reference_pair_rotated(
     example_isolation, kbplacer_process, angle
-):
+) -> None:
     if KICAD_VERSION < (7, 0, 0) and angle in [60, 10, -60]:
         # the differences are not noticible, not worth creating dedicated
         # reference files support for KiCad 6 should be dropped soon anyway.
@@ -556,7 +558,7 @@ def test_board_creation(
 )
 def test_board_outline_building(
     example_isolation, kbplacer_process, delta, expected_area
-):
+) -> None:
     def get_area():
         board = pcbnew.LoadBoard(pcb_path)
         bbox = board.GetBoardEdgesBoundingBox()

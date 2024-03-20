@@ -40,7 +40,7 @@ def prepare_target_board(request):
 
 
 @pytest.mark.parametrize("copy_tracks", [True, False])
-def test_template_copy(copy_tracks, tmpdir, request):
+def test_template_copy(copy_tracks, tmpdir, request) -> None:
     source_board_path = prepare_source_board(tmpdir, request)
     target_board, footprints = prepare_target_board(request)
 
