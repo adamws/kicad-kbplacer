@@ -80,7 +80,8 @@ class KeyMatrix:
                 diodes.append(f)
                 diodes_nets_by_reference[reference].update(_get_nets(f))
 
-        # reduce diode_nets to contain only diode-unique nets (i.e. not common with any switch)
+        # reduce diode_nets to contain only diode-unique nets
+        # (i.e. not common with any switch)
         for k, v in diodes_nets_by_reference.items():
             diodes_unique_nets[k] = v.difference(all_switches_nets)
 
@@ -787,7 +788,10 @@ class KeyPlacer(BoardModifier):
                 diode_info.position_option == PositionOption.PRESET
                 and len(template_matrix._switches) != 1
             ):
-                msg = f"Template file '{diode_info.template_path}' must have exactly one switch"
+                msg = (
+                    f"Template file '{diode_info.template_path}' "
+                    "must have exactly one switch"
+                )
                 raise RuntimeError(msg)
             first_switch = template_matrix.first_switch_number()
             switch = template_matrix.switch_by_number(first_switch)

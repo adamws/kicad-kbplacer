@@ -163,7 +163,10 @@ def __get_parameters():
         for route_option_name, route_option in route_options.items():
             for diode_option_name, diode_option in diode_options.items():
                 for layout_option_name, layout_option in layout_options.items():
-                    test_id = f"{example};{route_option_name};{diode_option_name};{layout_option_name}"
+                    test_id = (
+                        f"{example};{route_option_name};"
+                        f"{diode_option_name};{layout_option_name}"
+                    )
                     param = pytest.param(
                         example,
                         (route_option_name, route_option),
@@ -175,7 +178,10 @@ def __get_parameters():
 
     # this special examples can't be used with all option combinations, appended here:
     for layout_option_name, layout_option in layout_options.items():
-        test_id = f"2x3-rotations-custom-diode-with-track;Tracks;DiodeOption2;{layout_option_name}"
+        test_id = (
+            f"2x3-rotations-custom-diode-with-track;"
+            f"Tracks;DiodeOption2;{layout_option_name}"
+        )
         param = pytest.param(
             "2x3-rotations-custom-diode-with-track",
             ("Tracks", True),
@@ -242,10 +248,12 @@ def __get_parameters():
 def get_reference_files(references_dir):
     references = Path(references_dir).glob("*.svg")
     reference_files = list(references)
-    # ignore silkscreen svg when asserting results. Plugin does not do anything on those layers
-    # and maintaining them is a bit tedious, for example between 7.0.0 and 7.0.5 there is very
-    # slight difference in silkscreen digits which would be falsely detected as failure here.
-    # `generate_render` will still produce silkscreen svg to have nice images in test report but
+    # ignore silkscreen svg when asserting results.
+    # Plugin does not do anything on those layers and maintaining them
+    # is a bit tedious, for example between 7.0.0 and 7.0.5 there is very
+    # slight difference in silkscreen digits which would be falsely detected
+    # as failure here. The `generate_render` will still produce silkscreen
+    # svg to have nice images in test report but
     # for checking result it is ignored:
     reference_files = [
         item for item in reference_files if "Silkscreen" not in str(item)
@@ -385,9 +393,9 @@ def test_placing_and_routing_separately(example_isolation, kbplacer_process):
 
 
 def test_empty_run_after_placing_and_routing(example_isolation, kbplacer_process):
-    # The 'empty run' is when user deselects all options but still clicks OK instead of Cancel
-    # (if using GUI). This should not change the state of previously placed & routed PCB.
-    # Simulate this scenario with CLI subprocess:
+    # The 'empty run' is when user deselects all options but still clicks OK
+    # instead of Cancel (if using GUI). This should not change the state of
+    # previously placed & routed PCB. Simulate this scenario with CLI subprocess:
     example = "2x3-rotations"
     layout_file = "kle.json"
     with example_isolation(example, layout_file, "Tracks", "DefaultDiode") as e:
@@ -423,7 +431,8 @@ def test_routing_with_template_without_diode_placement(
 
         board.Save(pcb_path)
 
-        # run with routing, without layout and without diode placement, template should be applied
+        # run with routing, without layout and without diode placement,
+        # template should be applied
         kbplacer_process(True, "D{} UNCHANGED", None, pcb_path)
 
 
@@ -435,8 +444,8 @@ def test_placing_and_routing_when_reference_pair_rotated(
     example_isolation, kbplacer_process, angle
 ):
     if KICAD_VERSION < (7, 0, 0) and angle in [60, 10, -60]:
-        # the differences are not noticible, not worth creating dedicated reference files
-        # support for KiCad 6 should be dropped soon anyway.
+        # the differences are not noticible, not worth creating dedicated
+        # reference files support for KiCad 6 should be dropped soon anyway.
         pytest.skip(
             "These angles fail on KiCad 6 due to some rounding errors... ignoring"
         )
@@ -538,7 +547,8 @@ def test_board_creation(
 
 
 # Use area of board edges bounding box to test if outline is generated.
-# Before plugin run, the area must be zero, then it must be approximately equal reference.
+# Before plugin run, the area must be zero, then it must be approximately
+# equal reference.
 # References were obtained by dry-running and manual inspection of resulting PCBs
 @pytest.mark.parametrize(
     "delta,expected_area",

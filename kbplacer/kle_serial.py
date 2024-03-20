@@ -663,7 +663,8 @@ def parse_ergogen_points(layout: dict, *, zone_filter: str = "") -> Keyboard:
         key = Key()
 
         # kle expresses distances (positions) with 1U, need to normalize
-        # ergogen uses key center for position, kle uses key left top corner, need to adjust position by size
+        # ergogen uses key center for position, kle uses key left top corner,
+        # need to adjust position by size
         key.x = __int(item["x"] / spread)
         key.y = __int(item["y"] / padding)
         key.width = __int(meta["width"] / spread)

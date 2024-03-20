@@ -253,14 +253,15 @@ def run_gui_test(tmpdir, screen_manager, window_name, gui_callback) -> None:
                 outs, _ = p.communicate()
 
             assert outs == "Press any key to exit: "
-            # here we used to check if stderr is empty but on some occasions (linux only)
-            # it would contain `AssertionError: assert 'double free'` or similar
-            # even though dialog opened correctly. This probably is related to test harness
-            # (running GUI in Xvfb virtual buffer) and not to tested code defect.
+            # here we used to check if stderr is empty but on some occasions
+            # (linux only) it would contain `AssertionError: assert 'double free'`
+            # or similar even though dialog opened correctly.
+            # This probably is related to test harness (running GUI in Xvfb
+            # virtual buffer) and not to tested code defect.
             # Decided to skip stderr check.
-            # If gui fails to open then screenshot function of pyvirtualdisplay would return
-            # 'screenshot is empty' which can be verified by swapping order of gui_callback
-            # and screenshot calls.
+            # If gui fails to open then screenshot function of pyvirtualdisplay
+            # would return 'screenshot is empty' which can be verified by swapping
+            # order of gui_callback and screenshot calls.
 
             if is_ok:
                 break

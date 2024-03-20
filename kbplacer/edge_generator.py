@@ -49,7 +49,8 @@ def convex_hull(points):
         upper.append(p)
 
     # Concatenation of the lower and upper hulls gives the convex hull.
-    # Last point of each list is omitted because it is repeated at the beginning of the other list.
+    # Last point of each list is omitted because it is repeated
+    # at the beginning of the other list.
     return lower[:-1] + upper[:-1]
 
 
