@@ -331,7 +331,8 @@ def test_bottom_row_decal_handling() -> None:
 def test_collapse_detects_duplicated_keys() -> None:
     # middle alternative key should be removed because it belongs to the same net,
     # and although it is different size than default choice, the center of a switch
-    # is in the same place (so using both would result in overlapping/duplicated footprint)
+    # is in the same place (so using both would result in overlapping/duplicated
+    # footprint)
     # fmt: off
     layout = [
         [{"w":7},"4,6\n\n\n2,0"],

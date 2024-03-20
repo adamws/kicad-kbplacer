@@ -91,7 +91,8 @@ class BoardBuilder:
                     except Exception as e:
                         msg = (
                             f"Layout from {keyboard} is not convertable to "
-                            "matrix annotated keyboard which is required for board create"
+                            "matrix annotated keyboard which is required "
+                            "for board create"
                         )
                         raise RuntimeError(msg) from e
                 else:

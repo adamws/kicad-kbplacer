@@ -77,9 +77,10 @@ def package_name(request):
 
 @pytest.fixture(autouse=True, scope="session")
 def prepare_ci_machine():
-    # when running on CircleCI's Windows machine, there is annoying notification po-up opened
-    # which may obstruct tested plugin window when GUI testing. When running on Windows and CI,
-    # simulate single 'ESC' press to close notification. Do this once before testing starts.
+    # when running on CircleCI's Windows machine, there is annoying
+    # notification po-up opened which may obstruct tested plugin window
+    # when GUI testing. When running on Windows and CI, simulate single
+    # 'ESC' press to close notification. Do this once before testing starts.
     if "CIRCLECI" in os.environ and sys.platform == "win32":
         VK_ESCAPE = 0x1B
         KEYEVENTF_EXTENDEDKEY = 0x0001
