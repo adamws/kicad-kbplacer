@@ -2,15 +2,17 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: 2024-01-31 18:38+0100\n"
-"PO-Revision-Date: 2023-07-14 20:04+0200\n"
-"Last-Translator: Automatically generated\n"
-"Language-Team: none\n"
+"PO-Revision-Date: 2024-03-28 08:01+0000\n"
+"Last-Translator: 김랑기 <korearf@gmail.com>\n"
+"Language-Team: Korean <https://hosted.weblate.org/projects/kicad-kbplacer/"
+"master-source/ko/>\n"
 "Language: ko\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: pygettext.py 1.5\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Weblate 5.5-dev\n"
+"Generated-By: pygettext.py 1.5\n"
 
 msgid "<missing>"
 msgstr "<정보 없음>"
@@ -32,37 +34,37 @@ msgid "Geekhack forum thread - "
 msgstr "Geekhack 포럼 스레드 - "
 
 msgid "Save to:"
-msgstr ""
+msgstr "저장하기:"
 
 msgid "Load from:"
-msgstr ""
+msgstr "불러오기:"
 
 msgid "Keyboard layout file:"
 msgstr "키보드 레이아웃 파일:"
 
 msgid "Switch settings"
-msgstr "설정 변경하기"
+msgstr "설정 스위치"
 
 msgid "Route with switches"
-msgstr ""
+msgstr "전환 경로"
 
 msgid "Switch diodes settings"
-msgstr "다이오드 설정 변경하기"
+msgstr "다이오드 설정 전환"
 
 msgid "Additional elements settings"
 msgstr "추가 요소 설정하기"
 
 msgid "Route rows and columns"
-msgstr ""
+msgstr "행과 열 경로 지정"
 
 msgid "Controller circuit template file:"
 msgstr "컨트롤러 회로 템플릿 파일:"
 
 msgid "Build board outline"
-msgstr ""
+msgstr "보드 외곽선 만들기"
 
 msgid "Outline delta:"
-msgstr ""
+msgstr "외곽선 델타:"
 
 msgid "Other settings"
-msgstr "그 외 설정"
+msgstr "기타 설정"
