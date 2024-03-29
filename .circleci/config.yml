@@ -89,6 +89,45 @@ jobs:
           path: report.html
       - store_test_results:
           path: test-results
+  test-macos:
+    macos:
+      xcode: 15.3
+    parameters:
+      kicad-version:
+        type: string
+    steps:
+      - checkout
+      - run:
+          name: Install KiCad
+          command: |
+            if [ "<<parameters.kicad-version>>" = "6.0.11" ]; then
+              revision=fe3bee625b41005d37bbce2ef48d921f9826298e
+              filepath=Casks/kicad.rb
+            elif [ "<<parameters.kicad-version>>" = "7.0.11" ]; then
+              revision=a7e1cdb4e1343b253270fd97f3fcf2ae884428b3
+              filepath=Casks/k/kicad.rb
+            elif [ "<<parameters.kicad-version>>" = "8.0.1" ]; then
+              revision=c7ee7731a967c3728e1034e00461a562c6882f78
+              filepath=Casks/k/kicad.rb
+            else
+              echo "Unsupported KiCad version!"
+            fi
+            brew install --cask https://raw.githubusercontent.com/Homebrew/homebrew-cask/$revision/$filepath
+      - run:
+          name: Install dependencies
+          command: |
+            source .circleci/scripts/use-kicad-python-macos.sh
+            pip install --no-cache-dir -r dev-requirements.txt
+      - run:
+          name: Run tests
+          command: |
+            source .circleci/scripts/use-kicad-python-macos.sh
+            pytest --junitxml=test-results/pytest/results.xml tests
+      - store_artifacts:
+          path: report.html
+      - store_test_results:
+          path: test-results
+
   create-pcm-package:
     docker:
       - image: cimg/python:3.11
@@ -265,6 +304,13 @@ workflows:
           requires:
             - test-linux
       - test-windows:
+          matrix:
+            parameters:
+              kicad-version:
+                - 6.0.11
+                - 7.0.11
+                - 8.0.0
+      - test-macos:
           matrix:
             parameters:
               kicad-version:

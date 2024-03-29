@@ -6,13 +6,15 @@ import os
 import subprocess
 import sys
 import time
-from ctypes.wintypes import DWORD, HWND, RECT
 
 import pytest
 from PIL import ImageGrab
 from pyvirtualdisplay.smartdisplay import DisplayTimeoutError, SmartDisplay
 
 from kbplacer.kbplacer_dialog import load_window_state_from_log
+
+if sys.platform == "win32":
+    from ctypes.wintypes import DWORD, HWND, RECT
 
 logger = logging.getLogger(__name__)
 
