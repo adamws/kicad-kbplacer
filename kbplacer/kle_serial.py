@@ -84,11 +84,11 @@ class Key:
     def __post_init__(self: Key) -> None:
         if isinstance(self.default, dict):
             self.default = KeyDefault(**self.default)
-        for field in self.__dataclass_fields__:
-            value = getattr(self, field)
+        for key_field in self.__dataclass_fields__:
+            value = getattr(self, key_field)
             if isinstance(value, float):
                 new_val = round(value, 6)
-                setattr(self, field, new_val)
+                setattr(self, key_field, new_val)
 
     def get_label(self: Key, index: int) -> Optional[str]:
         if len(self.labels) > index:
