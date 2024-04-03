@@ -125,6 +125,7 @@ ignore = [
 "kbplacer/kbplacer_plugin_action.py" = ["N802"]
 "kbplacer/kbplacer_dialog.py" = ["N802"]
 "kbplacer/help_dialog.py" = ["N802"]
+"tests/**/*" = ["ANN"]
 
 [tool.ruff.isort]
 known-first-party = ["hatch_kicad"]
