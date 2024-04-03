@@ -1,11 +1,12 @@
 #!/bin/sh
 eeschema $1 &
 EESCHEMA_PID=$!
-sleep 1
+# long sleeps because it take a while on circleci
+sleep 10
 xdotool key Return
-sleep 1
+sleep 5
 xdotool key Return
-sleep 2
+sleep 5
 xdotool key ctrl+s
 sleep 2
 kill -9 $EESCHEMA_PID
