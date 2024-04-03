@@ -321,6 +321,7 @@ workflows:
           requires: &required-tests
             - test-linux
             - test-windows
+            - test-macos
       - create-pypi-package:
           requires: *required-tests
       - deploy-image:
