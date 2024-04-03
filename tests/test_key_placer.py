@@ -32,7 +32,7 @@ try:
         KeyPlacer,
     )
     from kbplacer.kle_serial import get_keyboard
-except:
+except Exception:
     # satisfy import issues when running examples tests
     # in docker image on CI.
     # these tests should not be executed but pytest

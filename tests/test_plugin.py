@@ -9,7 +9,7 @@ import pytest
 
 try:
     from kbplacer.kbplacer_plugin_action import KbplacerPluginAction
-except:
+except Exception:
     pass
 
 logger = logging.getLogger(__name__)

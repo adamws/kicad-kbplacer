@@ -6,7 +6,7 @@ from .conftest import add_switch_footprint, add_track, generate_render
 try:
     from kbplacer.board_modifier import get_position, set_position
     from kbplacer.template_copier import copy_from_template_to_board
-except:
+except Exception:
     pass
 
 

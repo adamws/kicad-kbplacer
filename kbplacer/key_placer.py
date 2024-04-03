@@ -881,7 +881,7 @@ class KeyPlacer(BoardModifier):
                     logger.info(
                         "Detected layout convertible to matrix annotated keyboard"
                     )
-                except:
+                except Exception:
                     pass
             if isinstance(keyboard, MatrixAnnotatedKeyboard):
                 # can be called only once:

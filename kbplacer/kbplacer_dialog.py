@@ -541,7 +541,7 @@ class KbplacerDialog(wx.Dialog):
                     params["element_info"] = ElementInfo.from_dict(
                         params["element_info"]
                     )
-                except:
+                except Exception:
                     params = {}
 
         params: dict = __get_params("switch_section")
@@ -558,7 +558,7 @@ class KbplacerDialog(wx.Dialog):
                 params["elements_info"] = [
                     ElementInfo.from_dict(v) for v in params["elements_info"]
                 ]
-            except:
+            except Exception:
                 params = {}
         additional_elements_section: wx.Sizer = self.get_additional_elements_section(
             **params
@@ -932,7 +932,7 @@ def load_window_state_from_log(filepath: str) -> Tuple[Any, bool]:
                 if "GUI state:" in line:
                     try:
                         return json.loads(line[line.find("{") :]), False
-                    except:
+                    except Exception:
                         return None, True
     return None, False
 

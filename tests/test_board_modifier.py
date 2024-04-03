@@ -21,7 +21,7 @@ try:
         set_side,
     )
     from kbplacer.element_position import Side
-except:
+except Exception:
     pass
 
 

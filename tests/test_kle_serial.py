@@ -21,7 +21,7 @@ try:
         parse_kle,
         parse_via,
     )
-except:
+except Exception:
     pass
 
 
