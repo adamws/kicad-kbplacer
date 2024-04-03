@@ -16,7 +16,7 @@ class Side(Flag):
                 return Side.FRONT
             elif name.upper() == "BACK":
                 return Side.BACK
-        msg = f"'{name}' is not valid Position"
+        msg = f"'{name}' is not a valid Position"
         raise ValueError(msg)
 
 
@@ -51,7 +51,7 @@ class PositionOption(str, Enum):
         if isinstance(name, str):
             value = name.replace("_", " ").title()
             return PositionOption(value)
-        msg = f"'{name}' is not valid Position"
+        msg = f"'{name}' is not a valid PositionOption"
         raise ValueError(msg)
 
 
