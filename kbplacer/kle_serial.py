@@ -50,16 +50,16 @@ REVERSE_LABEL_MAP: List[List[int]] = [
 
 @dataclass
 class KeyDefault:
-    textColor: str = DEFAULT_TEXT_COLOR
-    textSize: int = DEFAULT_TEXT_SIZE
+    textColor: str = DEFAULT_TEXT_COLOR  # noqa: N815
+    textSize: int = DEFAULT_TEXT_SIZE  # noqa: N815
 
 
 @dataclass
 class Key:
     color: str = DEFAULT_KEY_COLOR
     labels: List[str] = field(default_factory=list)
-    textColor: List[Optional[str]] = field(default_factory=list)
-    textSize: List[Optional[int]] = field(default_factory=list)
+    textColor: List[Optional[str]] = field(default_factory=list)  # noqa: N815
+    textSize: List[Optional[int]] = field(default_factory=list)  # noqa: N815
     default: KeyDefault = field(default_factory=KeyDefault)
     x: float = 0
     y: float = 0
@@ -118,9 +118,9 @@ class KeyboardMetadata:
     name: str = ""
     notes: str = ""
     radii: str = ""
-    switchBrand: str = ""
-    switchMount: str = ""
-    switchType: str = ""
+    switchBrand: str = ""  # noqa: N815
+    switchMount: str = ""  # noqa: N815
+    switchType: str = ""  # noqa: N815
 
     def __post_init__(self: KeyboardMetadata) -> None:
         if isinstance(self.background, dict):
