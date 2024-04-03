@@ -788,12 +788,12 @@ if __name__ == "__main__":
         print("Output format equal input format, nothing to do...")
         sys.exit(1)
 
-    with open(input_path, "r") as f:
+    with open(input_path, "r") as input_file:
         if input_path.endswith("yaml") or input_path.endswith("yml"):
             try:
                 import yaml
 
-                layout = yaml.safe_load(f)
+                layout = yaml.safe_load(input_file)
             except Exception as e:
                 msg = (
                     "Could not load yaml file, make sure that `PyYAML` installed "
@@ -801,7 +801,7 @@ if __name__ == "__main__":
                 )
                 raise RuntimeError(msg) from e
         else:
-            layout = json.load(f)
+            layout = json.load(input_file)
 
         result = ""
         if input_format == "KLE_RAW":  # convert to KLE_INTERNAL
@@ -837,5 +837,5 @@ if __name__ == "__main__":
                 result = json.loads(result)
 
         if output_path:
-            with open(output_path, "w") as f:
-                json.dump(result, f, indent=4)
+            with open(output_path, "w") as output_file:
+                json.dump(result, output_file, indent=4)
