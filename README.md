@@ -78,7 +78,7 @@ and it is available [here](https://adamws.github.io/kicad-kbplacer).
 
 For development activities, it is recommended to checkout this repository and copy (or link)
 content of `kbplacer` directory to one of the KiCad's plugin search paths.
-For more details see [this](https://dev-docs.kicad.org/en/python/pcbnew/) guide.
+For more details see [this](https://dev-docs.kicad.org/en/apis-and-binding/pcbnew/) guide.
 
 After installation, plugin can be started by clicking plugin icon on the toolbar:
 
