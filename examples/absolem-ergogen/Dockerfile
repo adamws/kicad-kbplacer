@@ -74,12 +74,16 @@ RUN python3 -m kbplacer --board $PROJECT_NAME.kicad_pcb \
   --route-switches-with-diodes \
   --route-rows-and-columns
 
+RUN kicad-cli pcb export svg --exclude-drawing-sheet \
+  -l F.Cu,B.Cu,F.Silkscreen -o $PROJECT_NAME.svg $PROJECT_NAME.kicad_pcb
+
 RUN zip -r $PROJECT_NAME.zip \
   $PROJECT_NAME-kle.json \
   $PROJECT_NAME.kicad_pro \
   $PROJECT_NAME.kicad_sch \
   $PROJECT_NAME.kicad_pcb \
-  $PROJECT_NAME.net
+  $PROJECT_NAME.net \
+  $PROJECT_NAME.svg
 
 FROM scratch
 ARG WORK_PATH

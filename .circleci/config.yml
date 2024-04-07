@@ -66,17 +66,7 @@ jobs:
           command: |
             cd examples/absolem-ergogen
             ./run.sh
-            unzip -p absolem.zip absolem.kicad_pcb > absolem.kicad_pcb
-      - run:
-          name: Export to SVG
-          command: |
-            cd examples/absolem-ergogen
-            # run with sudo to solve problem with different uid/gid between
-            # circleci user and in-docker user
-            docker run --rm -v $(pwd):$(pwd) -w $(pwd) kicad/kicad:8.0.1 \
-              sudo kicad-cli pcb export svg --exclude-drawing-sheet \
-              -l F.Cu,B.Cu,F.Silkscreen absolem.kicad_pcb
-            sudo chown circleci:circleci absolem.svg
+            unzip absolem.zip
       - store_artifacts:
           path: examples/absolem-ergogen/absolem.svg
       - store_artifacts:
