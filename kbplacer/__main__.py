@@ -223,7 +223,8 @@ def app() -> None:
         required=False,
         type=str,
         help=(
-            "Full path to switch footprint, required when `--crate-from-via` option used."
+            "Full path to switch footprint, required when "
+            "`--create-from-annotated-layout` option used."
         ),
     )
     parser.add_argument(
@@ -231,7 +232,8 @@ def app() -> None:
         required=False,
         type=str,
         help=(
-            "Full path to diode footprint, required when `--crate-from-via` option used."
+            "Full path to diode footprint, required when "
+            "`--create-from-annotated-layout` option used."
         ),
     )
 
