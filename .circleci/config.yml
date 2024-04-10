@@ -45,6 +45,7 @@ jobs:
           command: |
             python -m coverage combine /tmp/workspace/.coverage-*
             python -m coverage report
+            python -m coverage html
       - when: # run only on master
           condition:
             equal: [ master, << pipeline.git.branch >> ]
@@ -56,6 +57,8 @@ jobs:
                   python -m coveralls
       - store_artifacts:
           path: .coverage
+      - store_artifacts:
+          path: htmlcov
   run-absolem-example:
     machine:
       image: ubuntu-2204:2022.10.2
