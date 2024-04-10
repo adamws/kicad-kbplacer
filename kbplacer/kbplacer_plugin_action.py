@@ -7,10 +7,8 @@ import sys
 import pcbnew
 import wx
 
-from .edge_generator import build_board_outline
 from .kbplacer_dialog import KbplacerDialog, load_window_state_from_log
-from .key_placer import KeyPlacer
-from .template_copier import copy_from_template_to_board
+from .kbplacer_plugin import PluginSettings, run
 
 logger = logging.getLogger(__name__)
 
@@ -35,14 +33,14 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
             raise Exception(msg)
 
         self.board = pcbnew.GetBoard()
-
         board_file = self.board.GetFileName()
         if not board_file:
             msg = "Could not locate .kicad_pcb file, open or create it first"
             raise Exception(msg)
 
+        self.board_path = os.path.abspath(board_file)
         # go to the project folder - so that log will be in proper place
-        os.chdir(os.path.dirname(os.path.abspath(board_file)))
+        os.chdir(os.path.dirname(self.board_path))
 
         # Remove all handlers associated with the root logger object.
         for handler in logging.root.handlers[:]:
@@ -82,29 +80,23 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
             gui_state = dlg.get_window_state()
             logger.info(f"GUI state: {gui_state}")
 
-            key_info = dlg.get_key_position_info()
-            diode_info = dlg.get_diode_position_info()
-            additional_elements = dlg.get_additional_elements_info()
-
-            placer = KeyPlacer(self.board, dlg.get_key_distance())
-            placer.run(
-                dlg.get_layout_path(),
-                key_info,
-                diode_info,
-                dlg.route_switches_with_diodes(),
-                dlg.route_rows_and_columns(),
-                additional_elements=additional_elements,
+            settings = PluginSettings(
+                board_path=self.board_path,
+                layout_path=dlg.get_layout_path(),
+                key_info=dlg.get_key_position_info(),
+                key_distance=dlg.get_key_distance(),
+                diode_info=dlg.get_diode_position_info(),
+                route_switches_with_diodes=dlg.route_switches_with_diodes(),
+                route_rows_and_columns=dlg.route_rows_and_columns(),
+                additional_elements=dlg.get_additional_elements_info(),
+                generate_outline=dlg.generate_outline(),
+                outline_delta=dlg.get_outline_delta(),
+                template_path=dlg.get_template_path(),
+                create_from_annotated_layout=False,
+                switch_footprint="",
+                diode_footprint="",
             )
-
-            if dlg.generate_outline():
-                build_board_outline(
-                    self.board, dlg.get_outline_delta(), key_info.annotation_format
-                )
-
-            if template_path := dlg.get_template_path():
-                copy_from_template_to_board(
-                    self.board, template_path, dlg.route_rows_and_columns()
-                )
+            run(settings)
         else:
             gui_state = dlg.get_window_state()
             logger.info(f"GUI state: {gui_state}")

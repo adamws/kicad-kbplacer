@@ -6,12 +6,9 @@ from typing import List
 
 import pcbnew
 
-from .board_builder import BoardBuilder
 from .defaults import DEFAULT_DIODE_POSITION, ZERO_POSITION
-from .edge_generator import build_board_outline
 from .element_position import ElementInfo, ElementPosition, PositionOption, Side
-from .key_placer import KeyPlacer
-from .template_copier import copy_from_template_to_board
+from .kbplacer_plugin import PluginSettings, run
 
 logger = logging.getLogger(__name__)
 
@@ -247,35 +244,27 @@ def app() -> None:
         level=logging.DEBUG, format="%(asctime)s: %(message)s", datefmt="%H:%M:%S"
     )
 
-    if args.create_from_annotated_layout:
-        if os.path.isfile(board_path):
-            logger.error(f"File {board_path} already exist, aborting")
-            sys.exit(1)
+    if args.create_from_annotated_layout and os.path.isfile(board_path):
+        logger.error(f"File {board_path} already exist, aborting")
+        sys.exit(1)
 
-        builder = BoardBuilder(
-            switch_footprint=args.switch_footprint,
-            diode_footprint=args.diode_footprint,
-        )
-        board = builder.create_board(layout_path)
-        board.Save(board_path)
-
-    board = pcbnew.LoadBoard(board_path)
-
-    placer = KeyPlacer(board, args.key_distance)
-    placer.run(
-        layout_path,
-        ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, ""),
-        args.diode,
-        args.route_switches_with_diodes,
-        args.route_rows_and_columns,
+    settings = PluginSettings(
+        board_path=board_path,
+        layout_path=layout_path,
+        key_info=ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, ""),
+        key_distance=args.key_distance,
+        diode_info=args.diode,
+        route_switches_with_diodes=args.route_switches_with_diodes,
+        route_rows_and_columns=args.route_rows_and_columns,
         additional_elements=args.additional_elements,
+        generate_outline=args.build_board_outline,
+        outline_delta=args.outline_delta,
+        template_path=args.template,
+        create_from_annotated_layout=args.create_from_annotated_layout,
+        switch_footprint=args.switch_footprint,
+        diode_footprint=args.diode_footprint,
     )
-
-    if args.build_board_outline:
-        build_board_outline(board, args.outline_delta, "SW{}")
-
-    if args.template:
-        copy_from_template_to_board(board, args.template, args.route_rows_and_columns)
+    board = run(settings)
 
     pcbnew.Refresh()
     pcbnew.SaveBoard(board_path, board)
