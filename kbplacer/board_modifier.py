@@ -100,12 +100,15 @@ def get_position(footprint: pcbnew.FOOTPRINT) -> pcbnew.wxPoint:
 
 
 def set_side(footprint: pcbnew.FOOTPRINT, side: Side) -> None:
-    if side ^ get_side(footprint):
+    if side != get_side(footprint):
         footprint.Flip(footprint.GetPosition(), False)
 
 
 def get_side(footprint: pcbnew.FOOTPRINT) -> Side:
-    return Side(footprint.IsFlipped())
+    if footprint.IsFlipped():
+        return Side.BACK
+    else:
+        return Side.FRONT
 
 
 def set_rotation(footprint: pcbnew.FOOTPRINT, angle: float) -> None:

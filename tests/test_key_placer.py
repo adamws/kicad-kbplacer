@@ -304,8 +304,8 @@ def test_switch_distance(key_distance, tmpdir, request) -> None:
     switches = [get_footprint(board, f"SW{i}") for i in range(1, 5)]
     diodes = [get_footprint(board, f"D{i}") for i in range(1, 5)]
     for switch, diode in zip(switches, diodes):
-        p = diode_position.relative_position
-        assert get_position(diode) == get_position(switch) + pcbnew.wxPointMM(p.x, p.y)
+        x, y = diode_position.x, diode_position.y
+        assert get_position(diode) == get_position(switch) + pcbnew.wxPointMM(x, y)
 
 
 def test_diode_placement_ignore(tmpdir, request) -> None:

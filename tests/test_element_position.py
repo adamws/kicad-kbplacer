@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from dataclasses import asdict
+
 import pytest
 
 from kbplacer.defaults import ZERO_POSITION
-from kbplacer.element_position import ElementInfo, Point, PositionOption, Side
+from kbplacer.element_position import ElementInfo, PositionOption, Side
 
 
 @pytest.mark.parametrize(
@@ -27,10 +29,6 @@ def test_side_get_invalid() -> None:
 def test_side_get_invalid_type() -> None:
     with pytest.raises(ValueError, match="'True' is not a valid Position"):
         Side.get(True)
-
-
-def test_point_to_list() -> None:
-    assert Point(1, 2).to_list() == [1, 2]
 
 
 @pytest.mark.parametrize(
@@ -63,9 +61,10 @@ def test_position_option_get_invalid_type() -> None:
                 "annotation_format": "D{}",
                 "position_option": PositionOption.DEFAULT,
                 "position": {
-                    "relative_position": [0, 0],
+                    "x": 0,
+                    "y": 0,
                     "orientation": 0,
-                    "side": "FRONT",
+                    "side": Side.FRONT,
                 },
                 "template_path": "",
             },
@@ -82,11 +81,11 @@ def test_position_option_get_invalid_type() -> None:
     ],
 )
 def test_element_info_dict_conversions(info, expected) -> None:
-    result = info.to_dict()
+    result = asdict(info)
     assert result == expected
     assert ElementInfo.from_dict(result) == info
 
 
 def test_element_info_from_empty_dict() -> None:
-    with pytest.raises(ValueError, match="Failed to create ElementInfo object"):
+    with pytest.raises(TypeError):
         ElementInfo.from_dict({})

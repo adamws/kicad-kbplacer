@@ -29,7 +29,7 @@ from .board_modifier import (
     set_rotation,
     set_side,
 )
-from .element_position import ElementInfo, ElementPosition, Point, PositionOption
+from .element_position import ElementInfo, ElementPosition, PositionOption
 from .kle_serial import Keyboard, MatrixAnnotatedKeyboard, get_keyboard_from_file
 
 logger = logging.getLogger(__name__)
@@ -382,7 +382,8 @@ class KeyPlacer(BoardModifier):
         y = cast(float, pcbnew.ToMM(pos2.y - pos1.y))
 
         return ElementPosition(
-            Point(x, y),
+            x,
+            y,
             rot2 - rot1,
             get_side(element2),
         )
@@ -631,7 +632,7 @@ class KeyPlacer(BoardModifier):
         set_side(footprint, element_position.side)
         set_rotation(footprint, element_position.orientation)
 
-        offset = pcbnew.wxPointMM(*element_position.relative_position.to_list())
+        offset = pcbnew.wxPointMM(element_position.x, element_position.y)
         if reference_orientation != 0:
             offset = position_in_rotated_coordinates(offset, reference_orientation)
 

@@ -9,7 +9,7 @@ import pcbnew
 from .board_builder import BoardBuilder
 from .defaults import DEFAULT_DIODE_POSITION, ZERO_POSITION
 from .edge_generator import build_board_outline
-from .element_position import ElementInfo, ElementPosition, Point, PositionOption, Side
+from .element_position import ElementInfo, ElementPosition, PositionOption, Side
 from .key_placer import KeyPlacer
 from .template_copier import copy_from_template_to_board
 
@@ -71,7 +71,7 @@ class ElementInfoAction(argparse.Action):
             if option == PositionOption.CUSTOM:
                 floats = tuple(map(float, tokens[2:5]))
                 side = Side.get(tokens[5])
-                position = ElementPosition(Point(floats[0], floats[1]), floats[2], side)
+                position = ElementPosition(floats[0], floats[1], floats[2], side)
             elif option == PositionOption.RELATIVE:
                 # template path if optional for RELATIVE option:
                 if len(tokens) == 3:

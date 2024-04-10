@@ -6,6 +6,7 @@ import logging
 import os
 import string
 import sys
+from dataclasses import asdict
 from enum import Flag
 from typing import Any, List, Optional, Tuple
 
@@ -13,7 +14,7 @@ import wx
 from wx.lib.embeddedimage import PyEmbeddedImage
 
 from .defaults import DEFAULT_DIODE_POSITION, ZERO_POSITION
-from .element_position import ElementInfo, ElementPosition, Point, PositionOption, Side
+from .element_position import ElementInfo, ElementPosition, PositionOption, Side
 from .help_dialog import HelpDialog
 
 logger = logging.getLogger(__name__)
@@ -270,16 +271,14 @@ class ElementPositionWidget(wx.Panel):
             raise ValueError
 
     def set_position(self, position: ElementPosition) -> None:
-        self.__set_coordinates(
-            str(position.relative_position.x), str(position.relative_position.y)
-        )
+        self.__set_coordinates(str(position.x), str(position.y))
         self.__set_orientation(str(position.orientation))
         self.__set_side(position.side)
 
     def __set_position_to_default(self) -> None:
         if self.default:
-            x = str(self.default.relative_position.x)
-            y = str(self.default.relative_position.y)
+            x = str(self.default.x)
+            y = str(self.default.y)
             self.__set_coordinates(x, y)
             self.__set_orientation(str(self.default.orientation))
             self.__set_side(self.default.side)
@@ -310,12 +309,18 @@ class ElementPositionWidget(wx.Panel):
         else:
             self.side.Select(wx_("Front"))
 
+    def __get_side(self) -> Side:
+        side_str = str(self.side.GetValue())
+        if side_str == wx_("Back"):
+            return Side.BACK
+        else:
+            return Side.FRONT
+
     def GetValue(self) -> ElementPosition:
         x = float(self.x.text.GetValue())
         y = float(self.y.text.GetValue())
         orientation = float(self.orientation.text.GetValue())
-        side_str = self.side.GetValue()
-        return ElementPosition(Point(x, y), orientation, Side(side_str == wx_("Back")))
+        return ElementPosition(x, y, orientation, self.__get_side())
 
     def Enable(self) -> None:
         self.x.Enable()
@@ -903,16 +908,16 @@ class KbplacerDialog(wx.Dialog):
                 "layout_path": self.get_layout_path(),
                 "x_distance": self.__key_distance_x.GetValue(),
                 "y_distance": self.__key_distance_y.GetValue(),
-                "element_info": self.get_key_position_info().to_dict(),
+                "element_info": asdict(self.get_key_position_info()),
             },
             "switch_diodes_section": {
                 "enable": self.__place_diodes_checkbox.GetValue(),
                 "route_switches_with_diodes": self.route_switches_with_diodes(),
-                "element_info": self.__diode_settings.GetValue().to_dict(),
+                "element_info": asdict(self.__diode_settings.GetValue()),
             },
             "additional_elements": {
                 "elements_info": [
-                    e.GetValue().to_dict() for e in self.__additional_elements
+                    asdict(e.GetValue()) for e in self.__additional_elements
                 ],
             },
             "misc_section": {

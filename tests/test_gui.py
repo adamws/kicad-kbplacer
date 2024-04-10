@@ -26,9 +26,10 @@ DEFAULT_WINDOW_STATE = {
         "element_info": {
             "annotation_format": "SW{}",
             "position": {
+                "x": 0.0,
+                "y": 0.0,
                 "orientation": 0.0,
-                "relative_position": [0.0, 0.0],
-                "side": "FRONT",
+                "side": "Front",
             },
             "position_option": "Default",
             "template_path": "",
@@ -40,9 +41,10 @@ DEFAULT_WINDOW_STATE = {
         "element_info": {
             "annotation_format": "D{}",
             "position": {
+                "x": 5.08,
+                "y": 3.03,
                 "orientation": 90.0,
-                "relative_position": [5.08, 3.03],
-                "side": "BACK",
+                "side": "Back",
             },
             "position_option": "Default",
             "template_path": "",
@@ -53,9 +55,10 @@ DEFAULT_WINDOW_STATE = {
             {
                 "annotation_format": "ST{}",
                 "position": {
+                    "x": 0.0,
+                    "y": 0.0,
                     "orientation": 0.0,
-                    "relative_position": [0.0, 0.0],
-                    "side": "FRONT",
+                    "side": "Front",
                 },
                 "position_option": "Custom",
                 "template_path": "",
@@ -78,9 +81,10 @@ CUSTOM_WINDOW_STATE_EXAMPLE1 = {
         "element_info": {
             "annotation_format": "KEY{}",
             "position": {
+                "x": 0.0,
+                "y": 0.0,
                 "orientation": 90.0,
-                "relative_position": [0.0, 0.0],
-                "side": "BACK",
+                "side": "Back",
             },
             "position_option": "Default",
             "template_path": "",
@@ -92,9 +96,10 @@ CUSTOM_WINDOW_STATE_EXAMPLE1 = {
         "element_info": {
             "annotation_format": "D{}",
             "position": {
+                "x": -5.0,
+                "y": 5.5,
                 "orientation": 180.0,
-                "relative_position": [-5.0, 5.5],
-                "side": "FRONT",
+                "side": "Front",
             },
             "position_option": "Custom",
             "template_path": "",
@@ -105,9 +110,10 @@ CUSTOM_WINDOW_STATE_EXAMPLE1 = {
             {
                 "annotation_format": "ST{}",
                 "position": {
+                    "x": 0.0,
+                    "y": -5.0,
                     "orientation": 0.0,
-                    "relative_position": [0.0, -5.0],
-                    "side": "FRONT",
+                    "side": "Front",
                 },
                 "position_option": "Custom",
                 "template_path": "",
@@ -345,9 +351,10 @@ def get_state_data(state: dict, name: str):
                     "annotation_format": "KEY{}",
                     "position_option": "Default",
                     "position": {
-                        "relative_position": [0, 0],
+                        "x": 0,
+                        "y": 0,
                         "orientation": 90,
-                        "side": "BACK"
+                        "side": "Back"
                     },
                     "template_path": ""
                 }
