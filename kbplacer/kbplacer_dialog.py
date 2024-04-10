@@ -591,8 +591,7 @@ class KbplacerDialog(wx.Dialog):
     def get_switch_section(
         self,
         layout_path: str = "",
-        x_distance: str = "19.05",
-        y_distance: str = "19.05",
+        key_distance: Tuple[float, float] = (19.05, 19.05),
         element_info: ElementInfo = ElementInfo(
             "SW{}", PositionOption.DEFAULT, ZERO_POSITION, ""
         ),
@@ -614,10 +613,10 @@ class KbplacerDialog(wx.Dialog):
             layout_picker.GetTextCtrl().SetInsertionPointEnd()
 
         key_distance_x = LabeledTextCtrl(
-            self, wx_("Step X:"), value=x_distance, width=5, validator=FloatValidator()
+            self, wx_("Step X:"), value=str(key_distance[0]), width=5, validator=FloatValidator()
         )
         key_distance_y = LabeledTextCtrl(
-            self, wx_("Step Y:"), value=y_distance, width=5, validator=FloatValidator()
+            self, wx_("Step Y:"), value=str(key_distance[1]), width=5, validator=FloatValidator()
         )
 
         key_position = ElementPositionWidget(self, ZERO_POSITION, disable_offsets=True)
@@ -906,8 +905,7 @@ class KbplacerDialog(wx.Dialog):
         window_state = {
             "switch_section": {
                 "layout_path": self.get_layout_path(),
-                "x_distance": self.__key_distance_x.GetValue(),
-                "y_distance": self.__key_distance_y.GetValue(),
+                "key_distance": self.get_key_distance(),
                 "element_info": asdict(self.get_key_position_info()),
             },
             "switch_diodes_section": {

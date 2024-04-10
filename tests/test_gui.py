@@ -21,8 +21,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_WINDOW_STATE = {
     "switch_section": {
         "layout_path": "",
-        "x_distance": "19.05",
-        "y_distance": "19.05",
+        "key_distance": [19.05, 19.05],
         "element_info": {
             "annotation_format": "SW{}",
             "position": {
@@ -76,8 +75,7 @@ DEFAULT_WINDOW_STATE = {
 CUSTOM_WINDOW_STATE_EXAMPLE1 = {
     "switch_section": {
         "layout_path": "/home/user/kle.json",
-        "x_distance": "18",
-        "y_distance": "18",
+        "key_distance": [18, 18],
         "element_info": {
             "annotation_format": "KEY{}",
             "position": {
@@ -360,7 +358,7 @@ def get_state_data(state: dict, name: str):
                 }
             }
         }, "non-default-key-annotation-and-position"),
-        get_state_data({"switch_section": {"x_distance": "18"}}, "non-default-x-distance"),
+        get_state_data({"switch_section": {"key_distance": [18, 18.01]}}, "non-default-x-distance"),
         get_state_data({"additional_elements": {"elements_info": []}}, "no-additional-elements"),
         get_state_data(CUSTOM_WINDOW_STATE_EXAMPLE1, "custom-state-1"),
         # fmt: on
