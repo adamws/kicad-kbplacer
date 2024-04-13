@@ -253,10 +253,14 @@ def run_gui_test(tmpdir, screen_manager, window_name, gui_callback) -> None:
 
             is_ok = mgr.screenshot(window_name, f"{tmpdir}/report/screenshot.png")
             try:
-                outs, _ = p.communicate("q\n", timeout=1)
+                outs, errs = p.communicate("q\n", timeout=1)
             except subprocess.TimeoutExpired:
+                logger.error("Process timeout expired")
                 p.kill()
-                outs, _ = p.communicate()
+                outs, errs = p.communicate()
+
+            logger.info(f"Process stdout: {outs}")
+            logger.info(f"Process stderr: {errs}")
 
             assert outs == "Press any key to exit: "
             # here we used to check if stderr is empty but on some occasions
