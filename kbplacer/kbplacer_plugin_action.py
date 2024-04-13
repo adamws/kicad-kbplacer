@@ -7,6 +7,7 @@ import sys
 import pcbnew
 import wx
 
+from .element_position import PositionOption
 from .kbplacer_dialog import KbplacerDialog, load_window_state_from_log
 from .kbplacer_plugin import PluginSettings, run
 
@@ -50,9 +51,7 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
 
         # if log file already exist (from previous plugin run),
         # try to get window state from it, must be done before setting up new logger
-        self.window_state, self.window_state_error = load_window_state_from_log(
-            log_file
-        )
+        self.window_state = load_window_state_from_log(log_file)
 
         # set up logger
         logging.basicConfig(
@@ -69,23 +68,22 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
 
         pcb_frame = [x for x in wx.GetTopLevelWindows() if x.GetName() == "PcbFrame"][0]
 
-        if self.window_state_error:
-            logger.info(
-                "Found corrupted cached window state, skipping state restoration"
-            )
-            self.window_state = None
-
         dlg = KbplacerDialog(pcb_frame, "kbplacer", initial_state=self.window_state)
         if dlg.ShowModal() == wx.ID_OK:
             gui_state = dlg.get_window_state()
             logger.info(f"GUI state: {gui_state}")
 
+            key_info = dlg.get_key_info()
+            if not dlg.enable_diode_placement():
+                key_info.position_option = PositionOption.UNCHANGED
+                key_info.template_path = ""
+
             settings = PluginSettings(
                 board_path=self.board_path,
                 layout_path=dlg.get_layout_path(),
-                key_info=dlg.get_key_position_info(),
+                key_info=key_info,
                 key_distance=dlg.get_key_distance(),
-                diode_info=dlg.get_diode_position_info(),
+                diode_info=dlg.get_diode_info(),
                 route_switches_with_diodes=dlg.route_switches_with_diodes(),
                 route_rows_and_columns=dlg.route_rows_and_columns(),
                 additional_elements=dlg.get_additional_elements_info(),

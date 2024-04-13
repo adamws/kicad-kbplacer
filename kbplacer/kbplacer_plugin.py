@@ -29,12 +29,6 @@ class PluginSettings:
     switch_footprint: str
     diode_footprint: str
 
-    @classmethod
-    def from_dict(cls, data: dict) -> PluginSettings:
-        key_info = ElementInfo.from_dict(data.pop("key_info"))
-        diode_info = ElementInfo.from_dict(data.pop("diode_info"))
-        return cls(key_info=key_info, diode_info=diode_info, **data)
-
 
 def run(settings: PluginSettings) -> pcbnew.BOARD:
     if settings.create_from_annotated_layout:

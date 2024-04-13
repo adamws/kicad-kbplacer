@@ -6,9 +6,9 @@ import logging
 import os
 import string
 import sys
-from dataclasses import asdict
+from dataclasses import asdict, dataclass, field
 from enum import Flag
-from typing import Any, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import wx
 from wx.lib.embeddedimage import PyEmbeddedImage
@@ -46,6 +46,54 @@ KICAD_TRANSLATIONS_LOOKUP = {
     "Встановити мову": "uk",
     "設定語言": "zh_CN",
 }
+
+
+@dataclass
+class WindowState:
+    layout_path: str = ""
+    key_distance: Tuple[float, float] = (19.05, 19.05)
+    key_info: ElementInfo = field(
+        default_factory=lambda: ElementInfo(
+            "SW{}", PositionOption.DEFAULT, ZERO_POSITION, ""
+        )
+    )
+    enable_diode_placement: bool = True
+    route_switches_with_diodes: bool = True
+    diode_info: ElementInfo = field(
+        default_factory=lambda: ElementInfo(
+            "D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, ""
+        )
+    )
+    additional_elements: List[ElementInfo] = field(
+        default_factory=lambda: [
+            ElementInfo("ST{}", PositionOption.CUSTOM, ZERO_POSITION, "")
+        ]
+    )
+    route_rows_and_columns: bool = True
+    template_path: str = ""
+    generate_outline: bool = False
+    outline_delta: float = 0.0
+
+    def __str__(self) -> str:
+        return json.dumps(asdict(self), indent=None)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> WindowState:
+        key_distance = data.pop("key_distance")
+        if type(key_distance) is list:
+            key_distance = tuple(key_distance)
+        key_info = ElementInfo.from_dict(data.pop("key_info"))
+        diode_info = ElementInfo.from_dict(data.pop("diode_info"))
+        additional_elements = [
+            ElementInfo.from_dict(i) for i in data.pop("additional_elements")
+        ]
+        return cls(
+            key_distance=key_distance,
+            key_info=key_info,
+            diode_info=diode_info,
+            additional_elements=additional_elements,
+            **data,
+        )
 
 
 def get_current_kicad_language() -> str:
@@ -263,12 +311,10 @@ class ElementPositionWidget(wx.Panel):
     def set_position_by_choice(self, choice: str) -> None:
         if choice == PositionOption.DEFAULT:
             self.__set_position_to_default()
-        elif choice in [PositionOption.RELATIVE, PositionOption.PRESET]:
-            self.__set_position_to_empty_non_editable()
         elif choice == PositionOption.CUSTOM:
             self.__set_position_to_zero_editable()
         else:
-            raise ValueError
+            self.__set_position_to_empty_non_editable()
 
     def set_position(self, position: ElementPosition) -> None:
         self.__set_coordinates(str(position.x), str(position.y))
@@ -528,7 +574,7 @@ class KbplacerDialog(wx.Dialog):
         self,
         parent: Optional[wx.Window],
         title: str,
-        initial_state: Optional[dict] = None,
+        initial_state: WindowState = WindowState(),
     ) -> None:
         style = wx.DEFAULT_DIALOG_STYLE
         super(KbplacerDialog, self).__init__(parent, -1, title, style=style)
@@ -537,42 +583,30 @@ class KbplacerDialog(wx.Dialog):
         logger.info(f"Language: {language}")
         self._ = get_plugin_translator(language)
 
-        def __get_params(name: str) -> dict:
-            return initial_state.get(name, {}) if initial_state else {}
-
-        def __parse_element_info(params: dict) -> None:
-            if "element_info" in params:
-                try:
-                    params["element_info"] = ElementInfo.from_dict(
-                        params["element_info"]
-                    )
-                except Exception:
-                    params = {}
-
-        params: dict = __get_params("switch_section")
-        __parse_element_info(params)
-        switch_section: wx.Sizer = self.get_switch_section(**params)
-
-        params: dict = __get_params("switch_diodes_section")
-        __parse_element_info(params)
-        switch_diodes_section: wx.Sizer = self.get_switch_diodes_section(**params)
-
-        params: dict = __get_params("additional_elements")
-        if "elements_info" in params:
-            try:
-                params["elements_info"] = [
-                    ElementInfo.from_dict(v) for v in params["elements_info"]
-                ]
-            except Exception:
-                params = {}
-        additional_elements_section: wx.Sizer = self.get_additional_elements_section(
-            **params
+        switch_section = self.get_switch_section(
+            layout_path=initial_state.layout_path,
+            key_distance=initial_state.key_distance,
+            element_info=initial_state.key_info,
         )
 
-        params: dict = __get_params("misc_section")
-        misc_section: wx.Sizer = self.get_misc_section(**params)
+        switch_diodes_section = self.get_switch_diodes_section(
+            enable=initial_state.enable_diode_placement,
+            route_switches_with_diodes=initial_state.route_switches_with_diodes,
+            element_info=initial_state.diode_info,
+        )
 
-        box: wx.Sizer = wx.BoxSizer(wx.VERTICAL)
+        additional_elements_section = self.get_additional_elements_section(
+            elements_info=initial_state.additional_elements,
+        )
+
+        misc_section = self.get_misc_section(
+            route_rows_and_columns=initial_state.route_rows_and_columns,
+            template_path=initial_state.template_path,
+            generate_outline=initial_state.generate_outline,
+            outline_delta=initial_state.outline_delta,
+        )
+
+        box = wx.BoxSizer(wx.VERTICAL)
 
         box.Add(switch_section, 0, wx.EXPAND | wx.ALL, 5)
         box.Add(switch_diodes_section, 0, wx.EXPAND | wx.ALL, 5)
@@ -613,10 +647,18 @@ class KbplacerDialog(wx.Dialog):
             layout_picker.GetTextCtrl().SetInsertionPointEnd()
 
         key_distance_x = LabeledTextCtrl(
-            self, wx_("Step X:"), value=str(key_distance[0]), width=5, validator=FloatValidator()
+            self,
+            wx_("Step X:"),
+            value=str(key_distance[0]),
+            width=5,
+            validator=FloatValidator(),
         )
         key_distance_y = LabeledTextCtrl(
-            self, wx_("Step Y:"), value=str(key_distance[1]), width=5, validator=FloatValidator()
+            self,
+            wx_("Step Y:"),
+            value=str(key_distance[1]),
+            width=5,
+            validator=FloatValidator(),
         )
 
         key_position = ElementPositionWidget(self, ZERO_POSITION, disable_offsets=True)
@@ -867,9 +909,7 @@ class KbplacerDialog(wx.Dialog):
     def get_template_path(self) -> str:
         return self.__template_picker.GetPath()
 
-    def get_key_position_info(
-        self,
-    ) -> ElementInfo:
+    def get_key_info(self) -> ElementInfo:
         return ElementInfo(
             self.get_key_annotation_format(),
             PositionOption.DEFAULT,
@@ -877,23 +917,14 @@ class KbplacerDialog(wx.Dialog):
             "",
         )
 
-    def get_diode_position_info(
-        self,
-    ) -> ElementInfo:
-        element_info = self.__diode_settings.GetValue()
-        if not self.__place_diodes_checkbox.GetValue():
-            element_info.position_option = PositionOption.UNCHANGED
-            element_info.template_path = ""
-        return element_info
+    def enable_diode_placement(self) -> bool:
+        return self.__place_diodes_checkbox.GetValue()
 
-    def get_additional_elements_info(
-        self,
-    ) -> List[ElementInfo]:
-        return [
-            e.GetValue()
-            for e in self.__additional_elements
-            if e.GetValue().annotation_format != ""
-        ]
+    def get_diode_info(self) -> ElementInfo:
+        return self.__diode_settings.GetValue()
+
+    def get_additional_elements_info(self) -> List[ElementInfo]:
+        return [e.GetValue() for e in self.__additional_elements]
 
     def generate_outline(self) -> bool:
         return self.__generate_outline_checkbox.GetValue()
@@ -901,43 +932,35 @@ class KbplacerDialog(wx.Dialog):
     def get_outline_delta(self) -> float:
         return float(self.__outline_delta_ctrl.text.GetValue())
 
-    def get_window_state(self) -> str:
-        window_state = {
-            "switch_section": {
-                "layout_path": self.get_layout_path(),
-                "key_distance": self.get_key_distance(),
-                "element_info": asdict(self.get_key_position_info()),
-            },
-            "switch_diodes_section": {
-                "enable": self.__place_diodes_checkbox.GetValue(),
-                "route_switches_with_diodes": self.route_switches_with_diodes(),
-                "element_info": asdict(self.__diode_settings.GetValue()),
-            },
-            "additional_elements": {
-                "elements_info": [
-                    asdict(e.GetValue()) for e in self.__additional_elements
-                ],
-            },
-            "misc_section": {
-                "route_rows_and_columns": self.route_rows_and_columns(),
-                "template_path": self.get_template_path(),
-                "generate_outline": self.generate_outline(),
-                "outline_delta": self.get_outline_delta(),
-            },
-        }
-        return json.dumps(window_state, indent=None)
+    def get_window_state(self) -> WindowState:
+        return WindowState(
+            layout_path=self.get_layout_path(),
+            key_distance=self.get_key_distance(),
+            key_info=self.get_key_info(),
+            enable_diode_placement=self.enable_diode_placement(),
+            route_switches_with_diodes=self.route_switches_with_diodes(),
+            diode_info=self.get_diode_info(),
+            additional_elements=self.get_additional_elements_info(),
+            route_rows_and_columns=self.route_rows_and_columns(),
+            template_path=self.get_template_path(),
+            generate_outline=self.generate_outline(),
+            outline_delta=self.get_outline_delta(),
+        )
 
 
-def load_window_state_from_log(filepath: str) -> Tuple[Any, bool]:
-    if os.path.isfile(filepath):
+def load_window_state_from_log(filepath: str) -> WindowState:
+    try:
         with open(filepath, "r") as f:
             for line in f:
                 if "GUI state:" in line:
-                    try:
-                        return json.loads(line[line.find("{") :]), False
-                    except Exception:
-                        return None, True
-    return None, False
+                    state = WindowState.from_dict(json.loads(line[line.find("{") :]))
+                    logger.info("Using window state found in previous log")
+                    return state
+    except Exception:
+        # if something went wrong use default
+        pass
+    logger.warning("Failed to parse window state from log file, using default")
+    return WindowState()
 
 
 # used for tests
@@ -946,17 +969,19 @@ if __name__ == "__main__":
     import threading
 
     parser = argparse.ArgumentParser(description="dialog test")
-    parser.add_argument("-i", "--initial-state", default="{}", help="Initial gui state")
+    parser.add_argument(
+        "-i", "--initial-state-file", default="", help="Initial gui state file"
+    )
     parser.add_argument(
         "-o", "--output-dir", required=True, help="Directory for output files"
     )
     args = parser.parse_args()
 
-    initial_state = json.loads(args.initial_state)
+    initial_state = load_window_state_from_log(args.initial_state_file)
     _ = wx.App()
     dlg = KbplacerDialog(None, "kbplacer", initial_state=initial_state)
     with open(f"{args.output_dir}/window_state.json", "w") as f:
-        f.write(dlg.get_window_state())
+        f.write(f"{dlg.get_window_state()}")
 
     if "PYTEST_CURRENT_TEST" in os.environ:
         # use stdin for gracefully closing GUI when running
