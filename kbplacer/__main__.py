@@ -129,7 +129,7 @@ def app() -> None:
         help=".kicad_pcb file to be processed or created",
     )
     parser.add_argument(
-        "-l", "--layout", required=False, help="json layout definition file"
+        "-l", "--layout", required=False, default="", help="json layout definition file"
     )
     parser.add_argument(
         "--route-switches-with-diodes",
@@ -192,7 +192,13 @@ def app() -> None:
             "19.05 19.05 by default"
         ),
     )
-    parser.add_argument("-t", "--template", help="Controller circuit template")
+    parser.add_argument(
+        "-t",
+        "--template",
+        required=False,
+        default="",
+        help="Controller circuit template",
+    )
     parser.add_argument(
         "--build-board-outline",
         required=False,
@@ -218,6 +224,7 @@ def app() -> None:
     parser.add_argument(
         "--switch-footprint",
         required=False,
+        default="",
         type=str,
         help=(
             "Full path to switch footprint, required when "
@@ -227,6 +234,7 @@ def app() -> None:
     parser.add_argument(
         "--diode-footprint",
         required=False,
+        default="",
         type=str,
         help=(
             "Full path to diode footprint, required when "
