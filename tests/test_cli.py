@@ -142,6 +142,13 @@ def expects_settings(default_difference: Dict):
                 match=r"--diode invalid format"
             ),
         ),
+        #   - invalid float numbers
+        (
+            ["--diode", "D{} CUSTOM 0 --10 0 FRONT"],
+            pytest.raises(ArgumentTypeError,
+                          match=r"could not convert string to float: '--10'"
+            ),
+        ),
         #   - annotation without placeholder
         (
             ["--diode", "D CUSTOM 0 0 0 FRONT"],
