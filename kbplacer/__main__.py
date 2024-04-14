@@ -54,7 +54,7 @@ class ElementInfoAction(argparse.Action):
             elif len(tokens) == 3:
                 if option not in [PositionOption.PRESET, PositionOption.RELATIVE]:
                     err = (
-                        f"{option_string} position option needs to be equal"
+                        f"{option_string} position option needs to be equal "
                         "RELATIVE or PRESET when providing template path"
                     )
                     raise ValueError(err)
@@ -70,7 +70,7 @@ class ElementInfoAction(argparse.Action):
                 side = Side.get(tokens[5])
                 position = ElementPosition(floats[0], floats[1], floats[2], side)
             elif option == PositionOption.RELATIVE:
-                # template path if optional for RELATIVE option:
+                # template path is optional for RELATIVE option:
                 if len(tokens) == 3:
                     template_path = tokens[2]
             elif option == PositionOption.PRESET:
