@@ -108,6 +108,12 @@ def expects_settings(default_difference: Dict):
             expects_settings({"diode_info": ElementInfo("D{}", PositionOption.RELATIVE, None,
                                                         "/path/to/save.kicad_pcb")}),
         ),
+        #   - valid preset with path (CLI does not check if file exist, this is done later)
+        (
+            ["--diode", "D{} PRESET /path/to/load.kicad_pcb"],
+            expects_settings({"diode_info": ElementInfo("D{}", PositionOption.PRESET, None,
+                                                        "/path/to/load.kicad_pcb")}),
+        ),
         #   - valid custom position setting
         (
             ["--diode", "DIODE{} CUSTOM 1.5 -2.05 180.0 FRONT"],
