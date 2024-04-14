@@ -96,6 +96,12 @@ def expects_settings(default_difference: Dict):
             ["--diode", "D{} RELATIVE"],
             expects_settings({"diode_info": ElementInfo("D{}", PositionOption.RELATIVE, None, "")}),
         ),
+        #   - valid relative position setting - it is case insensitive
+        #     (it is not documented in --help, exist for convenience)
+        (
+            ["--diode", "D{} rElaTIve"],
+            expects_settings({"diode_info": ElementInfo("D{}", PositionOption.RELATIVE, None, "")}),
+        ),
         #   - valid relative position setting with destination template save path
         (
             ["--diode", "D{} RELATIVE /path/to/save.kicad_pcb"],
@@ -108,14 +114,20 @@ def expects_settings(default_difference: Dict):
             expects_settings({"diode_info": ElementInfo("DIODE{}", PositionOption.CUSTOM,
                                             ElementPosition(1.5, -2.05, 180.0, Side.FRONT), "")}),
         ),
+        #   - valid custom position setting with side lowercase
+        (
+            ["--diode", "DIODE{} CUSTOM 1.5 -2.05 180.0 front"],
+            expects_settings({"diode_info": ElementInfo("DIODE{}", PositionOption.CUSTOM,
+                                            ElementPosition(1.5, -2.05, 180.0, Side.FRONT), "")}),
+        ),
         # invalid diode option values
-        #   - invalid position FIXME: should use 'NO_SUCH_OPTION' string in error message:
-        #(
-        #    ["--diode", "D{} NO_SUCH_OPTION"],
-        #    pytest.raises(ArgumentTypeError,
-        #        match=r"'NO_SUCH_OPTION' is not a valid PositionOption"
-        #    ),
-        #),
+        #   - invalid position
+        (
+            ["--diode", "D{} NO_SUCH_OPTION"],
+            pytest.raises(ArgumentTypeError,
+                match=r"'NO_SUCH_OPTION' is not a valid PositionOption"
+            ),
+        ),
         #   - too little tokens
         (
             ["--diode", "D{}"],

@@ -12,10 +12,11 @@ class Side(str, Enum):
     @classmethod
     def get(cls, name) -> Side:
         if isinstance(name, str):
-            if name.upper() == "FRONT":
-                return Side.FRONT
-            elif name.upper() == "BACK":
-                return Side.BACK
+            try:
+                return Side(name.title())
+            except ValueError:
+                # fallback to error below to use 'name' before converting to titlecase
+                pass
         msg = f"'{name}' is not a valid Position"
         raise ValueError(msg)
 
@@ -41,8 +42,11 @@ class PositionOption(str, Enum):
     @classmethod
     def get(cls, name) -> PositionOption:
         if isinstance(name, str):
-            value = name.replace("_", " ").title()
-            return PositionOption(value)
+            try:
+                return PositionOption(name.title())
+            except ValueError:
+                # fallback to error below to use 'name' before converting to titlecase
+                pass
         msg = f"'{name}' is not a valid PositionOption"
         raise ValueError(msg)
 

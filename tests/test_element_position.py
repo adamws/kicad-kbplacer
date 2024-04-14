@@ -43,7 +43,7 @@ def test_position_option_get(value, expected) -> None:
 
 
 def test_position_option_get_invalid() -> None:
-    with pytest.raises(ValueError, match="'Some' is not a valid PositionOption"):
+    with pytest.raises(ValueError, match="'some' is not a valid PositionOption"):
         PositionOption.get("some")
 
 
