@@ -27,62 +27,62 @@ class ElementInfoAction(argparse.Action):
         if len(tokens) not in [2, 3, 6]:
             err = f"{option_string} invalid format."
             raise ValueError(err)
-        else:
-            annotation = tokens[0]
-            if annotation.count("{}") != 1:
-                err = (
-                    f"'{annotation}' invalid annotation specifier, "
-                    "it must contain exactly one '{}' placeholder."
-                )
-                raise ValueError(err)
 
-            option = PositionOption.get(tokens[1])
-            position = None
-            template_path = ""
-
-            if len(tokens) == 2:
-                if option not in [
-                    PositionOption.RELATIVE,
-                    PositionOption.DEFAULT,
-                    PositionOption.UNCHANGED,
-                ]:
-                    err = (
-                        f"{option_string} position option needs to be equal "
-                        "RELATIVE or DEFAULT if position details not provided"
-                    )
-                    raise ValueError(err)
-            elif len(tokens) == 3:
-                if option not in [PositionOption.PRESET, PositionOption.RELATIVE]:
-                    err = (
-                        f"{option_string} position option needs to be equal "
-                        "RELATIVE or PRESET when providing template path"
-                    )
-                    raise ValueError(err)
-            elif option != PositionOption.CUSTOM:
-                err = (
-                    f"{option_string} position option needs to be equal CUSTOM "
-                    "when providing position details"
-                )
-                raise ValueError(err)
-
-            if option == PositionOption.CUSTOM:
-                floats = tuple(map(float, tokens[2:5]))
-                side = Side.get(tokens[5])
-                position = ElementPosition(floats[0], floats[1], floats[2], side)
-            elif option == PositionOption.RELATIVE:
-                # template path is optional for RELATIVE option:
-                if len(tokens) == 3:
-                    template_path = tokens[2]
-            elif option == PositionOption.PRESET:
-                template_path = tokens[2]
-
-            value: ElementInfo = ElementInfo(
-                annotation,
-                option,
-                position,
-                template_path,
+        annotation = tokens[0]
+        if annotation.count("{}") != 1:
+            err = (
+                f"'{annotation}' invalid annotation specifier, "
+                "it must contain exactly one '{}' placeholder."
             )
-            return value
+            raise ValueError(err)
+
+        option = PositionOption.get(tokens[1])
+        position = None
+        template_path = ""
+
+        if len(tokens) == 2:
+            if option not in [
+                PositionOption.RELATIVE,
+                PositionOption.DEFAULT,
+                PositionOption.UNCHANGED,
+            ]:
+                err = (
+                    f"{option_string} position option needs to be equal "
+                    "RELATIVE or DEFAULT if position details not provided"
+                )
+                raise ValueError(err)
+        elif len(tokens) == 3:
+            if option not in [PositionOption.PRESET, PositionOption.RELATIVE]:
+                err = (
+                    f"{option_string} position option needs to be equal "
+                    "RELATIVE or PRESET when providing template path"
+                )
+                raise ValueError(err)
+        elif option != PositionOption.CUSTOM:
+            err = (
+                f"{option_string} position option needs to be equal CUSTOM "
+                "when providing position details"
+            )
+            raise ValueError(err)
+
+        if option == PositionOption.CUSTOM:
+            floats = tuple(map(float, tokens[2:5]))
+            side = Side.get(tokens[5])
+            position = ElementPosition(floats[0], floats[1], floats[2], side)
+        elif option == PositionOption.RELATIVE:
+            # template path is optional for RELATIVE option:
+            if len(tokens) == 3:
+                template_path = tokens[2]
+        elif option == PositionOption.PRESET:
+            template_path = tokens[2]
+
+        value: ElementInfo = ElementInfo(
+            annotation,
+            option,
+            position,
+            template_path,
+        )
+        return value
 
 
 class ElementInfoListAction(ElementInfoAction):
