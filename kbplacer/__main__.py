@@ -13,6 +13,53 @@ from .kbplacer_plugin import PluginSettings, run
 logger = logging.getLogger(__name__)
 
 
+def check_annotation(value: str) -> None:
+    if value.count("{}") != 1:
+        err = (
+            f"'{value}' invalid annotation specifier, "
+            "it must contain exactly one '{}' placeholder."
+        )
+        raise ValueError(err)
+
+
+class SwitchElementInfoAction(argparse.Action):
+    """Simplified action producing ElementInfo which always use
+    `PositionOption.DEFAULT` and `ElementPosition` with x and y 0, i.e. the only
+    variable (configurable) parameters are annotation, orientation and side
+    """
+
+    def __call__(self, parser, namespace, values: str, option_string=None) -> None:
+        try:
+            value: ElementInfo = self.parse(values, option_string)
+        except ValueError as e:
+            raise argparse.ArgumentTypeError(str(e))
+        setattr(namespace, self.dest, value)
+
+    def parse(self, values: str, option_string) -> ElementInfo:
+        tokens: list[str] = values.split()
+        err = ""
+        if len(tokens) not in [1, 3]:
+            err = f"{option_string} invalid format."
+            raise ValueError(err)
+
+        annotation = tokens[0]
+        check_annotation(annotation)
+
+        if len(tokens) > 1:
+            orientation = float(tokens[1])
+            side = Side.get(tokens[2])
+        else:
+            orientation = 0
+            side = Side.FRONT
+
+        return ElementInfo(
+            annotation,
+            PositionOption.DEFAULT,
+            ElementPosition(0, 0, orientation, side),
+            "",
+        )
+
+
 class ElementInfoAction(argparse.Action):
     def __call__(self, parser, namespace, values: str, option_string=None) -> None:
         try:
@@ -29,12 +76,7 @@ class ElementInfoAction(argparse.Action):
             raise ValueError(err)
 
         annotation = tokens[0]
-        if annotation.count("{}") != 1:
-            err = (
-                f"'{annotation}' invalid annotation specifier, "
-                "it must contain exactly one '{}' placeholder."
-            )
-            raise ValueError(err)
+        check_annotation(annotation)
 
         option = PositionOption.get(tokens[1])
         position = None
@@ -140,6 +182,24 @@ def app() -> None:
         "--route-rows-and-columns",
         action="store_true",
         help="Enable rows/columns routing",
+    )
+    parser.add_argument(
+        "-s",
+        "--switch",
+        default=ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, ""),
+        action=SwitchElementInfoAction,
+        help=(
+            "Switch information, space separated value of ANNOTATION [ORIENTATION SIDE]\n"
+            "where ANNOTATION is footprint annotation string with '{}' placeholder,\n"
+            "ORIENTATION is numeric value of reference orientation for each footprint\n"
+            "and SIDE is either FRONT or BACK\n"
+            "When only ANNOTATION defined, then orientation is 0 and side is FRONT\n"
+            "for example:\n"
+            "\tSW{}\n"
+            "\tSW{} 0 FRONT\n"
+            "\tSW{} 90 BACK\n"
+            "equal 'SW{} 0 FRONT' by default"
+        ),
     )
     parser.add_argument(
         "-d",
@@ -259,7 +319,7 @@ def app() -> None:
     settings = PluginSettings(
         board_path=board_path,
         layout_path=layout_path,
-        key_info=ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, ""),
+        key_info=args.switch,
         key_distance=args.key_distance,
         diode_info=args.diode,
         route_switches_with_diodes=args.route_switches_with_diodes,

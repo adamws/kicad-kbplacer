@@ -90,6 +90,33 @@ def expects_settings(default_difference: Dict):
             [],
             expects_settings({}),
         ),
+        # valid switch option values
+        #   - valid when only annotation specified
+        (
+            ["--switch", "S{}"],
+            expects_settings({"key_info": ElementInfo("S{}", PositionOption.DEFAULT, ZERO_POSITION, "")}),
+        ),
+        #   - valid with orientation and side
+        (
+            ["--switch", "S{} 90 BACK"],
+            expects_settings({"key_info": ElementInfo("S{}", PositionOption.DEFAULT,
+                                          ElementPosition(0, 0, 90, Side.BACK), "")}),
+        ),
+        # invalid switch option values
+        #   - too many tokens
+        (
+            ["--switch", "SW{} DEFAULT 0 0 0 FRONT"],
+            pytest.raises(ArgumentTypeError,
+                match=r"--switch invalid format"
+            ),
+        ),
+        #   - invalid side
+        (
+            ["--switch", "SW{} 0 NOT_A_SIDE"],
+            pytest.raises(ArgumentTypeError,
+                match=r"'NOT_A_SIDE' is not a valid Side"
+            ),
+        ),
         # valid diode option values
         #   - valid relative position setting
         (
