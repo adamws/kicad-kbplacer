@@ -17,7 +17,7 @@ class Side(str, Enum):
             except ValueError:
                 # fallback to error below to use 'name' before converting to titlecase
                 pass
-        msg = f"'{name}' is not a valid Position"
+        msg = f"'{name}' is not a valid Side"
         raise ValueError(msg)
 
 

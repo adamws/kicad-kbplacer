@@ -22,12 +22,12 @@ def test_side_get(value, expected) -> None:
 
 
 def test_side_get_invalid() -> None:
-    with pytest.raises(ValueError, match="'some' is not a valid Position"):
+    with pytest.raises(ValueError, match="'some' is not a valid Side"):
         Side.get("some")
 
 
 def test_side_get_invalid_type() -> None:
-    with pytest.raises(ValueError, match="'True' is not a valid Position"):
+    with pytest.raises(ValueError, match="'True' is not a valid Side"):
         Side.get(True)
 
 
