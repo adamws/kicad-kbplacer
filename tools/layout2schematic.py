@@ -28,7 +28,7 @@ def _y(y: int) -> float:
 
 
 def load_keyboard(layout_path) -> MatrixAnnotatedKeyboard:
-    with open(layout_path, "r") as f:
+    with open(layout_path, "r", encoding="utf-8") as f:
         if layout_path.endswith("yaml") or layout_path.endswith("yml"):
             layout = yaml.safe_load(f)
         else:

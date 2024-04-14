@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import json
+import locale
+import logging
 import os
 import shutil
 import subprocess
+import sys
 import unittest
 from pathlib import Path
 from typing import Tuple
@@ -17,12 +20,15 @@ try:
     from kbplacer.kle_serial import (
         Keyboard,
         MatrixAnnotatedKeyboard,
+        get_keyboard_from_file,
         parse_ergogen_points,
         parse_kle,
         parse_via,
     )
 except Exception:
     pass
+
+logger = logging.getLogger(__name__)
 
 
 def __minify(string: str) -> str:
@@ -512,3 +518,17 @@ class TestKleSerialCli:
 
         with open(tmp_file, "r") as f:
             assert json.load(f) == reference
+
+
+def test_utf8_label(request) -> None:
+    test_dir = request.fspath.dirname
+    data_dir = f"{test_dir}/data"
+    layout_path = f"{data_dir}/kle-layouts/one-key-with-utf-8-label.json"
+
+    logger.info(f"Preferred encoding: {locale.getpreferredencoding()}")
+    if sys.version_info >= (3, 11):
+        logger.info(f"Encoding: {locale.getencoding()}")
+
+    keyboard = get_keyboard_from_file(layout_path)
+    assert len(keyboard.keys) == 1
+    assert keyboard.keys[0].labels == ["😊"]

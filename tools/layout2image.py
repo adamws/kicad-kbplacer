@@ -146,7 +146,7 @@ def calcualte_canvas_size(key_iterator: Iterator) -> tuple[int, int]:
 
 def create_images(keyboard: Union[str, Keyboard], output_path):
     if isinstance(keyboard, str):
-        with open(keyboard, "r") as f:
+        with open(keyboard, "r", encoding="utf-8") as f:
             if keyboard.endswith("yaml") or keyboard.endswith("yml"):
                 layout = yaml.safe_load(f)
             else:

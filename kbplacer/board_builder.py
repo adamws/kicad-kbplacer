@@ -82,7 +82,7 @@ class BoardBuilder:
         keyboard: Union[str, MatrixAnnotatedKeyboard],
     ) -> pcbnew.BOARD:
         if isinstance(keyboard, str):
-            with open(keyboard, "r") as f:
+            with open(keyboard, "r", encoding="utf-8") as f:
                 layout = json.load(f)
                 tmp: Keyboard = get_keyboard(layout)
                 if not isinstance(tmp, MatrixAnnotatedKeyboard):

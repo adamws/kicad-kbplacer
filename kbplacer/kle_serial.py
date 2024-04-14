@@ -742,7 +742,9 @@ def get_keyboard(layout: dict) -> Keyboard:
 
 
 def get_keyboard_from_file(layout_path: str) -> Keyboard:
-    with open(layout_path, "r") as f:
+    # Layout downloaded from keyboard-layout-editor is most likely using utf-8.
+    # Use it explicitly in case the platform locale sets different encoding.
+    with open(layout_path, "r", encoding="utf-8") as f:
         layout = json.load(f)
     logger.info(f"User layout: {layout}")
     return get_keyboard(layout)
@@ -788,7 +790,7 @@ if __name__ == "__main__":
         print("Output format equal input format, nothing to do...")
         sys.exit(1)
 
-    with open(input_path, "r") as input_file:
+    with open(input_path, "r", encoding="utf-8") as input_file:
         if input_path.endswith("yaml") or input_path.endswith("yml"):
             try:
                 import yaml
@@ -837,5 +839,5 @@ if __name__ == "__main__":
                 result = json.loads(result)
 
         if output_path:
-            with open(output_path, "w") as output_file:
+            with open(output_path, "w", encoding="utf-8") as output_file:
                 json.dump(result, output_file, indent=4)
