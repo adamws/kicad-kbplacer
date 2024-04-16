@@ -177,10 +177,24 @@ def remove_tags(root, name) -> None:
 
 # pcb plotting based on https://github.com/kitspace/kitspace-v2/tree/master/processor/src/tasks/processKicadPCB
 # and https://gitlab.com/kicad/code/kicad/-/blob/master/demos/python_scripts_examples/plot_board.py
-def generate_render(tmpdir, request) -> None:
-    project_name = "keyboard-before"
-    pcb_path = f"{tmpdir}/{project_name}.kicad_pcb"
-    board = pcbnew.LoadBoard(pcb_path)
+def generate_render(
+    request,
+    pcb_path: Union[str, os.PathLike],
+    *,
+    destination_dir: Union[str, os.PathLike] = "",
+) -> None:
+    pcb_path = Path(pcb_path)
+    pcb_name = pcb_path.stem
+    board = pcbnew.LoadBoard(str(pcb_path))
+    if destination_dir == "":
+        destination_dir = pcb_path.parent
+
+    destination_dir = Path(destination_dir)
+    layers_dir = destination_dir / f"{pcb_name}-layers"
+    assert destination_dir.is_dir()
+    assert not layers_dir.is_dir()
+
+    os.mkdir(layers_dir)
 
     plot_layers = [
         "B_Cu",
@@ -194,7 +208,7 @@ def generate_render(tmpdir, request) -> None:
     ]
     plot_control = pcbnew.PLOT_CONTROLLER(board)
     plot_options = plot_control.GetPlotOptions()
-    plot_options.SetOutputDirectory(tmpdir)
+    plot_options.SetOutputDirectory(destination_dir)
     plot_options.SetColorSettings(pcbnew.GetSettingsManager().GetColorSettings("user"))
     plot_options.SetPlotFrameRef(False)
     plot_options.SetSketchPadLineWidth(pcbnew.FromMM(0.35))
@@ -234,15 +248,15 @@ def generate_render(tmpdir, request) -> None:
         plot_control.PlotLayer()
         plot_control.ClosePlot()
 
-        filepath = os.path.join(tmpdir, f"{project_name}-{layer_name}.svg")
+        filepath = os.path.join(destination_dir, f"{pcb_name}-{layer_name}.svg")
         tree = ET.parse(filepath)
         root = tree.getroot()
         # for some reason there is plenty empty groups in generated svg's (kicad bug?)
         # remove for clarity:
         remove_empty_groups(root)
         shrink_svg(tree, margin=1)
-        tree.write(f"{tmpdir}/{layer_name}.svg")
-        os.remove(f"{tmpdir}/{project_name}-{layer_name}.svg")
+        tree.write(f"{layers_dir}/{layer_name}.svg")
+        os.remove(f"{destination_dir}/{pcb_name}-{layer_name}.svg")
 
     if request.config.getoption("--save-results-as-reference"):
         references_dir = request_to_references_dir(request)
@@ -250,13 +264,13 @@ def generate_render(tmpdir, request) -> None:
 
         for layer_name, _ in plot_plan:
             if "Silkscreen" not in layer_name:
-                filepath = os.path.join(tmpdir, f"{layer_name}.svg")
+                filepath = os.path.join(layers_dir, f"{layer_name}.svg")
                 shutil.copy(filepath, references_dir)
 
     new_tree = None
     new_root = None
     for i, (layer_name, _) in enumerate(plot_plan):
-        filepath = os.path.join(tmpdir, f"{layer_name}.svg")
+        filepath = os.path.join(layers_dir, f"{layer_name}.svg")
         tree = ET.parse(filepath)
         layer = tree.getroot()
         if i == 0:
@@ -272,7 +286,10 @@ def generate_render(tmpdir, request) -> None:
     remove_tags(new_root, "{http://www.w3.org/2000/svg}desc")
 
     shrink_svg(new_tree, margin=1)
-    new_tree.write(f"{tmpdir}/report/render.svg")
+
+    if not (destination_dir / "report").is_dir:
+        os.mkdir(f"{destination_dir}/report")
+    new_tree.write(f"{destination_dir}/report/{pcb_name}.svg")
 
 
 def generate_drc(tmpdir, board_path: str) -> None:

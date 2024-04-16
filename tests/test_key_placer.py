@@ -75,6 +75,12 @@ def get_board_with_one_switch(
     return board, switch, diodes
 
 
+def save_and_render(board: pcbnew.BOARD, tmpdir, request) -> None:
+    pcb_path = f"{tmpdir}/test.kicad_pcb"
+    board.Save(pcb_path)
+    generate_render(request, pcb_path)
+
+
 def assert_board_tracks(
     expected: list[Tuple[int, int]] | None, board: pcbnew.BOARD
 ) -> None:
@@ -167,8 +173,7 @@ def test_diode_switch_routing(
     key_placer.route_switch_with_diode(switch, diodes)
     key_placer.remove_dangling_tracks()
 
-    board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
-    generate_render(tmpdir, request)
+    save_and_render(board, tmpdir, request)
     assert_board_tracks(expected, board)
 
 
@@ -195,8 +200,7 @@ def test_diode_switch_routing_complicated_footprint(
 
     key_placer.route_switch_with_diode(switch, diodes)
 
-    board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
-    generate_render(tmpdir, request)
+    save_and_render(board, tmpdir, request)
     assert_board_tracks(expected, board)
 
 
@@ -211,8 +215,8 @@ def test_multi_diode_switch_routing(tmpdir, request) -> None:
         diode.SetOrientationDegrees(0)
     key_placer.route_switch_with_diode(switch, diodes)
 
-    board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
-    generate_render(tmpdir, request)
+    save_and_render(board, tmpdir, request)
+
     expected = [
         (2540000, -8510000),
         (1050000, -10000000),
@@ -297,8 +301,7 @@ def test_switch_distance(key_distance, tmpdir, request) -> None:
         True,
     )
 
-    board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
-    generate_render(tmpdir, request)
+    save_and_render(board, tmpdir, request)
 
     assert_2x2_layout_switches(board, key_distance)
     switches = [get_footprint(board, f"SW{i}") for i in range(1, 5)]
@@ -317,8 +320,7 @@ def test_diode_placement_ignore(tmpdir, request) -> None:
     )
     key_placer.run(get_2x2_layout_path(request), key_info, diode_info, False)
 
-    board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
-    generate_render(tmpdir, request)
+    save_and_render(board, tmpdir, request)
 
     assert_2x2_layout_switches(board, (19.05, 19.05))
     diodes = [get_footprint(board, f"D{i}") for i in range(1, 5)]

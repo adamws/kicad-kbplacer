@@ -28,6 +28,8 @@ from .conftest import (
 
 logger = logging.getLogger(__name__)
 
+PROJECT_NAME = "keyboard"
+
 
 @pytest.fixture
 def kbplacer_process(
@@ -150,7 +152,7 @@ def assert_example(tmpdir, references_dir: Path) -> None:
     reference_files = get_reference_files(references_dir)
     assert len(reference_files) == 4, "Reference files not found"
     for path in reference_files:
-        assert_kicad_svg(path, Path(f"{tmpdir}/{path.name}"))
+        assert_kicad_svg(path, Path(f"{tmpdir}/{PROJECT_NAME}-layers/{path.name}"))
 
 
 def __get_parameters():
@@ -265,8 +267,10 @@ def prepare_project(request, tmpdir, example: str, layout_file: str) -> None:
     test_dir = request.fspath.dirname
 
     source_dir = f"{test_dir}/../examples/{example}"
-    for filename in ["keyboard-before.kicad_pcb", layout_file]:
-        shutil.copy(f"{source_dir}/{filename}", tmpdir)
+    shutil.copy(
+        f"{source_dir}/keyboard-before.kicad_pcb", f"{tmpdir}/{PROJECT_NAME}.kicad_pcb"
+    )
+    shutil.copy(f"{source_dir}/{layout_file}", tmpdir)
     for template in glob.glob(f"{source_dir}/*_template.kicad_pcb"):
         shutil.copy(template, tmpdir)
 
@@ -283,12 +287,12 @@ def example_isolation(request, tmpdir):
         example: str, layout_file: str, tracks_variant: str, diode_variant: str
     ):
         prepare_project(request, tmpdir, example, layout_file)
-        pcb_path = f"{tmpdir}/keyboard-before.kicad_pcb"
+        pcb_path = f"{tmpdir}/{PROJECT_NAME}.kicad_pcb"
         layout_path = f"{tmpdir}/{layout_file}"
 
         yield layout_path, pcb_path
 
-        generate_render(tmpdir, request)
+        generate_render(request, pcb_path)
         generate_drc(tmpdir, pcb_path)
         references_dir = get_references_dir(
             request, example, tracks_variant, diode_variant
@@ -356,7 +360,7 @@ def test_with_examples_annotated_layout_shuffled_references(
 
 
 def test_saving_connection_template(
-    request, tmpdir, example_isolation, kbplacer_process
+    request, example_isolation, kbplacer_process
 ) -> None:
     example = "2x3-rotations-custom-diode-with-track-and-complex-footprint"
     layout_option = "kle.json"
@@ -370,11 +374,7 @@ def test_saving_connection_template(
         board = pcbnew.LoadBoard(str(template_destination))
         for t in board.GetTracks():
             assert t.GetNetCode() != 0
-    # Override render for html report:
-    # must replace actual board with template in order to use `generate_render`
-    # which still supports hardcoded path only
-    shutil.copy(template_destination, pcb_path)
-    generate_render(tmpdir, request)
+    generate_render(request, template_destination)
 
 
 def test_placing_and_routing_separately(example_isolation, kbplacer_process) -> None:

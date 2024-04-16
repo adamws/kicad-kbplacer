@@ -46,8 +46,9 @@ def test_template_copy(copy_tracks, tmpdir, request) -> None:
 
     copy_from_template_to_board(target_board, source_board_path, copy_tracks)
 
-    target_board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
-    generate_render(tmpdir, request)
+    pcb_path = f"{tmpdir}/test.kicad_pcb"
+    target_board.Save(pcb_path)
+    generate_render(request, pcb_path)
 
     for i, f in enumerate(footprints):
         assert get_position(f) == pcbnew.wxPointMM(i * 19.05, 0)

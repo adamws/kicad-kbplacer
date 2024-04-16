@@ -55,6 +55,12 @@ def add_nets(board, netnames) -> None:
         board.Add(net)
 
 
+def save_and_render(board: pcbnew.BOARD, tmpdir, request) -> None:
+    pcb_path = f"{tmpdir}/test.kicad_pcb"
+    board.Save(pcb_path)
+    generate_render(request, pcb_path)
+
+
 def __get_parameters():
     examples = ["D_SOD-323", "D_DO-34_SOD68_P7.62mm_Horizontal"]
     positions = list(TrackToElementPosition)
@@ -145,8 +151,7 @@ def test_track_with_pad_collision(
 
     board.Add(track)
     board.BuildListOfNets()
-    board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
-    generate_render(tmpdir, request)
+    save_and_render(board, tmpdir, request)
 
     assert collide == expected_collision_result, "Unexpected track collision result"
 
@@ -173,8 +178,7 @@ def add_track_segments_test(
         else:
             assert type(start) == type(None), "Unexpected track success"
 
-    board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
-    generate_render(tmpdir, request)
+    save_and_render(board, tmpdir, request)
 
 
 def test_track_with_track_collision_close_to_footprint(tmpdir, request) -> None:
@@ -235,6 +239,5 @@ def test_track_with_track_collision(
 
     collide = modifier.test_track_collision(track)
 
-    board.Save(f"{tmpdir}/keyboard-before.kicad_pcb")
-    generate_render(tmpdir, request)
+    save_and_render(board, tmpdir, request)
     assert collide == expected, "Unexpected track collision result"
