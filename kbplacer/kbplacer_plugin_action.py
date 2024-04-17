@@ -7,9 +7,8 @@ import sys
 import pcbnew
 import wx
 
-from .element_position import PositionOption
 from .kbplacer_dialog import KbplacerDialog, load_window_state_from_log
-from .kbplacer_plugin import PluginSettings, run
+from .kbplacer_plugin import run_from_gui
 
 logger = logging.getLogger(__name__)
 
@@ -72,29 +71,7 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
         if dlg.ShowModal() == wx.ID_OK:
             gui_state = dlg.get_window_state()
             logger.info(f"GUI state: {gui_state}")
-
-            key_info = dlg.get_key_info()
-            if not dlg.enable_diode_placement():
-                key_info.position_option = PositionOption.UNCHANGED
-                key_info.template_path = ""
-
-            settings = PluginSettings(
-                board_path=self.board_path,
-                layout_path=dlg.get_layout_path(),
-                key_info=key_info,
-                key_distance=dlg.get_key_distance(),
-                diode_info=dlg.get_diode_info(),
-                route_switches_with_diodes=dlg.route_switches_with_diodes(),
-                route_rows_and_columns=dlg.route_rows_and_columns(),
-                additional_elements=dlg.get_additional_elements_info(),
-                generate_outline=dlg.generate_outline(),
-                outline_delta=dlg.get_outline_delta(),
-                template_path=dlg.get_template_path(),
-                create_from_annotated_layout=False,
-                switch_footprint="",
-                diode_footprint="",
-            )
-            run(settings)
+            run_from_gui(self.board_path, gui_state)
         else:
             gui_state = dlg.get_window_state()
             logger.info(f"GUI state: {gui_state}")

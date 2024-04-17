@@ -7,7 +7,8 @@ import pcbnew
 
 from .board_builder import BoardBuilder
 from .edge_generator import build_board_outline
-from .element_position import ElementInfo
+from .element_position import ElementInfo, PositionOption
+from .kbplacer_dialog import WindowState
 from .key_placer import KeyPlacer
 from .template_copier import copy_from_template_to_board
 
@@ -62,3 +63,29 @@ def run(settings: PluginSettings) -> pcbnew.BOARD:
         )
 
     return board
+
+
+def run_from_gui(board_path: str, state: WindowState) -> pcbnew.BOARD:
+    """Same as 'run' but with additional WindowState to PluginSettings translation"""
+    key_info = state.key_info
+    if not state.enable_diode_placement:
+        key_info.position_option = PositionOption.UNCHANGED
+        key_info.template_path = ""
+
+    settings = PluginSettings(
+        board_path=board_path,
+        layout_path=state.layout_path,
+        key_info=key_info,
+        key_distance=state.key_distance,
+        diode_info=state.diode_info,
+        route_switches_with_diodes=state.route_switches_with_diodes,
+        route_rows_and_columns=state.route_rows_and_columns,
+        additional_elements=state.additional_elements,
+        generate_outline=state.generate_outline,
+        outline_delta=state.outline_delta,
+        template_path=state.template_path,
+        create_from_annotated_layout=False,
+        switch_footprint="",
+        diode_footprint="",
+    )
+    return run(settings)

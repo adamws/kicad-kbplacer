@@ -968,6 +968,8 @@ if __name__ == "__main__":
     import argparse
     import threading
 
+    from .kbplacer_plugin import run_from_gui
+
     parser = argparse.ArgumentParser(description="dialog test")
     parser.add_argument(
         "-i", "--initial-state-file", default="", help="Initial gui state file"
@@ -975,26 +977,46 @@ if __name__ == "__main__":
     parser.add_argument(
         "-o", "--output-dir", required=True, help="Directory for output files"
     )
+    parser.add_argument(
+        "--run-without-dialog",
+        required=False,
+        action="store_true",
+        help="Run with loaded state without displaying dialog window",
+    )
+    parser.add_argument(
+        "-b",
+        "--board",
+        required=False,
+        default="",
+        help=".kicad_pcb file to be used with --run-without-dialog option",
+    )
     args = parser.parse_args()
 
     initial_state = load_window_state_from_log(args.initial_state_file)
-    _ = wx.App()
-    dlg = KbplacerDialog(None, "kbplacer", initial_state=initial_state)
-    with open(f"{args.output_dir}/window_state.json", "w") as f:
-        f.write(f"{dlg.get_window_state()}")
+    if not args.run_without_dialog:
+        _ = wx.App()
+        dlg = KbplacerDialog(None, "kbplacer", initial_state=initial_state)
+        with open(f"{args.output_dir}/window_state.json", "w") as f:
+            f.write(f"{dlg.get_window_state()}")
 
-    if "PYTEST_CURRENT_TEST" in os.environ:
-        # use stdin for gracefully closing GUI when running
-        # from pytest. This is required when measuring
-        # coverage and process kill would cause measurement to be lost
-        def listen_for_exit():
-            while True:
-                input("Press any key to exit: ")
-                dlg.Close(True)
-                sys.exit()
+        if "PYTEST_CURRENT_TEST" in os.environ:
+            # use stdin for gracefully closing GUI when running
+            # from pytest. This is required when measuring
+            # coverage and process kill would cause measurement to be lost
+            def listen_for_exit():
+                while True:
+                    input("Press any key to exit: ")
+                    dlg.Close(True)
+                    sys.exit()
 
-        input_thread = threading.Thread(target=listen_for_exit)
-        input_thread.daemon = True
-        input_thread.start()
+            input_thread = threading.Thread(target=listen_for_exit)
+            input_thread.daemon = True
+            input_thread.start()
 
-    dlg.ShowModal()
+        dlg.ShowModal()
+    else:
+        import pcbnew
+
+        board = run_from_gui(args.board, initial_state)
+        pcbnew.Refresh()
+        pcbnew.SaveBoard(args.board, board)
