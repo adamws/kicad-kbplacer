@@ -2,7 +2,15 @@ import logging
 
 import pcbnew
 
-from .board_modifier import get_footprint, set_position
+from .board_modifier import (
+    get_footprint,
+    get_orientation,
+    get_position,
+    get_side,
+    set_position,
+    set_rotation,
+    set_side,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -24,14 +32,13 @@ def copy_from_template_to_board(
         reference = footprint.GetReference()
         destination_footprint = get_footprint(board, reference)
 
-        layer = footprint.GetLayerName()
-        position = footprint.GetPosition()
-        orientation = footprint.GetOrientation()
+        side = get_side(footprint)
+        position = get_position(footprint)
+        orientation = get_orientation(footprint)
 
-        if layer == "B.Cu" and destination_footprint.GetLayerName() != "B.Cu":
-            destination_footprint.Flip(destination_footprint.GetCenter(), False)
+        set_side(destination_footprint, side)
         set_position(destination_footprint, position)
-        destination_footprint.SetOrientation(orientation)
+        set_rotation(destination_footprint, orientation)
 
     if route_tracks:
         tracks = template.GetTracks()
