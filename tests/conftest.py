@@ -292,15 +292,18 @@ def generate_render(
     new_tree.write(f"{destination_dir}/report/{pcb_name}.svg")
 
 
-def generate_drc(tmpdir, board_path: str) -> None:
+def generate_drc(tmpdir, board_path: Union[str, os.PathLike]) -> None:
     if KICAD_VERSION == (8, 0, 1):
         # there is some kind of KiCad regression, this function
         # causes assertion fail randomly, see
         # https://gitlab.com/kicad/code/kicad/-/issues/17504
         return
 
-    board = pcbnew.LoadBoard(board_path)
-    drc_path = tmpdir / "report/drc.log"
+    board_path = Path(board_path)
+    board_name = board_path.stem
+
+    board = pcbnew.LoadBoard(str(board_path))
+    drc_path = tmpdir / f"report/{board_name}-drc.log"
     pcbnew.WriteDRCReport(board, drc_path, pcbnew.EDA_UNITS_MILLIMETRES, True)
     with open(drc_path, "r") as f:
         logger.debug(f.read())

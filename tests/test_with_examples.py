@@ -6,6 +6,7 @@ import logging
 import os
 import shutil
 import subprocess
+import textwrap
 import xml.etree.ElementTree as ET
 from contextlib import contextmanager
 from pathlib import Path
@@ -69,6 +70,43 @@ def kbplacer_process(
         p = subprocess.Popen(
             kbplacer_args,
             cwd=package_path,
+        )
+        p.communicate()
+        if p.returncode != 0:
+            raise Exception("Switch placement failed")
+
+    return _process
+
+
+@pytest.fixture
+def kbplacer_gui_process(
+    package_path,
+    package_name,
+    tmpdir,
+):
+    def _process(
+        pcb_path,
+        gui_state_file,
+    ):
+        kbplacer_args = [
+            "python3",
+            "-m",
+            f"{package_name}.kbplacer_dialog",
+            "-b",
+            pcb_path,
+            "--run-without-dialog",
+            "--initial-state-file",
+            gui_state_file,
+            "-o",
+            tmpdir,
+        ]
+        p = subprocess.Popen(
+            kbplacer_args,
+            cwd=package_path,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdin=subprocess.PIPE,
+            text=True,
         )
         p.communicate()
         if p.returncode != 0:
@@ -390,6 +428,61 @@ def test_placing_and_routing_separately(example_isolation, kbplacer_process) -> 
         kbplacer_process(False, None, layout_path, pcb_path)
         # run with routing, without layout
         kbplacer_process(True, None, None, pcb_path)
+
+
+@pytest.mark.parametrize("test_type", ["CLI", "GUI"])
+def test_empty_run(
+    request, tmpdir, kbplacer_process, kbplacer_gui_process, test_type: str
+) -> None:
+    test_dir = request.fspath.dirname
+    # FIXME: there is no way to define empty 'additional-elements' with CLI
+    # so using example where there are not stabilizer footprints which would
+    # be moved this following 'empty run'
+    example = "2x2"
+
+    reference = f"{test_dir}/../examples/{example}/keyboard-before.kicad_pcb"
+    reference_copy = f"{tmpdir}/keyboard-before.kicad_pcb"
+    working_copy = f"{tmpdir}/keyboard-after.kicad_pcb"
+
+    shutil.copy(reference, reference_copy)
+    shutil.copy(reference, working_copy)
+
+    # empty run:
+    if test_type == "CLI":
+        kbplacer_process(False, "D{} UNCHANGED", None, working_copy)
+    else:
+        # this is same as test_empty_run with CLI but targets specific bug
+        # which was caused by wrong translation between GUI window state
+        # and run settings
+        state_str = """
+            GUI state: {"layout_path": "", "key_distance": [19.05, 19.05],
+            "key_info": {"annotation_format": "SW{}", "position_option": "Default",
+            "position": {"x": 0.0, "y": 0.0, "orientation": 0.0, "side": "Front"},
+            "template_path": ""}, "enable_diode_placement": false,
+            "route_switches_with_diodes": false,
+            "diode_info": {"annotation_format": "D{}", "position_option": "Default",
+            "position": {"x": 5.08, "y": 3.03, "orientation": 90.0, "side": "Back"},
+            "template_path": ""}, "additional_elements": [],
+            "route_rows_and_columns": false, "template_path": "",
+            "generate_outline": false, "outline_delta": 0.0}"""
+
+        state_str = textwrap.dedent(state_str).replace("\n", " ")
+        logger.info(state_str)
+
+        gui_state_file = f"{tmpdir}/guistate.log"
+        with open(gui_state_file, "w") as f:
+            f.write(state_str)
+        kbplacer_gui_process(working_copy, gui_state_file)
+
+    for pcb in [reference_copy, working_copy]:
+        generate_render(request, pcb)
+
+    generate_drc(tmpdir, working_copy)
+
+    reference_files = get_reference_files(f"{tmpdir}/keyboard-before-layers")
+    assert len(reference_files) == 4, "Reference files not found"
+    for path in reference_files:
+        assert_kicad_svg(path, Path(f"{tmpdir}/keyboard-after-layers/{path.name}"))
 
 
 def test_empty_run_after_placing_and_routing(
