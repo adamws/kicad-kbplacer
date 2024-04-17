@@ -67,15 +67,14 @@ def run(settings: PluginSettings) -> pcbnew.BOARD:
 
 def run_from_gui(board_path: str, state: WindowState) -> pcbnew.BOARD:
     """Same as 'run' but with additional WindowState to PluginSettings translation"""
-    key_info = state.key_info
     if not state.enable_diode_placement:
-        key_info.position_option = PositionOption.UNCHANGED
-        key_info.template_path = ""
+        state.diode_info.position_option = PositionOption.UNCHANGED
+        state.diode_info.template_path = ""
 
     settings = PluginSettings(
         board_path=board_path,
         layout_path=state.layout_path,
-        key_info=key_info,
+        key_info=state.key_info,
         key_distance=state.key_distance,
         diode_info=state.diode_info,
         route_switches_with_diodes=state.route_switches_with_diodes,
