@@ -68,13 +68,12 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
         pcb_frame = [x for x in wx.GetTopLevelWindows() if x.GetName() == "PcbFrame"][0]
 
         dlg = KbplacerDialog(pcb_frame, "kbplacer", initial_state=self.window_state)
-        if dlg.ShowModal() == wx.ID_OK:
-            gui_state = dlg.get_window_state()
-            logger.info(f"GUI state: {gui_state}")
+        modal_return = dlg.ShowModal()
+        gui_state = dlg.get_window_state()
+        logger.info(f"GUI state: {gui_state}")
+
+        if modal_return == wx.ID_OK:
             run_from_gui(self.board_path, gui_state)
-        else:
-            gui_state = dlg.get_window_state()
-            logger.info(f"GUI state: {gui_state}")
 
         dlg.Destroy()
         logging.shutdown()
