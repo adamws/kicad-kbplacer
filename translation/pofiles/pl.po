@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: \n"
-"POT-Creation-Date: 2024-01-31 18:38+0100\n"
+"POT-Creation-Date: 2024-04-19 22:57+0200\n"
 "PO-Revision-Date: 2024-02-23 19:09+0100\n"
 "Last-Translator: adamws <adamws@users.noreply.github.com>\n"
 "Language-Team: Polish <https://hosted.weblate.org/projects/kicad-kbplacer/"
@@ -15,15 +15,8 @@ msgstr ""
 "X-Generator: Poedit 3.4.2\n"
 "Generated-By: pygettext.py 1.5\n"
 
-msgid "<missing>"
-msgstr "<brak>"
-
-msgid "development build"
-msgstr "kompilacja deweloperska"
-
 msgid ""
-"Plugin for mechanical keyboard design. It features automatic key "
-"placement \n"
+"Plugin for mechanical keyboard design. It features automatic key placement \n"
 "based on popular layout description from "
 msgstr ""
 "Wtyczka ułatwiająca projektowanie klawiatur mechanicznych. Pozwala na "
@@ -71,3 +64,5 @@ msgstr "Delta obrysu:"
 
 msgid "Other settings"
 msgstr "Pozostałe ustawiania"
+
+

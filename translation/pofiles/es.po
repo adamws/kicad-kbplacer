@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2024-01-31 18:38+0100\n"
+"POT-Creation-Date: 2024-04-19 22:57+0200\n"
 "PO-Revision-Date: 2024-02-19 13:02+0000\n"
 "Last-Translator: gallegonovato <fran-carro@hotmail.es>\n"
 "Language-Team: Spanish <https://hosted.weblate.org/projects/kicad-kbplacer/"
@@ -13,12 +13,6 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
 "X-Generator: Weblate 5.4\n"
 "Generated-By: pygettext.py 1.5\n"
-
-msgid "<missing>"
-msgstr "<faltante>"
-
-msgid "development build"
-msgstr "compilación de desarrollo"
 
 msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
@@ -69,3 +63,5 @@ msgstr "Esquema delta:"
 
 msgid "Other settings"
 msgstr "Otras configuraciones"
+
+

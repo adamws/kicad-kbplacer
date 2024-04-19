@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2024-01-31 18:38+0100\n"
+"POT-Creation-Date: 2024-04-19 22:57+0200\n"
 "PO-Revision-Date: 2024-02-19 13:02+0000\n"
 "Last-Translator: Сергій <sergiy.goncharuk.1@gmail.com>\n"
 "Language-Team: Ukrainian <https://hosted.weblate.org/projects/kicad-kbplacer/"
@@ -14,12 +14,6 @@ msgstr ""
 "n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 "X-Generator: Weblate 5.4\n"
 "Generated-By: pygettext.py 1.5\n"
-
-msgid "<missing>"
-msgstr "<немає>"
-
-msgid "development build"
-msgstr "збірка для розробників"
 
 msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
@@ -70,3 +64,5 @@ msgstr "Дельта контуру:"
 
 msgid "Other settings"
 msgstr "Інші налаштування"
+
+

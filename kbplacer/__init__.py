@@ -2,7 +2,16 @@ import inspect
 import logging
 from logging import NullHandler
 
+try:
+    from ._version import __version__
+except ImportError:
+    __version__ = "not-found"
+
+__license__ = "GPL-3.0-only"
+__version__ = __version__
+
 logging.getLogger(__name__).addHandler(NullHandler())
+del NullHandler
 
 
 def __is_in_call_stack(function_name: str, module_name: str) -> bool:

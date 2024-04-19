@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2024-01-31 18:38+0100\n"
+"POT-Creation-Date: 2024-04-19 22:57+0200\n"
 "PO-Revision-Date: 2024-03-28 08:01+0000\n"
 "Last-Translator: 김랑기 <korearf@gmail.com>\n"
 "Language-Team: Korean <https://hosted.weblate.org/projects/kicad-kbplacer/"
@@ -13,12 +13,6 @@ msgstr ""
 "Plural-Forms: nplurals=1; plural=0;\n"
 "X-Generator: Weblate 5.5-dev\n"
 "Generated-By: pygettext.py 1.5\n"
-
-msgid "<missing>"
-msgstr "<정보 없음>"
-
-msgid "development build"
-msgstr "개발 버전"
 
 msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
@@ -68,3 +62,5 @@ msgstr "외곽선 델타:"
 
 msgid "Other settings"
 msgstr "기타 설정"
+
+

@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2024-01-31 18:38+0100\n"
+"POT-Creation-Date: 2024-04-19 22:57+0200\n"
 "PO-Revision-Date: 2024-03-17 15:02+0000\n"
 "Last-Translator: Mikachu <micah.sh@proton.me>\n"
 "Language-Team: Dutch <https://hosted.weblate.org/projects/kicad-kbplacer/"
@@ -13,12 +13,6 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
 "X-Generator: Weblate 5.5-dev\n"
 "Generated-By: pygettext.py 1.5\n"
-
-msgid "<missing>"
-msgstr "<ontbreekt>"
-
-msgid "development build"
-msgstr ""
 
 msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
@@ -46,7 +40,6 @@ msgstr "Toetsenbordindelingsbestand:"
 msgid "Switch settings"
 msgstr "Schakelaar instellingen"
 
-#, fuzzy
 msgid "Route with switches"
 msgstr "Route met schakelaars"
 
@@ -70,3 +63,4 @@ msgstr ""
 
 msgid "Other settings"
 msgstr ""
+

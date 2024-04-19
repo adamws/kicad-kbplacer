@@ -7,6 +7,7 @@ import sys
 import pcbnew
 import wx
 
+from . import __version__
 from .kbplacer_dialog import KbplacerDialog, load_window_state_from_log
 from .kbplacer_plugin import run_from_gui
 
@@ -59,6 +60,7 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
             filemode="w",
             format="[%(filename)s:%(lineno)d]: %(message)s",
         )
+        logger.info(f"Plugin version: {__version__}")
         logger.info(f"Plugin executed with KiCad version: {version}")
         logger.info(f"Plugin executed with python version: {repr(sys.version)}")
 

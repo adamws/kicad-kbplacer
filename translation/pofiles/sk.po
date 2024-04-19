@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2024-01-31 18:38+0100\n"
+"POT-Creation-Date: 2024-04-19 22:57+0200\n"
 "PO-Revision-Date: 2024-03-12 21:01+0000\n"
 "Last-Translator: Milan Šalka <salka.milan@googlemail.com>\n"
 "Language-Team: Slovak <https://hosted.weblate.org/projects/kicad-kbplacer/"
@@ -13,12 +13,6 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=((n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2);\n"
 "X-Generator: Weblate 5.5-dev\n"
 "Generated-By: pygettext.py 1.5\n"
-
-msgid "<missing>"
-msgstr "<missing>"
-
-msgid "development build"
-msgstr "vývojová budova"
 
 msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
@@ -69,3 +63,5 @@ msgstr "Outline delta:"
 
 msgid "Other settings"
 msgstr "Ďalšie nastavenia"
+
+

@@ -1,6 +1,6 @@
 __pycache__/
 kbplacer/locale/
-kbplacer/version.txt
+kbplacer/_version.py
 dist/
 *.egg-info/
 

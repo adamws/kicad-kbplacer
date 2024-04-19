@@ -1,8 +1,9 @@
 import os
-import re
 import webbrowser
 
 import wx
+
+from . import __version__
 
 wx_ = wx.GetTranslation
 
@@ -43,16 +44,7 @@ class HelpDialog(wx.Dialog):
         name = wx.StaticText(self, -1, "Keyboard Footprints Placer")
         name.SetFont(font)
 
-        version_file_name = os.path.join(source_dir, "version.txt")
-        version_str = self._("<missing>")
-        if os.path.isfile(version_file_name):
-            with open(version_file_name, "r") as f:
-                version_str = f.read()
-        if not re.match(r"\d.\d$", version_str):
-            status = ", " + self._("development build")
-        else:
-            status = ""
-        version = wx.StaticText(self, -1, wx_("Version") + f": {version_str}{status}")
+        version = wx.StaticText(self, -1, wx_("Version") + f": {__version__}")
 
         name_box = wx.BoxSizer(wx.HORIZONTAL)
         name_box.Add(static_icon_bitmap, 0, wx.ALL, 5)
