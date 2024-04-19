@@ -396,3 +396,16 @@ def test_switch_iterator_default_mode_ignore_decal(request) -> None:
     for key, footprint in iterator:
         assert key == next(expected_keys)
         assert footprint.GetReference() == next(expected_footprints)
+
+
+def test_placer_board_without_matching_switches(request) -> None:
+    board = get_board_for_2x2_example(request)
+    key_placer = KeyPlacer(board)
+    key_info = ElementInfo("MX{}", PositionOption.DEFAULT, ZERO_POSITION, "")
+    diode_info = ElementInfo("D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, "")
+    layout_path = get_2x2_layout_path(request)
+
+    with pytest.raises(
+        RuntimeError, match=r"No switch footprints found using 'MX{}' annotation format"
+    ):
+        key_placer.run(layout_path, key_info, diode_info, True)

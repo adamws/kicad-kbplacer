@@ -124,6 +124,9 @@ class KeyMatrix:
     def switches_by_number(self) -> Iterable[Tuple[int, pcbnew.FOOTPRINT]]:
         return self._switches_by_number.items()
 
+    def number_of_switches(self) -> int:
+        return len(self._switches)
+
     def switch_by_reference(self, reference: str) -> pcbnew.FOOTPRINT:
         return self._switches[reference]
 
@@ -873,6 +876,15 @@ class KeyPlacer(BoardModifier):
 
         # stage 2 - place elements
         if layout_path:
+            number_of_switches = key_matrix.number_of_switches()
+            if number_of_switches == 0:
+                msg = (
+                    f"No switch footprints found using '{key_info.annotation_format}' "
+                    "annotation format. Make sure that switches are added to opened "
+                    "PCB file and theirs annotations match configured value."
+                )
+                raise RuntimeError(msg)
+
             keyboard = get_keyboard_from_file(layout_path)
             if not isinstance(keyboard, MatrixAnnotatedKeyboard):
                 # if not MatrixAnnotatedKeyboard already,

@@ -682,7 +682,7 @@ def test_template_copy_complex(request, tmpdir, kbplacer_process) -> None:
     test_dir = request.fspath.dirname
     example = "2x3-rotations"
 
-    example_dir= f"{test_dir}/../examples/{example}"
+    example_dir = f"{test_dir}/../examples/{example}"
     initial_board = f"{example_dir}/keyboard-before.kicad_pcb"
 
     # must use PROJECT_NAME, otherwise `assert_example` won't work
@@ -694,9 +694,7 @@ def test_template_copy_complex(request, tmpdir, kbplacer_process) -> None:
     shutil.copy(initial_board, template_copy)
 
     # prepare template
-    kbplacer_process(
-        False, None, f"{tmpdir}/kle.json", template_copy
-    )
+    kbplacer_process(False, None, f"{tmpdir}/kle.json", template_copy)
 
     # this is not really the purpose of --template flag but if can
     # replicate key-matrix as well (meant for microcontroller circuits templates)
