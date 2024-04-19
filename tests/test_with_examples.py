@@ -676,3 +676,37 @@ def test_board_outline_building(
 
         error_margin = expected_area * (1 / 100.0)
         assert abs(get_area() - expected_area) <= error_margin
+
+
+def test_template_copy_complex(request, tmpdir, kbplacer_process) -> None:
+    test_dir = request.fspath.dirname
+    example = "2x3-rotations"
+
+    example_dir= f"{test_dir}/../examples/{example}"
+    initial_board = f"{example_dir}/keyboard-before.kicad_pcb"
+
+    # must use PROJECT_NAME, otherwise `assert_example` won't work
+    working_copy = f"{tmpdir}/{PROJECT_NAME}.kicad_pcb"
+    template_copy = f"{tmpdir}/template.kicad_pcb"
+
+    shutil.copy(f"{example_dir}/kle.json", tmpdir)
+    shutil.copy(initial_board, working_copy)
+    shutil.copy(initial_board, template_copy)
+
+    # prepare template
+    kbplacer_process(
+        False, None, f"{tmpdir}/kle.json", template_copy
+    )
+
+    # this is not really the purpose of --template flag but if can
+    # replicate key-matrix as well (meant for microcontroller circuits templates)
+    kbplacer_process(
+        False, "D{} UNCHANGED", None, working_copy, args={"--template": template_copy}
+    )
+
+    for pcb in [template_copy, working_copy]:
+        generate_render(request, pcb)
+        generate_drc(tmpdir, pcb)
+
+    references_dir = get_references_dir(request, example, "NoTracks", "DefaultDiode")
+    assert_example(tmpdir, references_dir)
