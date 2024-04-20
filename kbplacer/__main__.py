@@ -6,6 +6,7 @@ from typing import List
 
 import pcbnew
 
+from . import __version__
 from .defaults import DEFAULT_DIODE_POSITION, ZERO_POSITION
 from .element_position import ElementInfo, ElementPosition, PositionOption, Side
 from .kbplacer_plugin import PluginSettings, run
@@ -164,6 +165,7 @@ def app() -> None:
         formatter_class=argparse.RawTextHelpFormatter,
     )
 
+    parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument(
         "-b",
         "--board",

@@ -4,6 +4,7 @@ import difflib
 import glob
 import logging
 import os
+import re
 import shutil
 import subprocess
 import textwrap
@@ -708,3 +709,18 @@ def test_template_copy_complex(request, tmpdir, kbplacer_process) -> None:
 
     references_dir = get_references_dir(request, example, "NoTracks", "DefaultDiode")
     assert_example(tmpdir, references_dir)
+
+
+def test_version(request, package_name, package_path) -> None:
+    kbplacer_args = ["python3", "-m", package_name, "--version"]
+
+    p = subprocess.run(
+        kbplacer_args,
+        cwd=package_path,
+        capture_output=True,
+        text=True,
+    )
+    logger.info(f"Version: {p.stdout}")
+    if request.config.getoption("--test-plugin-installation"):
+        assert re.match(r"^0\.\d+(\.dev\d+)?(.*)?$", p.stdout)
+    assert p.stderr == ""
