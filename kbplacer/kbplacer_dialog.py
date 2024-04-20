@@ -174,6 +174,7 @@ class FloatValidator(wx.Validator):
             wx.WXK_RIGHT,
             wx.WXK_NUMPAD_LEFT,
             wx.WXK_NUMPAD_RIGHT,
+            wx.WXK_TAB,
         ]:
             event.Skip()
         else:
