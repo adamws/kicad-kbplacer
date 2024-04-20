@@ -631,10 +631,6 @@ class KbplacerDialog(wx.Dialog):
             "SW{}", PositionOption.DEFAULT, ZERO_POSITION, ""
         ),
     ) -> wx.Sizer:
-        key_annotation = LabeledTextCtrl(
-            self, wx_("Footprint Annotation") + ":", element_info.annotation_format
-        )
-
         layout_label = wx.StaticText(self, -1, self._("Keyboard layout file:"))
         layout_picker = get_file_picker(
             self,
@@ -660,6 +656,10 @@ class KbplacerDialog(wx.Dialog):
             value=str(key_distance[1]),
             width=5,
             validator=FloatValidator(),
+        )
+
+        key_annotation = LabeledTextCtrl(
+            self, wx_("Footprint Annotation") + ":", element_info.annotation_format
         )
 
         key_position = ElementPositionWidget(self, ZERO_POSITION, disable_offsets=True)
