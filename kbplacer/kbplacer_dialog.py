@@ -153,7 +153,7 @@ class FloatValidator(wx.Validator):
             # this can happen when value is empty, equal '-', '.', or '-.',
             # other invalid values should not be allowed by 'OnChar' filtering
             name = text_ctrl.GetName()
-            wx.MessageBox(f"Invalid '{name}' float value: '{text}'!", "Error")
+            wx.MessageBox(f"Invalid '{name}' value: '{text}' is not a number!", "Error")
             text_ctrl.SetFocus()
             return False
 
