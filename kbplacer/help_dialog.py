@@ -167,7 +167,9 @@ if __name__ == "__main__":
         def listen_for_exit():
             while True:
                 input("Press any key to exit: ")
-                dlg.Close(wx.ID_CANCEL)
+                dlg.Close(True)
+                print("exit ok")
+                sys.stdout.flush()
                 sys.exit()
 
         input_thread = threading.Thread(target=listen_for_exit)

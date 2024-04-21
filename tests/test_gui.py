@@ -206,7 +206,7 @@ def run_gui_test(tmpdir, screen_manager, window_name, gui_callback) -> None:
             logger.info(f"Process stdout: {outs}")
             logger.info(f"Process stderr: {errs}")
 
-            assert outs == "Press any key to exit: "
+            assert "Press any key to exit: exit ok" in outs
             # here we used to check if stderr is empty but on some occasions
             # (linux only) it would contain `AssertionError: assert 'double free'`
             # or similar even though dialog opened correctly.

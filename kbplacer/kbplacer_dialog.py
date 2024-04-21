@@ -1001,6 +1001,7 @@ if __name__ == "__main__":
             f.write(f"{dlg.get_window_state()}")
 
         if "PYTEST_CURRENT_TEST" in os.environ:
+            print(f"Using {wx.version()}")
             # use stdin for gracefully closing GUI when running
             # from pytest. This is required when measuring
             # coverage and process kill would cause measurement to be lost
@@ -1008,6 +1009,8 @@ if __name__ == "__main__":
                 while True:
                     input("Press any key to exit: ")
                     dlg.Close(True)
+                    print("exit ok")
+                    sys.stdout.flush()
                     sys.exit()
 
             input_thread = threading.Thread(target=listen_for_exit)

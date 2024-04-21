@@ -61,8 +61,8 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
             format="[%(filename)s:%(lineno)d]: %(message)s",
         )
         logger.info(f"Plugin version: {__version__}")
-        logger.info(f"Plugin executed with KiCad version: {version}")
-        logger.info(f"Plugin executed with python version: {repr(sys.version)}")
+        logger.info(f"Python version: {repr(sys.version)}")
+        logger.info(f"KiCad version: {version} with {wx.version()}")
 
     def Run(self) -> None:
         self.Initialize()
