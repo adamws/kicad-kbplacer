@@ -70,12 +70,20 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
         pcb_frame = [x for x in wx.GetTopLevelWindows() if x.GetName() == "PcbFrame"][0]
 
         dlg = KbplacerDialog(pcb_frame, "kbplacer", initial_state=self.window_state)
-        modal_return = dlg.ShowModal()
-        gui_state = dlg.get_window_state()
-        logger.info(f"GUI state: {gui_state}")
 
-        if modal_return == wx.ID_OK:
+        if dlg.ShowModal() == wx.ID_OK:
+            gui_state = dlg.get_window_state()
+            logger.info(f"GUI state: {gui_state}")
             run_from_gui(self.board_path, gui_state)
+        else:
+            # field validators are not executed on cancel so getting window
+            # state might raise an exception. Since we are cancelling,
+            # do not bother user with them.
+            try:
+                gui_state = dlg.get_window_state()
+                logger.info(f"GUI state: {gui_state}")
+            except Exception:
+                pass
 
         dlg.Destroy()
         logging.shutdown()
