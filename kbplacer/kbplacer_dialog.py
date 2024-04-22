@@ -1002,22 +1002,28 @@ if __name__ == "__main__":
 
         if "PYTEST_CURRENT_TEST" in os.environ:
             print(f"Using {wx.version()}")
+
             # use stdin for gracefully closing GUI when running
             # from pytest. This is required when measuring
             # coverage and process kill would cause measurement to be lost
             def listen_for_exit():
-                while True:
-                    input("Press any key to exit: ")
-                    dlg.Close(True)
-                    print("exit ok")
-                    sys.stdout.flush()
-                    sys.exit()
+                input("Press any key to exit: ")
+                dlg.EndModal(wx.ID_OK)
 
             input_thread = threading.Thread(target=listen_for_exit)
-            input_thread.daemon = True
             input_thread.start()
 
         dlg.ShowModal()
+
+        # it would be better to save WindowState here but some combinations of
+        # python-wx-ubuntu-xvfb fail to close process cleanly and this won't be
+        # reached (occasional 'Process timeout expired' observed on
+        # ubuntu focal with KiCad 6.0.11)
+        # on KiCad 8.0.1 ubuntu mantic same code cleanly reaches this section
+        # This does not matter for current tests but would become a problem if
+        # we would like to add tests with simulated user inputs where state changes
+        # after modal shown.
+
     else:
         import pcbnew
 
