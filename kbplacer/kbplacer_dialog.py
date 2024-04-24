@@ -995,10 +995,8 @@ if __name__ == "__main__":
 
     initial_state = load_window_state_from_log(args.initial_state_file)
     if not args.run_without_dialog:
-        _ = wx.App()
+        app = wx.App()
         dlg = KbplacerDialog(None, "kbplacer", initial_state=initial_state)
-        with open(f"{args.output_dir}/window_state.json", "w") as f:
-            f.write(f"{dlg.get_window_state()}")
 
         if "PYTEST_CURRENT_TEST" in os.environ:
             print(f"Using {wx.version()}")
@@ -1006,24 +1004,23 @@ if __name__ == "__main__":
             # use stdin for gracefully closing GUI when running
             # from pytest. This is required when measuring
             # coverage and process kill would cause measurement to be lost
-            def listen_for_exit():
+            def listen_for_exit() -> None:
                 input("Press any key to exit: ")
-                dlg.EndModal(wx.ID_OK)
+                dlg.Close()
+                wx.Exit()
 
             input_thread = threading.Thread(target=listen_for_exit)
             input_thread.start()
 
-        dlg.ShowModal()
+            dlg.Show()
+            app.MainLoop()
+        else:
+            dlg.ShowModal()
 
-        # it would be better to save WindowState here but some combinations of
-        # python-wx-ubuntu-xvfb fail to close process cleanly and this won't be
-        # reached (occasional 'Process timeout expired' observed on
-        # ubuntu focal with KiCad 6.0.11)
-        # on KiCad 8.0.1 ubuntu mantic same code cleanly reaches this section
-        # This does not matter for current tests but would become a problem if
-        # we would like to add tests with simulated user inputs where state changes
-        # after modal shown.
+        with open(f"{args.output_dir}/window_state.json", "w") as f:
+            f.write(f"{dlg.get_window_state()}")
 
+        print("exit ok")
     else:
         import pcbnew
 

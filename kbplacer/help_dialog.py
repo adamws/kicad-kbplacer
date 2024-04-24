@@ -156,7 +156,7 @@ class HelpDialog(wx.Dialog):
 if __name__ == "__main__":
     import threading
 
-    _ = wx.App()
+    app = wx.App()
     dlg = HelpDialog(None)
 
     if "PYTEST_CURRENT_TEST" in os.environ:
@@ -165,10 +165,15 @@ if __name__ == "__main__":
         # coverage and process kill would cause measurement to be lost
         def listen_for_exit():
             input("Press any key to exit: ")
-            dlg.EndModal(wx.ID_OK)
+            dlg.Close()
+            wx.Exit()
 
         input_thread = threading.Thread(target=listen_for_exit)
-        input_thread.daemon = True
         input_thread.start()
 
-    dlg.ShowModal()
+        dlg.Show()
+        app.MainLoop()
+    else:
+        dlg.ShowModal()
+
+    print("exit ok")
