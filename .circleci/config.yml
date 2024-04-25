@@ -76,7 +76,7 @@ jobs:
           path: examples/absolem-ergogen/absolem.zip
   test-windows:
     machine:
-      image: windows-server-2022-gui:current
+      image: windows-server-2022-gui:edge
       shell: powershell.exe -ExecutionPolicy Bypass
     resource_class: windows.medium
     parameters:
