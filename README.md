@@ -211,7 +211,7 @@ python -m com_github_adamws_kicad-kbplacer --help
     <td rowspan="5" align="center" style="vertical-align: middle;">Switch settings</td>
     <td align="center" style="vertical-align: middle;">Keyboard layout file</td>
     <td>
-      Layout file path. Supports <a href="http://www.keyboard-layout-editor.com/">keyboard-leyout-editor</a>
+      Layout file path. Supports <a href="http://www.keyboard-layout-editor.com/">keyboard-layout-editor</a>
       json layouts in both raw and internal form, <a href="https://www.caniusevia.com/docs/layouts">via</a>
       json layouts and <a href="https://docs.ergogen.xyz/formats">ergogen</a> canonical
       yaml points files converted to json.</br>
