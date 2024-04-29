@@ -384,7 +384,7 @@ class TestKleSerialCli:
         package_path,
         package_name,
         args: dict[str, str] = {},
-    ) -> None:
+    ) -> subprocess.Popen:
         kbplacer_args = [
             "python3",
             "-m",
@@ -398,12 +398,14 @@ class TestKleSerialCli:
         env = os.environ.copy()
         p = subprocess.Popen(
             kbplacer_args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdin=subprocess.PIPE,
+            text=True,
             cwd=package_path,
             env=env,
         )
-        p.communicate()
-        if p.returncode != 0:
-            raise Exception("kle_serial __main__ failed")
+        return p
 
     @pytest.fixture()
     def example_isolation(self, request, tmpdir, example) -> Tuple[str, str]:
@@ -429,7 +431,7 @@ class TestKleSerialCli:
         with open(internal, "r") as f:
             internal_json = json.load(f)
 
-        self._run_subprocess(
+        p = self._run_subprocess(
             package_path,
             package_name,
             {
@@ -440,10 +442,13 @@ class TestKleSerialCli:
                 "-text": "",
             },
         )
+        p.communicate()
+        assert p.returncode == 0
+
         with open(internal_tmp, "r") as f:
             assert json.load(f) == internal_json
 
-        self._run_subprocess(
+        p = self._run_subprocess(
             package_path,
             package_name,
             {
@@ -454,8 +459,50 @@ class TestKleSerialCli:
                 "-text": "",
             },
         )
+        p.communicate()
+        assert p.returncode == 0
+
         with open(raw_tmp, "r") as f:
             assert json.load(f) == raw_json
+
+    @pytest.mark.parametrize(
+        "example",
+        ["0_sixty", "wt60_a", "wt60_d"],
+    )
+    @pytest.mark.parametrize("outform", ["KLE_INTERNAL", "KLE_RAW"])
+    def test_via_file_convert(
+        self, request, tmpdir, package_path, package_name, example, outform
+    ) -> None:
+        test_dir = request.fspath.dirname
+        data_dir = f"{test_dir}/data"
+
+        layout_file = f"{data_dir}/via-layouts/{example}.json"
+        layout_in = f"{tmpdir}/{example}.json"
+        shutil.copy(layout_file, layout_in)
+        tmp_file = Path(layout_in).with_suffix(".json.tmp")
+
+        args = {
+            "-in": layout_in,
+            "-inform": "KLE_VIA",
+            "-out": str(tmp_file),
+            "-outform": outform,
+            "-text": "",
+        }
+        p = self._run_subprocess(package_path, package_name, args)
+        p.communicate()
+        assert p.returncode == 0
+
+        with open(Path(data_dir) / f"via-layouts/{example}-internal.json", "r") as f:
+            reference = json.load(f)
+
+        if outform == "KLE_RAW":
+            keyboard = Keyboard.from_json(reference)
+            result = keyboard.to_kle()
+            result = "[" + result + "]"
+            reference = json.loads(result)
+
+        with open(tmp_file, "r") as f:
+            assert json.load(f) == reference
 
     @pytest.mark.parametrize(
         "example,ergogen_filter",
@@ -487,7 +534,9 @@ class TestKleSerialCli:
         }
         if ergogen_filter:
             args["-ergogen-filter"] = ergogen_filter
-        self._run_subprocess(package_path, package_name, args)
+        p = self._run_subprocess(package_path, package_name, args)
+        p.communicate()
+        assert p.returncode == 0
 
         with open(f"{data_dir}/ergogen-layouts/{example}-reference.json", "r") as f:
             reference = json.load(f)
@@ -511,13 +560,34 @@ class TestKleSerialCli:
             "-outform": "KLE_RAW",
             "-text": "",
         }
-        self._run_subprocess(package_path, package_name, args)
+        p = self._run_subprocess(package_path, package_name, args)
+        p.communicate()
+        assert p.returncode == 0
 
         with open(f"{data_dir}/ergogen-layouts/{example}-reference.json", "r") as f:
             reference = json.load(f)
 
         with open(tmp_file, "r") as f:
             assert json.load(f) == reference
+
+    @pytest.mark.parametrize("form", ["KLE_RAW", "KLE_INTERNAL"])
+    def test_convertion_not_needed(
+        self, package_path, package_name, tmpdir, form
+    ) -> None:
+        p = self._run_subprocess(
+            package_path,
+            package_name,
+            {
+                "-in": f"{tmpdir}/in.json",
+                "-inform": form,
+                "-out": f"{tmpdir}/out.json",
+                "-outform": form,
+                "-text": "",
+            },
+        )
+        outs, _ = p.communicate()
+        assert p.returncode == 1
+        assert outs == "Output format equal input format, nothing to do...\n"
 
 
 def test_utf8_label(request) -> None:

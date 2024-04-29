@@ -756,7 +756,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-inform",
         required=False,
-        default="RAW",
+        default="KLE_RAW",
         choices=["KLE_RAW", "KLE_VIA", "KLE_INTERNAL", "ERGOGEN_INTERNAL"],
         help="Specifies the input format",
     )
@@ -790,6 +790,22 @@ if __name__ == "__main__":
         print("Output format equal input format, nothing to do...")
         sys.exit(1)
 
+    def _keyboard_to_kle_raw(keyboard: Keyboard):
+        result = keyboard.to_kle()
+        if print_result:
+            print(result)
+        # 'to_kle' returns 'raw data' string which can be copy pasted
+        # to keyboard-layout-editor, to make json out of it we need
+        # to wrap it in list. Then it can be uploaded as JSON.
+        result = "[" + result + "]"
+        return json.loads(result)
+
+    def _keyboard_to_kle_internal(keyboard: Keyboard):
+        result = json.loads(keyboard.to_json())
+        if print_result:
+            pprint.pprint(result)
+        return result
+
     with open(input_path, "r", encoding="utf-8") as input_file:
         if input_path.endswith("yaml") or input_path.endswith("yml"):
             try:
@@ -806,37 +822,22 @@ if __name__ == "__main__":
             layout = json.load(input_file)
 
         result = ""
-        if input_format == "KLE_RAW":  # convert to KLE_INTERNAL
-            result = parse_kle(layout)
-            result = json.loads(result.to_json())
-            if print_result:
-                pprint.pprint(result)
-        elif input_format == "KLE_VIA":  # convert to KLE_INTERNAL
-            result = parse_via(layout)
-            result = json.loads(result.to_json())
-            if print_result:
-                pprint.pprint(result)
-        elif input_format == "KLE_INTERNAL":  # convert to KLE_RAW
+        if input_format == "KLE_RAW":
+            keyboard = parse_kle(layout)
+        elif input_format == "KLE_VIA":
+            # 'parse_via' creates MatrixAnnotatedKeyboard which is our
+            # internal representation and it is not the same thing
+            # as KLE_INTERNAL format, so it is not used here
+            keyboard = parse_kle(layout["layouts"]["keymap"])
+        elif input_format == "KLE_INTERNAL":
             keyboard = Keyboard.from_json(layout)
-            result = keyboard.to_kle()
-            print(result)
-            # 'to_kle' returns 'raw data' string which can be copy pasted
-            # to keyboard-layout-editor, to make json out of it we need
-            # to wrap it in list. Then it can be uploaded as JSON.
-            result = "[" + result + "]"
-            result = json.loads(result)
-        else:  # ERGOGEN convert to KLE_RAW or KLE_INTERNAL
-            result = parse_ergogen_points(layout, zone_filter=ergogen_filter)
-            if output_format == "KLE_INTERNAL":
-                result = json.loads(result.to_json())
-                if print_result:
-                    pprint.pprint(result)
-            else:
-                result = result.to_kle()
-                if print_result:
-                    print(result)
-                result = "[" + result + "]"
-                result = json.loads(result)
+        else:
+            keyboard = parse_ergogen_points(layout, zone_filter=ergogen_filter)
+
+        if output_format == "KLE_INTERNAL":
+            result = _keyboard_to_kle_internal(keyboard)
+        else:
+            result = _keyboard_to_kle_raw(keyboard)
 
         if output_path:
             with open(output_path, "w", encoding="utf-8") as output_file:
