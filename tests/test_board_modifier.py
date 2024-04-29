@@ -5,6 +5,13 @@ from typing import List, Tuple, cast
 import pcbnew
 import pytest
 
+from kbplacer.board_modifier import (
+    BoardModifier,
+    set_position_by_points,
+    set_side,
+)
+from kbplacer.element_position import Side
+
 from .conftest import (
     KICAD_VERSION,
     add_track,
@@ -13,17 +20,6 @@ from .conftest import (
     pointMM,
     update_netinfo,
 )
-
-try:
-    from kbplacer.board_modifier import (
-        BoardModifier,
-        set_position_by_points,
-        set_side,
-    )
-    from kbplacer.element_position import Side
-except Exception:
-    pass
-
 
 logger = logging.getLogger(__name__)
 

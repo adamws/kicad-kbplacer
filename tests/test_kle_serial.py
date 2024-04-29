@@ -14,19 +14,16 @@ from typing import Tuple
 import pytest
 import yaml
 
-from .conftest import equal_ignore_order
+from kbplacer.kle_serial import (
+    Keyboard,
+    MatrixAnnotatedKeyboard,
+    get_keyboard_from_file,
+    parse_ergogen_points,
+    parse_kle,
+    parse_via,
+)
 
-try:
-    from kbplacer.kle_serial import (
-        Keyboard,
-        MatrixAnnotatedKeyboard,
-        get_keyboard_from_file,
-        parse_ergogen_points,
-        parse_kle,
-        parse_via,
-    )
-except Exception:
-    pass
+from .conftest import equal_ignore_order
 
 logger = logging.getLogger(__name__)
 

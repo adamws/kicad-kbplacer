@@ -7,7 +7,21 @@ from typing import List, Tuple
 import pcbnew
 import pytest
 
-from kbplacer.defaults import ZERO_POSITION
+from kbplacer.board_modifier import (
+    get_footprint,
+    get_position,
+    get_side,
+    set_position,
+    set_side,
+)
+from kbplacer.defaults import DEFAULT_DIODE_POSITION, ZERO_POSITION
+from kbplacer.element_position import ElementInfo, PositionOption, Side
+from kbplacer.key_placer import (
+    KeyboardSwitchIterator,
+    KeyMatrix,
+    KeyPlacer,
+)
+from kbplacer.kle_serial import get_keyboard
 
 from .conftest import (
     add_diode_footprint,
@@ -16,32 +30,6 @@ from .conftest import (
     generate_render,
     update_netinfo,
 )
-
-try:
-    from kbplacer.board_modifier import (
-        get_footprint,
-        get_position,
-        set_position,
-        set_side,
-    )
-    from kbplacer.defaults import DEFAULT_DIODE_POSITION
-    from kbplacer.element_position import ElementInfo, PositionOption, Side
-    from kbplacer.key_placer import (
-        KeyboardSwitchIterator,
-        KeyMatrix,
-        KeyPlacer,
-    )
-    from kbplacer.kle_serial import get_keyboard
-except Exception:
-    # satisfy import issues when running examples tests
-    # in docker image on CI.
-    # these tests should not be executed but pytest
-    # would fail to collect test information without that:
-    from enum import Flag
-
-    class Side(Flag):
-        FRONT = False
-        BACK = True
 
 
 def get_board_with_one_switch(

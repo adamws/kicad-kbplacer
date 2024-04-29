@@ -1,22 +1,18 @@
 import pcbnew
 import pytest
 
+from kbplacer.board_modifier import (
+    get_orientation,
+    get_position,
+    get_side,
+    set_position,
+    set_rotation,
+    set_side,
+)
+from kbplacer.element_position import Side
+from kbplacer.template_copier import copy_from_template_to_board
+
 from .conftest import add_switch_footprint, add_track, generate_render
-
-try:
-    from kbplacer.board_modifier import (
-        get_orientation,
-        get_position,
-        get_side,
-        set_position,
-        set_rotation,
-        set_side,
-    )
-    from kbplacer.element_position import Side
-    from kbplacer.template_copier import copy_from_template_to_board
-except Exception:
-    pass
-
 
 TRACK_START = pcbnew.wxPointMM(0, 5)
 TRACK_END = pcbnew.wxPointMM(19.05, 5)

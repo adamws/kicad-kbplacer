@@ -7,10 +7,7 @@ from unittest.mock import MagicMock, patch
 import pcbnew
 import pytest
 
-try:
-    from kbplacer.kbplacer_plugin_action import KbplacerPluginAction
-except Exception:
-    pass
+from kbplacer.kbplacer_plugin_action import KbplacerPluginAction
 
 logger = logging.getLogger(__name__)
 
