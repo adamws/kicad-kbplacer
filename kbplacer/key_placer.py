@@ -864,6 +864,15 @@ class KeyPlacer(BoardModifier):
             )
             raise RuntimeError(msg)
 
+        number_of_switches = key_matrix.number_of_switches()
+        if number_of_switches == 0:
+            msg = (
+                f"No switch footprints found using '{key_info.annotation_format}' "
+                "annotation format. Make sure that switches are added to opened "
+                "PCB file and theirs annotations match configured value."
+            )
+            raise RuntimeError(msg)
+
         # it is important to get template connection
         # and relative positions before moving any elements
         template_connection = self._get_template_connection(
@@ -876,15 +885,6 @@ class KeyPlacer(BoardModifier):
 
         # stage 2 - place elements
         if layout_path:
-            number_of_switches = key_matrix.number_of_switches()
-            if number_of_switches == 0:
-                msg = (
-                    f"No switch footprints found using '{key_info.annotation_format}' "
-                    "annotation format. Make sure that switches are added to opened "
-                    "PCB file and theirs annotations match configured value."
-                )
-                raise RuntimeError(msg)
-
             keyboard = get_keyboard_from_file(layout_path)
             if not isinstance(keyboard, MatrixAnnotatedKeyboard):
                 # if not MatrixAnnotatedKeyboard already,
