@@ -49,9 +49,16 @@ def get_board_with_one_switch(
 ) -> Tuple[pcbnew.BOARD, pcbnew.FOOTPRINT, List[pcbnew.FOOTPRINT]]:
     board = pcbnew.CreateEmptyBoard()
     net_count = board.GetNetCount()
-    switch_diode_net = pcbnew.NETINFO_ITEM(board, "Net-(D-Pad2)", net_count)
-    update_netinfo(board, switch_diode_net)
-    board.Add(switch_diode_net)
+
+    def _add_net(name: str, netcode: int) -> pcbnew.NETINFO_ITEM:
+        net = pcbnew.NETINFO_ITEM(board, name, netcode)
+        update_netinfo(board, net)
+        board.Add(net)
+        return net
+
+    switch_diode_net = _add_net("Net-(D-Pad2)", net_count)
+    column_net = _add_net("COL1", net_count + 1)
+    row_net = _add_net("ROW1", net_count + 2)
 
     switch = add_switch_footprint(board, request, 1, footprint=footprint)
     for p in switch.Pads():
@@ -61,12 +68,9 @@ def get_board_with_one_switch(
     diodes = []
     for i in range(number_of_diodes):
         diode = add_diode_footprint(board, request, i + 1)
+        diode.FindPadByNumber("1").SetNet(row_net)
         diode.FindPadByNumber("2").SetNet(switch_diode_net)
         diodes.append(diode)
-
-    column_net = pcbnew.NETINFO_ITEM(board, "COL1", net_count + 1)
-    update_netinfo(board, column_net)
-    board.Add(column_net)
 
     for p in switch.Pads():
         if p.GetNumber() == "1":
@@ -225,6 +229,23 @@ def test_multi_diode_switch_routing(tmpdir, request) -> None:
         (1050000, 5000000),
     ]
     assert_board_tracks(expected, board)
+
+
+def test_multi_diode_illegal_position_setting(request) -> None:
+    board, _, _ = get_board_with_one_switch(
+        request, "SW_Cherry_MX_PCB_1.00u", number_of_diodes=2
+    )
+    key_placer = KeyPlacer(board)
+
+    with pytest.raises(
+        RuntimeError,
+        match=r"The 'Custom' position not supported for multiple diodes per switch",
+    ):
+        key_placer.run(
+            "",  # not important, should raise even when layout not provided
+            ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, ""),
+            ElementInfo("D{}", PositionOption.CUSTOM, ZERO_POSITION, ""),
+        )
 
 
 def get_2x2_layout_path(request) -> str:
