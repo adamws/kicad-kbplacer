@@ -293,7 +293,7 @@ def generate_render(
 
 
 def generate_drc(tmpdir, board_path: Union[str, os.PathLike]) -> None:
-    if KICAD_VERSION == (8, 0, 1):
+    if KICAD_VERSION in [(8, 0, 1), (8, 0, 2)]:
         # there is some kind of KiCad regression, this function
         # causes assertion fail randomly, see
         # https://gitlab.com/kicad/code/kicad/-/issues/17504

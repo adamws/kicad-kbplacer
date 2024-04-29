@@ -127,6 +127,9 @@ jobs:
             elif [ "<<parameters.kicad-version>>" = "8.0.1" ]; then
               revision=c7ee7731a967c3728e1034e00461a562c6882f78
               filepath=Casks/k/kicad.rb
+            elif [ "<<parameters.kicad-version>>" = "8.0.2" ]; then
+              revision=ddd9b5e1665ecf77ec3ba0900e0b6c2a4367691f
+              filepath=Casks/k/kicad.rb
             else
               echo "Unsupported KiCad version!"
             fi
@@ -316,8 +319,8 @@ workflows:
                 - 7.0.6-lunar
                 - 7.0.11-focal
                 - 7.0.11-mantic
-                - 8.0.1-focal
-                - 8.0.1-mantic
+                - 8.0.2-focal
+                - 8.0.2-mantic
       - collect-coverage:
           requires:
             - test-linux
@@ -330,14 +333,14 @@ workflows:
               kicad-version:
                 - 6.0.11
                 - 7.0.11
-                - 8.0.0
+                - 8.0.2
       - test-macos:
           matrix:
             parameters:
               kicad-version:
                 - 6.0.11
                 - 7.0.11
-                - 8.0.1
+                - 8.0.2
       - create-pcm-package:
           requires: &required-tests
             - test-linux

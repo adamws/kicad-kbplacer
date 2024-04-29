@@ -31,9 +31,9 @@ RUN find / -type f -name "EXTERNALLY-MANAGED" -exec rm {} \;
 RUN add-apt-repository --yes ppa:kicad/kicad-8.0-releases \
   && apt-get update \
   && apt-get install -y --no-install-recommends \
-     kicad=8.0.1-0~ubuntu23.10.1 \
-     kicad-footprints=8.0.1-0~ubuntu23.10.1 \
-     kicad-symbols=8.0.1-0~ubuntu23.10.1 \
+     kicad=8.0.2-0~ubuntu23.10.1 \
+     kicad-footprints=8.0.2~ubuntu23.10.1 \
+     kicad-symbols=8.0.2~ubuntu23.10.1 \
   && rm -rf /var/lib/apt/lists/*
 
 ENV PYTHONPATH "${PYTHONPATH}:/usr/lib/python3/dist-packages"
