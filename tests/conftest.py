@@ -323,22 +323,28 @@ def equal_ignore_order(a, b):
     return not unmatched
 
 
+def _add_footprint(board, request, footprint, annotation) -> pcbnew.FOOTPRINT:
+    library = get_footprints_dir(request)
+    f = pcbnew.FootprintLoad(str(library), footprint)
+    f.SetReference(annotation)
+    board.Add(f)
+    return f
+
+
 def add_switch_footprint(
     board, request, ref_count, footprint: str = "SW_Cherry_MX_PCB_1.00u"
 ) -> pcbnew.FOOTPRINT:
-    library = get_footprints_dir(request)
-    f = pcbnew.FootprintLoad(str(library), footprint)
-    f.SetReference(f"SW{ref_count}")
-    board.Add(f)
-    return f
+    return _add_footprint(board, request, footprint, f"SW{ref_count}")
 
 
 def add_diode_footprint(board, request, ref_count) -> pcbnew.FOOTPRINT:
-    library = get_footprints_dir(request)
-    f = pcbnew.FootprintLoad(str(library), "D_SOD-323")
-    f.SetReference(f"D{ref_count}")
-    board.Add(f)
-    return f
+    return _add_footprint(board, request, "D_SOD-323", f"D{ref_count}")
+
+
+def add_led_footprint(board, request, ref_count) -> pcbnew.FOOTPRINT:
+    # NOTE: should use different footprint but that is
+    # not that important for testing
+    return _add_footprint(board, request, "D_SOD-323", f"LED{ref_count}")
 
 
 def get_track(board, start, end, layer):

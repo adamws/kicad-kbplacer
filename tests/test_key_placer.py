@@ -9,9 +9,11 @@ import pytest
 
 from kbplacer.board_modifier import (
     get_footprint,
+    get_orientation,
     get_position,
     get_side,
     set_position,
+    set_rotation,
     set_side,
 )
 from kbplacer.defaults import DEFAULT_DIODE_POSITION, ZERO_POSITION
@@ -25,6 +27,7 @@ from kbplacer.kle_serial import get_keyboard
 
 from .conftest import (
     add_diode_footprint,
+    add_led_footprint,
     add_switch_footprint,
     equal_ignore_order,
     generate_render,
@@ -260,7 +263,7 @@ def add_2x2_nets(board):
     return board.GetNetInfo().NetsByName()
 
 
-def get_board_for_2x2_example(request):
+def get_board_for_2x2_example(request) -> pcbnew.BOARD:
     board = pcbnew.CreateEmptyBoard()
     netcodes_map = add_2x2_nets(board)
     for i in range(1, 5):
@@ -418,3 +421,41 @@ def test_placer_board_without_matching_switches(request) -> None:
         RuntimeError, match=r"No switch footprints found using 'MX{}' annotation format"
     ):
         key_placer.run(layout_path, key_info, diode_info, True)
+
+
+def test_placing_additional_elements(tmpdir, request) -> None:
+    """Tests if placer correctly applies RELATIVE position
+    for each 'additional element'
+    """
+    board = get_board_for_2x2_example(request)
+    key_placer = KeyPlacer(board)
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
+    diode_info = ElementInfo("D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, "")
+    additional_elements = [ElementInfo("LED{}", PositionOption.RELATIVE, None, "")]
+    layout_path = get_2x2_layout_path(request)
+
+    for i in range(1, 5):
+        led = add_led_footprint(board, request, i)
+        if i % 2 == 0:
+            set_side(led, Side.BACK)
+        set_rotation(led, 10 * (i - 1))
+
+    sw1 = get_footprint(board, "SW1")
+    led1 = get_footprint(board, "LED1")
+
+    position_offset = pcbnew.wxPointMM(0, 5)
+    set_position(led1, get_position(sw1) + position_offset)
+
+    key_placer.run(layout_path, key_info, diode_info, True, True, additional_elements)
+
+    save_and_render(board, tmpdir, request)
+
+    assert_2x2_layout_switches(board, (19.05, 19.05))
+
+    switches = [get_footprint(board, f"SW{i}") for i in range(1, 5)]
+    leds = [get_footprint(board, f"LED{i}") for i in range(1, 5)]
+    for switch, led in zip(switches, leds):
+        assert get_position(led) == get_position(switch) + position_offset
+        # because reference LED1 is on front side and rotated by 0 degrees:
+        assert get_side(led) == Side.FRONT
+        assert get_orientation(led) == 0
