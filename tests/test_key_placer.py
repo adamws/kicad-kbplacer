@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import json
+import logging
 from typing import List, Tuple
 
 import pcbnew
@@ -220,6 +221,22 @@ def test_multi_diode_switch_routing(tmpdir, request) -> None:
         (1050000, 5000000),
     ]
     assert_board_tracks(expected, board)
+
+
+def test_diode_switch_routing_not_matching_nets(tmpdir, request, caplog) -> None:
+    board, switch, diodes = get_board_with_one_switch(request, "SW_Cherry_MX_PCB_1.00u")
+    key_placer = KeyPlacer(board)
+
+    assert len(diodes) == 1
+    diodes[0].FindPadByNumber("2").SetNet(None)
+    set_position(diodes[0], pcbnew.wxPointMM(0, 5))
+
+    with caplog.at_level(logging.ERROR):
+        key_placer.route_switch_with_diode(switch, diodes)
+    save_and_render(board, tmpdir, request)
+
+    assert "Could not find pads with the same net, routing skipped" in caplog.text
+    assert_board_tracks([], board)
 
 
 def test_multi_diode_illegal_position_setting(request) -> None:
