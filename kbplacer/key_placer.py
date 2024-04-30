@@ -788,13 +788,16 @@ class KeyPlacer(BoardModifier):
             template_matrix = KeyMatrix(
                 source, key_matrix.key_format, diode_info.annotation_format
             )
+            number_of_template_switches = template_matrix.number_of_switches()
             if (
                 diode_info.position_option == PositionOption.PRESET
-                and len(template_matrix._switches) != 1
+                and number_of_template_switches != 1
             ):
                 msg = (
                     f"Template file '{diode_info.template_path}' "
-                    "must have exactly one switch"
+                    "must have exactly one switch. "
+                    f"Found {number_of_template_switches} switches using "
+                    f"'{key_matrix.key_format}' annotation format."
                 )
                 raise RuntimeError(msg)
             first_switch = template_matrix.first_switch_number()

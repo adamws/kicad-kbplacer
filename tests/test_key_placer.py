@@ -459,3 +459,40 @@ def test_placing_additional_elements(tmpdir, request) -> None:
         # because reference LED1 is on front side and rotated by 0 degrees:
         assert get_side(led) == Side.FRONT
         assert get_orientation(led) == 0
+
+
+def test_placer_diode_from_preset_missing_path(request) -> None:
+    board = get_board_for_2x2_example(request)
+    key_placer = KeyPlacer(board)
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
+    diode_info = ElementInfo("D{}", PositionOption.PRESET, None, "")
+    layout_path = get_2x2_layout_path(request)
+
+    with pytest.raises(ValueError, match=r"Template path can't be empty"):
+        key_placer.run(layout_path, key_info, diode_info, True)
+
+
+def test_placer_diode_from_illegal_preset(tmpdir, request) -> None:
+    template_path = f"{tmpdir}/template.kicad_pcb"
+    board = get_board_for_2x2_example(request)
+    key_placer = KeyPlacer(board)
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
+    diode_info = ElementInfo("D{}", PositionOption.PRESET, None, template_path)
+    layout_path = get_2x2_layout_path(request)
+
+    template, _, _ = get_board_with_one_switch(request, "SW_Cherry_MX_PCB_1.00u")
+    # having two switches in template file makes it illegal:
+    add_switch_footprint(template, request, 2)
+
+    template.Save(template_path)
+
+    with pytest.raises(
+        RuntimeError,
+        match=(
+            r"Template file '.*' must have exactly one switch. "
+            "Found 2 switches using 'SW{}' annotation format."
+        ),
+    ):
+        key_placer.run(layout_path, key_info, diode_info, True)
+
+    save_and_render(board, tmpdir, request)
