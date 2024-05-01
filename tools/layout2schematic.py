@@ -5,7 +5,6 @@ import shutil
 import sys
 from collections import defaultdict
 from pathlib import Path
-from string import ascii_lowercase
 from typing import Dict, List, Tuple
 
 import yaml
@@ -112,9 +111,8 @@ def create_schematic(
         if used_slots == 0:
             switch_reference = f"SW{current_ref}"
         else:
-            suffix = ascii_lowercase[used_slots - 1]
             default_switch = progress[position][0]
-            switch_reference = f"{default_switch}{suffix}"
+            switch_reference = f"{default_switch}_{used_slots}"
         switch.setAllReferences(switch_reference)
         switch_x = _x(COLUMN_DISTANCE * int(column) + 5)
         switch_y = _y(ROW_DISTANCE * int(row) + used_slots)
