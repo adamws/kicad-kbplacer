@@ -7,6 +7,8 @@ import pytest
 
 from kbplacer.board_modifier import (
     BoardModifier,
+    get_footprint,
+    get_optional_footprint,
     set_position_by_points,
     set_side,
 )
@@ -237,3 +239,14 @@ def test_track_with_track_collision(
 
     save_and_render(board, tmpdir, request)
     assert collide == expected, "Unexpected track collision result"
+
+
+def test_find_footprint_raises_when_not_found() -> None:
+    board = pcbnew.CreateEmptyBoard()
+    with pytest.raises(RuntimeError, match=r"Cannot find footprint SW1"):
+        get_footprint(board, "SW1")
+
+
+def test_find_optional_footprint_return_none_when_not_found() -> None:
+    board = pcbnew.CreateEmptyBoard()
+    assert get_optional_footprint(board, "SW1") is None
