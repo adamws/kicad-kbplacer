@@ -3,7 +3,10 @@ import json
 import re
 import shutil
 import sys
+from collections import defaultdict
 from pathlib import Path
+from string import ascii_lowercase
+from typing import Dict, List, Tuple
 
 import yaml
 from skip import Schematic
@@ -89,23 +92,30 @@ def create_schematic(
     columns = len(set([x[1] for x in matrix]))
     print(f"matrix: {rows}x{columns}")
 
-    occurences = [[0 for _ in range(columns)] for _ in range(rows)]
+    progress: Dict[Tuple[int, int], List[str]] = defaultdict(list)
 
     current_ref = 1
     labels = set()
 
     for row, column in matrix:
+        position = (row, column)
         print(f"row: {row} column: {column}")
         row_label = f"ROW{row}"
         column_label = f"COL{column}"
 
-        used_slots = occurences[row][column]
+        used_slots = len(progress[position])
         if used_slots > 3:
             msg = "Too many switches per matrix slot"
             raise RuntimeError(msg)
 
         switch = base_switch.clone()
-        switch.setAllReferences(f"SW{current_ref}")
+        if used_slots == 0:
+            switch_reference = f"SW{current_ref}"
+        else:
+            suffix = ascii_lowercase[used_slots - 1]
+            default_switch = progress[position][0]
+            switch_reference = f"{default_switch}{suffix}"
+        switch.setAllReferences(switch_reference)
         switch_x = _x(COLUMN_DISTANCE * int(column) + 5)
         switch_y = _y(ROW_DISTANCE * int(row) + used_slots)
         switch.move(switch_x, switch_y)
@@ -154,9 +164,9 @@ def create_schematic(
             else:
                 junc = sch.junction.new()
                 junc.move(wire.end)
+            current_ref += 1
 
-        occurences[row][column] += 1
-        current_ref += 1
+        progress[position].append(switch_reference)
 
     base_switch.delete()
     base_diode.delete()
