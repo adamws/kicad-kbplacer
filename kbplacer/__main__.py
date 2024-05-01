@@ -303,6 +303,14 @@ def app() -> None:
             "`--create-from-annotated-layout` option used."
         ),
     )
+    parser.add_argument(
+        "--log-level",
+        required=False,
+        default="WARNING",
+        choices=logging._nameToLevel.keys(),
+        type=str,
+        help="Provide logging level, default=%(default)s",
+    )
 
     args = parser.parse_args()
 
@@ -311,7 +319,7 @@ def app() -> None:
 
     # set up logger
     logging.basicConfig(
-        level=logging.DEBUG, format="%(asctime)s: %(message)s", datefmt="%H:%M:%S"
+        level=args.log_level, format="%(asctime)s: %(message)s", datefmt="%H:%M:%S"
     )
 
     if args.create_from_annotated_layout and os.path.isfile(board_path):
