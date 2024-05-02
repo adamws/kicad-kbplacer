@@ -77,7 +77,7 @@ def create_schematic(
 ) -> None:
     keyboard = load_keyboard(input_path)
     matrix = get_matrix(keyboard)
-    print(matrix)
+    logger.debug(f"Matrix: {matrix}")
 
     with open(output_path, "w") as f:
         f.write(TEMPLATE)
@@ -92,7 +92,7 @@ def create_schematic(
 
     rows = len(set([x[0] for x in matrix]))
     columns = len(set([x[1] for x in matrix]))
-    print(f"matrix: {rows}x{columns}")
+    logger.debug(f"Matrix size: {rows}x{columns}")
 
     progress: Dict[Tuple[int, int], List[str]] = defaultdict(list)
 
@@ -217,7 +217,7 @@ if __name__ == "__main__":
     if force:
         shutil.rmtree(output_path, ignore_errors=True)
     elif Path(output_path).is_file():
-        print(f"Output file '{output_path}' already exists, exiting...")
+        logger.error(f"Output file '{output_path}' already exists, exiting...")
         sys.exit(1)
 
     create_schematic(input_path, output_path, switch_footprint, diode_footprint)

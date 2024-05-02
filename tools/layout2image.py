@@ -233,7 +233,7 @@ if __name__ == "__main__":
     if force:
         shutil.rmtree(output_path, ignore_errors=True)
     elif Path(output_path).is_file():
-        print(f"Output file '{output_path}' already exists, exiting...")
+        logger.error(f"Output file '{output_path}' already exists, exiting...")
         sys.exit(1)
 
     create_images(input_path, output_path)
