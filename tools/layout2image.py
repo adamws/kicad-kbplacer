@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import itertools
 import json
+import logging
 import math
 import shutil
 import sys
@@ -13,6 +14,8 @@ import drawsvg as dw
 import yaml
 
 from kbplacer.kle_serial import Key, Keyboard, MatrixAnnotatedKeyboard, get_keyboard
+
+logger = logging.getLogger(__name__)
 
 ORIGIN_X = 4
 ORIGIN_Y = 4
@@ -193,11 +196,24 @@ if __name__ == "__main__":
         action="store_true",
         help="Override output if already exists",
     )
+    parser.add_argument(
+        "--log-level",
+        required=False,
+        default="WARNING",
+        choices=logging._nameToLevel.keys(),
+        type=str,
+        help="Provide logging level, default=%(default)s",
+    )
 
     args = parser.parse_args()
     input_path = getattr(args, "in")
     output_path = getattr(args, "out")
     force = args.force
+
+    # set up logger
+    logging.basicConfig(
+        level=args.log_level, format="%(asctime)s: %(message)s", datefmt="%H:%M:%S"
+    )
 
     if force:
         shutil.rmtree(output_path, ignore_errors=True)

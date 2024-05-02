@@ -1,5 +1,6 @@
 import argparse
 import json
+import logging
 import re
 import shutil
 import sys
@@ -11,6 +12,8 @@ import yaml
 from skip import Schematic
 
 from kbplacer.kle_serial import MatrixAnnotatedKeyboard, get_keyboard
+
+logger = logging.getLogger(__name__)
 
 ORIGIN = (18, 18)
 UNIT = 1.27
@@ -98,7 +101,7 @@ def create_schematic(
 
     for row, column in matrix:
         position = (row, column)
-        print(f"row: {row} column: {column}")
+        logger.debug(f"row: {row} column: {column}")
         row_label = f"ROW{row}"
         column_label = f"COL{column}"
 
@@ -190,6 +193,14 @@ if __name__ == "__main__":
     )
     parser.add_argument("-swf", required=False, help="Switch footprint")
     parser.add_argument("-df", required=False, help="Diode footprint")
+    parser.add_argument(
+        "--log-level",
+        required=False,
+        default="WARNING",
+        choices=logging._nameToLevel.keys(),
+        type=str,
+        help="Provide logging level, default=%(default)s",
+    )
 
     args = parser.parse_args()
     input_path = getattr(args, "in")
@@ -197,6 +208,11 @@ if __name__ == "__main__":
     force = args.force
     switch_footprint = getattr(args, "swf")
     diode_footprint = getattr(args, "df")
+
+    # set up logger
+    logging.basicConfig(
+        level=args.log_level, format="%(asctime)s: %(message)s", datefmt="%H:%M:%S"
+    )
 
     if force:
         shutil.rmtree(output_path, ignore_errors=True)
