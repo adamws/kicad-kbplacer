@@ -259,7 +259,7 @@ class MatrixAnnotatedKeyboardSwitchIterator:
             self._seen.append(matrix_coordinates)
             return fp
         except Exception:
-            logger.warning("Could not locate footprint")
+            logger.warning("Could not find alternative layout footprint")
             return None
 
     def __next__(self):

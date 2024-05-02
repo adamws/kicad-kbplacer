@@ -368,7 +368,7 @@ class BoardModifier:
             logger.info("Track added")
             return stop
         else:
-            logger.warning("Could not add track segment due to detected collision")
+            logger.debug("Could not add track segment due to detected collision")
             return None
 
     def add_track_segment_by_points(
