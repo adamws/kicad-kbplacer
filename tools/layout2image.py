@@ -22,22 +22,22 @@ logger = logging.getLogger(__name__)
 ORIGIN_X = 4
 ORIGIN_Y = 4
 
-KEY_WIDTH = 52
-KEY_HEIGHT = 52
-INNER_GAP_LEFT = 6
-INNER_GAP_TOP = 4
-INNER_GAP_BOTTOM = 8
+KEY_WIDTH_PX = 52
+KEY_HEIGHT_PX = 52
+INNER_GAP_LEFT_PX = 6
+INNER_GAP_TOP_PX = 4
+INNER_GAP_BOTTOM_PX = 8
 
 LABEL_X_POSITION = [
-    (INNER_GAP_LEFT + 1, "start"),
-    (KEY_WIDTH / 2, "middle"),
-    (KEY_WIDTH - INNER_GAP_LEFT - 1, "end"),
+    (lambda _: INNER_GAP_LEFT_PX + 1, "start"),
+    (lambda width: width * KEY_WIDTH_PX / 2, "middle"),
+    (lambda width: width * KEY_WIDTH_PX - INNER_GAP_LEFT_PX - 1, "end"),
 ]
 LABEL_Y_POSITION = [
-    (INNER_GAP_TOP, "hanging"),
-    (KEY_HEIGHT / 2, "middle"),
-    (KEY_HEIGHT - INNER_GAP_BOTTOM - 2, "auto"),
-    (KEY_HEIGHT - 2, "auto"),
+    (lambda _: INNER_GAP_TOP_PX + 1, "hanging"),
+    (lambda height: height * KEY_HEIGHT_PX / 2, "middle"),
+    (lambda height: height * KEY_HEIGHT_PX - INNER_GAP_BOTTOM_PX - 2, "auto"),
+    (lambda height: height * KEY_HEIGHT_PX - 2, "auto"),
 ]
 LABEL_SIZES = [12, 12, 12, 7]
 
@@ -73,10 +73,10 @@ def build_key(key: Key):
 
     def border(x, y, w, h) -> dw.Rectangle:  # pyright: ignore
         return dw.Rectangle(
-            x * KEY_WIDTH,
-            y * KEY_HEIGHT,
-            w * KEY_WIDTH,
-            h * KEY_HEIGHT,
+            x * KEY_WIDTH_PX,
+            y * KEY_HEIGHT_PX,
+            w * KEY_WIDTH_PX,
+            h * KEY_HEIGHT_PX,
             rx="5",
             fill="none",
             stroke="black",
@@ -85,20 +85,20 @@ def build_key(key: Key):
 
     def fill(x, y, w, h) -> dw.Rectangle:  # pyright: ignore
         return dw.Rectangle(
-            x * KEY_WIDTH + 1,
-            y * KEY_HEIGHT + 1,
-            w * KEY_WIDTH - 2,
-            h * KEY_HEIGHT - 2,
+            x * KEY_WIDTH_PX + 1,
+            y * KEY_HEIGHT_PX + 1,
+            w * KEY_WIDTH_PX - 2,
+            h * KEY_HEIGHT_PX - 2,
             rx="5",
             fill=dark_color,
         )
 
     def top(x, y, w, h) -> dw.Rectangle:  # pyright: ignore
         return dw.Rectangle(
-            x * KEY_WIDTH + INNER_GAP_LEFT,
-            y * KEY_HEIGHT + INNER_GAP_TOP,
-            w * KEY_WIDTH - 2 * INNER_GAP_LEFT,
-            h * KEY_HEIGHT - INNER_GAP_TOP - INNER_GAP_BOTTOM,
+            x * KEY_WIDTH_PX + INNER_GAP_LEFT_PX,
+            y * KEY_HEIGHT_PX + INNER_GAP_TOP_PX,
+            w * KEY_WIDTH_PX - 2 * INNER_GAP_LEFT_PX,
+            h * KEY_HEIGHT_PX - INNER_GAP_TOP_PX - INNER_GAP_BOTTOM_PX,
             rx="5",
             fill=light_color,
         )
@@ -120,8 +120,8 @@ def build_key(key: Key):
                 dw.Text(
                     lines,
                     font_size=label_size,
-                    x=position_x[0],
-                    y=position_y[0],
+                    x=position_x[0](key.width),
+                    y=position_y[0](key.height),
                     text_anchor=position_x[1],
                     dominant_baseline=position_y[1],
                 )
@@ -136,14 +136,14 @@ def calcualte_canvas_size(key_iterator: Iterator) -> tuple[int, int]:
         angle = k.rotation_angle
         if angle != 0:
             # when rotated, check each corner
-            x1 = KEY_WIDTH * k.x
-            x2 = KEY_WIDTH * k.x + KEY_WIDTH * k.width
-            y1 = KEY_HEIGHT * k.y
-            y2 = KEY_HEIGHT * k.y + KEY_HEIGHT * k.height
+            x1 = KEY_WIDTH_PX * k.x
+            x2 = KEY_WIDTH_PX * k.x + KEY_WIDTH_PX * k.width
+            y1 = KEY_HEIGHT_PX * k.y
+            y2 = KEY_HEIGHT_PX * k.y + KEY_HEIGHT_PX * k.height
 
             for x, y in [(x1, y1), (x2, y1), (x1, y2), (x2, y2)]:
-                rot_x = KEY_WIDTH * k.rotation_x
-                rot_y = KEY_HEIGHT * k.rotation_y
+                rot_x = KEY_WIDTH_PX * k.rotation_x
+                rot_y = KEY_HEIGHT_PX * k.rotation_y
                 x, y = rotate((rot_x, rot_y), (x, y), angle)
                 x, y = int(x), int(y)
                 if x >= max_x:
@@ -153,8 +153,8 @@ def calcualte_canvas_size(key_iterator: Iterator) -> tuple[int, int]:
 
         else:
             # when not rotated, it is safe to check only bottom right corner:
-            x = KEY_WIDTH * k.x + KEY_WIDTH * k.width
-            y = KEY_HEIGHT * k.y + KEY_HEIGHT * k.height
+            x = KEY_WIDTH_PX * k.x + KEY_WIDTH_PX * k.width
+            y = KEY_HEIGHT_PX * k.y + KEY_HEIGHT_PX * k.height
             if x >= max_x:
                 max_x = x
             if y >= max_y:
@@ -185,16 +185,16 @@ def create_images(keyboard: Union[str, Keyboard], output_path):
     for k in _get_iterator():
         width = k.width
         height = k.height
-        x = KEY_WIDTH * k.x
-        y = KEY_WIDTH * k.y
+        x = KEY_WIDTH_PX * k.x
+        y = KEY_WIDTH_PX * k.y
 
         key = build_key(k)
 
         args = {}
         angle = k.rotation_angle
         if angle != 0:
-            rot_x = KEY_WIDTH * k.rotation_x
-            rot_y = KEY_HEIGHT * k.rotation_y
+            rot_x = KEY_WIDTH_PX * k.rotation_x
+            rot_y = KEY_HEIGHT_PX * k.rotation_y
             args["transform"] = f"rotate({angle} {rot_x} {rot_y})"
         d.append(dw.Use(key, x + ORIGIN_X, y + ORIGIN_Y, **args))
 
