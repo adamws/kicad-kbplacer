@@ -12,6 +12,8 @@ from typing import Iterator, Union
 
 import drawsvg as dw
 import yaml
+from colormath.color_conversions import convert_color
+from colormath.color_objects import LabColor, sRGBColor
 
 from kbplacer.kle_serial import Key, Keyboard, MatrixAnnotatedKeyboard, get_keyboard
 
@@ -40,6 +42,16 @@ LABEL_Y_POSITION = [
 LABEL_SIZES = [12, 12, 12, 7]
 
 
+def lighten_color(hex_color: str) -> str:
+    color = sRGBColor.new_from_rgb_hex(hex_color)
+    lab_color = convert_color(color, LabColor)
+    lab_color.lab_l = min(100, lab_color.lab_l * 1.2)
+    rgb = convert_color(lab_color, sRGBColor)
+    return sRGBColor(
+        rgb.clamped_rgb_r, rgb.clamped_rgb_g, rgb.clamped_rgb_b
+    ).get_rgb_hex()
+
+
 def rotate(origin, point, angle):
     ox, oy = origin
     px, py = point
@@ -53,8 +65,11 @@ def rotate(origin, point, angle):
 def build_key(key: Key):
     group = dw.Group()
     not_rectangle = key.width != key.width2 or key.height != key.height2
-    dark_color = "#cccccc"
-    light_color = "#fcfcfc"
+
+    # some layouts used to fail due to: 'input #ccccccc is not in #RRGGBB format',
+    # truncate in case this typo issue occurs again
+    dark_color = key.color[0:7]
+    light_color = lighten_color(dark_color)
 
     def border(x, y, w, h) -> dw.Rectangle:  # pyright: ignore
         return dw.Rectangle(

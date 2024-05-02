@@ -140,6 +140,7 @@ omit = [
 
 [tool.hatch.envs.tools]
 dependencies = [
+  "colormath==3.0.0",
   "drawsvg==2.3.0",
   "kicad-skip==0.2.5",
   "PyYAML==6.0.1",
