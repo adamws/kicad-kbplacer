@@ -370,6 +370,9 @@ class MatrixAnnotatedKeyboard(Keyboard):
             return props
 
         for k in self.keys:
+            # ignore decals in default key group
+            if k.decal:
+                continue
             seen[_key_props(k)] = True
 
         layout_keys = self._get_layout_options()

@@ -331,6 +331,28 @@ def test_bottom_row_decal_handling() -> None:
     assert len(result.alternative_keys) == 1
 
 
+def test_collapse_ignores_decal_keys_in_default_key_group() -> None:
+    # same as `test_bottom_row_decal_handling` but with decal key
+    # with missing labels in default row. Its labels should be ignored and it should
+    # be propagated to collapsed layout without change
+    # fmt: off
+    layout = [
+        [{"w":1.5},"4,0\n\n\n0,0","4,1\n\n\n0,0",{"w":1.5},"4,2\n\n\n0,0",{"d":True},""],
+        [{"y":0.75,"w":1.5,"d":True},"\n\n\n0,1",{"w":2.5},"4,1\n\n\n0,1"]
+    ]
+    expected = [
+        [{"w":1.5},"4,0\n\n\n0,0","4,1\n\n\n0,0",{"x":-1,"w":2.5},"4,1\n\n\n0,1",{"x":-1.5,"w":1.5},"4,2\n\n\n0,0",{"d":True},""]
+    ]
+    # fmt: on
+    result = _layout_collapse(layout)
+    expected_keyboard = parse_kle(expected)
+    expected_keyboard = MatrixAnnotatedKeyboard(
+        meta=expected_keyboard.meta, keys=expected_keyboard.keys
+    )
+    assert result == expected_keyboard
+    assert len(result.alternative_keys) == 1
+
+
 def test_collapse_detects_duplicated_keys() -> None:
     # middle alternative key should be removed because it belongs to the same net,
     # and although it is different size than default choice, the center of a switch
