@@ -323,7 +323,7 @@ class MatrixAnnotatedKeyboard(Keyboard):
     def __is_alternative(self, key: Key) -> bool:
         if label := key.get_label(self.LAYOUT_OPTION_LABEL):
             # check if not default layout:
-            if label.split(",")[1] != "0":
+            if label.split(",")[1].strip() != "0":
                 # alternative layout key
                 return True
         return False
@@ -403,7 +403,7 @@ class MatrixAnnotatedKeyboard(Keyboard):
             split = str(label).split(",")
             if len(split) != 2:
                 raise RuntimeError
-            return (split[0], split[1])
+            return (split[0].strip(), split[1].strip())
         except Exception as e:
             msg = "Matrix coordinates label missing or invalid"
             raise RuntimeError(msg) from e

@@ -62,6 +62,45 @@ def test_labels(layout, expected) -> None:
     assert [json.loads(result.to_kle())] == layout
 
 
+@pytest.mark.parametrize(
+    # fmt: off
+    "layout,expected",
+    [
+        ([["1,2"]], ("1", "2")),
+        ([["1, 2"]], ("1", "2")),
+        ([[" 1, 2"]], ("1", "2")),
+        ([["R1, R2"]], ("R1", "R2")),
+        ([["R1,R2 "]], ("R1", "R2")),
+    ],
+    # fmt: on
+)
+def test_via_labels(layout, expected) -> None:
+    keyboard = parse_kle(layout)
+    annotated_keyboard = MatrixAnnotatedKeyboard(keyboard.meta, keyboard.keys)
+    assert (
+        MatrixAnnotatedKeyboard.get_matrix_position(annotated_keyboard.keys[0])
+        == expected
+    )
+
+
+@pytest.mark.parametrize(
+    # fmt: off
+    "layout",
+    [
+        ([["1-2"]]),
+        ([["1,2,3"]]),
+    ],
+    # fmt: on
+)
+def test_illegal_via_labels(layout) -> None:
+    with pytest.raises(
+        RuntimeError, match=r"Matrix coordinates label missing or invalid"
+    ):
+        keyboard = parse_kle(layout)
+        annotated_keyboard = MatrixAnnotatedKeyboard(keyboard.meta, keyboard.keys)
+        MatrixAnnotatedKeyboard.get_matrix_position(annotated_keyboard.keys[0])
+
+
 class LabelsTestCase(unittest.TestCase):
     def test_too_many_labels(self) -> None:
         labels = "\n".join(13 * ["x"])
