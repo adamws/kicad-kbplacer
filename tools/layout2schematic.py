@@ -90,8 +90,16 @@ def create_schematic(
     if diode_footprint:
         base_diode.property.Footprint.value = diode_footprint
 
-    rows = len(set([x[0] for x in matrix]))
-    columns = len(set([x[1] for x in matrix]))
+    # rows and columns does not necessarily contain each value from min to max,
+    # i.e. matrix can have columns numbers: 1, 2, 4, 5. Because whole
+    # element placing and wiring logic depends on fixed positions calculated
+    # from row/column values, the following `rows` and `columns` variables
+    # represents maximum size (using mentioned example, columns = 5 (and not 4).
+    # Even though the whole column 3 will be empty, it is easier to draw that.
+    # We also assume that both rows and columns starts from 0 and can't used
+    # negative values as numbers.
+    rows = max(set([x[0] for x in matrix]))
+    columns = max(set([x[1] for x in matrix]))
     logger.debug(f"Matrix size: {rows}x{columns}")
 
     progress: Dict[Tuple[int, int], List[str]] = defaultdict(list)
@@ -131,7 +139,7 @@ def create_schematic(
             column_wire = sch.wire.new()
             column_wire.start_at(wire.end)
             column_wire.delta_x = 0
-            column_wire.delta_y = (ROW_DISTANCE * (rows - row - 1) + 15) * UNIT
+            column_wire.delta_y = (ROW_DISTANCE * (rows - row) + 15) * UNIT
 
             label = sch.global_label.new()
             label.move(column_wire.end.value[0], column_wire.end.value[1], 270)
@@ -157,7 +165,7 @@ def create_schematic(
             if row_label not in labels:
                 row_wire = sch.wire.new()
                 row_wire.start_at(wire.end)
-                row_wire.delta_x = (COLUMN_DISTANCE * (columns - column - 1) + 5) * UNIT
+                row_wire.delta_x = (COLUMN_DISTANCE * (columns - column) + 5) * UNIT
                 row_wire.delta_y = 0
 
                 label = sch.global_label.new()
