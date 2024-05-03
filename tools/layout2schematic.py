@@ -115,8 +115,9 @@ def create_schematic(
 
         used_slots = len(progress[position])
         if used_slots > 3:
-            msg = "Too many switches per matrix slot"
-            raise RuntimeError(msg)
+            # clamp to maximum value (use same slot for all 3+ alternative keys)
+            # schematic readability will suffer but such layouts are uncommon anyway
+            used_slots = 3
 
         switch = base_switch.clone()
         if used_slots == 0:
