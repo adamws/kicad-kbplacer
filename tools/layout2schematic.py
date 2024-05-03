@@ -21,7 +21,7 @@ UNIT = 1.27
 COLUMN_DISTANCE = 10
 ROW_DISTANCE = 16
 
-TEMPLATE = """(kicad_sch (version 20230121) (generator eeschema) (uuid 9e45a776-7007-48ff-b543-dc98423173b7) (paper "A4")(lib_symbols (symbol "Device:D_Small" (pin_numbers hide) (pin_names (offset 0.254) hide) (in_bom yes) (on_board yes) (property "Reference" "D" (at -1.27 2.032 0) (effects (font (size 1.27 1.27)) (justify left))) (property "Value" "D_Small" (at -3.81 -2.032 0) (effects (font (size 1.27 1.27)) (justify left))) (property "Footprint" "" (at 0 0 90) (effects (font (size 1.27 1.27)) hide)) (property "Datasheet" "~" (at 0 0 90) (effects (font (size 1.27 1.27)) hide)) (property "Sim.Device" "D" (at 0 0 0) (effects (font (size 1.27 1.27)) hide)) (property "Sim.Pins" "1=K 2=A" (at 0 0 0) (effects (font (size 1.27 1.27)) hide)) (property "ki_keywords" "diode" (at 0 0 0) (effects (font (size 1.27 1.27)) hide)) (property "ki_description" "Diode, small symbol" (at 0 0 0) (effects (font (size 1.27 1.27)) hide)) (property "ki_fp_filters" "TO-???* *_Diode_* *SingleDiode* D_*" (at 0 0 0) (effects (font (size 1.27 1.27)) hide)) (symbol "D_Small_0_1" (polyline (pts (xy -0.762 -1.016) (xy -0.762 1.016)) (stroke (width 0.254) (type default)) (fill (type none))) (polyline (pts (xy -0.762 0) (xy 0.762 0)) (stroke (width 0) (type default)) (fill (type none))) (polyline (pts (xy 0.762 -1.016) (xy -0.762 0) (xy 0.762 1.016) (xy 0.762 -1.016)) (stroke (width 0.254) (type default)) (fill (type none)))) (symbol "D_Small_1_1" (pin passive line (at -2.54 0 0) (length 1.778) (name "K" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27))))) (pin passive line (at 2.54 0 180) (length 1.778) (name "A" (effects (font (size 1.27 1.27)))) (number "2" (effects (font (size 1.27 1.27))))))) (symbol "Switch:SW_Push_45deg" (pin_numbers hide) (pin_names (offset 1.016) hide) (in_bom yes) (on_board yes) (property "Reference" "SW" (at 3.048 1.016 0) (effects (font (size 1.27 1.27)) (justify left))) (property "Value" "SW_Push_45deg" (at 0 -3.81 0) (effects (font (size 1.27 1.27)))) (property "Footprint" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide)) (property "Datasheet" "~" (at 0 0 0) (effects (font (size 1.27 1.27)) hide)) (property "ki_keywords" "switch normally-open pushbutton push-button" (at 0 0 0) (effects (font (size 1.27 1.27)) hide)) (property "ki_description" "Push button switch, normally open, two pins, 45° tilted" (at 0 0 0) (effects (font (size 1.27 1.27)) hide)) (symbol "SW_Push_45deg_0_1" (circle (center -1.1684 1.1684) (radius 0.508) (stroke (width 0) (type default)) (fill (type none))) (polyline (pts (xy -0.508 2.54) (xy 2.54 -0.508)) (stroke (width 0) (type default)) (fill (type none))) (polyline (pts (xy 1.016 1.016) (xy 2.032 2.032)) (stroke (width 0) (type default)) (fill (type none))) (polyline (pts (xy -2.54 2.54) (xy -1.524 1.524) (xy -1.524 1.524)) (stroke (width 0) (type default)) (fill (type none))) (polyline (pts (xy 1.524 -1.524) (xy 2.54 -2.54) (xy 2.54 -2.54) (xy 2.54 -2.54)) (stroke (width 0) (type default)) (fill (type none))) (circle (center 1.143 -1.1938) (radius 0.508) (stroke (width 0) (type default)) (fill (type none))) (pin passive line (at -2.54 2.54 0) (length 0) (name "1" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27))))) (pin passive line (at 2.54 -2.54 180) (length 0) (name "2" (effects (font (size 1.27 1.27)))) (number "2" (effects (font (size 1.27 1.27)))))))) (symbol (lib_id "Switch:SW_Push_45deg") (at 0 0 0) (unit 1) (in_bom yes) (on_board yes) (dnp no) (uuid 19751ded-3cc5-4b31-aeeb-fd1357dc1d55) (property "Reference" "SW1" (at 0 -5.08 0) (effects (font (size 1.27 1.27)))) (property "Value" "SW_Push" (at 0 -3.81 0) (effects (font (size 1.27 1.27)) hide)) (property "Footprint" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide)) (property "Datasheet" "~" (at 0 0 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid 94c53fa6-dd8d-4e6d-9c1a-277431558d0a)) (pin "2" (uuid ef827767-19b4-4ee5-b4b6-65189b88f8ee)) (instances (project "template" (path "/9e45a776-7007-48ff-b543-dc98423173b7" (reference "SW1") (unit 1))))) (symbol (lib_id "Device:D_Small") (at 2.54 6.35 90) (unit 1) (in_bom yes) (on_board yes) (dnp no) (uuid feb0fa1f-f7ed-4393-bef6-632a7fa048d6) (property "Reference" "D1" (at 3.81 5.08 90) (effects (font (size 1.27 1.27)) (justify right))) (property "Value" "D" (at 3.81 7.62 90) (effects (font (size 1.27 1.27)) (justify right) hide)) (property "Footprint" "" (at 2.54 6.35 90) (effects (font (size 1.27 1.27)) hide)) (property "Datasheet" "~" (at 2.54 6.35 90) (effects (font (size 1.27 1.27)) hide)) (property "Sim.Device" "D" (at 2.54 6.35 0) (effects (font (size 1.27 1.27)) hide)) (property "Sim.Pins" "1=K 2=A" (at 2.54 6.35 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid 004cc590-2791-46a0-9480-7962783605a4)) (pin "2" (uuid 428af732-f843-4705-863e-a0095a5fb80a)) (instances (project "template" (path "/9e45a776-7007-48ff-b543-dc98423173b7" (reference "D1") (unit 1))))) (sheet_instances (path "/" (page "1"))))"""
+TEMPLATE = """(kicad_sch (version 20230121) (generator eeschema) (uuid 9e45a776-7007-48ff-b543-dc98423173b7) (paper "{page_size}")(lib_symbols (symbol "Device:D_Small" (pin_numbers hide) (pin_names (offset 0.254) hide) (in_bom yes) (on_board yes) (property "Reference" "D" (at -1.27 2.032 0) (effects (font (size 1.27 1.27)) (justify left))) (property "Value" "D_Small" (at -3.81 -2.032 0) (effects (font (size 1.27 1.27)) (justify left))) (property "Footprint" "" (at 0 0 90) (effects (font (size 1.27 1.27)) hide)) (property "Datasheet" "~" (at 0 0 90) (effects (font (size 1.27 1.27)) hide)) (property "Sim.Device" "D" (at 0 0 0) (effects (font (size 1.27 1.27)) hide)) (property "Sim.Pins" "1=K 2=A" (at 0 0 0) (effects (font (size 1.27 1.27)) hide)) (property "ki_keywords" "diode" (at 0 0 0) (effects (font (size 1.27 1.27)) hide)) (property "ki_description" "Diode, small symbol" (at 0 0 0) (effects (font (size 1.27 1.27)) hide)) (property "ki_fp_filters" "TO-???* *_Diode_* *SingleDiode* D_*" (at 0 0 0) (effects (font (size 1.27 1.27)) hide)) (symbol "D_Small_0_1" (polyline (pts (xy -0.762 -1.016) (xy -0.762 1.016)) (stroke (width 0.254) (type default)) (fill (type none))) (polyline (pts (xy -0.762 0) (xy 0.762 0)) (stroke (width 0) (type default)) (fill (type none))) (polyline (pts (xy 0.762 -1.016) (xy -0.762 0) (xy 0.762 1.016) (xy 0.762 -1.016)) (stroke (width 0.254) (type default)) (fill (type none)))) (symbol "D_Small_1_1" (pin passive line (at -2.54 0 0) (length 1.778) (name "K" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27))))) (pin passive line (at 2.54 0 180) (length 1.778) (name "A" (effects (font (size 1.27 1.27)))) (number "2" (effects (font (size 1.27 1.27))))))) (symbol "Switch:SW_Push_45deg" (pin_numbers hide) (pin_names (offset 1.016) hide) (in_bom yes) (on_board yes) (property "Reference" "SW" (at 3.048 1.016 0) (effects (font (size 1.27 1.27)) (justify left))) (property "Value" "SW_Push_45deg" (at 0 -3.81 0) (effects (font (size 1.27 1.27)))) (property "Footprint" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide)) (property "Datasheet" "~" (at 0 0 0) (effects (font (size 1.27 1.27)) hide)) (property "ki_keywords" "switch normally-open pushbutton push-button" (at 0 0 0) (effects (font (size 1.27 1.27)) hide)) (property "ki_description" "Push button switch, normally open, two pins, 45° tilted" (at 0 0 0) (effects (font (size 1.27 1.27)) hide)) (symbol "SW_Push_45deg_0_1" (circle (center -1.1684 1.1684) (radius 0.508) (stroke (width 0) (type default)) (fill (type none))) (polyline (pts (xy -0.508 2.54) (xy 2.54 -0.508)) (stroke (width 0) (type default)) (fill (type none))) (polyline (pts (xy 1.016 1.016) (xy 2.032 2.032)) (stroke (width 0) (type default)) (fill (type none))) (polyline (pts (xy -2.54 2.54) (xy -1.524 1.524) (xy -1.524 1.524)) (stroke (width 0) (type default)) (fill (type none))) (polyline (pts (xy 1.524 -1.524) (xy 2.54 -2.54) (xy 2.54 -2.54) (xy 2.54 -2.54)) (stroke (width 0) (type default)) (fill (type none))) (circle (center 1.143 -1.1938) (radius 0.508) (stroke (width 0) (type default)) (fill (type none))) (pin passive line (at -2.54 2.54 0) (length 0) (name "1" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27))))) (pin passive line (at 2.54 -2.54 180) (length 0) (name "2" (effects (font (size 1.27 1.27)))) (number "2" (effects (font (size 1.27 1.27)))))))) (symbol (lib_id "Switch:SW_Push_45deg") (at 0 0 0) (unit 1) (in_bom yes) (on_board yes) (dnp no) (uuid 19751ded-3cc5-4b31-aeeb-fd1357dc1d55) (property "Reference" "SW1" (at 0 -5.08 0) (effects (font (size 1.27 1.27)))) (property "Value" "SW_Push" (at 0 -3.81 0) (effects (font (size 1.27 1.27)) hide)) (property "Footprint" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide)) (property "Datasheet" "~" (at 0 0 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid 94c53fa6-dd8d-4e6d-9c1a-277431558d0a)) (pin "2" (uuid ef827767-19b4-4ee5-b4b6-65189b88f8ee)) (instances (project "template" (path "/9e45a776-7007-48ff-b543-dc98423173b7" (reference "SW1") (unit 1))))) (symbol (lib_id "Device:D_Small") (at 2.54 6.35 90) (unit 1) (in_bom yes) (on_board yes) (dnp no) (uuid feb0fa1f-f7ed-4393-bef6-632a7fa048d6) (property "Reference" "D1" (at 3.81 5.08 90) (effects (font (size 1.27 1.27)) (justify right))) (property "Value" "D" (at 3.81 7.62 90) (effects (font (size 1.27 1.27)) (justify right) hide)) (property "Footprint" "" (at 2.54 6.35 90) (effects (font (size 1.27 1.27)) hide)) (property "Datasheet" "~" (at 2.54 6.35 90) (effects (font (size 1.27 1.27)) hide)) (property "Sim.Device" "D" (at 2.54 6.35 0) (effects (font (size 1.27 1.27)) hide)) (property "Sim.Pins" "1=K 2=A" (at 2.54 6.35 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid 004cc590-2791-46a0-9480-7962783605a4)) (pin "2" (uuid 428af732-f843-4705-863e-a0095a5fb80a)) (instances (project "template" (path "/9e45a776-7007-48ff-b543-dc98423173b7" (reference "D1") (unit 1))))) (sheet_instances (path "/" (page "1"))))"""
 
 
 def _x(x: int) -> float:
@@ -72,23 +72,24 @@ def get_matrix(keyboard: MatrixAnnotatedKeyboard) -> list[tuple[int, int]]:
     return sorted(list(map(_to_ints, items)))
 
 
+def get_lowest_paper_size(size):
+    matrix_size_to_paper = {(8, 19): "A4", (11, 30): "A3", (17, 44): "A2"}
+    smallest_size = None
+    for key in sorted(matrix_size_to_paper.keys()):
+        if size[0] <= key[0] and size[1] <= key[1]:
+            smallest_size = matrix_size_to_paper[key]
+            break
+    if smallest_size is None:
+        smallest_size = "A1"
+    return smallest_size
+
+
 def create_schematic(
     input_path, output_path, switch_footprint="", diode_footprint=""
 ) -> None:
     keyboard = load_keyboard(input_path)
     matrix = get_matrix(keyboard)
     logger.debug(f"Matrix: {matrix}")
-
-    with open(output_path, "w") as f:
-        f.write(TEMPLATE)
-
-    sch = Schematic(output_path)
-    base_switch = sch.symbol.reference_startswith("SW")[0]
-    if switch_footprint:
-        base_switch.property.Footprint.value = switch_footprint
-    base_diode = sch.symbol.reference_startswith("D")[0]
-    if diode_footprint:
-        base_diode.property.Footprint.value = diode_footprint
 
     # rows and columns does not necessarily contain each value from min to max,
     # i.e. matrix can have columns numbers: 1, 2, 4, 5. Because whole
@@ -101,6 +102,18 @@ def create_schematic(
     rows = max(set([x[0] for x in matrix]))
     columns = max(set([x[1] for x in matrix]))
     logger.debug(f"Matrix size: {rows}x{columns}")
+
+    with open(output_path, "w") as f:
+        size = (rows, columns)
+        f.write(TEMPLATE.format(page_size=get_lowest_paper_size(size)))
+
+    sch = Schematic(output_path)
+    base_switch = sch.symbol.reference_startswith("SW")[0]
+    if switch_footprint:
+        base_switch.property.Footprint.value = switch_footprint
+    base_diode = sch.symbol.reference_startswith("D")[0]
+    if diode_footprint:
+        base_diode.property.Footprint.value = diode_footprint
 
     progress: Dict[Tuple[int, int], List[str]] = defaultdict(list)
 
