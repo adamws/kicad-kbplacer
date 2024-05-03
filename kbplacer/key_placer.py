@@ -248,7 +248,7 @@ class MatrixAnnotatedKeyboardSwitchIterator:
             )
         switches = sorted(switches)
         logger.debug(f"Got {switches} for {matrix_coordinates} position")
-        # assume thar alternative keys have same annotation with
+        # assume that alternative keys have same annotation with
         # some sort of suffix so after sorting
         # the option index would get us correct footprint
         try:
