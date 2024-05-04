@@ -492,6 +492,25 @@ python -m kbplacer.kle_serial \
 This command generates [this](./tests/data/ergogen-layouts/absolem-simple-reference.json) file
 which can be loaded by keyboard-layout-editor website.
 
+#### Extra tools
+
+The `kbplacer` is used by additional tools available in [tools](tools/README.md) directory.
+
+<table>
+    <tr>
+        <td style="width:33%" align="center"><b>Tool</b></td>
+        <td align="center"><b>Example result</b></td>
+    </tr>
+    <tr>
+        <td><code>layout2image.py</code> - generates KLE-like image for layout</td>
+        <td><img src="resources/absolem-layout.png"/></td>
+    </tr>
+    <tr>
+        <td><code>layout2schematic.py</code> - generates KiCad schematic file with switch matrix</td>
+        <td><img src="resources/example-schematic.svg"/></td>
+    </tr>
+</table>
+
 <!-- TOC --><a name="use-in-python-projects"></a>
 ### Use in python projects
 
@@ -504,16 +523,20 @@ keyboard = parse_kle([["", ""]])
 print(f"This keyboard has only {len(keyboard.keys)} keys")
 ```
 
-It can also create and manipulate `kicad_pcb` files. This enables _non traditional_ KiCad workflows
-where schematic preparation can be completely skipped. For example see
-[keyboard-pcbs](https://adamws.github.io/keyboard-pcbs/) website and its source [repository](https://github.com/adamws/keyboard-pcbs).
-It demonstrates how to create `.kicad_pcb` file with switch matrix from scratch.
+The `kbplacer` API is used in following projects:
 
-> [!WARNING]
-> This is work in progress. Creating keyboard PCBs without schematic is not recommended
-> for inexperienced users. Internal `kbplacer` API is not stable.
+- [keyboard-pcbs](https://adamws.github.io/keyboard-pcbs/) ([repository](https://github.com/adamws/keyboard-pcbs)) -
+benchmark for `kbplacer` - website with collection of pre-generated KiCad projects (both
+schematics and PCB files) based on [via](https://github.com/the-via/keyboards) layouts.
+Combines usage of `kbplacer` KiCad plugin and accompanying [tools](tools/README.md).
+- [keyboard-tools](https://keyboard-tools.xyz/) ([repository](https://github.com/adamws/keyboard-tools)) -
+website for generating PCB files from user uploaded layout files, combines `kbplacer` plugin
+with [skidl](https://devbisme.github.io/skidl/) and aims to introduce no-schematic workflows
+or provide decent starting point for traditional KiCad projects.
 
-This package is also key component of [keyboard-tools](https://github.com/adamws/keyboard-tools) project.
+Creating keyboard PCB file from scratch (without skidl or using schematic generated with
+`layout2schematic` tool) is also possible using `kbplacer` CLI interface although it is
+currently considered experimental.
 
 <!-- TOC --><a name="demo-keyboard-project"></a>
 ## Demo keyboard project
