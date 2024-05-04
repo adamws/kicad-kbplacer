@@ -67,8 +67,13 @@ def build_key(key: Key):
     not_rectangle = key.width != key.width2 or key.height != key.height2
 
     # some layouts used to fail due to: 'input #ccccccc is not in #RRGGBB format',
-    # truncate in case this typo issue occurs again
+    # truncate too long strings, if color is still illegal then use default
     dark_color = key.color[0:7]
+    try:
+        sRGBColor.new_from_rgb_hex(dark_color)
+    except Exception:
+        logger.warning(f"Illegal color ('{dark_color}') value found, using default")
+        dark_color = "#cccccc"
     light_color = lighten_color(dark_color)
 
     def border(x, y, w, h) -> dw.Rectangle:  # pyright: ignore
