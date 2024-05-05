@@ -396,6 +396,25 @@ class MatrixAnnotatedKeyboard(Keyboard):
                 new_alternatives.remove(key)
         self.alternative_keys = new_alternatives
 
+    def get_matrix(self) -> List[Tuple[int, int]]:
+        items: List[Tuple[str, str]] = []
+        for key in self.key_iterator(ignore_alternative=False):
+            if key.decal:
+                continue
+            items.append(MatrixAnnotatedKeyboard.get_matrix_position(key))
+
+        def _to_ints(item) -> Tuple[int, int]:
+            row_match = re.search(r"\d+", item[0])
+            column_match = re.search(r"\d+", item[1])
+
+            if row_match is None or column_match is None:
+                msg = f"No numeric part for row or column found in '{item}'"
+                raise ValueError(msg)
+
+            return int(row_match.group()), int(column_match.group())
+
+        return sorted(list(map(_to_ints, items)))
+
     @staticmethod
     def get_matrix_position(key: Key) -> Tuple[str, str]:
         try:

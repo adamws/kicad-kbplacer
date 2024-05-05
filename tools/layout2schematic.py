@@ -1,7 +1,6 @@
 import argparse
 import json
 import logging
-import re
 import shutil
 import sys
 from collections import defaultdict
@@ -52,26 +51,6 @@ def load_keyboard(layout_path) -> MatrixAnnotatedKeyboard:
         return _keyboard
 
 
-def get_matrix(keyboard: MatrixAnnotatedKeyboard) -> list[tuple[int, int]]:
-    items: list[tuple[str, str]] = []
-    for key in keyboard.key_iterator(ignore_alternative=False):
-        if key.decal:
-            continue
-        items.append(MatrixAnnotatedKeyboard.get_matrix_position(key))
-
-    def _to_ints(item):
-        row_match = re.search(r"\d+", item[0])
-        column_match = re.search(r"\d+", item[1])
-
-        if row_match is None or column_match is None:
-            msg = f"No numeric part for row or column found in '{item}'"
-            raise ValueError(msg)
-
-        return int(row_match.group()), int(column_match.group())
-
-    return sorted(list(map(_to_ints, items)))
-
-
 def get_lowest_paper_size(size):
     matrix_size_to_paper = {(8, 19): "A4", (11, 30): "A3", (17, 44): "A2"}
     smallest_size = None
@@ -88,7 +67,7 @@ def create_schematic(
     input_path, output_path, switch_footprint="", diode_footprint=""
 ) -> None:
     keyboard = load_keyboard(input_path)
-    matrix = get_matrix(keyboard)
+    matrix = keyboard.get_matrix()
     logger.debug(f"Matrix: {matrix}")
 
     # rows and columns does not necessarily contain each value from min to max,
