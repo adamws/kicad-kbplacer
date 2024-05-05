@@ -128,7 +128,7 @@ jobs:
               revision=c7ee7731a967c3728e1034e00461a562c6882f78
               filepath=Casks/k/kicad.rb
             elif [ "<<parameters.kicad-version>>" = "8.0.2" ]; then
-              revision=ddd9b5e1665ecf77ec3ba0900e0b6c2a4367691f
+              revision=9adad0fea42cff3217bffc0589afa03f497299f5
               filepath=Casks/k/kicad.rb
             else
               echo "Unsupported KiCad version!"
