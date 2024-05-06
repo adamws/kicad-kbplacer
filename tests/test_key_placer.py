@@ -478,6 +478,41 @@ def test_placing_additional_elements(tmpdir, request) -> None:
         assert get_orientation(led) == 0
 
 
+def test_placing_additional_elements_for_alternative_keys(tmpdir, request) -> None:
+    """Tests if placer correctly differentiate between additional elements
+    for alternative layouts keys in case of matrix annotated layouts.
+    Common case includes bottom row with various layouts, where alternative keys
+    can have different width stabilizers.
+    This also tests for old bug where ST43 was placed next to SW43_1 instead of SW43.
+    """
+    board = pcbnew.CreateEmptyBoard()
+    ref_values = ["0", "0_1", "0_2", "1"]  # first key with two alternatives
+    for i in range(0, 4):
+        switch = add_switch_footprint(board, request, ref_values[i])
+        # skipping nets, would raise error message in log but tested operation should
+        # succeed anyway
+        position_offset = pcbnew.wxPointMM(20 * i, 0)
+        set_position(switch, pcbnew.wxPointMM(0, 0) + position_offset)
+
+    destination = "0_2"
+    # not using real stabilizer footprint but that's not important here
+    # interested in resulting position
+    stab = add_led_footprint(board, request, destination)
+
+    key_placer = KeyPlacer(board)
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
+    diode_info = ElementInfo("", PositionOption.DEFAULT, ZERO_POSITION, "")
+    additional_elements = [
+        ElementInfo("LED{}", PositionOption.CUSTOM, ZERO_POSITION, "")
+    ]
+
+    key_placer.run("", key_info, diode_info, False, False, additional_elements)
+
+    save_and_render(board, tmpdir, request)
+
+    assert get_position(stab) == pcbnew.wxPointMM(20 * ref_values.index(destination), 0)
+
+
 def test_placer_diode_from_preset_missing_path(request) -> None:
     board = get_board_for_2x2_example(request)
     key_placer = KeyPlacer(board)
