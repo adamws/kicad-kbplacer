@@ -51,6 +51,9 @@ RUN python3 -m kbplacer.kle_serial \
   -in points.yaml -inform ERGOGEN_INTERNAL \
   -outform KLE_RAW -out $PROJECT_NAME-kle.json
 
+# fix labels (to be fixed in kbplacer)
+RUN sed -i 's/[RC]//g' $PROJECT_NAME-kle.json
+
 RUN cd /kicad-kbplacer \
   && hatch run tools:layout2schematic -in $WORK_PATH/$PROJECT_NAME-kle.json \
   -out $WORK_PATH/$PROJECT_NAME.kicad_sch -f \
@@ -67,9 +70,6 @@ RUN kinet2pcb -i $PROJECT_NAME.net \
   --libraries /usr/share/kicad/footprints \
               $KICAD_3RDPARTY_PATH/footprints/$SWITCH_LIBRARY/Switch_Keyboard_Cherry_MX.pretty \
   --output $PROJECT_NAME.kicad_pcb
-
-# fix labels (to be fixed in kbplacer)
-RUN sed -i 's/[RC]//g' $PROJECT_NAME-kle.json
 
 RUN python3 -m kbplacer --board $PROJECT_NAME.kicad_pcb \
   --layout $PROJECT_NAME-kle.json \

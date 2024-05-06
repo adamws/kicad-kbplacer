@@ -396,24 +396,32 @@ class MatrixAnnotatedKeyboard(Keyboard):
                 new_alternatives.remove(key)
         self.alternative_keys = new_alternatives
 
-    def get_matrix(self) -> List[Tuple[int, int]]:
-        items: List[Tuple[str, str]] = []
+    def keys_in_matrix_order(self) -> List[Key]:
+        """Returns keys in matrix row/column order. If multiple keys occupy same
+        matrix position, sort by layout option label. Ignores decal keys.
+        """
+        items: List[Key] = []
         for key in self.key_iterator(ignore_alternative=False):
             if key.decal:
                 continue
-            items.append(MatrixAnnotatedKeyboard.get_matrix_position(key))
+            items.append(key)
 
-        def _to_ints(item) -> Tuple[int, int]:
-            row_match = re.search(r"\d+", item[0])
-            column_match = re.search(r"\d+", item[1])
+        def _key_sort(key: Key) -> Tuple[int, int, int]:
+            matrix_position = MatrixAnnotatedKeyboard.get_matrix_position(key)
+            row_match = re.search(r"\d+", matrix_position[0])
+            column_match = re.search(r"\d+", matrix_position[1])
 
             if row_match is None or column_match is None:
-                msg = f"No numeric part for row or column found in '{item}'"
+                msg = f"No numeric part for row or column found in '{matrix_position}'"
                 raise ValueError(msg)
 
-            return int(row_match.group()), int(column_match.group())
+            return (
+                int(row_match.group()),
+                int(column_match.group()),
+                MatrixAnnotatedKeyboard.get_layout_option(key),
+            )
 
-        return sorted(list(map(_to_ints, items)))
+        return sorted(items, key=lambda k: _key_sort(k))
 
     @staticmethod
     def get_matrix_position(key: Key) -> Tuple[str, str]:

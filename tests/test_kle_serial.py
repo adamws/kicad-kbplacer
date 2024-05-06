@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import unittest
+from copy import copy
 from pathlib import Path
 from typing import Tuple
 
@@ -437,52 +438,50 @@ def test_with_via_layouts(request, example) -> None:
 
 
 @pytest.mark.parametrize(
-    "layout,expected",
+    "layout,expected_order",
     [
         # fmt: off
         (
-            [
-                ["4,0","4,1","4,2"],
-            ],
-            [(4, 0), (4, 1), (4, 2)],
+            # nothing to sort
+            [["4,0","4,1","4,2"]],
+            [0, 1, 2],
         ),
         (
-            # labels can have prefix
-            [
-                ["R4,C0","R4,C1","R4,C2"],
-            ],
-            [(4, 0), (4, 1), (4, 2)],
-        ),
-        (
-            # matrix should be sorted
-            [
-                ["4,2","4,1","4,0"],
-            ],
-            [(4, 0), (4, 1), (4, 2)],
+            # labels can have prefix and should get sorted
+            [["R4,C0","R4,C2","R4,C1"]],
+            [0, 2, 1],
         ),
         (
             # alternative layouts should be preserved
             [
                 [{"w":1.5},"4,0\n\n\n0,0","4,1\n\n\n0,0",{"w":1.5},"4,2\n\n\n0,0",{"d":True},""],
                 [{"y":0.75,"w":1.5,"d":True},"\n\n\n0,1",{"w":2.5},"4,1\n\n\n0,1"]
+                                                                   # ^ this is 5th key, should end up
+                                                                   # before '4,2' (3rd key) because
+                                                                   # earlier in matrix
             ],
-            [(4, 0), (4, 1), (4, 1), (4, 2)],
+            [0, 1, 5, 2],
         ),
         (
             [
                 [{"w":7},"4,6\n\n\n2,0"],
                 [{"y":0.5,"w":3},"4,4\n\n\n2,1","4,6\n\n\n2,1",{"w":3},"4,8\n\n\n2,1"]
+                                 # ^ this is 2nd key which should be first after sort
             ],
-            [(4, 4), (4, 6), (4, 6), (4, 8)],
+            [1, 0, 2, 3],
         )
         # fmt: on
     ],
 )
-def test_get_matrix_from_annotated_layout(layout, expected) -> None:
+def test_keys_in_matrix_order(layout, expected_order) -> None:
     tmp = parse_kle(layout)
+    layout_order = copy(tmp.keys)
+
     keyboard = MatrixAnnotatedKeyboard(meta=tmp.meta, keys=tmp.keys)
-    matrix = keyboard.get_matrix()
-    assert matrix == expected
+    keys = keyboard.keys_in_matrix_order()
+
+    for k, index in zip(keys, expected_order):
+        assert k == layout_order[index]
 
 
 @pytest.mark.parametrize(
@@ -494,11 +493,11 @@ def test_get_matrix_from_annotated_layout(layout, expected) -> None:
         # fmt: on
     ],
 )
-def test_get_matrix_from_illegal_layout(layout) -> None:
+def test_keys_in_matrix_order_illegal_labels(layout) -> None:
     tmp = parse_kle(layout)
     keyboard = MatrixAnnotatedKeyboard(meta=tmp.meta, keys=tmp.keys)
     with pytest.raises(ValueError, match=r"No numeric part for row or column found in"):
-        keyboard.get_matrix()
+        keyboard.keys_in_matrix_order()
 
 
 class TestKleSerialCli:

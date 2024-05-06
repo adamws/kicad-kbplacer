@@ -67,7 +67,11 @@ def create_schematic(
     input_path, output_path, switch_footprint="", diode_footprint=""
 ) -> None:
     keyboard = load_keyboard(input_path)
-    matrix = keyboard.get_matrix()
+    matrix = [
+        tuple(map(int, MatrixAnnotatedKeyboard.get_matrix_position(k)))
+        for k in keyboard.keys_in_matrix_order()
+    ]
+
     logger.debug(f"Matrix: {matrix}")
 
     # rows and columns does not necessarily contain each value from min to max,
@@ -76,8 +80,7 @@ def create_schematic(
     # from row/column values, the following `rows` and `columns` variables
     # represents maximum size (using mentioned example, columns = 5 (and not 4).
     # Even though the whole column 3 will be empty, it is easier to draw that.
-    # We also assume that both rows and columns starts from 0 and can't used
-    # negative values as numbers.
+    # We also assume that both rows and columns starts from 0 and can't be negative.
     rows = max(set([x[0] for x in matrix]))
     columns = max(set([x[1] for x in matrix]))
     logger.debug(f"Matrix size: {rows}x{columns}")
