@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import logging
 import re
-from typing import cast
+from typing import List, cast
 
 import pcbnew
 
@@ -54,35 +56,14 @@ def convex_hull(points):
     return lower[:-1] + upper[:-1]
 
 
-def build_board_outline(
-    board: pcbnew.BOARD, outline_delta: float, key_format: str
+def build_board_outline_around_footprints(
+    board: pcbnew.BOARD, outline_delta: float, footprints: List[pcbnew.FOOTPRINT]
 ) -> None:
-    selected_footprints = []
-    if KICAD_VERSION >= (7, 0, 0):
-        selection: pcbnew.DRAWINGS = pcbnew.GetCurrentSelection()
-        if len(selection) != 0:
-            # else use only selected footprints
-            logger.info("Running board edge generation around selected footprints")
-            selected_footprints = [
-                f.Cast() for f in selection if isinstance(f.Cast(), pcbnew.FOOTPRINT)
-            ]
-            if not selected_footprints:
-                logger.info("No footprints selected")
-
-    if not selected_footprints:
-        # if nothing selected use all switches
-        logger.info("Running board edge generation around switch footprints")
-        footprints = board.GetFootprints()
-        pattern = re.compile(key_format.format("(\\d)+"))
-        selected_footprints = [
-            f for f in footprints if re.match(pattern, f.GetReference())
-        ]
-
-    if not selected_footprints:
-        msg = "No footprints found or selected for generating board edge"
+    if not footprints:
+        msg = "Footprints for generating board edge not set"
         raise Exception(msg)
 
-    hulls = [f.GetBoundingHull() for f in selected_footprints]
+    hulls = [f.GetBoundingHull() for f in footprints]
     points = []
     for hull in hulls:
         for i in range(0, hull.OutlineCount()):
@@ -132,3 +113,33 @@ def build_board_outline(
             segment.SetEnd(pcbnew.wxPoint(end[0], end[1]))
         segment.SetWidth(pcbnew.FromMM(0.4))
         board.Add(segment)
+
+
+def build_board_outline(
+    board: pcbnew.BOARD, outline_delta: float, footprint_annotation_format: str
+) -> None:
+    selected_footprints = []
+    if KICAD_VERSION >= (7, 0, 0):
+        selection: pcbnew.DRAWINGS = pcbnew.GetCurrentSelection()
+        if len(selection) != 0:
+            # else use only selected footprints
+            logger.info("Running board edge generation around selected footprints")
+            selected_footprints = [
+                f.Cast() for f in selection if isinstance(f.Cast(), pcbnew.FOOTPRINT)
+            ]
+            if not selected_footprints:
+                logger.info("No footprints selected")
+
+    if not selected_footprints:
+        # if nothing selected use all switches
+        logger.info(
+            "Running board edge generation around footprints with annotation "
+            f"matching '{footprint_annotation_format}' format"
+        )
+        footprints = board.GetFootprints()
+        pattern = re.compile(footprint_annotation_format.format("(\\d)+"))
+        selected_footprints = [
+            f for f in footprints if re.match(pattern, f.GetReference())
+        ]
+
+    build_board_outline_around_footprints(board, outline_delta, selected_footprints)
