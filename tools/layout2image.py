@@ -8,7 +8,7 @@ import math
 import shutil
 import sys
 from pathlib import Path
-from typing import Iterator, Union
+from typing import Iterator
 
 import drawsvg as dw
 import yaml
@@ -167,16 +167,20 @@ def calcualte_canvas_size(key_iterator: Iterator) -> tuple[int, int]:
     return max_x + 2 * ORIGIN_X, max_y + 2 * ORIGIN_Y
 
 
-def create_images(keyboard: Union[str, Keyboard], output_path):
-    if isinstance(keyboard, str):
-        with open(keyboard, "r", encoding="utf-8") as f:
-            if keyboard.endswith("yaml") or keyboard.endswith("yml"):
+def create_images(input_path: str, output_path):
+    if input_path != "-":
+        with open(input_path, "r", encoding="utf-8") as f:
+            if input_path.endswith("yaml") or input_path.endswith("yml"):
                 layout = yaml.safe_load(f)
             else:
                 layout = json.load(f)
-            _keyboard: Keyboard = get_keyboard(layout)
     else:
-        _keyboard: Keyboard = keyboard
+        try:
+            layout = yaml.safe_load(sys.stdin)
+        except Exception:
+            layout = json.load(sys.stdin)
+
+    _keyboard: Keyboard = get_keyboard(layout)
 
     def _get_iterator():
         if isinstance(_keyboard, MatrixAnnotatedKeyboard):
@@ -208,7 +212,9 @@ def create_images(keyboard: Union[str, Keyboard], output_path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Layout file to images")
-    parser.add_argument("-in", required=True, help="Layout file")
+    parser.add_argument(
+        "-in", nargs="?", type=str, default="-", help="Input path or '-' for stdin"
+    )
     parser.add_argument("-out", required=True, help="Output path")
     parser.add_argument(
         "-f",
