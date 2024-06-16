@@ -16,7 +16,6 @@ import pytest
 import yaml
 
 from kbplacer.kle_serial import (
-    Key,
     Keyboard,
     MatrixAnnotatedKeyboard,
     get_keyboard_from_file,
@@ -620,22 +619,39 @@ class TestKleSerialCli:
         "example",
         ["0_sixty", "wt60_a", "wt60_d"],
     )
-    @pytest.mark.parametrize("collapse", [False, True])
+    @pytest.mark.parametrize(
+        "inform,collapse",
+        [
+            ("KLE_VIA", False),
+            ("KLE_VIA", True),
+            ("QMK", False),  # QMK layout can't be collapsed
+        ],
+    )
     @pytest.mark.parametrize("outform", ["KLE_INTERNAL", "KLE_RAW"])
-    def test_via_file_convert(
-        self, request, tmpdir, package_path, package_name, example, collapse, outform
+    def test_via_and_qmk_file_convert(
+        self,
+        request,
+        tmpdir,
+        package_path,
+        package_name,
+        example,
+        inform,
+        collapse,
+        outform,
     ) -> None:
         test_dir = request.fspath.dirname
         data_dir = f"{test_dir}/data"
 
-        layout_file = f"{data_dir}/via-layouts/{example}.json"
+        layout_dir = "via-layouts" if inform == "KLE_VIA" else "qmk-layouts"
+        layout_file = f"{data_dir}/{layout_dir}/{example}.json"
+
         layout_in = f"{tmpdir}/{example}.json"
         shutil.copy(layout_file, layout_in)
         tmp_file = Path(layout_in).with_suffix(".json.tmp")
 
         args = {
             "-in": layout_in,
-            "-inform": "KLE_VIA",
+            "-inform": inform,
             "-out": str(tmp_file),
             "-outform": outform,
             "-text": "",
@@ -647,12 +663,12 @@ class TestKleSerialCli:
         p.communicate()
         assert p.returncode == 0
 
-        if collapse:
+        if (inform == "KLE_VIA" and collapse) or inform == "QMK":
             reference_name = f"{example}-internal-collapsed.json"
         else:
             reference_name = f"{example}-internal.json"
 
-        with open(Path(data_dir) / f"via-layouts/{reference_name}", "r") as f:
+        with open(Path(data_dir) / f"{layout_dir}/{reference_name}", "r") as f:
             reference = json.load(f)
 
         if outform == "KLE_RAW":
