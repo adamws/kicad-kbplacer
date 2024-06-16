@@ -283,6 +283,16 @@ def __get_parameters():
     )
     test_params.append(param)
 
+    # same as above but with qmk layout file
+    param = pytest.param(
+        "2x2-with-alternative-layout",
+        ("Tracks", True),
+        ("DefaultDiode", None),
+        "qmk.json",
+        id="2x2-with-alternative-layout;Tracks;DefaultDiode;QMK",
+    )
+    test_params.append(param)
+
     return test_params
 
 

@@ -45,7 +45,7 @@ by reducing tedious element placement and routing tasks.
 
 - Automatic keys and diodes placement
 - Track routing and track template replication
-- Support for KLE, [VIA](https://www.caniusevia.com/docs/layouts) and [ergogen](https://github.com/ergogen/ergogen) inputs
+- Support for KLE, [VIA](https://www.caniusevia.com/docs/layouts), [QMK](https://docs.qmk.fm/reference_info_json#layouts) and [ergogen](https://github.com/ergogen/ergogen) inputs
 - User selectable diode position in relation to key position
 - Configurable additional elements placement
 - Board outline generation
@@ -213,8 +213,8 @@ python -m com_github_adamws_kicad-kbplacer --help
     <td>
       Layout file path. Supports <a href="http://www.keyboard-layout-editor.com/">keyboard-layout-editor</a>
       json layouts in both raw and internal form, <a href="https://www.caniusevia.com/docs/layouts">via</a>
-      json layouts and <a href="https://docs.ergogen.xyz/formats">ergogen</a> canonical
-      yaml points files converted to json.</br>
+      and <a href="https://docs.qmk.fm/reference_info_json#layouts">qmk</a> json layouts and <a href="https://docs.ergogen.xyz/formats">ergogen</a>
+      canonical yaml points files converted to json.</br>
       Can be empty to run without switch footprints placement.
     </td>
   </tr>

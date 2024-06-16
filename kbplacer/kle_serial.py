@@ -853,6 +853,10 @@ def get_keyboard(layout: dict) -> Keyboard:
     except Exception:
         pass
     try:
+        return parse_qmk(layout)
+    except Exception:
+        pass
+    try:
         return Keyboard.from_json(layout)
     except Exception:
         pass
