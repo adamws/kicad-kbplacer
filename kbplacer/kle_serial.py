@@ -900,6 +900,14 @@ if __name__ == "__main__":
         type=str,
         help="Ergogen zone filter regular expression, applicable only when -inform ERGOGEN_INTERNAL",
     )
+    parser.add_argument(
+        "-collapse",
+        action="store_true",
+        help=(
+            "Collapse via-like annotated layout, "
+            "applicable only when -inform equal KLE_RAW, KLE_VIA or KLE_INTERNAL"
+        ),
+    )
 
     args = parser.parse_args()
     input_path = getattr(args, "in")
@@ -908,6 +916,7 @@ if __name__ == "__main__":
     output_format = args.outform
     print_result = args.text
     ergogen_filter = args.ergogen_filter
+    collapse = args.collapse
 
     if input_format == output_format:
         print("Output format equal input format, nothing to do...")
@@ -958,6 +967,11 @@ if __name__ == "__main__":
             keyboard = parse_ergogen_points(layout, zone_filter=ergogen_filter)
         else:  # QMK
             keyboard = parse_qmk(layout).to_keyboard()
+
+        if collapse:
+            keyboard = MatrixAnnotatedKeyboard(meta=keyboard.meta, keys=keyboard.keys)
+            keyboard.collapse()
+            keyboard = keyboard.to_keyboard()
 
         if output_format == "KLE_INTERNAL":
             result = _keyboard_to_kle_internal(keyboard)

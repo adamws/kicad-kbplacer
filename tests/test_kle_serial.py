@@ -620,9 +620,10 @@ class TestKleSerialCli:
         "example",
         ["0_sixty", "wt60_a", "wt60_d"],
     )
+    @pytest.mark.parametrize("collapse", [False, True])
     @pytest.mark.parametrize("outform", ["KLE_INTERNAL", "KLE_RAW"])
     def test_via_file_convert(
-        self, request, tmpdir, package_path, package_name, example, outform
+        self, request, tmpdir, package_path, package_name, example, collapse, outform
     ) -> None:
         test_dir = request.fspath.dirname
         data_dir = f"{test_dir}/data"
@@ -639,11 +640,19 @@ class TestKleSerialCli:
             "-outform": outform,
             "-text": "",
         }
+        if collapse:
+            args["-collapse"] = ""
+
         p = self._run_subprocess(package_path, package_name, args)
         p.communicate()
         assert p.returncode == 0
 
-        with open(Path(data_dir) / f"via-layouts/{example}-internal.json", "r") as f:
+        if collapse:
+            reference_name = f"{example}-internal-collapsed.json"
+        else:
+            reference_name = f"{example}-internal.json"
+
+        with open(Path(data_dir) / f"via-layouts/{reference_name}", "r") as f:
             reference = json.load(f)
 
         if outform == "KLE_RAW":

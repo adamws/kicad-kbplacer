@@ -480,8 +480,8 @@ Run it with `--help` option to get more details about options and CLI usage.
 
 #### Layout format conversion script
 
-The `kbplacer` is capable to convert ergogen point files to KLE layout files,
-for example:
+The `kbplacer` is capable of converting layouts between various formats.
+For example, to convert ergogen point file to KLE layout file:
 
 ```shell
 python -m kbplacer.kle_serial \
@@ -491,6 +491,29 @@ python -m kbplacer.kle_serial \
 
 This command generates [this](./tests/data/ergogen-layouts/absolem-simple-reference.json) file
 which can be loaded by keyboard-layout-editor website.
+
+In case of VIA-like annotated layouts there is an option to perform 'collapse' operation.
+
+```shell
+python -m kbplacer.kle_serial \
+  -in tests/data/via-layouts/wt60_d.json -inform KLE_VIA \
+  -out $(pwd)/wt60_d-internal-collapsed.json -outform KLE_INTERNAL -collapse
+```
+
+<table>
+    <tr>
+        <td style="width:50%" align="center"><b>Before collapse</b></td>
+        <td style="width:50%" align="center"><b>After collapse</b></td>
+    </tr>
+    <tr>
+        <td><img src="resources/wt60_d-before-collapse.svg"/></td>
+        <td><img src="resources/wt60_d-after-collapse.svg"/></td>
+    </tr>
+</table>
+
+Layout collapsing moves keys to theirs final physical position and removes
+duplicates. Key is considered duplicate when there is another key of same
+matrix position and size.
 
 #### Extra tools
 
