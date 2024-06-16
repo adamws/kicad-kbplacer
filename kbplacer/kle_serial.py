@@ -984,4 +984,4 @@ if __name__ == "__main__":
 
         if output_path:
             with open(output_path, "w", encoding="utf-8") as output_file:
-                json.dump(result, output_file, indent=4)
+                json.dump(result, output_file, indent=2)

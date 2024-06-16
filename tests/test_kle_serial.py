@@ -415,7 +415,7 @@ def test_collapse_detects_duplicated_keys() -> None:
     assert len(result.alternative_keys) == 2
 
 
-@pytest.mark.parametrize("example", ["0_sixty", "wt60_a", "wt60_d"])
+@pytest.mark.parametrize("example", ["0_sixty", "crkbd", "wt60_a", "wt60_d"])
 def test_with_via_layouts(request, example) -> None:
     test_dir = request.fspath.dirname
 
@@ -441,7 +441,7 @@ def test_with_via_layouts(request, example) -> None:
         assert result.keys == reference_collapsed_as_keyboard.keys
 
 
-@pytest.mark.parametrize("example", ["0_sixty", "wt60_a", "wt60_d"])
+@pytest.mark.parametrize("example", ["0_sixty", "crkbd", "wt60_a", "wt60_d"])
 def test_with_qmk_layouts(request, example) -> None:
     test_dir = request.fspath.dirname
 
@@ -617,7 +617,7 @@ class TestKleSerialCli:
 
     @pytest.mark.parametrize(
         "example",
-        ["0_sixty", "wt60_a", "wt60_d"],
+        ["0_sixty", "crkbd", "wt60_a", "wt60_d"],
     )
     @pytest.mark.parametrize(
         "inform,collapse",
