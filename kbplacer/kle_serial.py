@@ -57,7 +57,7 @@ class KeyDefault:
 @dataclass
 class Key:
     color: str = DEFAULT_KEY_COLOR
-    labels: List[str] = field(default_factory=list)
+    labels: List[Optional[str]] = field(default_factory=list)
     textColor: List[Optional[str]] = field(default_factory=list)  # noqa: N815
     textSize: List[Optional[int]] = field(default_factory=list)  # noqa: N815
     default: KeyDefault = field(default_factory=KeyDefault)
@@ -100,7 +100,7 @@ class Key:
             msg = "Illegal key label index"
             raise RuntimeError(msg)
         labels_to_add = index + 1 - len(self.labels)
-        self.labels += labels_to_add * [""]
+        self.labels += labels_to_add * [None]
         self.labels[index] = value
 
 
@@ -496,6 +496,86 @@ def cleanup_key(key: Key) -> None:
         setattr(key, attribute_name, attribute)
 
 
+def parse_qmk(layout) -> Keyboard:
+    metadata: KeyboardMetadata = KeyboardMetadata()
+
+    layouts = layout["layouts"]
+    keys: Dict[Tuple[int, int], List[Key]] = defaultdict(list)
+
+    for i, layout in enumerate(layouts.values()):
+        for item in layout["layout"]:
+            if not isinstance(item, dict):
+                msg = f"Unexpected data appeared while parsing QMK layout: '{item}'"
+                raise RuntimeError(msg)
+
+            key: Key = Key()
+            key.x = item["x"]
+            key.y = item["y"]
+            if "r" in item:
+                key.rotation_angle = item["r"]
+            if "rx" in item:
+                key.rotation_x = item["rx"]
+            if "ry" in item:
+                key.rotation_y = item["ry"]
+            if "w" in item:
+                key.width = item["w"]
+            if "h" in item:
+                key.height = item["h"]
+
+            # qmk uses 'matrix' property to define key position instead of labels
+            # this is not a part of Key dataclass derived from
+            # keyboard-layout-editor schema. Because we do not care about actual
+            # labels (which qmk layout also can define), use approach from via
+            # layouts, i.e. encode matrix position in first label
+            matrix_position = item["matrix"]
+            if not isinstance(matrix_position, list):
+                msg = (
+                    "Unexpected key matrix position appeared while parsing QMK "
+                    f"layout: '{matrix_position}'"
+                )
+                raise RuntimeError(msg)
+            key.set_label(
+                MatrixAnnotatedKeyboard.MATRIX_COORDINATES_LABEL,
+                f"{matrix_position[0]},{matrix_position[1]}",
+            )
+            # qmk layouts do not have information about alternative layout option groups,
+            # each group is 0
+            key.set_label(MatrixAnnotatedKeyboard.LAYOUT_OPTION_LABEL, f"0,{i}")
+
+            position = (matrix_position[0], matrix_position[1])
+            keys[position].append(key)
+
+    # remove duplicate keys ignoring LAYOUT_OPTION_LABEL value
+    deduplicate_keys: Dict[Tuple[int, int], List[Key]] = defaultdict(list)
+    for position, key_list in keys.items():
+        deduplicate_position_keys: List[Key] = []
+        for k in key_list:
+            duplicate = False
+            for k1 in deduplicate_position_keys:
+                temp1 = copy.deepcopy(k)
+                temp2 = copy.deepcopy(k1)
+                temp1.set_label(MatrixAnnotatedKeyboard.LAYOUT_OPTION_LABEL, "")
+                temp2.set_label(MatrixAnnotatedKeyboard.LAYOUT_OPTION_LABEL, "")
+                if temp1 == temp2:
+                    duplicate = True
+                    break
+            if not duplicate:
+                deduplicate_position_keys.append(k)
+
+        # clean up labels, i.e. remove LAYOUT_OPTION_LABEL if given key does not have
+        # alternative value
+        if len(deduplicate_position_keys) == 1:
+            deduplicate_position_keys[0].labels = [deduplicate_position_keys[0].labels[0]]
+
+        deduplicate_keys[position] = deduplicate_position_keys
+
+    final_keys: List[Key] = list()
+    for _, l in iter(sorted(deduplicate_keys.items())):
+        final_keys += l
+
+    return Keyboard(meta=metadata, keys=final_keys)
+
+
 def parse_via(layout) -> MatrixAnnotatedKeyboard:
     keyboard = parse_kle(layout["layouts"]["keymap"])
     return MatrixAnnotatedKeyboard(meta=keyboard.meta, keys=keyboard.keys)
@@ -787,7 +867,7 @@ if __name__ == "__main__":
         "-inform",
         required=False,
         default="KLE_RAW",
-        choices=["KLE_RAW", "KLE_VIA", "KLE_INTERNAL", "ERGOGEN_INTERNAL"],
+        choices=["KLE_RAW", "KLE_VIA", "KLE_INTERNAL", "ERGOGEN_INTERNAL", "QMK"],
         help="Specifies the input format",
     )
     parser.add_argument("-out", required=False, help="Result file")
@@ -861,12 +941,14 @@ if __name__ == "__main__":
             keyboard = parse_kle(layout["layouts"]["keymap"])
         elif input_format == "KLE_INTERNAL":
             keyboard = Keyboard.from_json(layout)
-        else:
+        elif input_format == "ERGOGEN_INTERNAL":
             keyboard = parse_ergogen_points(layout, zone_filter=ergogen_filter)
+        else:  # QMK
+            keyboard = parse_qmk(layout)
 
         if output_format == "KLE_INTERNAL":
             result = _keyboard_to_kle_internal(keyboard)
-        else:
+        else:  # KLE_RAW
             result = _keyboard_to_kle_raw(keyboard)
 
         if output_path:

@@ -16,15 +16,15 @@ import pytest
 import yaml
 
 from kbplacer.kle_serial import (
+    Key,
     Keyboard,
     MatrixAnnotatedKeyboard,
     get_keyboard_from_file,
     parse_ergogen_points,
     parse_kle,
+    parse_qmk,
     parse_via,
 )
-
-from .conftest import equal_ignore_order
 
 logger = logging.getLogger(__name__)
 
@@ -416,6 +416,10 @@ def test_collapse_detects_duplicated_keys() -> None:
     assert len(result.alternative_keys) == 2
 
 
+def _sort_key(item: Key):
+    return (item.y, item.x, item.labels)
+
+
 @pytest.mark.parametrize("example", ["0_sixty", "wt60_a", "wt60_d"])
 def test_with_via_layouts(request, example) -> None:
     test_dir = request.fspath.dirname
@@ -432,9 +436,40 @@ def test_with_via_layouts(request, example) -> None:
         reference_collapsed = _reference_keyboard(f"{example}-internal-collapsed.json")
         assert result.keys == reference_collapsed.keys
         # order after collapsing might be different but that's not important right now.
-        assert equal_ignore_order(
-            result.alternative_keys, reference_collapsed.alternative_keys
-        )
+        result.alternative_keys.sort(key=_sort_key)
+        reference_collapsed.alternative_keys.sort(key=_sort_key)
+        assert result.alternative_keys == reference_collapsed.alternative_keys
+
+
+@pytest.mark.parametrize("example", ["0_sixty", "wt60_a", "wt60_d"])
+def test_with_qmk_layouts(request, example) -> None:
+    test_dir = request.fspath.dirname
+
+    with open(Path(test_dir) / f"data/qmk-layouts/{example}.json", "r") as f:
+        layout = json.load(f)
+        result = parse_qmk(layout)
+        # qmk layouts are already 'collapsed', i.e. keys are at final positions
+        # and there are no duplicates
+        reference = get_reference(Path(test_dir) / "data/qmk-layouts" / f"{example}-internal-collapsed.json")
+
+        # sort both lists, reference from via tests might use different order
+        result.keys.sort(key=_sort_key)
+        reference.keys.sort(key=_sort_key)
+
+        assert result.keys == reference.keys
+
+        # qmk layout should be convertable to `MatrixAnnotatedKeyboard` type,
+        # calling collapse on already collapsed layout messes things up
+        result = MatrixAnnotatedKeyboard(result.meta, result.keys)
+        #result.collapse()
+
+        reference_collapsed = MatrixAnnotatedKeyboard(reference.meta, reference.keys)
+
+        assert result.keys == reference_collapsed.keys
+        # order after collapsing might be different but that's not important right now.
+        result.alternative_keys.sort(key=_sort_key)
+        reference_collapsed.alternative_keys.sort(key=_sort_key)
+        assert result.alternative_keys == reference_collapsed.alternative_keys
 
 
 @pytest.mark.parametrize(
