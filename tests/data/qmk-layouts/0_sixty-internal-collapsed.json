@@ -1696,7 +1696,7 @@
     {
       "color": "#cccccc",
       "labels": [
-        "4,6",
+        "4,5",
         null,
         null,
         null,
@@ -1704,7 +1704,7 @@
         null,
         null,
         null,
-        "0,0"
+        "0,2"
       ],
       "textColor": [],
       "textSize": [],
@@ -1714,7 +1714,7 @@
       },
       "x": 5,
       "y": 4,
-      "width": 2,
+      "width": 1,
       "height": 1,
       "x2": 0,
       "y2": 0,
@@ -1735,7 +1735,7 @@
     {
       "color": "#cccccc",
       "labels": [
-        "4,5",
+        "4,6",
         null,
         null,
         null,
@@ -1743,7 +1743,7 @@
         null,
         null,
         null,
-        "0,2"
+        "0,0"
       ],
       "textColor": [],
       "textSize": [],
@@ -1753,7 +1753,7 @@
       },
       "x": 5,
       "y": 4,
-      "width": 1,
+      "width": 2,
       "height": 1,
       "x2": 0,
       "y2": 0,

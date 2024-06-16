@@ -45,7 +45,7 @@
     {
       "color": "#cccccc",
       "labels": [
-        "0,3"
+        "0,1"
       ],
       "textColor": [],
       "textSize": [],
@@ -53,7 +53,7 @@
         "textColor": "#000000",
         "textSize": 3
       },
-      "x": 3.5,
+      "x": 5.5,
       "y": 0,
       "width": 1,
       "height": 1,
@@ -107,7 +107,7 @@
     {
       "color": "#cccccc",
       "labels": [
-        "0,1"
+        "0,3"
       ],
       "textColor": [],
       "textSize": [],
@@ -115,7 +115,7 @@
         "textColor": "#000000",
         "textSize": 3
       },
-      "x": 5.5,
+      "x": 3.5,
       "y": 0,
       "width": 1,
       "height": 1,
@@ -324,7 +324,7 @@
     {
       "color": "#cccccc",
       "labels": [
-        "0,12"
+        "0,10"
       ],
       "textColor": [],
       "textSize": [],
@@ -332,7 +332,7 @@
         "textColor": "#000000",
         "textSize": 3
       },
-      "x": 12.5,
+      "x": 14.5,
       "y": 0,
       "width": 1,
       "height": 1,
@@ -386,7 +386,7 @@
     {
       "color": "#cccccc",
       "labels": [
-        "0,10"
+        "0,12"
       ],
       "textColor": [],
       "textSize": [],
@@ -394,7 +394,7 @@
         "textColor": "#000000",
         "textSize": 3
       },
-      "x": 14.5,
+      "x": 12.5,
       "y": 0,
       "width": 1,
       "height": 1,
@@ -473,45 +473,6 @@
         "textSize": 3
       },
       "x": 15.5,
-      "y": 0,
-      "width": 1,
-      "height": 1,
-      "x2": 0,
-      "y2": 0,
-      "width2": 1,
-      "height2": 1,
-      "rotation_x": 0,
-      "rotation_y": 0,
-      "rotation_angle": 0,
-      "decal": false,
-      "ghost": false,
-      "stepped": false,
-      "nub": false,
-      "profile": "",
-      "sm": "",
-      "sb": "",
-      "st": ""
-    },
-    {
-      "color": "#cccccc",
-      "labels": [
-        "2,13",
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        "0,1"
-      ],
-      "textColor": [],
-      "textSize": [],
-      "default": {
-        "textColor": "#000000",
-        "textSize": 3
-      },
-      "x": 16.5,
       "y": 0,
       "width": 1,
       "height": 1,
@@ -1463,9 +1424,9 @@
       "st": ""
     },
     {
-      "color": "#aaaaaa",
+      "color": "#cccccc",
       "labels": [
-        "3,0",
+        "2,13",
         null,
         null,
         null,
@@ -1473,7 +1434,7 @@
         null,
         null,
         null,
-        "2,1"
+        "0,1"
       ],
       "textColor": [],
       "textSize": [],
@@ -1481,13 +1442,13 @@
         "textColor": "#000000",
         "textSize": 3
       },
-      "x": 2.5,
-      "y": 3,
-      "width": 1.25,
+      "x": 16.5,
+      "y": 0,
+      "width": 1,
       "height": 1,
       "x2": 0,
       "y2": 0,
-      "width2": 1.25,
+      "width2": 1,
       "height2": 1,
       "rotation_x": 0,
       "rotation_y": 0,
@@ -1527,6 +1488,45 @@
       "x2": 0,
       "y2": 0,
       "width2": 2.25,
+      "height2": 1,
+      "rotation_x": 0,
+      "rotation_y": 0,
+      "rotation_angle": 0,
+      "decal": false,
+      "ghost": false,
+      "stepped": false,
+      "nub": false,
+      "profile": "",
+      "sm": "",
+      "sb": "",
+      "st": ""
+    },
+    {
+      "color": "#aaaaaa",
+      "labels": [
+        "3,0",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        "2,1"
+      ],
+      "textColor": [],
+      "textSize": [],
+      "default": {
+        "textColor": "#000000",
+        "textSize": 3
+      },
+      "x": 2.5,
+      "y": 3,
+      "width": 1.25,
+      "height": 1,
+      "x2": 0,
+      "y2": 0,
+      "width2": 1.25,
       "height2": 1,
       "rotation_x": 0,
       "rotation_y": 0,
@@ -2368,7 +2368,7 @@
         null,
         null,
         null,
-        "4,1"
+        "4,0"
       ],
       "textColor": [],
       "textSize": [],
@@ -2376,13 +2376,13 @@
         "textColor": "#000000",
         "textSize": 3
       },
-      "x": 13.5,
+      "x": 13.75,
       "y": 4,
-      "width": 1.5,
+      "width": 1.25,
       "height": 1,
       "x2": 0,
       "y2": 0,
-      "width2": 1.5,
+      "width2": 1.25,
       "height2": 1,
       "rotation_x": 0,
       "rotation_y": 0,
@@ -2407,7 +2407,7 @@
         null,
         null,
         null,
-        "4,0"
+        "4,1"
       ],
       "textColor": [],
       "textSize": [],
@@ -2415,13 +2415,13 @@
         "textColor": "#000000",
         "textSize": 3
       },
-      "x": 13.75,
+      "x": 13.5,
       "y": 4,
-      "width": 1.25,
+      "width": 1.5,
       "height": 1,
       "x2": 0,
       "y2": 0,
-      "width2": 1.25,
+      "width2": 1.5,
       "height2": 1,
       "rotation_x": 0,
       "rotation_y": 0,
@@ -2524,7 +2524,7 @@
         null,
         null,
         null,
-        "4,1"
+        "4,0"
       ],
       "textColor": [],
       "textSize": [],
@@ -2532,13 +2532,13 @@
         "textColor": "#000000",
         "textSize": 3
       },
-      "x": 16,
+      "x": 16.25,
       "y": 4,
-      "width": 1.5,
+      "width": 1.25,
       "height": 1,
       "x2": 0,
       "y2": 0,
-      "width2": 1.5,
+      "width2": 1.25,
       "height2": 1,
       "rotation_x": 0,
       "rotation_y": 0,
@@ -2563,7 +2563,7 @@
         null,
         null,
         null,
-        "4,0"
+        "4,1"
       ],
       "textColor": [],
       "textSize": [],
@@ -2571,13 +2571,13 @@
         "textColor": "#000000",
         "textSize": 3
       },
-      "x": 16.25,
+      "x": 16,
       "y": 4,
-      "width": 1.25,
+      "width": 1.5,
       "height": 1,
       "x2": 0,
       "y2": 0,
-      "width2": 1.25,
+      "width2": 1.5,
       "height2": 1,
       "rotation_x": 0,
       "rotation_y": 0,

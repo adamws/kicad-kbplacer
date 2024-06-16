@@ -347,6 +347,22 @@ class MatrixAnnotatedKeyboard(Keyboard):
                 keys[option[0]][option[1]].append(key)
         return keys
 
+    @staticmethod
+    def _key_matrix_position(key: Key) -> Tuple[int, int, int]:
+        matrix_position = MatrixAnnotatedKeyboard.get_matrix_position(key)
+        row_match = re.search(r"\d+", matrix_position[0])
+        column_match = re.search(r"\d+", matrix_position[1])
+
+        if row_match is None or column_match is None:
+            msg = f"No numeric part for row or column found in '{matrix_position}'"
+            raise ValueError(msg)
+
+        return (
+            int(row_match.group()),
+            int(column_match.group()),
+            MatrixAnnotatedKeyboard.get_layout_option(key),
+        )
+
     def collapse(self) -> None:
         """Modify positions of alternative_keys to destination positions
         i.e. the positions they would take as 'non alternative'
@@ -394,7 +410,12 @@ class MatrixAnnotatedKeyboard(Keyboard):
         for key in list(new_alternatives):
             if key.decal:
                 new_alternatives.remove(key)
+
         self.alternative_keys = new_alternatives
+
+    def sort_keys(self) -> None:
+        for l in [self.keys, self.alternative_keys]:
+            l.sort(key=lambda k: MatrixAnnotatedKeyboard._key_matrix_position(k))
 
     def keys_in_matrix_order(self) -> List[Key]:
         """Returns keys in matrix row/column order. If multiple keys occupy same
@@ -406,22 +427,9 @@ class MatrixAnnotatedKeyboard(Keyboard):
                 continue
             items.append(key)
 
-        def _key_sort(key: Key) -> Tuple[int, int, int]:
-            matrix_position = MatrixAnnotatedKeyboard.get_matrix_position(key)
-            row_match = re.search(r"\d+", matrix_position[0])
-            column_match = re.search(r"\d+", matrix_position[1])
-
-            if row_match is None or column_match is None:
-                msg = f"No numeric part for row or column found in '{matrix_position}'"
-                raise ValueError(msg)
-
-            return (
-                int(row_match.group()),
-                int(column_match.group()),
-                MatrixAnnotatedKeyboard.get_layout_option(key),
-            )
-
-        return sorted(items, key=lambda k: _key_sort(k))
+        return sorted(
+            items, key=lambda k: MatrixAnnotatedKeyboard._key_matrix_position(k)
+        )
 
     @staticmethod
     def get_matrix_position(key: Key) -> Tuple[str, str]:
@@ -442,6 +450,9 @@ class MatrixAnnotatedKeyboard(Keyboard):
         ):
             return int(layout_option_label.split(",")[1])
         return 0
+
+    def to_keyboard(self) -> Keyboard:
+        return Keyboard(meta=self.meta, keys=self.keys_in_matrix_order())
 
 
 def reorder_items(items: List[Any], align: int) -> List[Any]:
@@ -496,7 +507,7 @@ def cleanup_key(key: Key) -> None:
         setattr(key, attribute_name, attribute)
 
 
-def parse_qmk(layout) -> Keyboard:
+def parse_qmk(layout) -> MatrixAnnotatedKeyboard:
     metadata: KeyboardMetadata = KeyboardMetadata()
 
     layouts = layout["layouts"]
@@ -565,7 +576,9 @@ def parse_qmk(layout) -> Keyboard:
         # clean up labels, i.e. remove LAYOUT_OPTION_LABEL if given key does not have
         # alternative value
         if len(deduplicate_position_keys) == 1:
-            deduplicate_position_keys[0].labels = [deduplicate_position_keys[0].labels[0]]
+            deduplicate_position_keys[0].labels = [
+                deduplicate_position_keys[0].labels[0]
+            ]
 
         deduplicate_keys[position] = deduplicate_position_keys
 
@@ -573,7 +586,7 @@ def parse_qmk(layout) -> Keyboard:
     for _, l in iter(sorted(deduplicate_keys.items())):
         final_keys += l
 
-    return Keyboard(meta=metadata, keys=final_keys)
+    return MatrixAnnotatedKeyboard(meta=metadata, keys=final_keys)
 
 
 def parse_via(layout) -> MatrixAnnotatedKeyboard:
@@ -944,7 +957,7 @@ if __name__ == "__main__":
         elif input_format == "ERGOGEN_INTERNAL":
             keyboard = parse_ergogen_points(layout, zone_filter=ergogen_filter)
         else:  # QMK
-            keyboard = parse_qmk(layout)
+            keyboard = parse_qmk(layout).to_keyboard()
 
         if output_format == "KLE_INTERNAL":
             result = _keyboard_to_kle_internal(keyboard)

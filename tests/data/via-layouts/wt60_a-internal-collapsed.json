@@ -415,45 +415,6 @@
       "st": ""
     },
     {
-      "color": "#cccccc",
-      "labels": [
-        "0,13",
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        "0,1"
-      ],
-      "textColor": [],
-      "textSize": [],
-      "default": {
-        "textColor": "#000000",
-        "textSize": 3
-      },
-      "x": 13,
-      "y": 0,
-      "width": 1,
-      "height": 1,
-      "x2": 0,
-      "y2": 0,
-      "width2": 1,
-      "height2": 1,
-      "rotation_x": 0,
-      "rotation_y": 0,
-      "rotation_angle": 0,
-      "decal": false,
-      "ghost": false,
-      "stepped": false,
-      "nub": false,
-      "profile": "",
-      "sm": "",
-      "sb": "",
-      "st": ""
-    },
-    {
       "color": "#aaaaaa",
       "labels": [
         "0,13",
@@ -495,7 +456,7 @@
     {
       "color": "#cccccc",
       "labels": [
-        "2,13",
+        "0,13",
         null,
         null,
         null,
@@ -511,7 +472,7 @@
         "textColor": "#000000",
         "textSize": 3
       },
-      "x": 14,
+      "x": 13,
       "y": 0,
       "width": 1,
       "height": 1,
@@ -1369,6 +1330,45 @@
       "st": ""
     },
     {
+      "color": "#cccccc",
+      "labels": [
+        "2,13",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        "0,1"
+      ],
+      "textColor": [],
+      "textSize": [],
+      "default": {
+        "textColor": "#000000",
+        "textSize": 3
+      },
+      "x": 14,
+      "y": 0,
+      "width": 1,
+      "height": 1,
+      "x2": 0,
+      "y2": 0,
+      "width2": 1,
+      "height2": 1,
+      "rotation_x": 0,
+      "rotation_y": 0,
+      "rotation_angle": 0,
+      "decal": false,
+      "ghost": false,
+      "stepped": false,
+      "nub": false,
+      "profile": "",
+      "sm": "",
+      "sb": "",
+      "st": ""
+    },
+    {
       "color": "#aaaaaa",
       "labels": [
         "3,0"
@@ -1720,7 +1720,7 @@
         null,
         null,
         null,
-        "1,1"
+        "1,0"
       ],
       "textColor": [],
       "textSize": [],
@@ -1730,11 +1730,11 @@
       },
       "x": 12.25,
       "y": 3,
-      "width": 1.75,
+      "width": 2.75,
       "height": 1,
       "x2": 0,
       "y2": 0,
-      "width2": 1.75,
+      "width2": 2.75,
       "height2": 1,
       "rotation_x": 0,
       "rotation_y": 0,
@@ -1759,7 +1759,7 @@
         null,
         null,
         null,
-        "1,0"
+        "1,1"
       ],
       "textColor": [],
       "textSize": [],
@@ -1769,11 +1769,11 @@
       },
       "x": 12.25,
       "y": 3,
-      "width": 2.75,
+      "width": 1.75,
       "height": 1,
       "x2": 0,
       "y2": 0,
-      "width2": 2.75,
+      "width2": 1.75,
       "height2": 1,
       "rotation_x": 0,
       "rotation_y": 0,
@@ -2266,7 +2266,7 @@
         null,
         null,
         null,
-        "2,1"
+        "2,0"
       ],
       "textColor": [],
       "textSize": [],
@@ -2274,13 +2274,13 @@
         "textColor": "#000000",
         "textSize": 3
       },
-      "x": 11,
+      "x": 11.25,
       "y": 4,
-      "width": 1.5,
+      "width": 1.25,
       "height": 1,
       "x2": 0,
       "y2": 0,
-      "width2": 1.5,
+      "width2": 1.25,
       "height2": 1,
       "rotation_x": 0,
       "rotation_y": 0,
@@ -2305,7 +2305,7 @@
         null,
         null,
         null,
-        "2,0"
+        "2,1"
       ],
       "textColor": [],
       "textSize": [],
@@ -2313,13 +2313,13 @@
         "textColor": "#000000",
         "textSize": 3
       },
-      "x": 11.25,
+      "x": 11,
       "y": 4,
-      "width": 1.25,
+      "width": 1.5,
       "height": 1,
       "x2": 0,
       "y2": 0,
-      "width2": 1.25,
+      "width2": 1.5,
       "height2": 1,
       "rotation_x": 0,
       "rotation_y": 0,
@@ -2461,7 +2461,7 @@
         null,
         null,
         null,
-        "2,1"
+        "2,0"
       ],
       "textColor": [],
       "textSize": [],
@@ -2469,13 +2469,13 @@
         "textColor": "#000000",
         "textSize": 3
       },
-      "x": 13.5,
+      "x": 13.75,
       "y": 4,
-      "width": 1.5,
+      "width": 1.25,
       "height": 1,
       "x2": 0,
       "y2": 0,
-      "width2": 1.5,
+      "width2": 1.25,
       "height2": 1,
       "rotation_x": 0,
       "rotation_y": 0,
@@ -2500,7 +2500,7 @@
         null,
         null,
         null,
-        "2,0"
+        "2,1"
       ],
       "textColor": [],
       "textSize": [],
@@ -2508,13 +2508,13 @@
         "textColor": "#000000",
         "textSize": 3
       },
-      "x": 13.75,
+      "x": 13.5,
       "y": 4,
-      "width": 1.25,
+      "width": 1.5,
       "height": 1,
       "x2": 0,
       "y2": 0,
-      "width2": 1.25,
+      "width2": 1.5,
       "height2": 1,
       "rotation_x": 0,
       "rotation_y": 0,

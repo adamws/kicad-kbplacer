@@ -1673,45 +1673,6 @@
         null,
         null,
         null,
-        "0,2"
-      ],
-      "textColor": [],
-      "textSize": [],
-      "default": {
-        "textColor": "#000000",
-        "textSize": 3
-      },
-      "x": 4,
-      "y": 4,
-      "width": 2,
-      "height": 1,
-      "x2": 0,
-      "y2": 0,
-      "width2": 2,
-      "height2": 1,
-      "rotation_x": 0,
-      "rotation_y": 0,
-      "rotation_angle": 0,
-      "decal": false,
-      "ghost": false,
-      "stepped": false,
-      "nub": false,
-      "profile": "",
-      "sm": "",
-      "sb": "",
-      "st": ""
-    },
-    {
-      "color": "#aaaaaa",
-      "labels": [
-        "4,5",
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
         "0,0"
       ],
       "textColor": [],
@@ -1743,7 +1704,7 @@
     {
       "color": "#aaaaaa",
       "labels": [
-        "4,6",
+        "4,5",
         null,
         null,
         null,
@@ -1751,7 +1712,7 @@
         null,
         null,
         null,
-        "0,1"
+        "0,2"
       ],
       "textColor": [],
       "textSize": [],
@@ -1759,7 +1720,7 @@
         "textColor": "#000000",
         "textSize": 3
       },
-      "x": 5,
+      "x": 4,
       "y": 4,
       "width": 2,
       "height": 1,
@@ -1805,6 +1766,45 @@
       "x2": 0,
       "y2": 0,
       "width2": 1,
+      "height2": 1,
+      "rotation_x": 0,
+      "rotation_y": 0,
+      "rotation_angle": 0,
+      "decal": false,
+      "ghost": false,
+      "stepped": false,
+      "nub": false,
+      "profile": "",
+      "sm": "",
+      "sb": "",
+      "st": ""
+    },
+    {
+      "color": "#aaaaaa",
+      "labels": [
+        "4,6",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        "0,1"
+      ],
+      "textColor": [],
+      "textSize": [],
+      "default": {
+        "textColor": "#000000",
+        "textSize": 3
+      },
+      "x": 5,
+      "y": 4,
+      "width": 2,
+      "height": 1,
+      "x2": 0,
+      "y2": 0,
+      "width2": 2,
       "height2": 1,
       "rotation_x": 0,
       "rotation_y": 0,
