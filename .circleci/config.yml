@@ -110,6 +110,8 @@ jobs:
   test-macos:
     macos:
       xcode: 15.3
+    environment:
+      HOMEBREW_NO_AUTO_UPDATE: 1
     parameters:
       kicad-version:
         type: string
