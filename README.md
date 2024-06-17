@@ -532,6 +532,14 @@ The `kbplacer` is used by additional tools available in [tools](tools/README.md)
         <td><code>layout2schematic.py</code> - generates KiCad schematic file with switch matrix</td>
         <td><img src="resources/example-schematic.svg"/></td>
     </tr>
+    <tr>
+        <td><code>layout2url.py</code> - small utility to generate KLE url</td>
+        <td>
+            To open new firefox tab with layout using <a href="http://www.keyboard-layout-editor.com/">keyboard-layout-editor</a> run</br>
+            <code>python layout2url.py -in kle.json | xargx firefox</code></br>
+            Example result: <a href="http://www.keyboard-layout-editor.com/##@@_a:7%3B&=&=%3B&@=&=">url</a>
+        </td>
+    </tr>
 </table>
 
 <!-- TOC --><a name="use-in-python-projects"></a>

@@ -143,8 +143,10 @@ dependencies = [
   "colormath==3.0.0",
   "drawsvg==2.3.0",
   "kicad-skip==0.2.5",
+  "pyurlon==0.1.0",
   "PyYAML==6.0.1",
 ]
 [tool.hatch.envs.tools.scripts]
 layout2image = "python tools/layout2image.py {args}"
 layout2schematic = "python tools/layout2schematic.py {args}"
+layout2url = "python tools/layout2url.py {args}"
