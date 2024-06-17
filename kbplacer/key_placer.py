@@ -17,6 +17,7 @@ from typing import (
     Optional,
     Set,
     Tuple,
+    Union,
     cast,
 )
 
@@ -135,7 +136,16 @@ class KeyMatrix:
         return self._switches.items()
 
     def switches_by_reference_ordered(self) -> Iterable[Tuple[str, pcbnew.FOOTPRINT]]:
-        return sorted(self._switches.items(), key=lambda x: x[0])
+        def _tryint(s: str) -> Union[str, int]:
+            try:
+                return int(s)
+            except ValueError:
+                return s
+
+        def _alphanum_keys(item: Tuple[str, pcbnew.FOOTPRINT]) -> List[Union[str, int]]:
+            return [_tryint(c) for c in re.split("([0-9]+)", item[0])]
+
+        return sorted(self._switches.items(), key=_alphanum_keys)
 
     def __guess_format(self, guesses: List[str]) -> str:
         for guess in guesses:
