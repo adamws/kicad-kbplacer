@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Tuple
 
 import pytest
+import pyurlon
 import yaml
 
 from kbplacer.kle_serial import (
@@ -25,6 +26,8 @@ from kbplacer.kle_serial import (
     parse_via,
 )
 
+from .conftest import add_url_to_report
+
 logger = logging.getLogger(__name__)
 
 
@@ -32,6 +35,17 @@ def __minify(string: str) -> str:
     for ch in ["\n", " "]:
         string = string.replace(ch, "")
     return string
+
+
+def keyboard_to_url(tmpdir, keyboard: Keyboard) -> None:
+    kle_raw = json.loads("[" + keyboard.to_kle() + "]")
+    if isinstance(kle_raw[0], dict):
+        for k, v in kle_raw[0].items():
+            kle_raw[0][k] = v.replace("_", "-")
+    kle_url = pyurlon.stringify(kle_raw)
+    kle_url = kle_url.replace("$", "_")
+    kle_url = "http://www.keyboard-layout-editor.com/##" + kle_url
+    add_url_to_report(tmpdir, kle_url)
 
 
 # single key layouts with various labels:
@@ -287,7 +301,7 @@ def test_with_kle_references(layout_file, reference_file, request) -> None:
 
 
 @pytest.mark.parametrize("example", ["2x2", "1x2-with-2U-bottom", "1x1-rotated"])
-def test_with_ergogen(example, request) -> None:
+def test_with_ergogen(tmpdir, example, request) -> None:
     test_dir = request.fspath.dirname
 
     reference = get_reference(
@@ -298,6 +312,7 @@ def test_with_ergogen(example, request) -> None:
     with open(Path(test_dir) / f"data/ergogen-layouts/{example}.json", "r") as f:
         layout = json.load(f)
         result = parse_ergogen_points(layout)
+        keyboard_to_url(tmpdir, result)
         assert result == reference
 
 
@@ -422,7 +437,7 @@ def test_collapse_detects_duplicated_keys() -> None:
 
 @pytest.mark.parametrize("example", ["0_sixty", "crkbd", "wt60_a", "wt60_d"])
 @pytest.mark.parametrize("collapses", [1, 2])
-def test_with_via_layouts(request, example, collapses) -> None:
+def test_with_via_layouts(tmpdir, request, example, collapses) -> None:
     test_dir = request.fspath.dirname
 
     def _reference_keyboard(filename: str) -> MatrixAnnotatedKeyboard:
@@ -432,6 +447,7 @@ def test_with_via_layouts(request, example, collapses) -> None:
     with open(Path(test_dir) / f"data/via-layouts/{example}.json", "r") as f:
         layout = json.load(f)
         result = parse_via(layout)
+        keyboard_to_url(tmpdir, result)
         assert result == _reference_keyboard(f"{example}-internal.json")
         # calling this multiple times should not matter
         for _ in range(0, collapses):
@@ -450,12 +466,13 @@ def test_with_via_layouts(request, example, collapses) -> None:
 
 
 @pytest.mark.parametrize("example", ["0_sixty", "crkbd", "wt60_a", "wt60_d"])
-def test_with_qmk_layouts(request, example) -> None:
+def test_with_qmk_layouts(tmpdir, request, example) -> None:
     test_dir = request.fspath.dirname
 
     with open(Path(test_dir) / f"data/qmk-layouts/{example}.json", "r") as f:
         layout = json.load(f)
         result = parse_qmk(layout).to_keyboard()
+        keyboard_to_url(tmpdir, result)
         # qmk layouts are already 'collapsed', i.e. keys are at final positions
         # and there are no duplicates
         reference = get_reference(

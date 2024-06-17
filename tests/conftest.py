@@ -309,6 +309,13 @@ def generate_drc(tmpdir, board_path: Union[str, os.PathLike]) -> None:
         logger.debug(f.read())
 
 
+def add_url_to_report(tmpdir, url: str) -> None:
+    url_path = tmpdir / "report"
+    urls = len(glob.glob(f"{url_path}/*url"))
+    with open(url_path / f"{urls + 1}.url", "w") as f:
+        f.write(url)
+
+
 def pointMM(x, y) -> pcbnew.wxPoint:
     return pcbnew.wxPoint(pcbnew.FromMM(x), pcbnew.FromMM(y))
 
@@ -412,4 +419,8 @@ def pytest_runtest_makereport(item, call):
             for f in images:
                 render = image_to_base64(f)
                 extras.append(pytest_html.extras.image(render))
+            urls = glob.glob(f"{tmpdir}/report/*url")
+            for url in urls:
+                with open(url, "r") as f:
+                    extras.append(pytest_html.extras.url(f.read()))
         report.extras = extras
