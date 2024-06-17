@@ -536,7 +536,7 @@ The `kbplacer` is used by additional tools available in [tools](tools/README.md)
         <td><code>layout2url.py</code> - small utility to generate KLE url</td>
         <td>
             To open new firefox tab with layout using <a href="http://www.keyboard-layout-editor.com/">keyboard-layout-editor</a> run</br>
-            <code>python layout2url.py -in kle.json | xargx firefox</code></br>
+            <code>python layout2url.py -in kle.json | xargs firefox</code></br>
             Example result: <a href="http://www.keyboard-layout-editor.com/##@@_a:7%3B&=&=%3B&@=&=">url</a>
         </td>
     </tr>
