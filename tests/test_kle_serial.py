@@ -49,7 +49,7 @@ def __minify(string: str) -> str:
         ([[{"a":5},"\nx"]],          (7 * [None]) + ["x"]), # bottom-center
         ([["\n\n\nx"]],              (8 * [None]) + ["x"]), # bottom-right
         ([[{"a":3},"\n\n\n\nx"]],    (9 * [None]) + ["x"]), # front-left
-        ([[{"a":7},"\n\n\n\nx"]],   (10 * [None]) + ["x"]), # fron-center
+        ([[{"a":7},"\n\n\n\nx"]],   (10 * [None]) + ["x"]), # front-center
         ([[{"a":3},"\n\n\n\n\nx"]], (11 * [None]) + ["x"]), # front-right
         ([[{"a":0},"x\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx"]], (12 * ["x"])) # all at once
     ],
@@ -326,6 +326,7 @@ def test_iso_enter_layout_collapse() -> None:
     expected_keyboard = MatrixAnnotatedKeyboard(
         meta=expected_keyboard.meta, keys=expected_keyboard.keys
     )
+    expected_keyboard.collapsed = True
     assert result == expected_keyboard
 
 
@@ -347,6 +348,7 @@ def test_bottom_row_collapse_no_extra_keys() -> None:
     expected_keyboard = MatrixAnnotatedKeyboard(
         meta=expected_keyboard.meta, keys=expected_keyboard.keys
     )
+    expected_keyboard.collapsed = True
     assert result == expected_keyboard
     assert len(result.alternative_keys) == 0
 
@@ -366,6 +368,7 @@ def test_bottom_row_decal_handling() -> None:
     expected_keyboard = MatrixAnnotatedKeyboard(
         meta=expected_keyboard.meta, keys=expected_keyboard.keys
     )
+    expected_keyboard.collapsed = True
     assert result == expected_keyboard
     assert len(result.alternative_keys) == 1
 
@@ -388,6 +391,7 @@ def test_collapse_ignores_decal_keys_in_default_key_group() -> None:
     expected_keyboard = MatrixAnnotatedKeyboard(
         meta=expected_keyboard.meta, keys=expected_keyboard.keys
     )
+    expected_keyboard.collapsed = True
     assert result == expected_keyboard
     assert len(result.alternative_keys) == 1
 
@@ -411,12 +415,14 @@ def test_collapse_detects_duplicated_keys() -> None:
     expected_keyboard = MatrixAnnotatedKeyboard(
         meta=expected_keyboard.meta, keys=expected_keyboard.keys
     )
+    expected_keyboard.collapsed = True
     assert result == expected_keyboard
     assert len(result.alternative_keys) == 2
 
 
 @pytest.mark.parametrize("example", ["0_sixty", "crkbd", "wt60_a", "wt60_d"])
-def test_with_via_layouts(request, example) -> None:
+@pytest.mark.parametrize("collapses", [1, 2])
+def test_with_via_layouts(request, example, collapses) -> None:
     test_dir = request.fspath.dirname
 
     def _reference_keyboard(filename: str) -> MatrixAnnotatedKeyboard:
@@ -427,7 +433,9 @@ def test_with_via_layouts(request, example) -> None:
         layout = json.load(f)
         result = parse_via(layout)
         assert result == _reference_keyboard(f"{example}-internal.json")
-        result.collapse()
+        # calling this multiple times should not matter
+        for _ in range(0, collapses):
+            result.collapse()
         result.sort_keys()
         reference_collapsed = _reference_keyboard(f"{example}-internal-collapsed.json")
         assert result.keys == reference_collapsed.keys
@@ -455,10 +463,13 @@ def test_with_qmk_layouts(request, example) -> None:
         )
         assert result.keys == reference.keys
 
-        # qmk layout should be convertable to `MatrixAnnotatedKeyboard` type,
-        # calling collapse on already collapsed layout messes things up (FIXME)
+        # qmk layout should be convertible to `MatrixAnnotatedKeyboard` type
         result = MatrixAnnotatedKeyboard(result.meta, result.keys)
-        # result.collapse()
+        # there is no automatic detection if layout is already collapsed (prior to calling `collapse`
+        # for the first time, this would require implementing rotated polygons collision detection
+        # which is too much work for now for this one edge case
+        result.collapsed = True
+        result.collapse()
 
         reference_collapsed = MatrixAnnotatedKeyboard(reference.meta, reference.keys)
         assert result.keys == reference_collapsed.keys

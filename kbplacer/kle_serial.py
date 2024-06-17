@@ -309,6 +309,7 @@ class MatrixAnnotatedKeyboard(Keyboard):
     LAYOUT_OPTION_LABEL = 8
 
     alternative_keys: List[Key] = field(default_factory=list)
+    collapsed: bool = field(init=False)
 
     def __post_init__(self: MatrixAnnotatedKeyboard) -> None:
         for key in list(self.keys):
@@ -319,6 +320,7 @@ class MatrixAnnotatedKeyboard(Keyboard):
             if self.__is_alternative(key):
                 self.alternative_keys.append(copy.deepcopy(key))
                 self.keys.remove(key)
+        self.collapsed = False
 
     def __is_alternative(self, key: Key) -> bool:
         if label := key.get_label(self.LAYOUT_OPTION_LABEL):
@@ -368,6 +370,10 @@ class MatrixAnnotatedKeyboard(Keyboard):
         i.e. the positions they would take as 'non alternative'
         and de-duplicate items with equal matrix coordinates and size
         """
+        if self.collapsed:
+            # prevent double collapsing
+            return
+
         seen = {}
         new_alternatives = []
 
@@ -412,6 +418,7 @@ class MatrixAnnotatedKeyboard(Keyboard):
                 new_alternatives.remove(key)
 
         self.alternative_keys = new_alternatives
+        self.collapsed = True
 
     def sort_keys(self) -> None:
         for l in [self.keys, self.alternative_keys]:
@@ -586,7 +593,9 @@ def parse_qmk(layout) -> MatrixAnnotatedKeyboard:
     for _, l in iter(sorted(deduplicate_keys.items())):
         final_keys += l
 
-    return MatrixAnnotatedKeyboard(meta=metadata, keys=final_keys)
+    keyboard = MatrixAnnotatedKeyboard(meta=metadata, keys=final_keys)
+    keyboard.collapsed = True
+    return keyboard
 
 
 def parse_via(layout) -> MatrixAnnotatedKeyboard:
