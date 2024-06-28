@@ -43,7 +43,7 @@ def load_keyboard(layout_path) -> MatrixAnnotatedKeyboard:
                 _keyboard = MatrixAnnotatedKeyboard(_keyboard.meta, _keyboard.keys)
             except Exception as e:
                 msg = (
-                    f"Layout from {_keyboard} is not convertable to "
+                    f"Layout from {_keyboard} is not convertible to "
                     "matrix annotated keyboard which is required for schematic create"
                 )
                 raise RuntimeError(msg) from e

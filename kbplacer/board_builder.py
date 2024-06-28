@@ -90,7 +90,7 @@ class BoardBuilder:
                         _keyboard = MatrixAnnotatedKeyboard(tmp.meta, tmp.keys)
                     except Exception as e:
                         msg = (
-                            f"Layout from {keyboard} is not convertable to "
+                            f"Layout from {keyboard} is not convertible to "
                             "matrix annotated keyboard which is required "
                             "for board create"
                         )
