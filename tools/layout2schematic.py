@@ -1,11 +1,12 @@
 import argparse
 import json
 import logging
+import re
 import shutil
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import yaml
 from skip import Schematic
@@ -63,16 +64,51 @@ def get_lowest_paper_size(size):
     return smallest_size
 
 
+def parse_annotation(annotation: str) -> Tuple[Optional[str], int]:
+    pattern = r"^([A-Za-z]*)(\d+)$"
+
+    match = re.match(pattern, annotation)
+    if match:
+        prefix, digits = match.groups()
+        return prefix if prefix else None, int(digits)
+    msg = "Unexpected annotation format"
+    raise RuntimeError(msg)
+
+
+def get_or_default(value: Optional[str], default: str) -> str:
+    return value if value else default
+
+
 def create_schematic(
     input_path, output_path, switch_footprint="", diode_footprint=""
 ) -> None:
     keyboard = load_keyboard(input_path)
     matrix = [
-        tuple(map(int, MatrixAnnotatedKeyboard.get_matrix_position(k)))
-        for k in keyboard.keys_in_matrix_order()
+        (parse_annotation(pos[0])[1], parse_annotation(pos[1])[1])
+        for pos in (
+            MatrixAnnotatedKeyboard.get_matrix_position(k)
+            for k in keyboard.keys_in_matrix_order()
+        )
     ]
 
     logger.debug(f"Matrix: {matrix}")
+
+    # deduce label names from annotation of first key,
+    # if annotations are comma separated numbers then use default 'ROW'/'COL' names,
+    # otherwise use same prefix as in annotation
+    first_key = keyboard.keys[0]
+    first_key_matrix_position = MatrixAnnotatedKeyboard.get_matrix_position(first_key)
+    row_label_prefix = get_or_default(
+        parse_annotation(first_key_matrix_position[0])[0], "ROW"
+    )
+    column_label_prefix = get_or_default(
+        parse_annotation(first_key_matrix_position[1])[0], "COL"
+    )
+
+    logger.debug(
+        f"Labels prefixes: for rows: '{row_label_prefix}', "
+        f"for columns: '{column_label_prefix}'"
+    )
 
     # rows and columns does not necessarily contain each value from min to max,
     # i.e. matrix can have columns numbers: 1, 2, 4, 5. Because whole
@@ -105,8 +141,8 @@ def create_schematic(
     for row, column in matrix:
         position = (row, column)
         logger.debug(f"row: {row} column: {column}")
-        row_label = f"ROW{row}"
-        column_label = f"COL{column}"
+        row_label = f"{row_label_prefix}{row}"
+        column_label = f"{column_label_prefix}{column}"
 
         used_slots = len(progress[position])
         if used_slots > 3:
