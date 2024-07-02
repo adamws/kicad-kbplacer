@@ -58,6 +58,12 @@ def pytest_addoption(parser) -> None:
         "This option is for updating expected results and NOT for testing",
         default=False,
     )
+    parser.addoption(
+        "--profile",
+        action="store_true",
+        help="Run example tests with cProfile",
+        default=False,
+    )
 
 
 @pytest.fixture(scope="session")
@@ -73,6 +79,13 @@ def package_name(request):
     if request.config.getoption("--test-plugin-installation"):
         return "com_github_adamws_kicad-kbplacer"
     return "kbplacer"
+
+
+@pytest.fixture(scope="session")
+def profile_args(request):
+    if request.config.getoption("--profile"):
+        return "-m", "cProfile"
+    return None
 
 
 @pytest.fixture(autouse=True, scope="session")

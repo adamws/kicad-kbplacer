@@ -37,6 +37,7 @@ PROJECT_NAME = "keyboard"
 def kbplacer_process(
     package_path,
     package_name,
+    profile_args,
 ):
     def _process(
         route,
@@ -46,8 +47,13 @@ def kbplacer_process(
         flags: list[str] = [],
         args: dict[str, str] = {},
     ):
+
         kbplacer_args = [
             "python3",
+        ]
+        if profile_args:
+            kbplacer_args += profile_args
+        kbplacer_args += [
             "-m",
             package_name,
             "-b",
@@ -728,7 +734,7 @@ def test_version(request, package_name, package_path) -> None:
         kbplacer_args,
         cwd=package_path,
         capture_output=True,
-        text=True,
+        text=True, check=False,
     )
     logger.info(f"Version: {p.stdout}")
     if request.config.getoption("--test-plugin-installation"):

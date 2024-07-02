@@ -29,6 +29,28 @@ jobs:
           path: report.html
       - store_test_results:
           path: test-results
+  test-linux-performance:
+    parameters:
+      version:
+        type: string
+    docker:
+      - image: admwscki/kicad-kbplacer-primary:<<parameters.version>>
+    steps:
+      - checkout
+      - run:
+          name: Prepare tests
+          command: |
+            pip3 install --no-cache-dir -r dev-requirements.txt
+      - run:
+          name: Run tests
+          command: |
+            pytest --junitxml=test-results/pytest/results.xml \
+              -k "2x3-rotations-custom-diode and RAW and PRESET" \
+              --no-cov --profile tests/
+      - store_artifacts:
+          path: report.html
+      - store_test_results:
+          path: test-results
   collect-coverage:
     docker:
       - image: cimg/python:3.11
@@ -325,6 +347,11 @@ workflows:
                 - 7.0.11-focal
                 - 7.0.11-mantic
                 - 8.0.3-focal
+                - 8.0.3-mantic
+      - test-linux-performance:
+          matrix:
+            parameters:
+              version:
                 - 8.0.3-mantic
       - collect-coverage:
           requires:
