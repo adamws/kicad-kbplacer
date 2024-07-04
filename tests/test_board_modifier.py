@@ -1,6 +1,6 @@
 import enum
 import logging
-from typing import List, Tuple, cast
+from typing import List, Tuple
 
 import pcbnew
 import pytest
@@ -98,22 +98,22 @@ def test_track_with_pad_collision(
     set_side(diode, Side.BACK)
 
     pad_position = pad.GetPosition()
-    if KICAD_VERSION >= (7, 0, 0):
-        pad_position = pcbnew.wxPoint(pad_position.x, pad_position.y)
+    if KICAD_VERSION < (7, 0, 0):
+        pad_position = pcbnew.VECTOR2I(pad_position)
 
     # create track to test
     if position == TrackToElementPosition.APART:
-        start = pad_position.__add__(pcbnew.wxPoint(pad.GetSizeX() / 2, 0))
-        start = start.__add__(pcbnew.wxPoint(pcbnew.FromMM(0.5), 0))
+        start = pad_position + pcbnew.VECTOR2I(pad.GetSizeX() // 2, 0)
+        start = start + pcbnew.VECTOR2I_MM(0.5, 0)
     elif position == TrackToElementPosition.STARTS_AT:
         start = pad_position
     elif position == TrackToElementPosition.GOES_THROUGH:
-        start = pad_position.__sub__(pcbnew.wxPoint(pad.GetSizeX() / 2, 0))
-        start = start.__sub__(pcbnew.wxPoint(pcbnew.FromMM(0.5), 0))
+        start = pad_position - pcbnew.VECTOR2I(pad.GetSizeX() // 2, 0)
+        start = start - pcbnew.VECTOR2I_MM(0.5, 0)
     else:
         assert False, "Unexpected position option"
 
-    end = start.__add__(pcbnew.wxPoint(pcbnew.FromMM(5), 0))
+    end = start + pcbnew.VECTOR2I_MM(5, 0)
 
     if side == TrackSide.SAME:
         layer = pcbnew.B_Cu
@@ -155,7 +155,7 @@ def test_track_with_pad_collision(
 
 
 def add_track_segments_test(
-    steps: List[Tuple[pcbnew.wxPoint, bool]], tmpdir, request
+    steps: List[Tuple[pcbnew.VECTOR2I, bool]], tmpdir, request
 ) -> None:
     board = pcbnew.CreateEmptyBoard()
     f = add_diode_footprint(board, "D_SOD-323", request)
@@ -166,10 +166,13 @@ def add_track_segments_test(
     set_side(f, Side.BACK)
 
     start = f.FindPadByNumber("2").GetPosition()
+
     for step in steps:
         direction, should_succeed = step
-        start = cast(pcbnew.wxPoint, start)
-        end = pcbnew.wxPoint(start.x + direction[0], start.y + direction[1])
+        assert start
+        if KICAD_VERSION < (7, 0, 0):
+            start = pcbnew.VECTOR2I(start)
+        end = start + pcbnew.VECTOR2I(*direction)
         start = modifier.add_track_segment_by_points(start, end)
         if should_succeed:
             assert type(start) != type(None), "Unexpected track add failure"
@@ -184,8 +187,8 @@ def test_track_with_track_collision_close_to_footprint(tmpdir, request) -> None:
     # adding track which starts at pad but is so short it barely
     # reaches out of it meaning that next track starting there might
     # be incorrectly detected as colliding with pad
-    steps.append((pcbnew.wxPointMM(-0.4, 0), True))
-    steps.append((pcbnew.wxPointMM(0, 1), True))
+    steps.append((pcbnew.VECTOR2I_MM(-0.4, 0), True))
+    steps.append((pcbnew.VECTOR2I_MM(0, 1), True))
     add_track_segments_test(steps, tmpdir, request)
 
 
@@ -197,8 +200,8 @@ def test_track_with_track_collision_close_to_footprints_one_good_one_bad(
     # instead going down (where there is nothing to collide with), it goes to left and
     # reaches second pad of diode which should be detected as collision,
     # hence segment should not be added
-    steps.append((pcbnew.wxPointMM(-0.4, 0), True))
-    steps.append((pcbnew.wxPointMM(-5, 0), False))
+    steps.append((pcbnew.VECTOR2I_MM(-0.4, 0), True))
+    steps.append((pcbnew.VECTOR2I_MM(-5, 0), False))
     add_track_segments_test(steps, tmpdir, request)
 
 
@@ -208,10 +211,10 @@ def test_track_with_track_collision_close_to_footprint_many_small_tracks(
     steps = []
     # kind of ridiculous example but all tracks here should succeed, such
     # scenario should never happen under normal circumstances
-    steps.append((pcbnew.wxPointMM(-0.4, 0), True))
-    steps.append((pcbnew.wxPointMM(0, -0.4), True))
-    steps.append((pcbnew.wxPointMM(0.4, 0), True))
-    steps.append((pcbnew.wxPointMM(0, 0.4), True))
+    steps.append((pcbnew.VECTOR2I_MM(-0.4, 0), True))
+    steps.append((pcbnew.VECTOR2I_MM(0, -0.4), True))
+    steps.append((pcbnew.VECTOR2I_MM(0.4, 0), True))
+    steps.append((pcbnew.VECTOR2I_MM(0, 0.4), True))
     add_track_segments_test(steps, tmpdir, request)
 
 

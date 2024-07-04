@@ -14,8 +14,8 @@ from kbplacer.template_copier import copy_from_template_to_board
 
 from .conftest import add_switch_footprint, add_track, generate_render
 
-TRACK_START = pcbnew.wxPointMM(0, 5)
-TRACK_END = pcbnew.wxPointMM(19.05, 5)
+TRACK_START = pcbnew.VECTOR2I_MM(0, 5)
+TRACK_END = pcbnew.VECTOR2I_MM(19.05, 5)
 
 
 def prepare_source_board(tmpdir, request) -> str:
@@ -24,7 +24,7 @@ def prepare_source_board(tmpdir, request) -> str:
 
     for i in range(0, 2):
         sw = add_switch_footprint(source_board, request, i)
-        set_position(sw, pcbnew.wxPointMM(i * 19.05, 0))
+        set_position(sw, pcbnew.VECTOR2I_MM(i * 19.05, 0))
         set_rotation(sw, 45 * i)
 
     add_track(source_board, TRACK_START, TRACK_END, pcbnew.B_Cu)
@@ -38,7 +38,7 @@ def prepare_target_board(request):
     footprints = []
     for i in range(0, 2):
         sw = add_switch_footprint(target_board, request, i)
-        assert get_position(sw) == pcbnew.wxPoint(0, 0)
+        assert get_position(sw) == pcbnew.VECTOR2I(0, 0)
         footprints.append(sw)
 
     # change side of one footprint and rotate the other
@@ -63,7 +63,7 @@ def test_template_copy(copy_tracks, tmpdir, request) -> None:
     generate_render(request, pcb_path)
 
     for i, f in enumerate(footprints):
-        assert get_position(f) == pcbnew.wxPointMM(i * 19.05, 0)
+        assert get_position(f) == pcbnew.VECTOR2I_MM(i * 19.05, 0)
         assert get_side(f) == Side.FRONT
         assert get_orientation(f) == 45 * i
     expected_tracks_count = 1 if copy_tracks else 0

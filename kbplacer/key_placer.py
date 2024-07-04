@@ -337,8 +337,8 @@ class KeyPlacer(BoardModifier):
             # specific operations here)
             track = pcbnew.Cast_to_PCB_TRACK(item)
             new_track = track.Duplicate()
-            if KICAD_VERSION >= (7, 0, 0):
-                new_track.Move(pcbnew.VECTOR2I(switch_position.x, switch_position.y))
+            if KICAD_VERSION < (7, 0, 0):
+                new_track.Move(pcbnew.wxPoint(switch_position.x, switch_position.y))
             else:
                 new_track.Move(switch_position)
             if angle != 0:
@@ -440,7 +440,7 @@ class KeyPlacer(BoardModifier):
 
         switch_copy = pcbnew.Cast_to_FOOTPRINT(switch.Duplicate())
         reset_rotation(switch_copy)
-        set_position(switch_copy, pcbnew.wxPoint(0, 0))
+        set_position(switch_copy, pcbnew.VECTOR2I(0, 0))
 
         origin = get_position(switch)
         diode_copies = []
@@ -450,7 +450,7 @@ class KeyPlacer(BoardModifier):
                 rotate(diode_copy, origin, angle)
             set_position(
                 diode_copy,
-                get_position(diode_copy) - pcbnew.wxPoint(origin.x, origin.y),
+                get_position(diode_copy) - origin,
             )
             diode_copies.append(diode_copy)
 
@@ -528,10 +528,10 @@ class KeyPlacer(BoardModifier):
             item_copy.SetNetCode(0)
             if angle := get_orientation(switch):
                 rotate(item_copy, origin, angle)
-            if KICAD_VERSION >= (7, 0, 0):
-                item_copy.Move(pcbnew.VECTOR2I(-origin.x, -origin.y))
-            else:
+            if KICAD_VERSION < (7, 0, 0):
                 item_copy.Move(pcbnew.wxPoint(-origin.x, -origin.y))
+            else:
+                item_copy.Move(origin * -1)
 
             if route:
                 self.board.RemoveNative(item)
@@ -573,19 +573,19 @@ class KeyPlacer(BoardModifier):
         self,
         keyboard: Keyboard,
         key_matrix: KeyMatrix,
-    ) -> pcbnew.wxPoint:
+    ) -> pcbnew.VECTOR2I:
         """Calculates value of offset vector to be applied to key coordinates
         in order to align first key center with defined x/y grid
         """
 
-        def _offset(grid, coordinate, size):
+        def _offset(grid, coordinate, size) -> int:
             if not grid:
                 return 0
             pos = (grid * coordinate) + (grid * size // 2)
             quotient = pos // grid
             # add to avoid placing next to drawing sheet borders (it just looks better):
             margin = 2
-            return grid * (quotient + margin) - pos
+            return int(grid * (quotient + margin) - pos)
 
         offset_x = 0
         offset_y = 0
@@ -594,7 +594,7 @@ class KeyPlacer(BoardModifier):
         if first_key:
             offset_x = _offset(self.__key_distance_x, first_key.x, first_key.width)
             offset_y = _offset(self.__key_distance_y, first_key.y, first_key.height)
-        return pcbnew.wxPoint(offset_x, offset_y)
+        return pcbnew.VECTOR2I(offset_x, offset_y)
 
     def place_switches(
         self,
@@ -611,14 +611,10 @@ class KeyPlacer(BoardModifier):
                 set_side(switch_footprint, key_position.side)
                 set_rotation(switch_footprint, key_position.orientation)
 
-            width = key.width
-            height = key.height
             position = (
-                pcbnew.wxPoint(
-                    (self.__key_distance_x * key.x)
-                    + (self.__key_distance_x * width // 2),
-                    (self.__key_distance_y * key.y)
-                    + (self.__key_distance_y * height // 2),
+                pcbnew.VECTOR2I(
+                    int(self.__key_distance_x * (key.x + key.width / 2)),
+                    int(self.__key_distance_y * (key.y + key.height / 2)),
                 )
                 + offset
             )
@@ -627,9 +623,9 @@ class KeyPlacer(BoardModifier):
             angle = key.rotation_angle
             if angle != 0:
                 rotation_reference = (
-                    pcbnew.wxPoint(
-                        (self.__key_distance_x * key.rotation_x),
-                        (self.__key_distance_y * key.rotation_y),
+                    pcbnew.VECTOR2I(
+                        int(self.__key_distance_x * key.rotation_x),
+                        int(self.__key_distance_y * key.rotation_y),
                     )
                     + offset
                 )
@@ -639,14 +635,14 @@ class KeyPlacer(BoardModifier):
         self,
         footprint: pcbnew.FOOTPRINT,
         element_position: ElementPosition,
-        reference_position: pcbnew.wxPoint,
+        reference_position: pcbnew.VECTOR2I,
         reference_orientation: float,
     ) -> None:
         reset_rotation(footprint)
         set_side(footprint, element_position.side)
         set_rotation(footprint, element_position.orientation)
 
-        offset = pcbnew.wxPointMM(element_position.x, element_position.y)
+        offset = pcbnew.VECTOR2I_MM(element_position.x, element_position.y)
         if reference_orientation != 0:
             offset = position_in_rotated_coordinates(offset, reference_orientation)
 

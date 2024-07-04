@@ -329,8 +329,8 @@ def add_url_to_report(tmpdir, url: str) -> None:
         f.write(url)
 
 
-def pointMM(x, y) -> pcbnew.wxPoint:
-    return pcbnew.wxPoint(pcbnew.FromMM(x), pcbnew.FromMM(y))
+def pointMM(x, y) -> pcbnew.VECTOR2I:
+    return pcbnew.VECTOR2I_MM(x, y)
 
 
 def equal_ignore_order(a, b):
@@ -367,20 +367,20 @@ def add_led_footprint(board, request, ref_count) -> pcbnew.FOOTPRINT:
     return _add_footprint(board, request, "D_SOD-323", f"LED{ref_count}")
 
 
-def get_track(board, start, end, layer):
+def get_track(board, start: pcbnew.VECTOR2I, end: pcbnew.VECTOR2I, layer):
     track = pcbnew.PCB_TRACK(board)
     track.SetWidth(pcbnew.FromMM(0.25))
     track.SetLayer(layer)
-    if KICAD_VERSION >= (7, 0, 0):
-        track.SetStart(pcbnew.VECTOR2I(start.x, start.y))
-        track.SetEnd(pcbnew.VECTOR2I(end.x, end.y))
+    if KICAD_VERSION < (7, 0, 0):
+        track.SetStart(pcbnew.wxPoint(start.x, start.y))
+        track.SetEnd(pcbnew.wxPoint(end.x, end.y))
     else:
         track.SetStart(start)
         track.SetEnd(end)
     return track
 
 
-def add_track(board, start, end, layer):
+def add_track(board, start: pcbnew.VECTOR2I, end: pcbnew.VECTOR2I, layer):
     track = get_track(board, start, end, layer)
     board.Add(track)
     return track
@@ -388,16 +388,18 @@ def add_track(board, start, end, layer):
 
 def rotate(
     item: pcbnew.BOARD_ITEM,
-    rotation_reference: pcbnew.wxPoint,
+    rotation_reference: pcbnew.VECTOR2I,
     angle: float,
 ) -> None:
-    if KICAD_VERSION >= (7, 0, 0):
+    if KICAD_VERSION < (7, 0, 0):
         item.Rotate(
-            pcbnew.VECTOR2I(rotation_reference.x, rotation_reference.y),
-            pcbnew.EDA_ANGLE(angle * -1, pcbnew.DEGREES_T),
+            pcbnew.wxPoint(rotation_reference.x, rotation_reference.y), angle * -10
         )
     else:
-        item.Rotate(rotation_reference, angle * -10)
+        item.Rotate(
+            rotation_reference,
+            pcbnew.EDA_ANGLE(angle * -1, pcbnew.DEGREES_T),
+        )
 
 
 def update_netinfo(board: pcbnew.BOARD, net: pcbnew.NETINFO_ITEM) -> None:

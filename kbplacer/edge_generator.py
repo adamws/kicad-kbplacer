@@ -105,12 +105,12 @@ def build_board_outline_around_footprints(
         segment = pcbnew.PCB_SHAPE(board)
         segment.SetShape(pcbnew.SHAPE_T_SEGMENT)
         segment.SetLayer(pcbnew.Edge_Cuts)
-        if KICAD_VERSION >= (7, 0, 0):
-            segment.SetStart(pcbnew.VECTOR2I(start[0], start[1]))
-            segment.SetEnd(pcbnew.VECTOR2I(end[0], end[1]))
+        if KICAD_VERSION < (7, 0, 0):
+            segment.SetStart(pcbnew.wxPoint(*start))
+            segment.SetEnd(pcbnew.wxPoint(*end))
         else:
-            segment.SetStart(pcbnew.wxPoint(start[0], start[1]))
-            segment.SetEnd(pcbnew.wxPoint(end[0], end[1]))
+            segment.SetStart(pcbnew.VECTOR2I(*start))
+            segment.SetEnd(pcbnew.VECTOR2I(*end))
         segment.SetWidth(pcbnew.FromMM(0.4))
         board.Add(segment)
 

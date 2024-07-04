@@ -27,6 +27,7 @@ from kbplacer.key_placer import (
 from kbplacer.kle_serial import get_keyboard
 
 from .conftest import (
+    KICAD_VERSION,
     add_diode_footprint,
     add_led_footprint,
     add_switch_footprint,
@@ -80,7 +81,7 @@ def save_and_render(board: pcbnew.BOARD, tmpdir, request) -> None:
 def assert_board_tracks(
     expected: list[Tuple[int, int]] | None, board: pcbnew.BOARD
 ) -> None:
-    expected_wx = [pcbnew.wxPoint(x[0], x[1]) for x in expected] if expected else None
+    expected_points = [pcbnew.VECTOR2I(*x) for x in expected] if expected else None
     points = []
     for track in board.GetTracks():
         start = track.GetStart()
@@ -90,8 +91,8 @@ def assert_board_tracks(
         if end not in points:
             points.append(end)
 
-    if expected_wx:
-        assert equal_ignore_order(points, expected_wx)
+    if expected_points:
+        assert equal_ignore_order(points, expected_points)
     else:
         assert not points
 
@@ -157,11 +158,10 @@ def test_diode_switch_routing(
 
     switch_pad = switch.FindPadByNumber("2")
     switch_pad_position = switch_pad.GetPosition()
+    if KICAD_VERSION < (7, 0, 0):
+        switch_pad_position = pcbnew.VECTOR2I(switch_pad_position)
 
-    diode_position = pcbnew.wxPoint(
-        switch_pad_position.x + pcbnew.FromMM(position[0]),
-        switch_pad_position.y + pcbnew.FromMM(position[1]),
-    )
+    diode_position = switch_pad_position + pcbnew.VECTOR2I_MM(*position)
     set_position(diodes[0], diode_position)
     set_side(diodes[0], side)
     diodes[0].SetOrientationDegrees(orientation)
@@ -191,7 +191,7 @@ def test_diode_switch_routing_complicated_footprint(
     )
     key_placer = KeyPlacer(board)
 
-    set_position(diodes[0], pcbnew.wxPointMM(*position))
+    set_position(diodes[0], pcbnew.VECTOR2I_MM(*position))
     diodes[0].SetOrientationDegrees(orientation)
 
     key_placer.route_switch_with_diode(switch, diodes)
@@ -207,7 +207,7 @@ def test_multi_diode_switch_routing(tmpdir, request) -> None:
     key_placer = KeyPlacer(board)
     diode_positions = [(0, 5), (0, -10)]
     for position, diode in zip(diode_positions, diodes):
-        set_position(diode, pcbnew.wxPointMM(*position))
+        set_position(diode, pcbnew.VECTOR2I_MM(*position))
         diode.SetOrientationDegrees(0)
     key_placer.route_switch_with_diode(switch, diodes)
 
@@ -229,7 +229,7 @@ def test_diode_switch_routing_not_matching_nets(tmpdir, request, caplog) -> None
 
     assert len(diodes) == 1
     diodes[0].FindPadByNumber("2").SetNet(None)
-    set_position(diodes[0], pcbnew.wxPointMM(0, 5))
+    set_position(diodes[0], pcbnew.VECTOR2I_MM(0, 5))
 
     with caplog.at_level(logging.ERROR):
         key_placer.route_switch_with_diode(switch, diodes)
@@ -298,11 +298,11 @@ def assert_2x2_layout_switches(
 ) -> None:
     switches = [get_footprint(board, f"SW{i}") for i in range(1, 5)]
     positions = [get_position(switch) for switch in switches]
-    assert positions[0] == pcbnew.wxPointMM(key_distance[0] * 2, key_distance[1] * 2)
-    assert positions[1] - positions[0] == pcbnew.wxPointMM(key_distance[0], 0)
-    assert positions[2] - positions[0] == pcbnew.wxPointMM(0, key_distance[1])
-    assert positions[3] - positions[2] == pcbnew.wxPointMM(key_distance[0], 0)
-    assert positions[3] - positions[1] == pcbnew.wxPointMM(0, key_distance[1])
+    assert positions[0] == pcbnew.VECTOR2I_MM(key_distance[0] * 2, key_distance[1] * 2)
+    assert positions[1] - positions[0] == pcbnew.VECTOR2I_MM(key_distance[0], 0)
+    assert positions[2] - positions[0] == pcbnew.VECTOR2I_MM(0, key_distance[1])
+    assert positions[3] - positions[2] == pcbnew.VECTOR2I_MM(key_distance[0], 0)
+    assert positions[3] - positions[1] == pcbnew.VECTOR2I_MM(0, key_distance[1])
 
 
 @pytest.mark.parametrize(
@@ -337,7 +337,7 @@ def test_switch_distance(key_distance, tmpdir, request) -> None:
     diodes = [get_footprint(board, f"D{i}") for i in range(1, 5)]
     for switch, diode in zip(switches, diodes):
         x, y = diode_position.x, diode_position.y
-        assert get_position(diode) == get_position(switch) + pcbnew.wxPointMM(x, y)
+        assert get_position(diode) == get_position(switch) + pcbnew.VECTOR2I_MM(x, y)
 
 
 def test_diode_placement_ignore(tmpdir, request) -> None:
@@ -355,7 +355,7 @@ def test_diode_placement_ignore(tmpdir, request) -> None:
     diodes = [get_footprint(board, f"D{i}") for i in range(1, 5)]
     positions = [get_position(diode) for diode in diodes]
     for pos in positions:
-        assert pos == pcbnew.wxPoint(0, 0)
+        assert pos == pcbnew.VECTOR2I(0, 0)
     # running without routing enabled, 'router' is not that good yet to correctly
     # handle illegal (overlapping) diodes
     assert len(board.GetTracks()) == 0
@@ -460,7 +460,7 @@ def test_placing_additional_elements(tmpdir, request) -> None:
     sw1 = get_footprint(board, "SW1")
     led1 = get_footprint(board, "LED1")
 
-    position_offset = pcbnew.wxPointMM(0, 5)
+    position_offset = pcbnew.VECTOR2I_MM(0, 5)
     set_position(led1, get_position(sw1) + position_offset)
 
     key_placer.run(layout_path, key_info, diode_info, True, True, additional_elements)
@@ -491,8 +491,8 @@ def test_placing_additional_elements_for_alternative_keys(tmpdir, request) -> No
         switch = add_switch_footprint(board, request, ref_values[i])
         # skipping nets, would raise error message in log but tested operation should
         # succeed anyway
-        position_offset = pcbnew.wxPointMM(20 * i, 0)
-        set_position(switch, pcbnew.wxPointMM(0, 0) + position_offset)
+        position_offset = pcbnew.VECTOR2I_MM(20 * i, 0)
+        set_position(switch, pcbnew.VECTOR2I_MM(0, 0) + position_offset)
 
     destination = "0_2"
     # not using real stabilizer footprint but that's not important here
@@ -510,7 +510,9 @@ def test_placing_additional_elements_for_alternative_keys(tmpdir, request) -> No
 
     save_and_render(board, tmpdir, request)
 
-    assert get_position(stab) == pcbnew.wxPointMM(20 * ref_values.index(destination), 0)
+    assert get_position(stab) == pcbnew.VECTOR2I_MM(
+        20 * ref_values.index(destination), 0
+    )
 
 
 def test_placer_diode_from_preset_missing_path(request) -> None:

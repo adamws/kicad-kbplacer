@@ -19,44 +19,44 @@ if KICAD_VERSION == ():
 
 
 def position_in_rotated_coordinates(
-    point: pcbnew.wxPoint, angle: float
-) -> pcbnew.wxPoint:
+    point: pcbnew.VECTOR2I, angle: float
+) -> pcbnew.VECTOR2I:
     """
     Map position in xy-Cartesian coordinate system to x'y'-Cartesian which
     has same origin but axes are rotated by angle
 
     :param point: A point to be mapped
     :param angle: Rotation angle (in degrees) of x'y'-Cartesian coordinates
-    :type point: pcbnew.wxPoint
+    :type point: pcbnew.VECTOR2I
     :type angle: float
     :return: Result position in x'y'-Cartesian coordinates
-    :rtype: pcbnew.wxPoint
+    :rtype: pcbnew.VECTOR2I
     """
     x, y = point.x, point.y
     angle = math.radians(angle)
     xr = (x * math.cos(angle)) + (y * math.sin(angle))
     yr = (-x * math.sin(angle)) + (y * math.cos(angle))
-    return pcbnew.wxPoint(xr, yr)
+    return pcbnew.VECTOR2I(int(xr), int(yr))
 
 
 def position_in_cartesian_coordinates(
-    point: pcbnew.wxPoint, angle: float
-) -> pcbnew.wxPoint:
+    point: pcbnew.VECTOR2I, angle: float
+) -> pcbnew.VECTOR2I:
     """Performs inverse operation to position_in_rotated_coordinates i.e.
     map position in rotated (by angle) x'y'-Cartesian to xy-Cartesian
 
     :param point: A point to be mapped
     :param angle: Rotation angle (in degrees) of x'y'-Cartesian coordinates
-    :type point: pcbnew.wxPoint
+    :type point: pcbnew.VECTOR2I
     :type angle: float
     :return: Result position in xy-Cartesian coordinates
-    :rtype: pcbnew.wxPoint
+    :rtype: pcbnew.VECTOR2I
     """
     xr, yr = point.x, point.y
     angle = math.radians(angle)
     x = (xr * math.cos(angle)) - (yr * math.sin(angle))
     y = (xr * math.sin(angle)) + (yr * math.cos(angle))
-    return pcbnew.wxPoint(x, y)
+    return pcbnew.VECTOR2I(int(x), int(y))
 
 
 def get_footprint(board: pcbnew.BOARD, reference: str) -> pcbnew.FOOTPRINT:
@@ -80,23 +80,23 @@ def get_optional_footprint(
     return footprint
 
 
-def set_position(footprint: pcbnew.FOOTPRINT, position: pcbnew.wxPoint) -> None:
+def set_position(footprint: pcbnew.FOOTPRINT, position: pcbnew.VECTOR2I) -> None:
     logger.debug(f"Setting {footprint.GetReference()} footprint position: {position}")
-    if KICAD_VERSION >= (7, 0, 0):
-        footprint.SetPosition(pcbnew.VECTOR2I(position.x, position.y))
+    if KICAD_VERSION < (7, 0, 0):
+        footprint.SetPosition(pcbnew.wxPoint(position.x, position.y))
     else:
         footprint.SetPosition(position)
 
 
 def set_position_by_points(footprint: pcbnew.FOOTPRINT, x: int, y: int) -> None:
-    set_position(footprint, pcbnew.wxPoint(x, y))
+    set_position(footprint, pcbnew.VECTOR2I(x, y))
 
 
-def get_position(footprint: pcbnew.FOOTPRINT) -> pcbnew.wxPoint:
+def get_position(footprint: pcbnew.FOOTPRINT) -> pcbnew.VECTOR2I:
     position = footprint.GetPosition()
     logger.debug(f"Getting {footprint.GetReference()} footprint position: {position}")
-    if KICAD_VERSION >= (7, 0, 0):
-        return pcbnew.wxPoint(position.x, position.y)
+    if KICAD_VERSION < (7, 0, 0):
+        return pcbnew.VECTOR2I(position)
     return position
 
 
@@ -126,16 +126,18 @@ def get_orientation(footprint: pcbnew.FOOTPRINT) -> float:
 
 def rotate(
     item: pcbnew.BOARD_ITEM,
-    rotation_reference: pcbnew.wxPoint,
+    rotation_reference: pcbnew.VECTOR2I,
     angle: float,
 ) -> None:
-    if KICAD_VERSION >= (7, 0, 0):
+    if KICAD_VERSION < (7, 0, 0):
         item.Rotate(
-            pcbnew.VECTOR2I(rotation_reference.x, rotation_reference.y),
-            pcbnew.EDA_ANGLE(angle * -1, pcbnew.DEGREES_T),
+            pcbnew.wxPoint(rotation_reference.x, rotation_reference.y), angle * -10
         )
     else:
-        item.Rotate(rotation_reference, angle * -10)
+        item.Rotate(
+            rotation_reference,
+            pcbnew.EDA_ANGLE(angle * -1, pcbnew.DEGREES_T),
+        )
 
 
 def get_distance(i1: pcbnew.BOARD_ITEM, i2: pcbnew.BOARD_ITEM) -> int:
@@ -373,8 +375,8 @@ class BoardModifier:
 
     def add_track_segment_by_points(
         self,
-        start: pcbnew.wxPoint,
-        end: pcbnew.wxPoint,
+        start: pcbnew.VECTOR2I,
+        end: pcbnew.VECTOR2I,
         layer=pcbnew.B_Cu,
         netcode: int = 0,
     ):
@@ -383,9 +385,9 @@ class BoardModifier:
         track.SetLayer(layer)
         if netcode:
             track.SetNetCode(netcode)
-        if KICAD_VERSION >= (7, 0, 0):
-            track.SetStart(pcbnew.VECTOR2I(start.x, start.y))
-            track.SetEnd(pcbnew.VECTOR2I(end.x, end.y))
+        if KICAD_VERSION < (7, 0, 0):
+            track.SetStart(pcbnew.wxPoint(start.x, start.y))
+            track.SetEnd(pcbnew.wxPoint(end.x, end.y))
         else:
             track.SetStart(start)
             track.SetEnd(end)
@@ -440,8 +442,8 @@ class BoardModifier:
         netcode = pad1.GetNetCode()
 
         def _calculate_corners(
-            pos1: pcbnew.wxPoint, pos2: pcbnew.wxPoint
-        ) -> Tuple[pcbnew.wxPoint, pcbnew.wxPoint]:
+            pos1: pcbnew.VECTOR2I, pos2: pcbnew.VECTOR2I
+        ) -> Tuple[pcbnew.VECTOR2I, pcbnew.VECTOR2I]:
             x_diff = pos2.x - pos1.x
             y_diff = pos2.y - pos1.y
             x_diff_abs = builtins.abs(x_diff)
@@ -449,18 +451,18 @@ class BoardModifier:
             if x_diff_abs < y_diff_abs:
                 up_or_down = -1 if y_diff > 0 else 1
                 return (
-                    pcbnew.wxPoint(pos1.x, pos2.y + (up_or_down * x_diff_abs)),
-                    pcbnew.wxPoint(pos2.x, pos1.y - (up_or_down * x_diff_abs)),
+                    pcbnew.VECTOR2I(pos1.x, pos2.y + (up_or_down * x_diff_abs)),
+                    pcbnew.VECTOR2I(pos2.x, pos1.y - (up_or_down * x_diff_abs)),
                 )
             else:
                 left_or_right = -1 if x_diff > 0 else 1
                 return (
-                    pcbnew.wxPoint(pos2.x + (left_or_right * y_diff_abs), pos1.y),
-                    pcbnew.wxPoint(pos1.x - (left_or_right * y_diff_abs), pos2.y),
+                    pcbnew.VECTOR2I(pos2.x + (left_or_right * y_diff_abs), pos1.y),
+                    pcbnew.VECTOR2I(pos1.x - (left_or_right * y_diff_abs), pos2.y),
                 )
 
         def _route(
-            pos1: pcbnew.wxPoint, pos2: pcbnew.wxPoint, corner: pcbnew.wxPoint
+            pos1: pcbnew.VECTOR2I, pos2: pcbnew.VECTOR2I, corner: pcbnew.VECTOR2I
         ) -> bool:
             if end := self.add_track_segment_by_points(pos1, corner, layer, netcode):
                 end = self.add_track_segment_by_points(end, pos2, layer, netcode)
