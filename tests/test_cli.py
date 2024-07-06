@@ -30,6 +30,7 @@ def get_default(board_path: str) -> PluginSettings:
             "D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, ""
         ),
         route_switches_with_diodes=False,  # this in True by default when using GUI
+        optimize_diodes_orientation=False,
         route_rows_and_columns=False,  # same as above
         additional_elements=[
             ElementInfo("ST{}", PositionOption.CUSTOM, ZERO_POSITION, "")

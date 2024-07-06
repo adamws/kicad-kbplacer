@@ -59,6 +59,7 @@ class WindowState:
     )
     enable_diode_placement: bool = True
     route_switches_with_diodes: bool = True
+    optimize_diodes_orientation: bool = False
     diode_info: ElementInfo = field(
         default_factory=lambda: ElementInfo(
             "D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, ""
@@ -593,6 +594,7 @@ class KbplacerDialog(wx.Dialog):
         switch_diodes_section = self.get_switch_diodes_section(
             enable=initial_state.enable_diode_placement,
             route_switches_with_diodes=initial_state.route_switches_with_diodes,
+            optimize_diodes_orientation=initial_state.optimize_diodes_orientation,
             element_info=initial_state.diode_info,
         )
 
@@ -693,6 +695,7 @@ class KbplacerDialog(wx.Dialog):
         self,
         enable: bool = True,
         route_switches_with_diodes: bool = True,
+        optimize_diodes_orientation: bool = False,
         element_info: ElementInfo = ElementInfo(
             "D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, ""
         ),
@@ -706,6 +709,11 @@ class KbplacerDialog(wx.Dialog):
         )
         switches_and_diodes_tracks_checkbox.SetValue(route_switches_with_diodes)
 
+        optimize_diodes_orientation_checkbox = wx.CheckBox(
+            self, label=self._("Automatically adjust orientation")
+        )
+        optimize_diodes_orientation_checkbox.SetValue(optimize_diodes_orientation)
+
         diode_settings = ElementSettingsWidget(
             self,
             element_info,
@@ -718,6 +726,7 @@ class KbplacerDialog(wx.Dialog):
         row1 = wx.BoxSizer(wx.HORIZONTAL)
         row1.Add(place_diodes_checkbox, 0, wx.ALL, 0)
         row1.Add(switches_and_diodes_tracks_checkbox, 0, wx.ALL, 0)
+        row1.Add(optimize_diodes_orientation_checkbox, 0, wx.ALL, 0)
 
         sizer.Add(row1, 0, wx.EXPAND | wx.ALL, 5)
         # weird border value to make it aligned with 'additional_elements_section':
@@ -725,6 +734,9 @@ class KbplacerDialog(wx.Dialog):
 
         self.__place_diodes_checkbox = place_diodes_checkbox
         self.__switches_and_diodes_tracks_checkbox = switches_and_diodes_tracks_checkbox
+        self.__optimize_diodes_orientation_checkbox = (
+            optimize_diodes_orientation_checkbox
+        )
         self.__diode_settings = diode_settings
 
         self.__enable_diode_settings(enable)
@@ -734,8 +746,10 @@ class KbplacerDialog(wx.Dialog):
     def __enable_diode_settings(self, enable: bool) -> None:
         if enable:
             self.__diode_settings.Enable()
+            self.__optimize_diodes_orientation_checkbox.Enable()
         else:
             self.__diode_settings.Disable()
+            self.__optimize_diodes_orientation_checkbox.Disable()
 
     def on_diode_place_checkbox(self, event: wx.CommandEvent) -> None:
         is_checked = event.GetEventObject().IsChecked()
@@ -898,6 +912,9 @@ class KbplacerDialog(wx.Dialog):
 
     def route_switches_with_diodes(self) -> bool:
         return self.__switches_and_diodes_tracks_checkbox.GetValue()
+
+    def optimize_diodes_orientation(self) -> bool:
+        return self.__optimize_diodes_orientation_checkbox.GetValue()
 
     def route_rows_and_columns(self) -> bool:
         return self.__rows_and_columns_tracks_checkbox.GetValue()

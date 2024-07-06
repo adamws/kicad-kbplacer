@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2024-04-19 22:57+0200\n"
+"POT-Creation-Date: 2024-07-20 12:36+0200\n"
 "PO-Revision-Date: 2024-03-17 15:02+0000\n"
 "Last-Translator: Mikachu <micah.sh@proton.me>\n"
 "Language-Team: Dutch <https://hosted.weblate.org/projects/kicad-kbplacer/"
@@ -43,6 +43,9 @@ msgstr "Schakelaar instellingen"
 msgid "Route with switches"
 msgstr "Route met schakelaars"
 
+msgid "Automatically adjust orientation"
+msgstr ""
+
 msgid "Switch diodes settings"
 msgstr "Schakelaar Diode Instellingen"
 
@@ -63,4 +66,3 @@ msgstr ""
 
 msgid "Other settings"
 msgstr ""
-

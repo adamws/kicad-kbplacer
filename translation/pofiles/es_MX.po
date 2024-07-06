@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2024-04-19 22:57+0200\n"
+"POT-Creation-Date: 2024-07-20 12:36+0200\n"
 "PO-Revision-Date: 2024-02-15 17:02+0000\n"
 "Last-Translator: Ulices <hasecilu@tuta.io>\n"
 "Language-Team: Spanish (Mexico) <https://hosted.weblate.org/projects/kicad-"
@@ -43,6 +43,9 @@ msgstr "Configuración de los interruptores"
 msgid "Route with switches"
 msgstr "Ruta con interruptores"
 
+msgid "Automatically adjust orientation"
+msgstr ""
+
 msgid "Switch diodes settings"
 msgstr "Configuración de los diodos de los interruptores"
 
@@ -63,5 +66,3 @@ msgstr "Delta del contorno:"
 
 msgid "Other settings"
 msgstr "Otras configuraciones"
-
-

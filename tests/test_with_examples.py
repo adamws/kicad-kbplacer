@@ -416,6 +416,21 @@ def test_with_examples_annotated_layout_shuffled_references(
         kbplacer_process(True, None, layout_path, pcb_path)
 
 
+@pytest.mark.parametrize("example", ["2x2-japanese-duplex-matrix", "2x2"])
+def test_with_examples_optimize_diodes_orientation(
+    example, example_isolation, kbplacer_process
+) -> None:
+    with example_isolation(example, "kle.json", "Tracks", "DefaultDiode") as e:
+        layout_path, pcb_path = e
+        kbplacer_process(
+            True,
+            None,
+            layout_path,
+            pcb_path,
+            flags=["--optimize-diodes-orientation"],
+        )
+
+
 def test_saving_connection_template(
     request, example_isolation, kbplacer_process
 ) -> None:
@@ -736,7 +751,8 @@ def test_version(request, package_name, package_path) -> None:
         kbplacer_args,
         cwd=package_path,
         capture_output=True,
-        text=True, check=False,
+        text=True,
+        check=False,
     )
     logger.info(f"Version: {p.stdout}")
     if request.config.getoption("--test-plugin-installation"):
