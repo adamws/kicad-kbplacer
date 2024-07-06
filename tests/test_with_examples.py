@@ -73,6 +73,8 @@ def kbplacer_process(
         for k, v in args.items():
             kbplacer_args.append(k)
             kbplacer_args.append(v)
+        kbplacer_args.append("--log-level")
+        kbplacer_args.append("DEBUG")
 
         p = subprocess.Popen(
             kbplacer_args,
