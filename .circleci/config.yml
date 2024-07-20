@@ -157,6 +157,9 @@ jobs:
             elif [ "<<parameters.kicad-version>>" = "8.0.3" ]; then
               revision=d5e707138d98f4e02221c1fdcf4cc887970c962d
               filepath=Casks/k/kicad.rb
+            elif [ "<<parameters.kicad-version>>" = "8.0.4" ]; then
+              revision=ced7b59ba78c908ee102ce8ea98387d4a116bef8
+              filepath=Casks/k/kicad.rb
             else
               echo "Unsupported KiCad version!"
             fi
@@ -321,10 +324,10 @@ jobs:
       - run:
           name: Build and push KiCad nightly docker image
           command: |
-            docker build -t admwscki/kicad-kbplacer-primary:nightly-mantic -f nightly.Dockerfile .
+            docker build -t admwscki/kicad-kbplacer-primary:nightly-jammy -f nightly.Dockerfile .
             echo $DOCKERHUB_PASSWORD | docker login -u $DOCKERHUB_LOGIN --password-stdin
-            docker push admwscki/kicad-kbplacer-primary:nightly-mantic
-          working_directory: .circleci/images/mantic
+            docker push admwscki/kicad-kbplacer-primary:nightly-jammy
+          working_directory: .circleci/images/jammy
   test-linux-kicad-nightly:
     parameters:
       version:
@@ -346,13 +349,13 @@ workflows:
                 - 7.0.6-lunar
                 - 7.0.11-focal
                 - 7.0.11-mantic
-                - 8.0.3-focal
-                - 8.0.3-mantic
+                - 8.0.4-focal
+                - 8.0.4-jammy
       - test-linux-performance:
           matrix:
             parameters:
               version:
-                - 8.0.3-mantic
+                - 8.0.4-jammy
       - collect-coverage:
           requires:
             - test-linux
@@ -365,13 +368,13 @@ workflows:
               kicad-version:
                 - 6.0.11
                 - 7.0.11
-                - 8.0.3
+                - 8.0.4
       - test-macos:
           matrix:
             parameters:
               kicad-version:
                 - 7.0.11
-                - 8.0.3
+                - 8.0.4
       - create-pcm-package:
           requires: &required-tests
             - test-linux
@@ -413,6 +416,6 @@ workflows:
     jobs:
       - build-nightly-image
       - test-linux-kicad-nightly:
-          version: nightly-mantic
+          version: nightly-jammy
           requires:
             - build-nightly-image
