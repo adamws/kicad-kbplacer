@@ -20,6 +20,7 @@ and [ergogen](https://github.com/ergogen/ergogen).
 - [Use from KiCad](#how-to-use-from-kicad)
   - [Options overview](#options-overview)
   - [Diode placement and routing](#diode-placement-and-routing)
+    - [Diode automatic orientation adjustment](#diode-automatic-orientation-adjustment)
   - [Track templating](#track-templating)
   - [Additional elements placement](#additional-elements-placement)
   - [Building board outline](#building-board-outline)
@@ -245,7 +246,7 @@ python -m com_github_adamws_kicad-kbplacer --help
     </td>
   </tr>
   <tr>
-    <td rowspan="8" align="center" style="vertical-align: middle;">Switch diodes settings</td>
+    <td rowspan="9" align="center" style="vertical-align: middle;">Switch diodes settings</td>
     <td align="center" style="vertical-align: middle;">Allow autoplacement</td>
     <td>
       Enables automatic diodes positioning. When turned on, each diode will be placed
@@ -262,6 +263,14 @@ python -m com_github_adamws_kicad-kbplacer --help
       then it replicates the connection for remaining pairs. If not, uses automatic
       internal router. When automatic router used, attempts to connect only two closest
       pads of the same net.
+    </td>
+  </tr>
+  <tr>
+    <td align="center" style="vertical-align: middle;">Automatically adjust orientation</td>
+    <td>
+      Enables automatic diode orientation adjustment based on distance between diode
+      and corresponding switch. Useful for some key matrix types, for example Japanese
+      duplex matrix, where diodes are connected with alternating directions.
     </td>
   </tr>
   <tr>
@@ -393,6 +402,21 @@ In the above example it managed to connect diodes to switches but failed to conn
 Switch-to-diode routing is not done with proper auto-routing algorithm and it is very limited.
 It attempts to create track in the shortest way (using 45&deg; angles) and doesn't look for other options
 if there is a collision, leaving elements unconnected.
+
+<!-- TOC --><a name="diode-automatic-orientation-adjustment"></a>
+#### Diode automatic orientation adjustment
+
+Some key matrix types use diodes in alternating directions (see [The (Japanese) duplex matrix](https://kbd.news/The-Japanese-duplex-matrix-1391.html)),
+making it undesirable to use a single `Position` value for all of them.
+When `Automatically adjust orientation` is enabled, `kicad-kbplacer` will choose between two positions:
+the one defined by the `Position` controls values and another with the orientation rotated by 180 degrees.
+It then selects the position where the distance between the switch and diode pads is shortest.
+
+Consider following example:
+
+Schematic | Automatic adjustment disabled | Automatic adjustment enabled
+--- | --- | ---
+![japanese-matrix-schematic](resources/japanese-matrix-schematic.png) | ![japanese-matrix-no-adjustment](resources/japanese-matrix-no-automatic-adjustment.png) | ![japanese-matrix-adjustment](resources/japanese-matrix-automatic-adjustment.png)
 
 <!-- TOC --><a name="track-templating"></a>
 ### Track templating

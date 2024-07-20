@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: \n"
-"POT-Creation-Date: 2024-04-19 22:57+0200\n"
+"POT-Creation-Date: 2024-07-20 12:36+0200\n"
 "PO-Revision-Date: 2024-02-23 19:09+0100\n"
 "Last-Translator: adamws <adamws@users.noreply.github.com>\n"
 "Language-Team: Polish <https://hosted.weblate.org/projects/kicad-kbplacer/"
@@ -44,6 +44,9 @@ msgstr "Ustawiania przełączników"
 msgid "Route with switches"
 msgstr "Trasuj z przełącznikami"
 
+msgid "Automatically adjust orientation"
+msgstr "Automatycznie dopasuj orientację"
+
 msgid "Switch diodes settings"
 msgstr "Ustawienia diód przełączników"
 
@@ -64,5 +67,3 @@ msgstr "Delta obrysu:"
 
 msgid "Other settings"
 msgstr "Pozostałe ustawiania"
-
-

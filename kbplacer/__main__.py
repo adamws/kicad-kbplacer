@@ -311,6 +311,14 @@ def app() -> None:
         type=str,
         help="Provide logging level, default=%(default)s",
     )
+    parser.add_argument(
+        "--optimize-diodes-orientation",
+        action="store_true",
+        help=(
+            "Enables automatic diode orientation adjustment based on distance\n"
+            "between diode and corresponding switch."
+        ),
+    )
 
     args = parser.parse_args()
 
@@ -333,6 +341,7 @@ def app() -> None:
         key_distance=args.key_distance,
         diode_info=args.diode,
         route_switches_with_diodes=args.route_switches_with_diodes,
+        optimize_diodes_orientation=args.optimize_diodes_orientation,
         route_rows_and_columns=args.route_rows_and_columns,
         additional_elements=args.additional_elements,
         generate_outline=args.build_board_outline,

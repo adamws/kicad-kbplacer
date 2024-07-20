@@ -21,6 +21,7 @@ class PluginSettings:
     key_distance: Tuple[float, float]
     diode_info: ElementInfo
     route_switches_with_diodes: bool
+    optimize_diodes_orientation: bool
     route_rows_and_columns: bool
     additional_elements: List[ElementInfo]
     generate_outline: bool
@@ -50,6 +51,7 @@ def run(settings: PluginSettings) -> pcbnew.BOARD:
         settings.route_switches_with_diodes,
         settings.route_rows_and_columns,
         additional_elements=settings.additional_elements,
+        optimize_diodes_orientation=settings.optimize_diodes_orientation,
     )
 
     if settings.generate_outline:
@@ -78,6 +80,7 @@ def run_from_gui(board_path: str, state: WindowState) -> pcbnew.BOARD:
         key_distance=state.key_distance,
         diode_info=state.diode_info,
         route_switches_with_diodes=state.route_switches_with_diodes,
+        optimize_diodes_orientation=state.optimize_diodes_orientation,
         route_rows_and_columns=state.route_rows_and_columns,
         additional_elements=state.additional_elements,
         generate_outline=state.generate_outline,

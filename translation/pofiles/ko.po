@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2024-04-19 22:57+0200\n"
+"POT-Creation-Date: 2024-07-20 12:36+0200\n"
 "PO-Revision-Date: 2024-03-28 08:01+0000\n"
 "Last-Translator: 김랑기 <korearf@gmail.com>\n"
 "Language-Team: Korean <https://hosted.weblate.org/projects/kicad-kbplacer/"
@@ -42,6 +42,9 @@ msgstr "설정 스위치"
 msgid "Route with switches"
 msgstr "전환 경로"
 
+msgid "Automatically adjust orientation"
+msgstr ""
+
 msgid "Switch diodes settings"
 msgstr "다이오드 설정 전환"
 
@@ -62,5 +65,3 @@ msgstr "외곽선 델타:"
 
 msgid "Other settings"
 msgstr "기타 설정"
-
-

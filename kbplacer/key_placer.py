@@ -679,6 +679,36 @@ class KeyPlacer(BoardModifier):
                         )
                         placed_diodes.append(diode)
 
+    def optimize_diodes_orientation(
+        self,
+        key_matrix: KeyMatrix,
+    ) -> None:
+        for (
+            reference,
+            switch,
+        ) in key_matrix.switches_by_reference_ordered():
+            diodes = key_matrix.diodes_by_switch_reference(reference)
+            logger.debug(f"Optimizing orientation of {switch.GetReference()} diodes")
+            for diode in diodes:
+                if pads := get_closest_pads_on_same_net(diode, switch):
+                    distance1 = get_distance(*pads)
+                    position = get_position(diode)
+                    rotate(diode, position, 180)
+                    distance2 = get_distance(*pads)
+                    diff = abs(distance1 - distance2)
+                    # if first was shorter or approximately the same (less than 0.01mm)
+                    # then go back to initial orientation
+                    if distance1 < distance2 or diff < 10000:
+                        rotate(diode, position, 180)
+                    else:
+                        logger.debug(
+                            f"Rotated {diode.GetReference()} to minimize distance"
+                        )
+                else:
+                    logger.error(
+                        "Could not find pads with the same net, diode optimization skipped"
+                    )
+
     def place_switch_elements(
         self,
         elements: List[ElementInfo],
@@ -859,6 +889,7 @@ class KeyPlacer(BoardModifier):
         route_switches_with_diodes: bool = False,
         route_rows_and_columns: bool = False,
         additional_elements: List[ElementInfo] = [],
+        optimize_diodes_orientation: bool = False,
     ) -> None:
         # stage 1 - prepare
         key_matrix = KeyMatrix(
@@ -919,6 +950,8 @@ class KeyPlacer(BoardModifier):
         logger.info(f"Diode info: {diode_infos}")
         if diode_info.position_option != PositionOption.UNCHANGED:
             self.place_diodes(diode_infos, key_matrix)
+            if optimize_diodes_orientation:
+                self.optimize_diodes_orientation(key_matrix)
 
         if additional_elements:
             self.place_switch_elements(additional_elements, key_matrix)
