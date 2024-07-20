@@ -28,7 +28,7 @@ def test_side_get_invalid() -> None:
 
 def test_side_get_invalid_type() -> None:
     with pytest.raises(ValueError, match="'True' is not a valid Side"):
-        Side.get(True)
+        Side.get(True)  # type: ignore
 
 
 @pytest.mark.parametrize(
@@ -49,7 +49,7 @@ def test_position_option_get_invalid() -> None:
 
 def test_position_option_get_invalid_type() -> None:
     with pytest.raises(ValueError, match="'True' is not a valid PositionOption"):
-        PositionOption.get(True)
+        PositionOption.get(True)  # type: ignore
 
 
 @pytest.mark.parametrize(

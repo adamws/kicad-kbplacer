@@ -42,7 +42,7 @@ from .board_modifier import (
     set_side,
 )
 from .element_position import ElementInfo, ElementPosition, PositionOption
-from .kle_serial import Keyboard, MatrixAnnotatedKeyboard, get_keyboard_from_file
+from .kle_serial import Key, Keyboard, MatrixAnnotatedKeyboard, get_keyboard_from_file
 
 logger = logging.getLogger(__name__)
 
@@ -213,7 +213,7 @@ class KeyboardSwitchIterator:
         self._current_key = 1
         return self
 
-    def __get_footprint(self, key) -> pcbnew.FOOTPRINT:
+    def __get_footprint(self, key: Key) -> pcbnew.FOOTPRINT:
         if self._explicit_annotations:
             return self._key_matrix.switch_by_format_value(
                 key.labels[self.EXPLICIT_ANNOTATION_LABEL]
@@ -247,7 +247,7 @@ class MatrixAnnotatedKeyboardSwitchIterator:
         self._seen: List[Tuple[str, str]] = []
         return self
 
-    def __get_footprint(self, key) -> Optional[pcbnew.FOOTPRINT]:
+    def __get_footprint(self, key: Key) -> Optional[pcbnew.FOOTPRINT]:
         matrix_coordinates = MatrixAnnotatedKeyboard.get_matrix_position(key)
         if all(c.isdigit() for c in matrix_coordinates):
             switches = self._key_matrix.switches_references_by_coordinates(
@@ -408,7 +408,7 @@ class KeyPlacer(BoardModifier):
 
         any_removed = False
 
-        def _is_dangling(track):
+        def _is_dangling(track: pcbnew.PCB_TRACK) -> bool:
             if KICAD_VERSION >= (7, 0, 7):
                 return connectivity.TestTrackEndpointDangling(track, False)
             return connectivity.TestTrackEndpointDangling(track)
@@ -578,7 +578,11 @@ class KeyPlacer(BoardModifier):
         in order to align first key center with defined x/y grid
         """
 
-        def _offset(grid, coordinate, size) -> int:
+        def _offset(
+            grid: Union[int, float],
+            coordinate: Union[int, float],
+            size: Union[int, float],
+        ) -> int:
             if not grid:
                 return 0
             pos = (grid * coordinate) + (grid * size // 2)
@@ -706,7 +710,8 @@ class KeyPlacer(BoardModifier):
                         )
                 else:
                     logger.error(
-                        "Could not find pads with the same net, diode optimization skipped"
+                        "Could not find pads with the same net, "
+                        "diode optimization skipped"
                     )
 
     def place_switch_elements(

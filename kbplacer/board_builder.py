@@ -111,7 +111,7 @@ class BoardBuilder:
                 continue
             items.append(MatrixAnnotatedKeyboard.get_matrix_position(key))
 
-        def _sort_matrix(item):
+        def _sort_matrix(item: Tuple[str, str]) -> Tuple[int, int]:
             row_match = re.search(r"\d+", item[0])
             column_match = re.search(r"\d+", item[1])
 

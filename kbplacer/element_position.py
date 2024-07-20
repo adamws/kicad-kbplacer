@@ -10,7 +10,7 @@ class Side(str, Enum):
     BACK = "Back"
 
     @classmethod
-    def get(cls, name) -> Side:
+    def get(cls, name: str) -> Side:
         if isinstance(name, str):
             try:
                 return Side(name.title())
@@ -40,7 +40,7 @@ class PositionOption(str, Enum):
         return self.value
 
     @classmethod
-    def get(cls, name) -> PositionOption:
+    def get(cls, name: str) -> PositionOption:
         if isinstance(name, str):
             try:
                 return PositionOption(name.title())

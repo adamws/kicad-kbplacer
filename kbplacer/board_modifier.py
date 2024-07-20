@@ -5,7 +5,7 @@ import itertools
 import logging
 import math
 import re
-from typing import Tuple
+from typing import Optional, Tuple, Union
 
 import pcbnew
 
@@ -233,7 +233,7 @@ class BoardModifier:
     def __init__(self, board: pcbnew.BOARD) -> None:
         self.board = board
 
-    def get_connectivity(self):
+    def get_connectivity(self) -> pcbnew.CONNECTIVITY_DATA:
         self.board.BuildConnectivity()
         return self.board.GetConnectivity()
 
@@ -347,7 +347,9 @@ class BoardModifier:
             return self._test_collision_track_without_net(track)
         return self._test_collision_track_with_net(track)
 
-    def add_track_to_board(self, track: pcbnew.PCB_TRACK):
+    def add_track_to_board(
+        self, track: pcbnew.PCB_TRACK
+    ) -> Optional[Union[pcbnew.VECTOR2I, pcbnew.wxPoint]]:
         """Add track to the board if track passes collision check.
         If track has no set netlist, it would get netlist of a pad
         or other track, on which it started or ended.
@@ -377,9 +379,9 @@ class BoardModifier:
         self,
         start: pcbnew.VECTOR2I,
         end: pcbnew.VECTOR2I,
-        layer=pcbnew.B_Cu,
+        layer: int = pcbnew.B_Cu,
         netcode: int = 0,
-    ):
+    ) -> Optional[Union[pcbnew.VECTOR2I, pcbnew.wxPoint]]:
         track = pcbnew.PCB_TRACK(self.board)
         track.SetWidth(pcbnew.FromMM(0.25))
         track.SetLayer(layer)
