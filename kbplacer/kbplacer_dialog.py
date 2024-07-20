@@ -957,6 +957,7 @@ class KbplacerDialog(wx.Dialog):
             key_info=self.get_key_info(),
             enable_diode_placement=self.enable_diode_placement(),
             route_switches_with_diodes=self.route_switches_with_diodes(),
+            optimize_diodes_orientation=self.optimize_diodes_orientation(),
             diode_info=self.get_diode_info(),
             additional_elements=self.get_additional_elements_info(),
             route_rows_and_columns=self.route_rows_and_columns(),
