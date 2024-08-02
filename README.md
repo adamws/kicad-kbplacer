@@ -150,7 +150,7 @@ To use this tool in this way, it needs to be installed following [plugin install
   convert [ergogen](https://github.com/ergogen/ergogen) points file to json
 
   <details>
-  <summary>keyboard-layout-editor details</summary>
+  <summary>keyboard-layout-editor details <i>(click to expand)</i></summary>
 
     ![kle-download](resources/kle-download.png)
 
@@ -169,7 +169,7 @@ To use this tool in this way, it needs to be installed following [plugin install
   </details>
 
   <details>
-  <summary>ergogen details</summary>
+  <summary>ergogen details <i>(click to expand)</i></summary>
 
     - open your design in https://ergogen.cache.works/ and download `points.yaml`
 
