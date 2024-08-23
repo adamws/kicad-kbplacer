@@ -7,6 +7,7 @@ Write-Output "Add KiCad's python to environment"
 $addPaths = $pythonPath,"$pythonPath\Scripts"
 $env:Path = ($arrPath + $addPaths) -join ";"
 
+python -c "import sys; print('Python version: ' + sys.version)"
 python -c "import pcbnew; print('KiCad version: ' + pcbnew.Version())"
 
 if ($LastExitCode -ne 0) {
