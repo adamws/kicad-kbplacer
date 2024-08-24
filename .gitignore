@@ -8,7 +8,8 @@ dist/
 .coverage
 .coverage.*
 .pytest_cache/
-tests/report.html
+tests/report*.html
+report*.html
 
 # Environments
 .env
