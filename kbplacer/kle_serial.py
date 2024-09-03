@@ -931,7 +931,7 @@ if __name__ == "__main__":
     ergogen_filter = args.ergogen_filter
     collapse = args.collapse
 
-    if input_format == output_format:
+    if input_format == output_format and not collapse:
         print("Output format equal input format, nothing to do...")
         sys.exit(1)
 
