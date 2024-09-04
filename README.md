@@ -564,6 +564,13 @@ The `kbplacer` is used by additional tools available in [tools](tools/README.md)
             Example result: <a href="http://www.keyboard-layout-editor.com/##@@_a:7%3B&=&=%3B&@=&=">url</a>
         </td>
     </tr>
+    <tr>
+        <td>
+            <code>layout2openscad.py</code> - generate plate for <a href="https://openscad.org/">openscad</a></br>
+            (⚠️ experimental)
+        </td>
+        <td><img src="resources/example-openscad-plate.png"/></td>
+    </tr>
 </table>
 
 <!-- TOC --><a name="use-in-python-projects"></a>

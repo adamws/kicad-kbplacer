@@ -3,6 +3,7 @@
 - `layout2image.py` - generate KLE style SVG image from keyboard layout
 - `layout2schematic.py` - generate KiCad schematic file from keyboard layout
 - `layout2url.py` - generate KLE url
+- `layout2openscad.py` - generate plate for [openscad](https://openscad.org/) (:warning: experimental)
 
 ## How to run
 
@@ -14,6 +15,7 @@ To execute, run:
 $ hatch run tools:layout2image {args...}
 $ hatch run tools:layout2schematic {args...}
 $ hatch run tools:layout2url {args...}
+$ hatch run tools:layout2openscad {args...}
 ```
 
 Alternatively, install required dependencies and run as regular python script:
@@ -22,6 +24,7 @@ Alternatively, install required dependencies and run as regular python script:
 python tools/layout2image.py {args...}
 python tools/layout2schematic.py {args...}
 python tools/layout2url.py {args...}
+python tools/layout2openscad.py {args...}
 ```
 
 ## Examples
