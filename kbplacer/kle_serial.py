@@ -636,7 +636,7 @@ def parse_kle(layout) -> Keyboard:
                     if len(items) > KEY_MAX_LABELS:
                         msg = (
                             f"Illegal key labels: '{repr(item)}'. "
-                            f"Labels string can contain {KEY_MAX_LABELS} '\n' "
+                            f"Labels string can contain {KEY_MAX_LABELS} '\\n' "
                             "separated items, ignoring redundant values."
                         )
                         logger.warning(msg)

@@ -127,7 +127,7 @@ class LabelsTestCase(unittest.TestCase):
             cm.output,
             [
                 f"WARNING:kbplacer.kle_serial:Illegal key labels: '{repr(labels)}'. "
-                "Labels string can contain 12 '\n' separated items, "
+                "Labels string can contain 12 '\\n' separated items, "
                 "ignoring redundant values."
             ],
         )
