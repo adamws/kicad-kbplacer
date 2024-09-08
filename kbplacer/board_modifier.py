@@ -5,7 +5,7 @@ import itertools
 import logging
 import math
 import re
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 
 import pcbnew
 
@@ -347,9 +347,7 @@ class BoardModifier:
             return self._test_collision_track_without_net(track)
         return self._test_collision_track_with_net(track)
 
-    def add_track_to_board(
-        self, track: pcbnew.PCB_TRACK
-    ) -> Optional[Union[pcbnew.VECTOR2I, pcbnew.wxPoint]]:
+    def add_track_to_board(self, track: pcbnew.PCB_TRACK) -> Optional[pcbnew.VECTOR2I]:
         """Add track to the board if track passes collision check.
         If track has no set netlist, it would get netlist of a pad
         or other track, on which it started or ended.
@@ -370,6 +368,8 @@ class BoardModifier:
         if not self.test_track_collision(track):
             self.board.Add(track)
             logger.info("Track added")
+            if KICAD_VERSION < (7, 0, 0):
+                return pcbnew.VECTOR2I(stop.x, stop.y)
             return stop
         else:
             logger.debug("Could not add track segment due to detected collision")
@@ -381,7 +381,7 @@ class BoardModifier:
         end: pcbnew.VECTOR2I,
         layer: int = pcbnew.B_Cu,
         netcode: int = 0,
-    ) -> Optional[Union[pcbnew.VECTOR2I, pcbnew.wxPoint]]:
+    ) -> Optional[pcbnew.VECTOR2I]:
         track = pcbnew.PCB_TRACK(self.board)
         track.SetWidth(pcbnew.FromMM(0.25))
         track.SetLayer(layer)
@@ -395,7 +395,7 @@ class BoardModifier:
             track.SetEnd(end)
         return self.add_track_to_board(track)
 
-    def route(self, pad1: pcbnew.PAD, pad2: pcbnew.PAD) -> None:
+    def route(self, pad1: pcbnew.PAD, pad2: pcbnew.PAD) -> bool:
         r"""Simple track router
         If pads are collinear, it will use single track segment.
         If pads are not collinear it will try use two segments track,
@@ -428,18 +428,20 @@ class BoardModifier:
         0, 90, 180 and 270. When comparing rotations use angle to closest
         quarter, i.e. footprints with orientation 10 and 190 (190-180=10) are
         considered to be rotated the same.
+
+        Returns True if routing done, False otherwise
         """
         layers = get_common_layers(pad1, pad2)
         if not layers:
             logger.warning("Could not route pads, no common layers found")
-            return
+            return False
 
         layer = layers[0]
         logger.debug(f"Routing at {self.board.GetLayerName(layer)} layer")
 
         if pad1.GetNetCode() != pad2.GetNetCode():
             logger.warning("Could not route pads of different nets")
-            return
+            return False
 
         netcode = pad1.GetNetCode()
 
@@ -499,7 +501,7 @@ class BoardModifier:
                 "Could not route pads when parent footprints not rotated the same, "
                 f"orientations: {orientation1} and {orientation2}"
             )
-            return
+            return False
 
         logger.debug(
             f"Routing pad '{pad1.GetParentAsString()}:{pad1.GetPadName()}' at {pos1} "
@@ -507,9 +509,10 @@ class BoardModifier:
             f"using coordinate system rotated by {angle} degree(s)"
         )
 
+        end = None
         # if in line, use one track segment
         if pos1.x == pos2.x or pos1.y == pos2.y:
-            self.add_track_segment_by_points(pos1, pos2, layer, netcode)
+            end = self.add_track_segment_by_points(pos1, pos2, layer, netcode)
         else:
             # pads are not in single line, attempt routing with two segment track
             if angle != 0:
@@ -523,5 +526,8 @@ class BoardModifier:
             else:
                 corners = _calculate_corners(pos1, pos2)
 
-            if not _route(pos1, pos2, corners[0]):
-                _route(pos1, pos2, corners[1])
+            for corner in corners:
+                if end := _route(pos1, pos2, corner):
+                    break
+
+        return end is not None
