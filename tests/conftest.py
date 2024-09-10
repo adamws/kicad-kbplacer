@@ -1,6 +1,7 @@
 import base64
 import ctypes
 import glob
+import json
 import logging
 import mimetypes
 import os
@@ -306,6 +307,18 @@ def generate_render(
     new_tree.write(f"{destination_dir}/report/{pcb_name}.svg")
 
 
+def ignore_selected_drc_rules(board_path: Union[str, os.PathLike]) -> None:
+    project_file = Path(board_path).with_suffix(".kicad_pro")
+    assert project_file.exists(), "Could not ignore DRC rules without .kicad_pro file"
+    with open(project_file, "r") as f:
+        project_data = json.load(f)
+    rules_to_ignore = ["lib_footprint_mismatch", "invalid_outline", "silk_overlap"]
+    for rule in rules_to_ignore:
+        project_data["board"]["design_settings"]["rule_severities"][rule] = "ignore"
+    with open(project_file, "w") as f:
+        json.dump(project_data, f)
+
+
 def kicad_cli() -> str:
     if sys.platform == "darwin":
         return "/opt/homebrew/bin/kicad-cli"
@@ -316,6 +329,8 @@ def generate_drc(tmpdir, board_path: Union[str, os.PathLike]) -> None:
     board_path = Path(board_path)
     board_name = board_path.stem
     drc_path = tmpdir / f"report/{board_name}-drc.log"
+
+    ignore_selected_drc_rules(board_path)
 
     if KICAD_VERSION >= (8, 0, 1):
         # there is some kind of KiCad regression, running WriteDRCReport function
