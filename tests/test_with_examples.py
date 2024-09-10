@@ -320,6 +320,21 @@ def get_reference_files(references_dir):
     return reference_files
 
 
+def prepare_fp_lib_table(request, tmpdir) -> None:
+    test_dir = request.fspath.dirname
+
+    libs = [
+        ("examples", Path(f"{test_dir}/../examples/examples.pretty").absolute()),
+    ]
+    with open(f"{tmpdir}/fp-lib-table", "w") as f:
+        f.write("(fp_lib_table\n")
+        for name, uri in libs:
+            f.write(
+                f'  (lib (name {name})(type KiCad)(uri {uri})(options "")(descr ""))\n'
+            )
+        f.write(")")
+
+
 def prepare_project(request, tmpdir, example: str, layout_file: str) -> None:
     test_dir = request.fspath.dirname
 
@@ -330,6 +345,8 @@ def prepare_project(request, tmpdir, example: str, layout_file: str) -> None:
     shutil.copy(f"{source_dir}/{layout_file}", tmpdir)
     for template in glob.glob(f"{source_dir}/*_template.kicad_pcb"):
         shutil.copy(template, tmpdir)
+
+    prepare_fp_lib_table(request, tmpdir)
 
 
 def common_board_checks(pcb_path: str) -> None:
@@ -480,6 +497,7 @@ def test_empty_run(
 
     shutil.copy(reference, reference_copy)
     shutil.copy(reference, working_copy)
+    prepare_fp_lib_table(request, tmpdir)
 
     # empty run:
     if test_type == "CLI":
@@ -726,6 +744,7 @@ def test_template_copy_complex(request, tmpdir, kbplacer_process) -> None:
     shutil.copy(f"{example_dir}/kle.json", tmpdir)
     shutil.copy(initial_board, working_copy)
     shutil.copy(initial_board, template_copy)
+    prepare_fp_lib_table(request, tmpdir)
 
     # prepare template
     kbplacer_process(False, None, f"{tmpdir}/kle.json", template_copy)
