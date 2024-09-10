@@ -6,6 +6,7 @@ import mimetypes
 import os
 import re
 import shutil
+import subprocess
 import sys
 import time
 import xml.etree.ElementTree as ET
@@ -305,19 +306,31 @@ def generate_render(
     new_tree.write(f"{destination_dir}/report/{pcb_name}.svg")
 
 
-def generate_drc(tmpdir, board_path: Union[str, os.PathLike]) -> None:
-    if KICAD_VERSION >= (8, 0, 1):
-        # there is some kind of KiCad regression, this function
-        # causes assertion fail randomly, see
-        # https://gitlab.com/kicad/code/kicad/-/issues/17504
-        return
+def kicad_cli() -> str:
+    if sys.platform == "darwin":
+        return "/opt/homebrew/bin/kicad-cli"
+    return "kicad-cli"
 
+
+def generate_drc(tmpdir, board_path: Union[str, os.PathLike]) -> None:
     board_path = Path(board_path)
     board_name = board_path.stem
-
-    board = pcbnew.LoadBoard(str(board_path))
     drc_path = tmpdir / f"report/{board_name}-drc.log"
-    pcbnew.WriteDRCReport(board, drc_path, pcbnew.EDA_UNITS_MILLIMETRES, True)
+
+    if KICAD_VERSION >= (8, 0, 1):
+        # there is some kind of KiCad regression, running WriteDRCReport function
+        # causes assertion fail randomly, see
+        # https://gitlab.com/kicad/code/kicad/-/issues/17504
+        # use kicad-cli via subprocess instead:
+        subprocess.run(
+            f"{kicad_cli()} pcb drc --output {drc_path} {board_path}",
+            shell=True,
+            check=False,
+        )
+    else:
+        board = pcbnew.LoadBoard(str(board_path))
+        pcbnew.WriteDRCReport(board, drc_path, pcbnew.EDA_UNITS_MILLIMETRES, True)
+
     with open(drc_path, "r") as f:
         logger.debug(f.read())
 
