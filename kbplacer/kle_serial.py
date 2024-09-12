@@ -312,14 +312,22 @@ class MatrixAnnotatedKeyboard(Keyboard):
     collapsed: bool = field(init=False)
 
     def __post_init__(self: MatrixAnnotatedKeyboard) -> None:
+        positions = []
         for key in list(self.keys):
             if not key.decal:
                 # check if required labels defined correctly
-                MatrixAnnotatedKeyboard.get_matrix_position(key)
-                MatrixAnnotatedKeyboard.get_layout_option(key)
+                position = MatrixAnnotatedKeyboard.get_matrix_position(key)
+                option = MatrixAnnotatedKeyboard.get_layout_option(key)
+                if option == 0:
+                    positions.append(position)
             if self.__is_alternative(key):
                 self.alternative_keys.append(copy.deepcopy(key))
                 self.keys.remove(key)
+        # check if there are no duplicated matrix position in default key group
+        if len(positions) != len(set(positions)):
+            msg = "Duplicate matrix position for default layout keys not allowed"
+            raise ValueError(msg)
+
         self.collapsed = False
 
     def __is_alternative(self, key: Key) -> bool:
@@ -338,7 +346,11 @@ class MatrixAnnotatedKeyboard(Keyboard):
 
     def _get_layout_option_or_none(self, key: Key) -> Optional[Tuple[int, int]]:
         if label := key.get_label(self.LAYOUT_OPTION_LABEL):
-            return tuple(map(int, label.split(",")))
+            parts = label.split(",")
+            if len(parts) != 2:
+                msg = "Unexpected number of ',' delimited elements in key label"
+                raise ValueError(msg)
+            return int(parts[0]), int(parts[1])
         return None
 
     def _get_layout_options(self) -> Dict[int, Dict[int, List[Key]]]:

@@ -435,6 +435,33 @@ def test_collapse_detects_duplicated_keys() -> None:
     assert len(result.alternative_keys) == 2
 
 
+def test_duplicate_matrix_position_in_default_group_not_allowed() -> None:
+    # fmt: off
+    layout = [
+        [{"w":1.5},"4,0\n\n\n0,0","4,1\n\n\n0,0",{"w":1.5},"4,1\n\n\n0,0"],
+        [{"w":2.5},"4,1\n\n\n0,1"]
+    ]
+    # fmt: on
+    with pytest.raises(
+        ValueError,
+        match=r"Duplicate matrix position for default layout keys not allowed",
+    ):
+        _ = _layout_collapse(layout)
+
+
+def test_illegal_layout_option_label() -> None:
+    # fmt: off
+    layout = [
+        [{"w":1.5},"4,0\n\n\n0,0","4,1\n\n\n0,0"],
+        [{"w":2.5},"4,1\n\n\n0,1,2"]
+    ]
+    # fmt: on
+    with pytest.raises(
+        ValueError, match=r"Unexpected number of ',' delimited elements in key label"
+    ):
+        _ = _layout_collapse(layout)
+
+
 @pytest.mark.parametrize("example", ["0_sixty", "crkbd", "wt60_a", "wt60_d"])
 @pytest.mark.parametrize("collapses", [1, 2])
 def test_with_via_layouts(tmpdir, request, example, collapses) -> None:
