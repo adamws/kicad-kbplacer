@@ -109,11 +109,13 @@ class KeyMatrix:
             if len(list(v)) == 2:
                 self._switches_references_by_net[frozenset(v)].append(k)
             else:
-                logger.error(
+                logger.warning(
                     "Unexpected switch net position detected, "
                     "each switch should have two unique nets unambiguously defining "
-                    "position in key matrix"
+                    "position in key matrix, switch-by-matrix association can't be used"
                 )
+                self._switches_references_by_net = {}
+                break
         logger.debug(f"Switches by nets: {self._switches_references_by_net}")
         diodes_by_switch = {
             k: [f.GetReference() for f in v] for k, v in self._diodes_by_switch.items()
@@ -146,6 +148,9 @@ class KeyMatrix:
             return [_tryint(c) for c in re.split("([0-9]+)", item[0])]
 
         return sorted(self._switches.items(), key=_alphanum_keys)
+
+    def is_matrix_ok(self) -> bool:
+        return len(self._switches_references_by_net) != 0
 
     def __guess_format(self, guesses: List[str]) -> str:
         for guess in guesses:
@@ -290,6 +295,18 @@ def get_key_iterator(
     key_matrix: KeyMatrix,
 ) -> Iterator:
     if isinstance(keyboard, MatrixAnnotatedKeyboard):
+        if not key_matrix.is_matrix_ok():
+            msg = (
+                "Detected layout file with via-annotated matrix positions "
+                "while not all footprints on PCB can be unambiguously associated "
+                "with row/column position.\n"
+                "Either net names are unrecognized, netlist is invalid or "
+                "or using direct-pin switch connections.\n"
+                "Fix netlist problems or use layout file with 'explicit annotation'.\n"
+                "For details see https://github.com/adamws/kicad-kbplacer/"
+                "blob/master/docs/annotation_guide.md"
+            )
+            raise RuntimeError(msg)
         _iter = MatrixAnnotatedKeyboardSwitchIterator(keyboard, key_matrix)
     else:
         _iter = KeyboardSwitchIterator(keyboard, key_matrix)

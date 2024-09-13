@@ -550,3 +550,71 @@ def test_placer_diode_from_illegal_preset(tmpdir, request) -> None:
         key_placer.run(layout_path, key_info, diode_info, True)
 
     save_and_render(board, tmpdir, request)
+
+
+def get_board_for_2x2_without_diodes_example(request) -> pcbnew.BOARD:
+    board = get_board_for_2x2_example(request)
+    netcodes_map = board.GetNetInfo().NetsByNetcode()
+
+    for f in board.GetFootprints():
+        ref = f.GetReference()
+        if ref.startswith("D"):
+            board.RemoveNative(f)
+        elif ref.startswith("SW"):
+            sw_pad = f.FindPadByNumber("2")
+            sw_pad.SetNet(netcodes_map[0])
+    return board
+
+
+def test_placer_no_diodes(tmpdir, request) -> None:
+    """Tests if placing switches works when diodes can't be found.
+    This can be intentional when using direct-pin switch connections
+    (there is no matrix, each switch is connected directed to MCU).
+    For such PCBs placer should still work as long as layout file is not
+    via-annotated (row/column assignments makes no sense for direct-pin).
+    QMK solves that by creating virtual key matrix, but for that we
+    would need to define switch mcu nets to virtual row/key mapping.
+    """
+    board = get_board_for_2x2_without_diodes_example(request)
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
+    diode_info = ElementInfo("", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, "")
+    layout_path = f"{request.fspath.dirname}/../examples/2x2/kle.json"
+
+    key_placer = KeyPlacer(board)
+    # enable routing, we expect that no tracks are added
+    key_placer.run(layout_path, key_info, diode_info, route_rows_and_columns=True)
+
+    save_and_render(board, tmpdir, request)
+
+    assert_2x2_layout_switches(board, (19.05, 19.05))
+    assert len(board.GetTracks()) == 0
+
+
+def test_placer_no_diodes_via_annotated_layout(tmpdir, request) -> None:
+    """If via-annotated layout detected and no diodes,
+    best we can do is raise clear error message with suggestion to use
+    implicit annotations.
+    """
+    board = get_board_for_2x2_without_diodes_example(request)
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
+    diode_info = ElementInfo("", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, "")
+    layout_path = f"{request.fspath.dirname}/../examples/2x2/kle-annotated.json"
+
+    key_placer = KeyPlacer(board)
+
+    with pytest.raises(
+        RuntimeError,
+        match=(
+            "Detected layout file with via-annotated matrix positions "
+            "while not all footprints on PCB can be unambiguously associated "
+            "with row/column position."
+        ),
+    ):
+        key_placer.run(layout_path, key_info, diode_info, route_rows_and_columns=True)
+
+    switches = [get_footprint(board, f"SW{i}") for i in range(1, 5)]
+    for sw in switches:
+        assert sw.GetPosition() == pcbnew.VECTOR2I(0, 0)
+    assert len(board.GetTracks()) == 0
+
+    save_and_render(board, tmpdir, request)
