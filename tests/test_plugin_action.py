@@ -51,7 +51,7 @@ def test_if_plugin_initializes_with_board(
     mock_board.GetFileName.return_value = f"{tmpdir}/test_board.kicad_pcb"
 
     mock_get_board.return_value = mock_board
-    kbplacer_plugin_action.Initialize()
+    kbplacer_plugin_action.initialize()
     assert Path(tmpdir / "kbplacer.log").is_file()
 
 
@@ -65,4 +65,4 @@ def test_if_plugin_not_initializes_without_board(
 
     mock_get_board.return_value = mock_board
     with pytest.raises(Exception, match="Could not locate .kicad_pcb file.*"):
-        kbplacer_plugin_action.Initialize()
+        kbplacer_plugin_action.initialize()

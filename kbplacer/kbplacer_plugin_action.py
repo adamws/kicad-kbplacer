@@ -8,6 +8,7 @@ import pcbnew
 import wx
 
 from . import __version__
+from .error_dialog import ErrorDialog
 from .kbplacer_dialog import KbplacerDialog, load_window_state_from_log
 from .kbplacer_plugin import run_from_gui
 
@@ -22,7 +23,7 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
         self.show_toolbar_button = True
         self.icon_file_name = os.path.join(os.path.dirname(__file__), "icon.png")
 
-    def Initialize(self) -> None:
+    def initialize(self) -> None:
         version = pcbnew.Version()
         if int(version.split(".")[0]) < 6:
             msg = f"KiCad version {version} is not supported"
@@ -64,13 +65,10 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
         logger.info(f"Python version: {repr(sys.version)}")
         logger.info(f"KiCad version: {version} with {wx.version()}")
 
-    def Run(self) -> None:
-        self.Initialize()
-
-        pcb_frame = [x for x in wx.GetTopLevelWindows() if x.GetName() == "PcbFrame"][0]
-
-        dlg = KbplacerDialog(pcb_frame, "kbplacer", initial_state=self.window_state)
-
+    def __run(self) -> None:
+        self.initialize()
+        self.window = wx.GetActiveWindow()
+        dlg = KbplacerDialog(self.window, "kbplacer", initial_state=self.window_state)
         if dlg.ShowModal() == wx.ID_OK:
             gui_state = dlg.get_window_state()
             logger.info(f"GUI state: {gui_state}")
@@ -87,3 +85,10 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
 
         dlg.Destroy()
         logging.shutdown()
+
+    def Run(self) -> None:
+        try:
+            self.__run()
+        except Exception as e:
+            error = ErrorDialog(self.window, e)
+            error.ShowModal()

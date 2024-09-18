@@ -253,6 +253,15 @@ def test_help_dialog(tmpdir, package_path, package_name, screen_manager) -> None
     run_gui_test(tmpdir, screen_manager, "kbplacer help", _callback)
 
 
+def test_error_dialog(tmpdir, package_path, package_name, screen_manager) -> None:
+    def _callback():
+        return run_process(
+            ["python3", "-m", f"{package_name}.error_dialog"], package_path
+        )
+
+    run_gui_test(tmpdir, screen_manager, "kbplacer error", _callback)
+
+
 def merge_dicts(dict1, dict2):
     for key, val in dict2.items():
         if key not in dict1:
