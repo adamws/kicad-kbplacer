@@ -43,6 +43,7 @@ from .board_modifier import (
 )
 from .element_position import ElementInfo, ElementPosition, PositionOption
 from .kle_serial import Key, Keyboard, MatrixAnnotatedKeyboard, get_keyboard_from_file
+from .plugin_error import PluginError
 
 logger = logging.getLogger(__name__)
 
@@ -306,7 +307,7 @@ def get_key_iterator(
                 "For details see https://github.com/adamws/kicad-kbplacer/"
                 "blob/master/docs/annotation_guide.md"
             )
-            raise RuntimeError(msg)
+            raise PluginError(msg)
         _iter = MatrixAnnotatedKeyboardSwitchIterator(keyboard, key_matrix)
     else:
         _iter = KeyboardSwitchIterator(keyboard, key_matrix)
@@ -809,7 +810,7 @@ class KeyPlacer(BoardModifier):
     def _normalize_template_path(self, template_path: str) -> str:
         if not template_path:
             msg = "Template path can't be empty"
-            raise ValueError(msg)
+            raise PluginError(msg)
         if str(Path(template_path).name) == template_path:
             # if passed filename without directory,
             # assume that this refers to file in the directory of
@@ -863,7 +864,7 @@ class KeyPlacer(BoardModifier):
                     f"Found {number_of_template_switches} switches using "
                     f"'{key_matrix.key_format}' annotation format."
                 )
-                raise RuntimeError(msg)
+                raise PluginError(msg)
             first_switch = template_matrix.first_switch_reference()
             switch = template_matrix.switch_by_reference(first_switch)
             diodes = template_matrix.diodes_by_switch_reference(switch.GetReference())
@@ -930,7 +931,7 @@ class KeyPlacer(BoardModifier):
                 f"multiple diodes per switch layouts, use '{PositionOption.RELATIVE}' "
                 f"or '{PositionOption.PRESET}' position option"
             )
-            raise RuntimeError(msg)
+            raise PluginError(msg)
 
         number_of_switches = key_matrix.number_of_switches()
         if number_of_switches == 0:
@@ -939,7 +940,7 @@ class KeyPlacer(BoardModifier):
                 "annotation format. Make sure that switches are added to opened "
                 "PCB file and theirs annotations match configured value."
             )
-            raise RuntimeError(msg)
+            raise PluginError(msg)
 
         # it is important to get template connection
         # and relative positions before moving any elements

@@ -3,6 +3,8 @@ import traceback
 
 import wx
 
+from .plugin_error import PluginError
+
 
 class ErrorDialog(wx.Dialog):
     def __init__(self, parent, e: Exception) -> None:
@@ -10,8 +12,15 @@ class ErrorDialog(wx.Dialog):
             parent, -1, "kbplacer error", style=wx.DEFAULT_DIALOG_STYLE | wx.STAY_ON_TOP
         )
         self.parent = parent
+        box = wx.BoxSizer(wx.VERTICAL)
 
-        message = getattr(e, "message", f"{e.__class__.__name__}: {e}")
+        if type(e) == PluginError:
+            message = e.message
+            add_traceback = False
+        else:
+            message = getattr(e, "message", f"{e.__class__.__name__}: {e}")
+            add_traceback = True
+
         message_text = wx.StaticText(self, label=message)
 
         error_icon = wx.ArtProvider.GetBitmap(
@@ -24,20 +33,19 @@ class ErrorDialog(wx.Dialog):
         icon_and_message_sizer.Add(
             message_text, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 10
         )
+        box.Add(icon_and_message_sizer, 0, wx.EXPAND | wx.ALL, 5)
 
-        traceback_str = traceback.format_exc()
-        details_text = wx.TextCtrl(
-            self,
-            value=traceback_str,
-            style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL,
-        )
-        self.adjust_size_to_text(details_text, traceback_str)
+        if add_traceback:
+            traceback_str = traceback.format_exc()
+            details_text = wx.TextCtrl(
+                self,
+                value=traceback_str,
+                style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL,
+            )
+            self.adjust_size_to_text(details_text, traceback_str)
+            box.Add(details_text, 0, wx.EXPAND | wx.ALL, 5)
 
         buttons = self.CreateButtonSizer(wx.OK)
-
-        box = wx.BoxSizer(wx.VERTICAL)
-        box.Add(icon_and_message_sizer, 0, wx.EXPAND | wx.ALL, 5)
-        box.Add(details_text, 0, wx.EXPAND | wx.ALL, 5)
         box.Add(buttons, 0, wx.EXPAND | wx.ALL, 5)
 
         self.SetSizerAndFit(box)

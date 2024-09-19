@@ -25,6 +25,7 @@ from kbplacer.key_placer import (
     KeyPlacer,
 )
 from kbplacer.kle_serial import get_keyboard
+from kbplacer.plugin_error import PluginError
 
 from .conftest import (
     KICAD_VERSION,
@@ -246,7 +247,7 @@ def test_multi_diode_illegal_position_setting(request) -> None:
     key_placer = KeyPlacer(board)
 
     with pytest.raises(
-        RuntimeError,
+        PluginError,
         match=r"The 'Custom' position not supported for multiple diodes per switch",
     ):
         key_placer.run(
@@ -435,7 +436,7 @@ def test_placer_board_without_matching_switches(request) -> None:
     layout_path = get_2x2_layout_path(request)
 
     with pytest.raises(
-        RuntimeError, match=r"No switch footprints found using 'MX{}' annotation format"
+        PluginError, match=r"No switch footprints found using 'MX{}' annotation format"
     ):
         key_placer.run(layout_path, key_info, diode_info, True)
 
@@ -522,7 +523,7 @@ def test_placer_diode_from_preset_missing_path(request) -> None:
     diode_info = ElementInfo("D{}", PositionOption.PRESET, None, "")
     layout_path = get_2x2_layout_path(request)
 
-    with pytest.raises(ValueError, match=r"Template path can't be empty"):
+    with pytest.raises(PluginError, match=r"Template path can't be empty"):
         key_placer.run(layout_path, key_info, diode_info, True)
 
 
@@ -541,7 +542,7 @@ def test_placer_diode_from_illegal_preset(tmpdir, request) -> None:
     template.Save(template_path)
 
     with pytest.raises(
-        RuntimeError,
+        PluginError,
         match=(
             r"Template file '.*' must have exactly one switch. "
             "Found 2 switches using 'SW{}' annotation format."
@@ -603,7 +604,7 @@ def test_placer_no_diodes_via_annotated_layout(tmpdir, request) -> None:
     key_placer = KeyPlacer(board)
 
     with pytest.raises(
-        RuntimeError,
+        PluginError,
         match=(
             "Detected layout file with via-annotated matrix positions "
             "while not all footprints on PCB can be unambiguously associated "
