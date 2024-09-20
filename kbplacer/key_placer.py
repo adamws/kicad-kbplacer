@@ -221,13 +221,28 @@ class KeyboardSwitchIterator:
 
     def __get_footprint(self, key: Key) -> pcbnew.FOOTPRINT:
         if self._explicit_annotations:
-            return self._key_matrix.switch_by_format_value(
-                key.labels[self.EXPLICIT_ANNOTATION_LABEL]
-            )
+            label = key.labels[self.EXPLICIT_ANNOTATION_LABEL]
+            try:
+                sw = self._key_matrix.switch_by_format_value(label)
+            except KeyError as e:
+                msg = (
+                    "Provided keyboard layout uses explicit annotations "
+                    f"but could not find switch {e}, aborting."
+                )
+                raise PluginError(msg)
         else:
-            sw = self._key_matrix.switch_by_format_value(self._current_key)
+            try:
+                sw = self._key_matrix.switch_by_format_value(self._current_key)
+            except KeyError as e:
+                msg = (
+                    f"Could not find switch {e}, aborting.\n"
+                    f"Provided keyboard layout requires {len(self._keyboard.keys)} "
+                    f"keys, found {self._key_matrix.number_of_switches()} "
+                    f"footprints with '{self._key_matrix.key_format}' annotation."
+                )
+                raise PluginError(msg)
             self._current_key += 1
-            return sw
+        return sw
 
     def __next__(self):
         key = next(self._keys)

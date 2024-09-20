@@ -391,6 +391,28 @@ def test_switch_iterator_default_mode(request) -> None:
         assert footprint.GetReference() == next(expected_footprints)
 
 
+def test_switch_iterator_default_mode_missing_footprint(request) -> None:
+    board = get_board_for_2x2_example(request)
+    sw2 = board.FindFootprintByReference("SW2")
+    board.RemoveNative(sw2)
+    key_matrix = KeyMatrix(board, "SW{}", "D{}")
+    with open(get_2x2_layout_path(request), "r") as f:
+        layout = json.load(f)
+        keyboard = get_keyboard(layout)
+
+    iterator = KeyboardSwitchIterator(keyboard, key_matrix)
+    with pytest.raises(
+        PluginError,
+        match=(
+            "Could not find switch 'SW2', aborting.\n"
+            "Provided keyboard layout requires 4 keys, found 3 "
+            "footprints with 'SW{}' annotation."
+        )
+    ):
+        for _, _ in iterator:
+            pass
+
+
 def test_switch_iterator_explicit_annotation_mode(request) -> None:
     board = get_board_for_2x2_example(request)
     key_matrix = KeyMatrix(board, "SW{}", "D{}")
@@ -406,6 +428,29 @@ def test_switch_iterator_explicit_annotation_mode(request) -> None:
     for key, footprint in iterator:
         assert key == next(expected_keys)
         assert footprint.GetReference() == next(expected_footprints)
+
+
+def test_switch_iterator_explicit_annotation_mode_missing_footprint(request) -> None:
+    board = get_board_for_2x2_example(request)
+    sw2 = board.FindFootprintByReference("SW2")
+    board.RemoveNative(sw2)
+    key_matrix = KeyMatrix(board, "SW{}", "D{}")
+    with open(get_2x2_layout_path(request), "r") as f:
+        layout = json.load(f)
+        keyboard = get_keyboard(layout)
+    expected_order = ["3", "1", "4", "2"]
+    for i, k in enumerate(keyboard.keys):
+        k.set_label(KeyboardSwitchIterator.EXPLICIT_ANNOTATION_LABEL, expected_order[i])
+    iterator = KeyboardSwitchIterator(keyboard, key_matrix)
+    with pytest.raises(
+        PluginError,
+        match=(
+            "Provided keyboard layout uses explicit annotations but "
+            "could not find switch 'SW2', aborting."
+        )
+    ):
+        for _, _ in iterator:
+            pass
 
 
 def test_switch_iterator_default_mode_ignore_decal(request) -> None:
