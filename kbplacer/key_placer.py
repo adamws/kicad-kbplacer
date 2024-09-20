@@ -26,15 +26,18 @@ import pcbnew
 from .board_modifier import (
     KICAD_VERSION,
     BoardModifier,
+    calculate_distance_matrix,
     get_closest_pads_on_same_net,
     get_common_nets,
     get_distance,
     get_footprint,
     get_optional_footprint,
     get_orientation,
+    get_pads_by_net,
     get_position,
     get_side,
     position_in_rotated_coordinates,
+    prim_mst,
     reset_rotation,
     rotate,
     set_position,
@@ -185,6 +188,13 @@ class KeyMatrix:
         nets = (row_net, column_net)
         return self._switches_references_by_net[frozenset(nets)]
 
+    def switches_references_by_netname(self, netname: str) -> List[str]:
+        result = []
+        for nets, switches in self._switches_references_by_net.items():
+            if netname in nets:
+                result.extend(switches)
+        return result
+
     def diodes_by_switch_reference(self, reference: str) -> List[pcbnew.FOOTPRINT]:
         return self._diodes_by_switch[reference]
 
@@ -193,6 +203,14 @@ class KeyMatrix:
 
     def matrix_nets(self) -> Set[str]:
         return set().union(*self._switches_references_by_net.keys())
+
+    def matrix_rows(self) -> Set[str]:
+        pattern = re.compile(self.row_format.format("(\\d)+"))
+        return set(filter(lambda net: re.match(pattern, net), self.matrix_nets()))
+
+    def matrix_columns(self) -> Set[str]:
+        pattern = re.compile(self.column_format.format("(\\d)+"))
+        return set(filter(lambda net: re.match(pattern, net), self.matrix_nets()))
 
 
 class KeyboardSwitchIterator:
@@ -793,29 +811,19 @@ class KeyPlacer(BoardModifier):
                 self.route_switch_with_diode(switch_footprint, diodes)
 
     def route_rows_and_columns(self, key_matrix: KeyMatrix) -> None:
-        matrix_pads: Dict[str, List[pcbnew.PAD]] = defaultdict(list)
-
-        xy_sorted_pads = pcbnew.PADS_VEC()
-        self.board.GetSortedPadListByXthenYCoord(xy_sorted_pads)
+        pads = get_pads_by_net(self.board)
 
         matrix_net_names = key_matrix.matrix_nets()
-        for pad in xy_sorted_pads:
-            net_name = pad.GetNetname()
-            if net_name in matrix_net_names:
-                matrix_pads[net_name].append(pad)
-
-        def _get_closest(pad: pcbnew.PAD, pads: List[pcbnew.PAD]) -> pcbnew.PAD:
-            return min(pads, key=lambda x: get_distance(pad, x))
-
-        for pads in matrix_pads.values():
-            len_pads = len(pads)
-            i = 0
-            while i < len_pads - 1:
-                pad1 = pads[i]
-                pad2 = _get_closest(pad1, pads[i + 1 :])
-                if pad1.GetParentAsString() != pad2.GetParentAsString():
-                    self.route(pad1, pad2)
-                i += 1
+        matrix_pads = {net: pads[net] for net in matrix_net_names}
+        for net, pads in matrix_pads.items():
+            logger.debug(f"Routing {net} pads")
+            distances = calculate_distance_matrix(cast(List[pcbnew.BOARD_ITEM], pads))
+            result = prim_mst(distances)
+            for i, j in result:
+                p1 = pads[i]
+                p2 = pads[j]
+                if p1.GetParentAsString() != p2.GetParentAsString():
+                    self.route(p1, p2)
 
     def load_template(self, template_path: str) -> pcbnew.BOARD:
         if KICAD_VERSION >= (8, 0, 0):

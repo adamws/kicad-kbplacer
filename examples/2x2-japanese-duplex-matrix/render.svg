@@ -24,9 +24,9 @@
 <svg:circle cx="59.690" cy="52.070" r="1.250"/> 
 </svg:g>
 <svg:g style="fill:none;  stroke:#C83434; stroke-width:0.250; stroke-opacity:1;  stroke-linecap:round; stroke-linejoin:round;">
-<svg:path d="M53.340 35.560 L53.340 54.610 "/>
-<svg:path d="M34.290 35.560 L34.290 54.610 "/>
-<svg:path d="M34.290 54.610 L53.340 54.610 "/>
+<svg:path d="M34.290 54.610 L53.340 54.610 " />
+<svg:path d="M34.290 35.560 L53.340 35.560 " />
+<svg:path d="M34.290 35.560 L34.290 54.610 " />
 </svg:g> 
 <svg:g style="fill:#4D7FC4; fill-opacity:1.000; stroke:none;">
 <svg:circle cx="34.290" cy="35.560" r="1.250"/> 

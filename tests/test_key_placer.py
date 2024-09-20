@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import json
 import logging
+from pathlib import Path
 from typing import List, Tuple
 
 import pcbnew
@@ -24,7 +25,7 @@ from kbplacer.key_placer import (
     KeyMatrix,
     KeyPlacer,
 )
-from kbplacer.kle_serial import get_keyboard
+from kbplacer.kle_serial import Keyboard, get_keyboard, get_keyboard_from_file
 from kbplacer.plugin_error import PluginError
 
 from .conftest import (
@@ -407,7 +408,7 @@ def test_switch_iterator_default_mode_missing_footprint(request) -> None:
             "Could not find switch 'SW2', aborting.\n"
             "Provided keyboard layout requires 4 keys, found 3 "
             "footprints with 'SW{}' annotation."
-        )
+        ),
     ):
         for _, _ in iterator:
             pass
@@ -447,7 +448,7 @@ def test_switch_iterator_explicit_annotation_mode_missing_footprint(request) -> 
         match=(
             "Provided keyboard layout uses explicit annotations but "
             "could not find switch 'SW2', aborting."
-        )
+        ),
     ):
         for _, _ in iterator:
             pass
@@ -664,3 +665,110 @@ def test_placer_no_diodes_via_annotated_layout(tmpdir, request) -> None:
     assert len(board.GetTracks()) == 0
 
     save_and_render(board, tmpdir, request)
+
+
+def get_board_with_column(
+    request, keyboard: Keyboard, positions: List[Tuple[float, float]]
+) -> pcbnew.BOARD:
+    assert len(keyboard.keys) == len(positions)
+
+    board = pcbnew.CreateEmptyBoard()
+
+    net_count = board.GetNetCount()
+
+    def _add_net(name: str, netcode: int) -> pcbnew.NETINFO_ITEM:
+        net = pcbnew.NETINFO_ITEM(board, name, netcode)
+        update_netinfo(board, net)
+        board.Add(net)
+        return net
+
+    column_net = _add_net("COL1", net_count)
+    row_nets = [_add_net(f"ROW{i}", net_count + i) for i in range(0, len(positions))]
+
+    for i, _ in enumerate(keyboard.keys):
+        switch = add_switch_footprint(
+            board, request, i + 1, footprint="SW_Cherry_MX_PCB_1.00u"
+        )
+        for p in switch.Pads():
+            if p.GetNumber() == "1":
+                p.SetNet(column_net)
+            if p.GetNumber() == "2":
+                p.SetNet(row_nets[i])
+        set_position(switch, pcbnew.VECTOR2I_MM(*positions[i]))
+
+    return board
+
+
+@pytest.mark.parametrize(
+    "layout,positions,expected_tracks",
+    [
+        (
+            "typical-column-from-full-layout",
+            [
+                (57.15, 38.1),
+                (38.1, 66.675),
+                (47.625, 85.725),
+                (52.3875, 112.775),
+                (45.24375, 142.875),
+            ],
+            [
+                (53340000, 35560000),
+                (53340000, 45085000),
+                (34290000, 64135000),
+                (34290000, 73660000),
+                (43815000, 83185000),
+                (43815000, 105472500),
+                (48577500, 110235000),
+                (48577500, 133191250),
+                (41433750, 140335000),
+            ],
+        ),
+        (
+            "typical-enter-column-from-60-percent-ansi-layout",
+            [
+                (57.15, 38.1),
+                (61.9125, 57.15),
+                (54.76875, 76.2),
+                (50.00625, 95.25),
+                (64.29375, 114.3),
+            ],
+            [
+                (53340000, 35560000),
+                (53340000, 49847500),
+                (58102500, 54610000),
+                (58102500, 66516250),
+                (50958750, 73660000),
+                (50958750, 87947500),
+                (46196250, 92710000),
+                (46196250, 97472500),
+                (60483750, 111760000),
+            ],
+        ),
+    ],
+)
+def test_column_routing(
+    tmpdir,
+    request,
+    layout: str,
+    positions: List[Tuple[float, float]],
+    expected_tracks: List[Tuple[int, int]],
+) -> None:
+    test_dir = request.fspath.dirname
+
+    layout_file = Path(test_dir) / f"data/kle-layouts/{layout}.json"
+    keyboard = get_keyboard_from_file(str(layout_file))
+
+    board = get_board_with_column(request, keyboard, positions)
+
+    key_matrix = KeyMatrix(board, "SW{}", "")
+
+    key_placer = KeyPlacer(board)
+    key_placer.route_rows_and_columns(key_matrix)
+    key_placer.remove_dangling_tracks()
+
+    save_and_render(board, tmpdir, request)
+
+    added_tracks = board.Tracks()
+    assert len(added_tracks) == len(expected_tracks) - 1
+
+    assert_board_tracks(expected_tracks, board)

@@ -5,7 +5,8 @@ import itertools
 import logging
 import math
 import re
-from typing import Optional, Tuple
+from collections import defaultdict
+from typing import Dict, List, Optional, Tuple
 
 import pcbnew
 
@@ -227,6 +228,67 @@ def get_clearance(
         return max(_own_clearance(i1), _own_clearance(i2))
     else:
         return max(i1.GetOwnClearance(i1.GetLayer()), i2.GetOwnClearance(i2.GetLayer()))
+
+
+def get_pads_by_net(board: pcbnew.BOARD) -> Dict[str, List[pcbnew.PAD]]:
+    matrix_pads: Dict[str, List[pcbnew.PAD]] = defaultdict(list)
+
+    xy_sorted_pads = pcbnew.PADS_VEC()
+    board.GetSortedPadListByXthenYCoord(xy_sorted_pads)
+
+    for pad in xy_sorted_pads:
+        net_name = pad.GetNetname()
+        matrix_pads[net_name].append(pad)
+
+    return matrix_pads
+
+
+def calculate_distance_matrix(elements: List[pcbnew.BOARD_ITEM]) -> List[List[int]]:
+    distances = []
+    for e1 in elements:
+        distances1 = []
+        for e2 in elements:
+            distance = get_distance(e1, e2)
+            distances1.append(distance)
+        distances.append(distances1)
+    return distances
+
+
+def prim_mst(distances: List[List[int]]) -> List[Tuple[int, int]]:
+    """Find minimum spanning tree (MST) using Prim's algorithm"""
+    # TODO: KiCad uses Kruskal's algorithm for ratsnests, check which one is better
+    # for kbplacer usecase
+    n = len(distances)
+    in_mst = [False] * n  # Track nodes that are already in MST
+    mst_edges = []  # List to store the edges of the MST
+    key = [float("inf")] * n  # Used to pick minimum weight edge
+    parent = [-1] * n  # Array to store constructed MST
+
+    key[0] = 0  # Start from the first node
+    for _ in range(n):
+        # Pick the minimum key vertex from the set of vertices not yet in MST
+        min_key = float("inf")
+        u = -1
+        for i in range(n):
+            if not in_mst[i] and key[i] < min_key:
+                min_key = key[i]
+                u = i
+
+        # Include the picked vertex in the MST
+        in_mst[u] = True
+
+        # Update key and parent for adjacent vertices of the picked vertex
+        for v in range(n):
+            if distances[u][v] > 0 and not in_mst[v] and distances[u][v] < key[v]:
+                key[v] = distances[u][v]
+                parent[v] = u
+
+    # Construct the list of MST edges
+    for i in range(1, n):
+        if parent[i] != -1:
+            mst_edges.append((parent[i], i))  # Add edge (parent, child)
+
+    return mst_edges
 
 
 class BoardModifier:
