@@ -316,7 +316,7 @@ def ignore_selected_drc_rules(board_path: Union[str, os.PathLike]) -> None:
     for rule in rules_to_ignore:
         project_data["board"]["design_settings"]["rule_severities"][rule] = "ignore"
     with open(project_file, "w") as f:
-        json.dump(project_data, f)
+        json.dump(project_data, f, indent=2)
 
 
 def kicad_cli() -> str:
@@ -348,6 +348,24 @@ def generate_drc(tmpdir, board_path: Union[str, os.PathLike]) -> None:
 
     with open(drc_path, "r") as f:
         logger.debug(f.read())
+
+
+def prepare_project_file(request, board_path: Union[str, os.PathLike]) -> None:
+    test_dir = Path(request.module.__file__).parent
+    major = KICAD_VERSION[0] if KICAD_VERSION else 0
+    templates_dir = test_dir / f"data/examples-references/kicad{major}/kicad-defaults"
+
+    destination = Path(board_path).parent
+    name = Path(board_path).stem
+    project_file = shutil.copy(
+        f"{templates_dir}/keyboard.kicad_pro", f"{destination}/{name}.kicad_pro"
+    )
+
+    with open(project_file, "r") as f:
+        project_data = json.load(f)
+    with open(project_file, "w") as f:
+        project_data["meta"]["filename"] = f"{name}.kicad_pro"
+        json.dump(project_data, f, indent=2)
 
 
 def add_url_to_report(tmpdir, url: str) -> None:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 from collections import defaultdict
 from dataclasses import dataclass
@@ -36,6 +37,7 @@ class Footprint:
 class BoardBuilder:
     def __init__(
         self,
+        board_path: Union[str, os.PathLike],
         *,
         switch_footprint: str,
         diode_footprint: str,
@@ -43,7 +45,9 @@ class BoardBuilder:
         self.switch_footprint = Footprint.from_str(switch_footprint)
         self.diode_footprint = Footprint.from_str(diode_footprint)
 
-        self.board = pcbnew.CreateEmptyBoard()
+        # use `NewBoard` over `CreateNewBoard` because it respects netclass
+        # settings from .kicad_pro file if it already exist
+        self.board = pcbnew.NewBoard(board_path)
         self.nets: dict[str, pcbnew.NETINFO_ITEM] = {}
         self.net_info = self.board.GetNetInfo()
         self.net_count = self.board.GetNetCount()

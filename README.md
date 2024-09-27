@@ -262,7 +262,7 @@ python -m com_github_adamws_kicad-kbplacer --help
       Enables automatic routing of switch-diode pairs. If user manually route first pair,
       then it replicates the connection for remaining pairs. If not, uses automatic
       internal router. When automatic router used, attempts to connect only two closest
-      pads of the same net.
+      pads of the same net. Automatic router will use default track width of a routed netclass.
     </td>
   </tr>
   <tr>
@@ -343,6 +343,7 @@ python -m com_github_adamws_kicad-kbplacer --help
       <code>ROW(\d+)</code> regular expressions (ignoring case) and connecting them
       using simplified internal router. Configuration of row/column naming scheme
       is not yet supported.
+      Automatic router will use default track width of a routed netclass.
     </td>
   </tr>
   <tr>

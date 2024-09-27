@@ -25,6 +25,7 @@ from .conftest import (
     get_footprints_dir,
     get_references_dir,
     pointMM,
+    prepare_project_file,
     rotate,
 )
 
@@ -339,12 +340,16 @@ def prepare_project(request, tmpdir, example: str, layout_file: str) -> None:
     test_dir = request.fspath.dirname
 
     source_dir = f"{test_dir}/../examples/{example}"
-    shutil.copy(
-        f"{source_dir}/keyboard-before.kicad_pcb", f"{tmpdir}/{PROJECT_NAME}.kicad_pcb"
-    )
+    pcb_path = f"{tmpdir}/{PROJECT_NAME}.kicad_pcb"
+    pcb_path = shutil.copy(f"{source_dir}/keyboard-before.kicad_pcb", pcb_path)
+    prepare_project_file(request, pcb_path)
+
     shutil.copy(f"{source_dir}/{layout_file}", tmpdir)
     for template in glob.glob(f"{source_dir}/*_template.kicad_pcb"):
-        shutil.copy(template, tmpdir)
+        pcb_path = shutil.copy(template, tmpdir)
+        # each template require own poject file, having one project file and many kicad_pcb
+        # will lead to crash on some platforms
+        prepare_project_file(request, pcb_path)
 
     prepare_fp_lib_table(request, tmpdir)
 

@@ -291,6 +291,24 @@ def prim_mst(distances: List[List[int]]) -> List[Tuple[int, int]]:
     return mst_edges
 
 
+def get_netclass(
+    board: pcbnew.BOARD, item: pcbnew.BOARD_CONNECTED_ITEM
+) -> pcbnew.NETCLASS:
+    netclass_name = item.GetNetClassName()
+    if KICAD_VERSION < (7, 0, 0):
+        netclasses = board.GetNetClasses()
+        netclass = netclasses.Find(netclass_name)
+        return netclass if netclass else netclasses.Find("Default")
+    else:
+        # workaround, see https://gitlab.com/kicad/code/kicad/-/issues/18609
+        try:
+            return board.GetNetClasses()[netclass_name]
+        except IndexError:
+            # may happen when item has no net assigned yet or netclass is
+            # equal "Default" (which is not a part of GetNetClasses collection)
+            return board.GetAllNetClasses()["Default"]
+
+
 class BoardModifier:
     def __init__(self, board: pcbnew.BOARD) -> None:
         self.board = board
@@ -441,11 +459,13 @@ class BoardModifier:
         self,
         start: pcbnew.VECTOR2I,
         end: pcbnew.VECTOR2I,
+        *,
         layer: int = pcbnew.B_Cu,
         netcode: int = 0,
+        width: int = 200000,
     ) -> Optional[pcbnew.VECTOR2I]:
         track = pcbnew.PCB_TRACK(self.board)
-        track.SetWidth(pcbnew.FromMM(0.25))
+        track.SetWidth(width)
         track.SetLayer(layer)
         if netcode:
             track.SetNetCode(netcode)
@@ -506,6 +526,19 @@ class BoardModifier:
             return False
 
         netcode = pad1.GetNetCode()
+        netclass = get_netclass(self.board, pad1)
+        track_width = netclass.GetTrackWidth()
+
+        if KICAD_VERSION < (7, 0, 0):
+            # on KiCad 6.0.11 `netclass.GetName()` for Default netclass
+            # ends with segmentation fault
+            netclass_str = f"{netclass}"
+        else:
+            netclass_str = netclass.GetName()
+
+        logger.debug(f"Netclass: {netclass_str}, track width: {track_width}")
+
+        track_args = {"layer": layer, "netcode": netcode, "width": track_width}
 
         def _calculate_corners(
             pos1: pcbnew.VECTOR2I, pos2: pcbnew.VECTOR2I
@@ -530,8 +563,8 @@ class BoardModifier:
         def _route(
             pos1: pcbnew.VECTOR2I, pos2: pcbnew.VECTOR2I, corner: pcbnew.VECTOR2I
         ) -> bool:
-            if end := self.add_track_segment_by_points(pos1, corner, layer, netcode):
-                end = self.add_track_segment_by_points(end, pos2, layer, netcode)
+            if end := self.add_track_segment_by_points(pos1, corner, **track_args):
+                end = self.add_track_segment_by_points(end, pos2, **track_args)
                 return end is not None
             return False
 
@@ -574,7 +607,7 @@ class BoardModifier:
         end = None
         # if in line, use one track segment
         if pos1.x == pos2.x or pos1.y == pos2.y:
-            end = self.add_track_segment_by_points(pos1, pos2, layer, netcode)
+            end = self.add_track_segment_by_points(pos1, pos2, **track_args)
         else:
             # pads are not in single line, attempt routing with two segment track
             if angle != 0:

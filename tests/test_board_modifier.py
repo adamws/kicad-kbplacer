@@ -20,6 +20,7 @@ from .conftest import (
     generate_render,
     get_footprints_dir,
     pointMM,
+    prepare_project_file,
     update_netinfo,
 )
 
@@ -37,10 +38,10 @@ class TrackSide(enum.Enum):
     OPPOSITE = 2
 
 
-def add_diode_footprint(board, footprint, request):
+def add_diode_footprint(board, footprint, request, reference: str = "D1"):
     library = get_footprints_dir(request)
     f = pcbnew.FootprintLoad(str(library), footprint)
-    f.SetReference("D1")
+    f.SetReference(reference)
     board.Add(f)
     return f
 
@@ -242,6 +243,54 @@ def test_track_with_track_collision(
 
     save_and_render(board, tmpdir, request)
     assert collide == expected, "Unexpected track collision result"
+
+
+def test_track_use_netclass_settings(tmpdir, request) -> None:
+    pcb_path = f"{tmpdir}/test.kicad_pcb"
+
+    prepare_project_file(request, pcb_path)
+    board = pcbnew.NewBoard(pcb_path)
+
+    netclasses = board.GetNetClasses()
+    # must be defined in used project file:
+    custom_netclasses = ["Custom1", "Custom2"]
+
+    netnames = ["n1", "n2"]
+    add_nets(board, netnames)
+
+    netcodes_map = board.GetNetInfo().NetsByName()
+
+    footprint = "D_SOD-323"
+    for i in range(2):
+        diode = add_diode_footprint(board, footprint, request, f"D{i + 1}")
+        for j in range(2):
+            pad = diode.FindPadByNumber(f"{j + 1}")
+            pad_netlist = netnames[j]
+            net = netcodes_map[pad_netlist]
+            if KICAD_VERSION < (7, 0, 0):
+                net.SetNetClass(netclasses.Find(custom_netclasses[j]))
+            else:
+                net.SetNetClass(netclasses[custom_netclasses[j]])
+            pad.SetNet(net)
+        if KICAD_VERSION < (7, 0, 0):
+            diode.Move(pcbnew.wxPointMM(0, i * 5))
+        else:
+            diode.Move(pcbnew.VECTOR2I_MM(0, i * 5))
+
+    d1 = get_footprint(board, "D1")
+    d2 = get_footprint(board, "D2")
+
+    modifier = BoardModifier(board)
+    for i in range(2):
+        modifier.route(d1.FindPadByNumber(f"{i + 1}"), d2.FindPadByNumber(f"{i + 1}"))
+
+    save_and_render(board, tmpdir, request)
+
+    tracks = board.GetTracks()
+    assert len(tracks) == 2
+    tracks.sort(key=lambda t: t.GetPosition()[0])
+    assert tracks[0].GetWidth() == pcbnew.FromMM(0.2)
+    assert tracks[1].GetWidth() == pcbnew.FromMM(0.4)
 
 
 def test_find_footprint_raises_when_not_found() -> None:

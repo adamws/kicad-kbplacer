@@ -35,13 +35,13 @@ class PluginSettings:
 def run(settings: PluginSettings) -> pcbnew.BOARD:
     if settings.create_from_annotated_layout:
         builder = BoardBuilder(
+            settings.board_path,
             switch_footprint=settings.switch_footprint,
             diode_footprint=settings.diode_footprint,
         )
         board = builder.create_board(settings.layout_path)
-        board.Save(settings.board_path)
-
-    board = pcbnew.LoadBoard(settings.board_path)
+    else:
+        board = pcbnew.LoadBoard(settings.board_path)
 
     placer = KeyPlacer(board, settings.key_distance)
     placer.run(
