@@ -572,6 +572,13 @@ The `kbplacer` is used by additional tools available in [tools](tools/README.md)
         </td>
         <td><img src="resources/example-openscad-plate.png"/></td>
     </tr>
+    <tr>
+        <td>
+            <code>kle2kle.py</code> - edit KLE layout, supports:</a></br>
+            labels and colors reset and automatic VIA style <code>row,column</code> matrix label annotation.
+        </td>
+        <td><img src="resources/example-kle2kle.png"/></td>
+    </tr>
 </table>
 
 <!-- TOC --><a name="use-in-python-projects"></a>
