@@ -19,24 +19,27 @@ from kbplacer.kle_serial import Key, Keyboard, MatrixAnnotatedKeyboard, get_keyb
 
 logger = logging.getLogger(__name__)
 
-ORIGIN_X = 4
-ORIGIN_Y = 4
-
 KEY_WIDTH_PX = 52
-KEY_HEIGHT_PX = 52
-INNER_GAP_LEFT_PX = 6
-INNER_GAP_TOP_PX = 4
-INNER_GAP_BOTTOM_PX = 8
+KEY_HEIGHT_PX = KEY_WIDTH_PX
+KEY_CORNER_RADIUS = 5
+KEY_STROKE_WIDTH = 2
+FILL_GAP = KEY_STROKE_WIDTH / 2
+KEYTOP_GAP_LEFT_PX = 6
+KEYTOP_GAP_TOP_PX = 4
+KEYTOP_GAP_BOTTOM_PX = 8
+
+ORIGIN_X = 2 + KEY_STROKE_WIDTH
+ORIGIN_Y = ORIGIN_X
 
 LABEL_X_POSITION = [
-    (lambda _: INNER_GAP_LEFT_PX + 1, "start"),
+    (lambda _: KEYTOP_GAP_LEFT_PX + 1, "start"),
     (lambda width: width * KEY_WIDTH_PX / 2, "middle"),
-    (lambda width: width * KEY_WIDTH_PX - INNER_GAP_LEFT_PX - 1, "end"),
+    (lambda width: width * KEY_WIDTH_PX - KEYTOP_GAP_LEFT_PX - 1, "end"),
 ]
 LABEL_Y_POSITION = [
-    (lambda _: INNER_GAP_TOP_PX + 1, "hanging"),
+    (lambda _: KEYTOP_GAP_TOP_PX + 1, "hanging"),
     (lambda height: height * KEY_HEIGHT_PX / 2, "middle"),
-    (lambda height: height * KEY_HEIGHT_PX - INNER_GAP_BOTTOM_PX - 2, "auto"),
+    (lambda height: height * KEY_HEIGHT_PX - KEYTOP_GAP_BOTTOM_PX - 2, "auto"),
     (lambda height: height * KEY_HEIGHT_PX - 2, "auto"),
 ]
 LABEL_SIZES = [12, 12, 12, 7]
@@ -82,34 +85,34 @@ def build_key(key: Key):
             y * KEY_HEIGHT_PX,
             w * KEY_WIDTH_PX,
             h * KEY_HEIGHT_PX,
-            rx="5",
+            rx=f"{KEY_CORNER_RADIUS}",
             fill="none",
             stroke="black",
-            stroke_width=2,
+            stroke_width=KEY_STROKE_WIDTH,
         )
 
     def fill(x, y, w, h) -> dw.Rectangle:  # pyright: ignore
         return dw.Rectangle(
-            x * KEY_WIDTH_PX + 1,
-            y * KEY_HEIGHT_PX + 1,
-            w * KEY_WIDTH_PX - 2,
-            h * KEY_HEIGHT_PX - 2,
-            rx="5",
+            x * KEY_WIDTH_PX + FILL_GAP,
+            y * KEY_HEIGHT_PX + FILL_GAP,
+            w * KEY_WIDTH_PX - 2 * FILL_GAP,
+            h * KEY_HEIGHT_PX - 2 * FILL_GAP,
+            rx=f"{KEY_CORNER_RADIUS - FILL_GAP}",
             fill=dark_color,
         )
 
-    def top(x, y, w, h) -> dw.Rectangle:  # pyright: ignore
+    def keytop(x, y, w, h) -> dw.Rectangle:  # pyright: ignore
         return dw.Rectangle(
-            x * KEY_WIDTH_PX + INNER_GAP_LEFT_PX,
-            y * KEY_HEIGHT_PX + INNER_GAP_TOP_PX,
-            w * KEY_WIDTH_PX - 2 * INNER_GAP_LEFT_PX,
-            h * KEY_HEIGHT_PX - INNER_GAP_TOP_PX - INNER_GAP_BOTTOM_PX,
-            rx="5",
+            x * KEY_WIDTH_PX + KEYTOP_GAP_LEFT_PX,
+            y * KEY_HEIGHT_PX + KEYTOP_GAP_TOP_PX,
+            w * KEY_WIDTH_PX - 2 * KEYTOP_GAP_LEFT_PX,
+            h * KEY_HEIGHT_PX - KEYTOP_GAP_TOP_PX - KEYTOP_GAP_BOTTOM_PX,
+            rx=f"{KEY_CORNER_RADIUS}",
             fill=light_color,
         )
 
     if not key.decal:
-        layers = ["border", "fill", "top"]
+        layers = ["border", "fill", "keytop"]
         for layer in layers:
             group.append(locals()[layer](0, 0, key.width, key.height))
             if not_rectangle:
