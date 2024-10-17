@@ -1024,7 +1024,6 @@ if __name__ == "__main__":
             # coverage and process kill would cause measurement to be lost
             def listen_for_exit() -> None:
                 input("Press any key to exit: ")
-                dlg.Close()
                 wx.Exit()
 
             input_thread = threading.Thread(target=listen_for_exit)
