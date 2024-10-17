@@ -55,7 +55,7 @@ def load_keyboard(layout_path) -> MatrixAnnotatedKeyboard:
 def get_lowest_paper_size(size):
     matrix_size_to_paper = {(8, 19): "A4", (11, 30): "A3", (17, 44): "A2"}
     smallest_size = None
-    for key in sorted(matrix_size_to_paper.keys()):
+    for key in sorted(matrix_size_to_paper):
         if size[0] <= key[0] and size[1] <= key[1]:
             smallest_size = matrix_size_to_paper[key]
             break

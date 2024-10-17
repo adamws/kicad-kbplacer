@@ -127,7 +127,7 @@ class KeyMatrix:
         logger.debug(f"Diodes by switch: {diodes_by_switch}")
 
     def first_switch_reference(self) -> str:
-        return min(self._switches.keys())
+        return min(self._switches)
 
     def number_of_switches(self) -> int:
         return len(self._switches)
@@ -202,7 +202,7 @@ class KeyMatrix:
         return any(len(d) > 1 for d in self._diodes_by_switch.values())
 
     def matrix_nets(self) -> Set[str]:
-        return set().union(*self._switches_references_by_net.keys())
+        return set().union(*self._switches_references_by_net)
 
     def matrix_rows(self) -> Set[str]:
         pattern = re.compile(self.row_format.format("(\\d)+"))
