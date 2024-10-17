@@ -14,5 +14,5 @@ build_and_push() {
   docker push admwscki/kicad-kbplacer-primary:$1
 }
 
-build_and_push 8.0.5-focal focal/kicad8.Dockerfile
-build_and_push 8.0.5-jammy jammy/kicad8.Dockerfile
+build_and_push 8.0.6-focal focal/kicad8.Dockerfile
+build_and_push 8.0.6-jammy jammy/kicad8.Dockerfile
