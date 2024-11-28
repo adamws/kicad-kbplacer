@@ -1,13 +1,13 @@
 ARG WORK_PATH=/keyboard
 ARG PROJECT_NAME=absolem
 
-FROM admwscki/kicad-kbplacer-primary:7.0.11-mantic
+FROM admwscki/kicad-kbplacer-primary:8.0.6-jammy
 
 # this revision has been used when [1] has been written
 # [1] https://adamws.github.io/keyboard-pcb-design-with-ergogen-and-kbplacer/
 ARG KBPLACER_REVISION=ca69cbc0f1de216fd50f63ba26180ad683a91270
 
-ARG KICAD_3RDPARTY_PATH=/root/.local/share/kicad/7.0/3rdparty
+ARG KICAD_3RDPARTY_PATH=/root/.local/share/kicad/8.0/3rdparty
 ARG WORK_PATH
 ARG PROJECT_NAME
 
@@ -17,7 +17,7 @@ RUN apt-get update \
   && apt-get install -y xdotool x11-xserver-utils x11-apps zip
 
 ENV DISPLAY=:99
-ENV XAUTHORITY /root/.Xauthority
+ENV XAUTHORITY=/root/.Xauthority
 
 RUN touch $XAUTHORITY && chmod 600 $XAUTHORITY
 
