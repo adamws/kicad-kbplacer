@@ -1,0 +1,62 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"POT-Creation-Date: 2024-07-20 12:36+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: ta\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: pygettext.py 1.5\n"
+
+msgid ""
+"Plugin for mechanical keyboard design. It features automatic key placement \n"
+"based on popular layout description from "
+msgstr ""
+
+msgid "Project website - "
+msgstr ""
+
+msgid "Geekhack forum thread - "
+msgstr ""
+
+msgid "Save to:"
+msgstr ""
+
+msgid "Load from:"
+msgstr ""
+
+msgid "Keyboard layout file:"
+msgstr ""
+
+msgid "Switch settings"
+msgstr ""
+
+msgid "Route with switches"
+msgstr ""
+
+msgid "Automatically adjust orientation"
+msgstr ""
+
+msgid "Switch diodes settings"
+msgstr ""
+
+msgid "Additional elements settings"
+msgstr ""
+
+msgid "Route rows and columns"
+msgstr ""
+
+msgid "Controller circuit template file:"
+msgstr ""
+
+msgid "Build board outline"
+msgstr ""
+
+msgid "Outline delta:"
+msgstr ""
+
+msgid "Other settings"
+msgstr ""
