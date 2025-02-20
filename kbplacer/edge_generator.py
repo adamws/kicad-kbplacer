@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
+import sys
 from typing import List, cast
 
 import pcbnew
@@ -73,6 +74,15 @@ def build_board_outline_around_footprints(
     shape_line = pcbnew.SHAPE_LINE_CHAIN()
     for r in result:
         shape_line.Append(r[0], r[1])
+
+    # Only this combination of platform and version triggers error pop-up about
+    # outline not being closed (assert failed).
+    # Checked with `test_board_outline_building` and values
+    # are the same on all platforms. This should be false-positive since boards
+    # with outline generated with this method can be successfully rendered
+    # with KiCad's 3d viewer. Calling `SetClosed` makes pop-up go away.
+    if KICAD_VERSION >= (9, 0, 0) and sys.platform == "win32":
+        shape_line.SetClosed(True)
 
     outline = pcbnew.SHAPE_POLY_SET()
     outline.AddOutline(shape_line)

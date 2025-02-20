@@ -103,7 +103,10 @@ def get_position(footprint: pcbnew.FOOTPRINT) -> pcbnew.VECTOR2I:
 
 def set_side(footprint: pcbnew.FOOTPRINT, side: Side) -> None:
     if side != get_side(footprint):
-        footprint.Flip(footprint.GetPosition(), False)
+        position = footprint.GetPosition()
+        footprint.Flip(position, False)
+        if KICAD_VERSION >= (9, 0, 0):
+            rotate(footprint, position, 180)
 
 
 def get_side(footprint: pcbnew.FOOTPRINT) -> Side:
@@ -309,6 +312,13 @@ def get_netclass(
             return board.GetAllNetClasses()["Default"]
 
 
+def get_effective_shape(item: pcbnew.BOARD_ITEM) -> pcbnew.SHAPE:
+    if KICAD_VERSION < (9, 0, 0):
+        return item.GetEffectiveShape()
+    else:
+        return item.GetEffectiveShape(item.GetLayer())
+
+
 class BoardModifier:
     def __init__(self, board: pcbnew.BOARD) -> None:
         self.board = board
@@ -319,7 +329,7 @@ class BoardModifier:
 
     def _test_collision_track_without_net(self, track: pcbnew.PCB_TRACK) -> bool:
         collide_list = []
-        track_shape = track.GetEffectiveShape()
+        track_shape = get_effective_shape(track)
         track_start = track.GetStart()
         track_end = track.GetEnd()
         # connectivity needs to be last,
@@ -331,7 +341,7 @@ class BoardModifier:
             if hit_test_result := hull.Collide(track_shape):
                 for p in f.Pads():
                     pad_name = p.GetName()
-                    pad_shape = p.GetEffectiveShape()
+                    pad_shape = get_effective_shape(p)
 
                     # if track starts or ends in pad then assume that
                     # this collision is expected, with the exception of case
@@ -384,7 +394,7 @@ class BoardModifier:
                                 "which leads to that pad"
                             )
                             collide_list.remove(collision)
-                elif hit_test_result := t.GetEffectiveShape().Collide(
+                elif hit_test_result := get_effective_shape(t).Collide(
                     track_shape, get_clearance(t, track)
                 ):
                     logger.debug(f"Track collide with another track: {track_uuid}")
@@ -401,13 +411,13 @@ class BoardModifier:
 
     def _test_collision_track_with_net(self, track: pcbnew.PCB_TRACK) -> bool:
         track_netcode = track.GetNetCode()
-        track_shape = track.GetEffectiveShape()
+        track_shape = get_effective_shape(track)
         track_layer = track.GetLayer()
         for item in self.board.AllConnectedItems():
             if track_netcode == item.GetNetCode():
                 continue
 
-            item_shape = item.GetEffectiveShape()
+            item_shape = get_effective_shape(item)
             if item_shape.Collide(track_shape, get_clearance(item, track)):
                 if isinstance(item.Cast(), pcbnew.PCB_TRACK):
                     if item.GetLayer() == track_layer:

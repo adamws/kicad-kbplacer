@@ -582,7 +582,7 @@ class KeyPlacer(BoardModifier):
             if KICAD_VERSION < (7, 0, 0):
                 item_copy.Move(pcbnew.wxPoint(-origin.x, -origin.y))
             else:
-                item_copy.Move(origin * -1)
+                item_copy.Move(pcbnew.VECTOR2I(-origin.x, -origin.y))
 
             if route:
                 self.board.RemoveNative(item)
