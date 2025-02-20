@@ -24,6 +24,7 @@ Box = Tuple[Numeric, Numeric, Numeric, Numeric]
 
 version_match = re.search(r"(\d+)\.(\d+)\.(\d+)", pcbnew.Version())
 KICAD_VERSION = tuple(map(int, version_match.groups())) if version_match else ()
+MIN_KICAD_VERSION = 6
 logger = logging.getLogger(__name__)
 
 
@@ -129,11 +130,23 @@ def get_footprints_dir(request):
 def get_references_dir(request, example_name, route_option, diode_option):
     test_dir = Path(request.module.__file__).parent
     major = KICAD_VERSION[0] if KICAD_VERSION else 0
-    references_dir = test_dir / f"data/examples-references/kicad{major}"
-    if not references_dir.exists():
-        msg = f"Reference directory '{references_dir}' does not exists"
-        raise RuntimeError(msg)
-    return references_dir / f"{example_name}/{route_option}-{diode_option}"
+
+    def get_references_dir_for_kicad(major):
+        references_dir = test_dir / f"data/examples-references/kicad{major}"
+        if not references_dir.exists():
+            msg = f"Reference directory '{references_dir}' does not exists"
+            raise RuntimeError(msg)
+        return references_dir / f"{example_name}/{route_option}-{diode_option}"
+
+    # if reference for given major version does not exist, try to use previous one
+    while major >= MIN_KICAD_VERSION:
+        references_dir = get_references_dir_for_kicad(major)
+        if references_dir.exists():
+            return references_dir
+        major -= 1
+
+    # could not find reference files
+    return None
 
 
 def request_to_references_dir(request):
@@ -353,6 +366,9 @@ def generate_drc(tmpdir, board_path: Union[str, os.PathLike]) -> None:
 def prepare_project_file(request, board_path: Union[str, os.PathLike]) -> None:
     test_dir = Path(request.module.__file__).parent
     major = KICAD_VERSION[0] if KICAD_VERSION else 0
+    if major == 9:
+        # reuse previous project files for kicad 9
+        major = 8
     templates_dir = test_dir / f"data/examples-references/kicad{major}/kicad-defaults"
 
     destination = Path(board_path).parent
