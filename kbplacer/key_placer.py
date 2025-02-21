@@ -952,7 +952,9 @@ class KeyPlacer(BoardModifier):
             msg = (
                 f"The '{diode_info.position_option}' position not supported for "
                 f"multiple diodes per switch layouts, use '{PositionOption.RELATIVE}' "
-                f"or '{PositionOption.PRESET}' position option"
+                f"or '{PositionOption.PRESET}' position option.\n"
+                f"When using '{diode_info.position_option}' ensure that each switch "
+                "has exactly one diode connected to it."
             )
             raise PluginError(msg)
 
