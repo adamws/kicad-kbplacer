@@ -104,7 +104,8 @@ class KeyMatrix:
                     self._diodes_by_switch[switch_reference].append(f)
                     # remove common switch-diode net and add diode-unique net instead,
                     # this way we should get key-matrix nets:
-                    switches_nets[switch_reference].discard(*common_nets)
+                    for net in common_nets:
+                        switches_nets[switch_reference].discard(net)
                     switches_nets[switch_reference].update(
                         diodes_unique_nets[reference]
                     )
