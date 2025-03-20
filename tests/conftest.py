@@ -14,8 +14,14 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Tuple, Union
 
-import pcbnew
 import pytest
+from PIL import ImageGrab
+from pyvirtualdisplay.smartdisplay import DisplayTimeoutError, SmartDisplay
+
+if sys.platform == "win32":
+    from ctypes.wintypes import DWORD, HWND, RECT
+
+import pcbnew
 import svgpathtools
 
 Numeric = Union[int, float]
@@ -501,3 +507,97 @@ def pytest_runtest_makereport(item, call):
                 with open(url, "r") as f:
                     extras.append(pytest_html.extras.url(f.read()))
         report.extras = extras
+
+
+class LinuxVirtualScreenManager:
+    def __enter__(self):
+        self.display = SmartDisplay(backend="xvfb", size=(960, 640))
+        self.display.start()
+        return self
+
+    def __exit__(self, *exc):
+        self.display.stop()
+        return False
+
+    def screenshot(self, window_name, path):
+        try:
+            img = self.display.waitgrab(timeout=5)
+            img.save(path)
+            return True
+        except DisplayTimeoutError as err:
+            logger.error(err)
+            return False
+
+
+def find_window(name):
+    if sys.platform != "win32":
+        return None
+    user32 = ctypes.windll.user32
+    return user32.FindWindowW(None, name)
+
+
+def get_window_position(window_handle):
+    if sys.platform != "win32":
+        return None
+    dwmapi = ctypes.windll.dwmapi
+    # based on https://stackoverflow.com/a/67137723
+    rect = RECT()
+    DMWA_EXTENDED_FRAME_BOUNDS = 9
+    dwmapi.DwmGetWindowAttribute(
+        HWND(window_handle),
+        DWORD(DMWA_EXTENDED_FRAME_BOUNDS),
+        ctypes.byref(rect),
+        ctypes.sizeof(rect),
+    )
+    return (rect.left, rect.top, rect.right, rect.bottom)
+
+
+class HostScreenManager:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def screenshot(self, window_name, path):
+        try:
+            time.sleep(1)
+            window_handle = find_window(window_name)
+            window_rect = get_window_position(window_handle)
+            img = ImageGrab.grab()
+            if window_rect:
+                img = img.crop(window_rect)
+            img.save(path)
+            return True
+        except Exception as err:
+            logger.error(err)
+            return False
+
+
+def is_xvfb_avaiable() -> bool:
+    try:
+        p = subprocess.Popen(
+            ["Xvfb", "-help"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=False,
+        )
+        _, _ = p.communicate()
+        exit_code = p.returncode
+        return exit_code == 0
+    except FileNotFoundError:
+        logger.warning("Xvfb was not found")
+    return False
+
+
+@pytest.fixture
+def screen_manager():
+    if sys.platform == "linux":
+        if is_xvfb_avaiable():
+            return LinuxVirtualScreenManager()
+        else:
+            return HostScreenManager()
+    elif sys.platform == "win32":
+        return HostScreenManager()
+    else:
+        pytest.skip(f"Platform '{sys.platform}' is not supported")
