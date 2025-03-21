@@ -115,6 +115,13 @@ jobs:
             scoop install kicad@<<parameters.kicad-version>>
             scoop cache rm --all
       - run:
+          name: Install Mesa # required for running pcbnew GUI
+          command: |
+            scoop bucket add games
+            scoop install games/mesa3d
+            scoop cache rm --all
+            C:\scoop\apps\mesa3d\current\systemwidedeploy.cmd 1
+      - run:
           name: Install dependencies
           command: |
             .\.circleci\scripts\use-kicad-python.ps1

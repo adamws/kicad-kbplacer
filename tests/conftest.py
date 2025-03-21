@@ -536,7 +536,7 @@ def find_window(name):
     return user32.FindWindowW(None, name)
 
 
-def get_window_position(window_handle):
+def get_window_position(window_handle) -> Union[None, Tuple[int, int, int, int]]:
     if sys.platform != "win32":
         return None
     dwmapi = ctypes.windll.dwmapi
@@ -566,7 +566,20 @@ class HostScreenManager:
             window_rect = get_window_position(window_handle)
             img = ImageGrab.grab()
             if window_rect:
-                img = img.crop(window_rect)
+                img_width, img_height = img.size
+                x1, y1, x2, y2 = window_rect
+
+                # Clamp coordinates within image bounds
+                x1, y1 = max(0, x1), max(0, y1)
+                x2, y2 = min(img_width, x2), min(img_height, y2)
+
+                if x1 < x2 and y1 < y2:
+                    img = img.crop((x1, y1, x2, y2))
+                else:
+                    logger.warning(
+                        f"Can't crop image of size {img_width}x{img_height} "
+                        f"to rectangle ({x1},{y1},{x2},{y2})"
+                    )
             img.save(path)
             return True
         except Exception as err:
