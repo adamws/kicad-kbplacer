@@ -20,26 +20,30 @@ from solid import (
 
 from kbplacer.kle_serial import Keyboard, MatrixAnnotatedKeyboard, get_keyboard
 
-PLATE_THICKNESS = 3
-HOLE_SIZE = 14
-DISTANCE_1U_X = 19.05
-DISTANCE_1U_Y = 19.05
-
 
 class PlateShape(str, Enum):
     ENVELOPE = "envelope"  # minimum bounding box that encloses switches
     CONVEX_HULL = "convex_hull"  # minimum convex geometry that encloses switches
 
 
-def _get_cube_hole(rotation):
-    c = cube((HOLE_SIZE, HOLE_SIZE, 2 * PLATE_THICKNESS + 2), center=True)
+def _get_cube_hole(rotation, hole_size, plate_thickness):
+    c = cube((hole_size, hole_size, 2 * plate_thickness + 2), center=True)
     if rotation == 0:
         return c
     else:
         return rotate(rotation)(c)
 
 
-def generate(keyboard: Keyboard, shape: PlateShape, margin: float) -> OpenSCADObject:
+def generate(
+    keyboard: Keyboard,
+    *,
+    dx: float = 19.05,
+    dy: float = 19.05,
+    cutout_size=14.0,
+    plate_thickness=3,
+    margin: float = 0,
+    shape: PlateShape = PlateShape.ENVELOPE,
+) -> OpenSCADObject:
     switches = []
     holes = []
     if isinstance(keyboard, MatrixAnnotatedKeyboard):
@@ -59,17 +63,17 @@ def generate(keyboard: Keyboard, shape: PlateShape, margin: float) -> OpenSCADOb
 
         plate_hole = translate(
             (
-                DISTANCE_1U_X * c.x,
-                DISTANCE_1U_Y * c.y,
+                dx * c.x,
+                dy * c.y,
                 0,
             )
-        )(_get_cube_hole(-k.rotation_angle))
+        )(_get_cube_hole(-k.rotation_angle, cutout_size, plate_thickness))
         holes.append(plate_hole)
 
     points = []
     for poly in switches:
         for c in poly.exterior.coords:
-            points.append((c[0] * DISTANCE_1U_X, c[1] * DISTANCE_1U_Y))
+            points.append((c[0] * dx, c[1] * dy))
 
     if shape == PlateShape.ENVELOPE:
         plate_polygon = envelope(MultiPoint(points))
@@ -80,7 +84,7 @@ def generate(keyboard: Keyboard, shape: PlateShape, margin: float) -> OpenSCADOb
         plate_polygon = plate_polygon.buffer(margin)
 
     _, coords, _ = shapely.to_ragged_array([plate_polygon])
-    plate = linear_extrude(height=PLATE_THICKNESS)(polygon(coords))
+    plate = linear_extrude(height=plate_thickness)(polygon(coords))
 
     result = plate - hole()(*holes)
     return result
@@ -124,13 +128,39 @@ if __name__ == "__main__":
         default=PlateShape.ENVELOPE,
         help="Plate shape",
     )
+    parser.add_argument(
+        "--key-distance-x",
+        type=float,
+        required=False,
+        default=19.05,
+        help=("1U distance in mm between two keys in X direction, 19.05 by default"),
+    )
+    parser.add_argument(
+        "--key-distance-y",
+        type=float,
+        required=False,
+        default=19.05,
+        help=("1U distance in mm between two keys in Y direction, 19.05 by default"),
+    )
+    parser.add_argument(
+        "--cutout-size",
+        type=float,
+        required=False,
+        default=14,
+        help=("Size of switch cutout, 14 by default"),
+    )
+    parser.add_argument(
+        "--plate_thickness",
+        type=float,
+        required=False,
+        default=3,
+        help=("Plate thickness in mm, 3 by default"),
+    )
 
     args = parser.parse_args()
     input_path = getattr(args, "in")
     output_path = getattr(args, "out")
     force = args.force
-    margin = args.margin
-    shape = args.shape
 
     if force:
         shutil.rmtree(output_path, ignore_errors=True)
@@ -141,6 +171,14 @@ if __name__ == "__main__":
         sys.exit(1)
 
     keyboard = load_keyboard(input_path)
-    result = generate(keyboard, shape, margin)
+    args = {
+        "dx": args.key_distance_x,
+        "dy": args.key_distance_y,
+        "cutout_size": args.cutout_size,
+        "plate_thickness": args.plate_thickness,
+        "margin": args.margin,
+        "shape": args.shape,
+    }
+    result = generate(keyboard, **args)
 
     scad_render_to_file(result, output_path, file_header="$fn = $preview ? 0 : 100;")
