@@ -1,4 +1,4 @@
-FROM admwscki/kicad-kbplacer-primary:8.0.0-mantic
+FROM admwscki/kicad-kbplacer-primary:8.0.9-jammy
 
 COPY dev-requirements.txt .
 RUN pip3 install --no-cache-dir -r dev-requirements.txt && rm dev-requirements.txt

@@ -7,10 +7,9 @@ COPY . /work
 RUN cd /work \
   && python -m hatch build --target kicad-package
 
-FROM admwscki/kicad-kbplacer-primary:8.0.0-mantic as main
+FROM admwscki/kicad-kbplacer-primary:8.0.9-jammy as main
 
 RUN ln -s /usr/bin/python3 /usr/bin/python
-RUN userdel -r ubuntu
 
 ARG UID=1000
 ARG GID=1000
