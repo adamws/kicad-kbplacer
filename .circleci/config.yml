@@ -95,6 +95,8 @@ jobs:
       - store_artifacts:
           path: examples/absolem-ergogen/absolem.svg
       - store_artifacts:
+          path: examples/absolem-ergogen/absolem-plate.png
+      - store_artifacts:
           path: examples/absolem-ergogen/absolem.zip
   test-windows:
     machine:

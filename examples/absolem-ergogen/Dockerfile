@@ -1,7 +1,7 @@
 ARG WORK_PATH=/keyboard
 ARG PROJECT_NAME=absolem
 
-FROM admwscki/kicad-kbplacer-primary:8.0.6-jammy
+FROM admwscki/kicad-kbplacer-primary:8.0.9-jammy
 
 # this revision has been used when [1] has been written
 # [1] https://adamws.github.io/keyboard-pcb-design-with-ergogen-and-kbplacer/
@@ -14,7 +14,7 @@ ARG PROJECT_NAME
 ARG SWITCH_LIBRARY=com_github_perigoso_keyswitch-kicad-library
 
 RUN apt-get update \
-  && apt-get install -y xdotool x11-xserver-utils x11-apps zip
+  && apt-get install -y openscad xdotool x11-xserver-utils x11-apps zip
 
 ENV DISPLAY=:99
 ENV XAUTHORITY=/root/.Xauthority
@@ -87,6 +87,10 @@ RUN zip -r $PROJECT_NAME.zip \
   $PROJECT_NAME.kicad_pcb \
   $PROJECT_NAME.net \
   $PROJECT_NAME.svg
+
+# sanity check for plate generation tool
+COPY generate-plate.sh $WORK_PATH
+RUN xvfb-run -a ./generate-plate.sh $KBPLACER_REVISION
 
 FROM scratch
 ARG WORK_PATH
