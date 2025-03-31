@@ -43,6 +43,7 @@ def generate(
     plate_thickness=3,
     margin: float = 0,
     shape: PlateShape = PlateShape.ENVELOPE,
+    align_origin = False,
 ) -> OpenSCADObject:
     switches = []
     holes = []
@@ -52,13 +53,23 @@ def generate(
         keys = keyboard.keys
         keys = sorted(keys, key=lambda k: [k.y, k.x])
 
+    offset = None
     for k in keys:
         if k.decal:
             continue
         p = shapely.box(k.x, -k.y, k.x + k.width, -k.y - k.height)
         p = affinity.rotate(p, -k.rotation_angle, origin=(k.rotation_x, -k.rotation_y))
+
+        # if align option enabled then use center of first switch as reference point (0, 0)
+        if align_origin:
+            if offset == None:
+                offset = centroid(p)
+            p = affinity.translate(p, -offset.x, -offset.y, 0)
+
+        # keep track of switches polygons in order to calculate plate shape later
         switches.append(p)
 
+        # get switch center and create cube hole based on it
         c = centroid(p)
 
         plate_hole = translate(
@@ -156,6 +167,11 @@ if __name__ == "__main__":
         default=3,
         help=("Plate thickness in mm, 3 by default"),
     )
+    parser.add_argument(
+        "--align-origin",
+        action="store_true",
+        help=("Place first layout switch at (0,0,0)"),
+    )
 
     args = parser.parse_args()
     input_path = getattr(args, "in")
@@ -178,6 +194,7 @@ if __name__ == "__main__":
         "plate_thickness": args.plate_thickness,
         "margin": args.margin,
         "shape": args.shape,
+        "align_origin": args.align_origin,
     }
     result = generate(keyboard, **args)
 

@@ -6,7 +6,7 @@ if hatch run tools:layout2openscad --help; then
   hatch run tools:layout2openscad \
     -in $WORK_PATH/$PROJECT_NAME-kle.json \
     -out $WORK_PATH/$PROJECT_NAME-plate.scad \
-    -shape convex_hull
+    -shape convex_hull --align-origin
   cd -
   openscad $PROJECT_NAME-plate.scad \
     -o $PROJECT_NAME-plate.png --viewall --view axes
