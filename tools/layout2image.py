@@ -37,7 +37,7 @@ LABEL_X_POSITION = [
     (lambda width: width * KEY_WIDTH_PX - KEYTOP_GAP_LEFT_PX - 1, "end"),
 ]
 LABEL_Y_POSITION = [
-    (lambda _: KEYTOP_GAP_TOP_PX + 1, "hanging"),
+    (lambda _: KEYTOP_GAP_TOP_PX + 3, "hanging"),
     (lambda height: height * KEY_HEIGHT_PX / 2, "middle"),
     (lambda height: height * KEY_HEIGHT_PX - KEYTOP_GAP_BOTTOM_PX - 2, "auto"),
     (lambda height: height * KEY_HEIGHT_PX - 2, "auto"),
