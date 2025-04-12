@@ -98,6 +98,25 @@ jobs:
           path: examples/absolem-ergogen/absolem-plate.png
       - store_artifacts:
           path: examples/absolem-ergogen/absolem.zip
+  run-tools-sanity-checks:
+    parameters:
+      version:
+        type: string
+    docker:
+      - image: admwscki/kicad-kbplacer-primary:<<parameters.version>>
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            python3 -m pip install --upgrade hatch
+      - run:
+          name: Run layout2image example
+          command: |
+            layout=tests/data/via-layouts/0_sixty.json
+            hatch run tools:layout2image -in $layout -out test.svg
+      - store_artifacts:
+          path: test.svg
   test-windows:
     machine:
       image: windows-server-2022-gui:edge
@@ -410,6 +429,12 @@ workflows:
                 - 7.0.11
                 - 8.0.9
                 - 9.0.1
+      - run-tools-sanity-checks:
+          matrix:
+            parameters:
+              version:
+                - 8.0.9-jammy
+                - 9.0.1-jammy
       - create-pcm-package:
           requires: &required-tests
             - test-linux
