@@ -113,10 +113,15 @@ jobs:
       - run:
           name: Run layout2image example
           command: |
-            layout=tests/data/via-layouts/0_sixty.json
-            hatch run tools:layout2image -in $layout -out test.svg
+            mkdir output_svgs
+            layouts=(0_sixty arya)
+            for l in "${layouts[@]}"; do
+                hatch run tools:layout2image \
+                    -in tests/data/via-layouts/$l.json \
+                    -out output_svgs/$l.svg
+            done
       - store_artifacts:
-          path: test.svg
+          path: output_svgs
   test-windows:
     machine:
       image: windows-server-2022-gui:edge
