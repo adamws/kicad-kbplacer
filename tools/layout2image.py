@@ -137,37 +137,39 @@ def build_key(key: Key):
     return group
 
 
-def calcualte_canvas_size(key_iterator: Iterator) -> tuple[int, int]:
+def calcualte_canvas_corners(key_iterator: Iterator) -> tuple[int, int, int, int]:
+    """
+    Find top-left and bottom-right corners for given keys
+
+    :return: Corners [x1 y1 x2 y2] tuple
+    """
+    min_x = 2**32
+    min_y = 2**32
     max_x = 0
     max_y = 0
     for k in key_iterator:
-        angle = k.rotation_angle
-        if angle != 0:
-            # when rotated, check each corner
-            x1 = KEY_WIDTH_PX * k.x
-            x2 = KEY_WIDTH_PX * k.x + KEY_WIDTH_PX * k.width
-            y1 = KEY_HEIGHT_PX * k.y
-            y2 = KEY_HEIGHT_PX * k.y + KEY_HEIGHT_PX * k.height
+        x1 = KEY_WIDTH_PX * k.x
+        x2 = KEY_WIDTH_PX * k.x + KEY_WIDTH_PX * k.width
+        y1 = KEY_HEIGHT_PX * k.y
+        y2 = KEY_HEIGHT_PX * k.y + KEY_HEIGHT_PX * k.height
 
-            for x, y in [(x1, y1), (x2, y1), (x1, y2), (x2, y2)]:
+        for x, y in [(x1, y1), (x2, y1), (x1, y2), (x2, y2)]:
+            angle = k.rotation_angle
+            if angle != 0:
                 rot_x = KEY_WIDTH_PX * k.rotation_x
                 rot_y = KEY_HEIGHT_PX * k.rotation_y
                 x, y = rotate((rot_x, rot_y), (x, y), angle)
-                x, y = int(x), int(y)
-                if x >= max_x:
-                    max_x = x
-                if y >= max_y:
-                    max_y = y
-
-        else:
-            # when not rotated, it is safe to check only bottom right corner:
-            x = KEY_WIDTH_PX * k.x + KEY_WIDTH_PX * k.width
-            y = KEY_HEIGHT_PX * k.y + KEY_HEIGHT_PX * k.height
+            x, y = int(x), int(y)
+            if x <= min_x:
+                min_x = x
             if x >= max_x:
                 max_x = x
+            if y <= min_y:
+                min_y = y
             if y >= max_y:
                 max_y = y
-    return max_x + 2 * ORIGIN_X, max_y + 2 * ORIGIN_Y
+
+    return min_x, min_y, max_x + 2 * ORIGIN_X, max_y + 2 * ORIGIN_Y
 
 
 def create_images(input_path: str, output_path):
@@ -191,8 +193,10 @@ def create_images(input_path: str, output_path):
         else:
             return iter(_keyboard.keys)
 
-    width, height = calcualte_canvas_size(_get_iterator())
-    d = dw.Drawing(width, height)
+    x1, y1, x2, y2 = calcualte_canvas_corners(_get_iterator())
+    width = x2 - x1
+    height = y2 - y1
+    d = dw.Drawing(width, height, origin=(x1, y1))
 
     for k in _get_iterator():
         width = k.width
