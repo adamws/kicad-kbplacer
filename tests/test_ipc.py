@@ -156,6 +156,11 @@ def get_board_with_one_footprint(request, footprint: str) -> pcbnew.BOARD:
 @pytest.mark.xfail
 def test_footprint_move(request, tmpdir, background_kicad) -> None:
     board = get_board_with_one_footprint(request, "SW_Cherry_MX_PCB_1.00u")
+
+    footprint = board.FindFootprintByReference("SW1")
+    pads_initial_positions = [p.GetPosition() for p in footprint.Pads()]
+    pads_initial_positions = sorted(pads_initial_positions)
+
     pcb_path = f"{tmpdir}/test.kicad_pcb"
     board.Save(pcb_path)
 
@@ -177,3 +182,11 @@ def test_footprint_move(request, tmpdir, background_kicad) -> None:
     position = footprint.GetPosition()
     assert position.x == dest_x
     assert position.y == dest_y
+
+    # add more strict check, seems that IPC API is bugged and code above just changes
+    # footprint origin (pads positions are unchanged) - checked with KiCad 9.0.2
+    # and kicad-python 0.3.0
+    pads_final_positions = [p.GetPosition() for p in footprint.Pads()]
+    pads_final_positions = sorted(pads_final_positions)
+    assert pads_final_positions != pads_initial_positions
+
