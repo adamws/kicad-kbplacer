@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2024-07-20 12:36+0200\n"
+"POT-Creation-Date: 2025-06-18 20:51+0200\n"
 "PO-Revision-Date: 2024-06-11 10:09+0000\n"
 "Last-Translator: hugoalh <hugoalh@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Chinese (Traditional) <https://hosted.weblate.org/projects/"
@@ -34,6 +34,12 @@ msgstr "載入至："
 msgid "Keyboard layout file:"
 msgstr "鍵盤佈局檔案："
 
+msgid "How many millimeters 1U spans between switches horizontally"
+msgstr ""
+
+msgid "How many millimeters 1U spans between switches vertically"
+msgstr ""
+
 msgid "Switch settings"
 msgstr "開關設定"
 
@@ -41,6 +47,11 @@ msgid "Route with switches"
 msgstr ""
 
 msgid "Automatically adjust orientation"
+msgstr ""
+
+msgid ""
+"Find optimal diode orientation for minimal distance between switch and diode "
+"common net pads"
 msgstr ""
 
 msgid "Switch diodes settings"

@@ -237,6 +237,8 @@ class LabeledTextCtrl(wx.Panel):
         value: str,
         width: int = -1,
         validator: wx.Validator = wx.DefaultValidator,
+        *,
+        tooltip: str = "",
     ) -> None:
         super().__init__(parent)
 
@@ -256,6 +258,9 @@ class LabeledTextCtrl(wx.Panel):
             validator=validator,
             name=label.strip(":"),
         )
+        if tooltip:
+            self.label.SetToolTip(tooltip)
+            self.text.SetToolTip(tooltip)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.label, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5)
@@ -688,13 +693,18 @@ class KbplacerDialog(wx.Dialog):
             value=str(key_distance[0]),
             width=5,
             validator=FloatValidator(),
+            tooltip=self._(
+                "How many millimeters 1U spans between switches horizontally"
+            ),
         )
+
         key_distance_y = LabeledTextCtrl(
             self,
             wx_("Step Y:"),
             value=str(key_distance[1]),
             width=5,
             validator=FloatValidator(),
+            tooltip=self._("How many millimeters 1U spans between switches vertically"),
         )
 
         key_annotation = LabeledTextCtrl(
@@ -753,6 +763,11 @@ class KbplacerDialog(wx.Dialog):
             self, label=self._("Automatically adjust orientation")
         )
         optimize_diodes_orientation_checkbox.SetValue(optimize_diodes_orientation)
+        optimize_diodes_orientation_checkbox.SetToolTip(
+            self._(
+                "Find optimal diode orientation for minimal distance between switch and diode common net pads"
+            )
+        )
 
         diode_settings = ElementSettingsWidget(
             self,

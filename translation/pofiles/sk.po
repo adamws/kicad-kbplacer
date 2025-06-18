@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2024-07-20 12:36+0200\n"
+"POT-Creation-Date: 2025-06-18 20:51+0200\n"
 "PO-Revision-Date: 2024-09-25 22:16+0000\n"
 "Last-Translator: Milan Šalka <salka.milan@googlemail.com>\n"
 "Language-Team: Slovak <https://hosted.weblate.org/projects/kicad-kbplacer/"
@@ -37,6 +37,12 @@ msgstr "Načítať z:"
 msgid "Keyboard layout file:"
 msgstr "Súbor rozloženie klávesnice:"
 
+msgid "How many millimeters 1U spans between switches horizontally"
+msgstr ""
+
+msgid "How many millimeters 1U spans between switches vertically"
+msgstr ""
+
 msgid "Switch settings"
 msgstr "Nastavenie prepínača"
 
@@ -45,6 +51,11 @@ msgstr "Trasa spínačmi"
 
 msgid "Automatically adjust orientation"
 msgstr "Automatické nastavenie orientácie"
+
+msgid ""
+"Find optimal diode orientation for minimal distance between switch and diode "
+"common net pads"
+msgstr ""
 
 msgid "Switch diodes settings"
 msgstr "Nastavenie spínačov"

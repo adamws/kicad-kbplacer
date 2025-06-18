@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2024-07-20 12:36+0200\n"
+"POT-Creation-Date: 2025-06-18 20:51+0200\n"
 "PO-Revision-Date: 2024-02-19 13:02+0000\n"
 "Last-Translator: Сергій <sergiy.goncharuk.1@gmail.com>\n"
 "Language-Team: Ukrainian <https://hosted.weblate.org/projects/kicad-kbplacer/"
@@ -38,6 +38,12 @@ msgstr "Завантажити з:"
 msgid "Keyboard layout file:"
 msgstr "Файл розкладки клавіатури:"
 
+msgid "How many millimeters 1U spans between switches horizontally"
+msgstr ""
+
+msgid "How many millimeters 1U spans between switches vertically"
+msgstr ""
+
 msgid "Switch settings"
 msgstr "Налаштування перемикача"
 
@@ -45,6 +51,11 @@ msgid "Route with switches"
 msgstr "Траса з перемикачами"
 
 msgid "Automatically adjust orientation"
+msgstr ""
+
+msgid ""
+"Find optimal diode orientation for minimal distance between switch and diode "
+"common net pads"
 msgstr ""
 
 msgid "Switch diodes settings"

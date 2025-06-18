@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2024-07-20 12:36+0200\n"
+"POT-Creation-Date: 2025-06-18 20:51+0200\n"
 "PO-Revision-Date: 2024-07-28 22:09+0000\n"
 "Last-Translator: gallegonovato <fran-carro@hotmail.es>\n"
 "Language-Team: Spanish <https://hosted.weblate.org/projects/kicad-kbplacer/"
@@ -37,6 +37,12 @@ msgstr "Carga desde:"
 msgid "Keyboard layout file:"
 msgstr "Archivo de diseño de teclado:"
 
+msgid "How many millimeters 1U spans between switches horizontally"
+msgstr ""
+
+msgid "How many millimeters 1U spans between switches vertically"
+msgstr ""
+
 msgid "Switch settings"
 msgstr "Configuración de los interruptores"
 
@@ -45,6 +51,11 @@ msgstr "Ruta con switches"
 
 msgid "Automatically adjust orientation"
 msgstr "Ajustar automáticamente la orientación"
+
+msgid ""
+"Find optimal diode orientation for minimal distance between switch and diode "
+"common net pads"
+msgstr ""
 
 msgid "Switch diodes settings"
 msgstr "Configuración de los diodos de los interruptores"
