@@ -844,12 +844,10 @@ def parse_ergogen_points(layout: dict, *, zone_filter: str = "") -> Keyboard:
         key.y = key.y - key.height / 2
     # move out of negative positions
     min_x = min(keys, key=lambda k: k.x).x
-    if min_x >= 0:
-        min_x = 0
+    min_x = min(0, min_x)
 
     min_y = min(keys, key=lambda k: k.y).y
-    if min_y >= 0:
-        min_y = 0
+    min_y = min(0, min_y)
 
     for key in keys:
         key.x = key.x - min_x

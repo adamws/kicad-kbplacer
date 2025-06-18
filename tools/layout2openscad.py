@@ -43,7 +43,7 @@ def generate(
     plate_thickness=3,
     margin: float = 0,
     shape: PlateShape = PlateShape.ENVELOPE,
-    align_origin = False,
+    align_origin=False,
 ) -> OpenSCADObject:
     switches = []
     holes = []

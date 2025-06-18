@@ -189,4 +189,3 @@ def test_footprint_move(request, tmpdir, background_kicad) -> None:
     pads_final_positions = [p.GetPosition() for p in footprint.Pads()]
     pads_final_positions = sorted(pads_final_positions)
     assert pads_final_positions != pads_initial_positions
-
