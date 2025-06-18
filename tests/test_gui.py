@@ -2,13 +2,21 @@ import copy
 import json
 import logging
 import os
+import re
 import subprocess
 from dataclasses import asdict
 
 import pytest
+import wx
 
 from kbplacer.element_position import ElementInfo, ElementPosition, PositionOption, Side
-from kbplacer.kbplacer_dialog import WindowState, load_window_state_from_log
+from kbplacer.kbplacer_dialog import (
+    FloatValidator,
+    WindowState,
+    load_window_state_from_log,
+)
+
+from .conftest import get_screen_manager
 
 logger = logging.getLogger(__name__)
 
@@ -277,3 +285,88 @@ def test_load_window_state_from_missing_log(caplog) -> None:
     assert state == DEFAULT_WINDOW_STATE
     assert len(caplog.records) == 1
     assert caplog.records[0].message == STATE_DEFAULT_LOG
+
+
+@pytest.fixture(scope="class")
+def validator_screen_manager():
+    with get_screen_manager():
+        app = wx.App()
+        yield
+        app.Destroy()
+
+
+@pytest.mark.usefixtures("validator_screen_manager")
+class TestValidators:
+
+    VALID_INTS = [
+        "0",
+        "42",
+        "-42",
+        "+42",
+        "999999",
+    ]
+    VALID_FLOATS = [
+        "0.0",
+        "123.456",
+        "-1.23",
+        "+0.5",
+        ".75",
+        "-.999",
+        "+.001",
+        "1e3",  # scientific notation (supported)
+        "-2e-2",
+    ]
+    INVALID_INPUTS = [
+        "abc",  # non-numeric
+        "12a",  # mixed
+        "++1",  # double sign
+        "--1",
+        "1..2",  # multiple dots
+        "1.2.3",
+        "0x123",  # hex-like
+        "1e3.5",  # malformed sci notation
+        "",  # empty string
+        " ",  # whitespace
+        ".",  # standalone dot
+        "-",  # standalone minus
+        "+",  # standalone plus
+    ]
+
+    @pytest.fixture
+    def ctrl(self):
+        frame = wx.Frame(None)
+        ctrl = wx.TextCtrl(frame, validator=FloatValidator(), name="TestFloat")
+        frame.Show()
+        yield ctrl
+        frame.Destroy()
+
+    @pytest.mark.parametrize("text", VALID_FLOATS + VALID_INTS)
+    def test_valid_float(self, ctrl, monkeypatch, text):
+        call_count = {"count": 0}
+
+        def fake_messagebox(msg, caption, *args, **kwargs):
+            call_count["count"] += 1
+            return wx.OK
+
+        monkeypatch.setattr(wx, "MessageBox", fake_messagebox)
+
+        ctrl.SetValue(text)
+        assert ctrl.GetValidator().Validate(ctrl.GetParent() or ctrl)
+        assert call_count["count"] == 0
+
+    @pytest.mark.parametrize("text", INVALID_INPUTS)
+    def test_invalid_float(self, ctrl, monkeypatch, text):
+        expected_err = r"Invalid 'TestFloat' value: '.*' is not a number!"
+        captured = {}
+
+        def fake_messagebox(msg, caption, *args, **kwargs):
+            captured["msg"] = msg
+            captured["caption"] = caption
+            return wx.OK
+
+        monkeypatch.setattr(wx, "MessageBox", fake_messagebox)
+
+        ctrl.SetValue(text)
+        assert not ctrl.GetValidator().Validate(ctrl.GetParent() or ctrl)
+        assert captured["caption"] == "Error"
+        assert re.match(expected_err, captured["msg"])

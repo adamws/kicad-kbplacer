@@ -604,8 +604,7 @@ def is_xvfb_avaiable() -> bool:
     return False
 
 
-@pytest.fixture
-def screen_manager():
+def get_screen_manager():
     if sys.platform == "linux":
         if is_xvfb_avaiable():
             return LinuxVirtualScreenManager()
@@ -615,3 +614,8 @@ def screen_manager():
         return HostScreenManager()
     else:
         pytest.skip(f"Platform '{sys.platform}' is not supported")
+
+
+@pytest.fixture
+def screen_manager():
+    return get_screen_manager()
