@@ -4,6 +4,7 @@ import gettext
 import json
 import logging
 import os
+import re
 import string
 import sys
 from dataclasses import asdict, dataclass, field
@@ -192,6 +193,40 @@ class FloatValidator(wx.Validator):
                 or (key == "." and "." not in text)
             ):
                 event.Skip()
+
+
+class AnnotationValidator(wx.Validator):
+    # probably not as strict as KiCad footprints annotations,
+    # we just check if there is exactly one '{}' placeholder which
+    # must be a part of some non-whitespace content
+    PATTERN = r"^(?!\s*\{\}\s*$)(?:[^{}]*\{\}[^{}]*)$"
+
+    def __init__(self) -> None:
+        wx.Validator.__init__(self)
+
+    def Clone(self) -> AnnotationValidator:
+        return AnnotationValidator()
+
+    def Validate(self, _) -> bool:
+        text_ctrl = self.GetWindow()
+        text = text_ctrl.GetValue()
+        if not re.fullmatch(AnnotationValidator.PATTERN, text):
+            name = text_ctrl.GetName()
+            wx.MessageBox(
+                f"Invalid '{name}' value. Annotation must have exactly one "
+                "'{}' placeholder, and it must be a part of non-whitespace "
+                f"content. Received: '{text}'",
+                "Error",
+            )
+            text_ctrl.SetFocus()
+            return False
+        return True
+
+    def TransferToWindow(self) -> bool:
+        return True
+
+    def TransferFromWindow(self) -> bool:
+        return True
 
 
 class LabeledTextCtrl(wx.Panel):
@@ -542,6 +577,7 @@ class ElementSettingsWidget(wx.Panel):
             label=wx_("Footprint Annotation") + ":",
             value=element_info.annotation_format,
             width=3,
+            validator=AnnotationValidator(),
         )
         self.position_widget = ElementPositionChoiceWidget(
             self,
@@ -662,7 +698,10 @@ class KbplacerDialog(wx.Dialog):
         )
 
         key_annotation = LabeledTextCtrl(
-            self, wx_("Footprint Annotation") + ":", element_info.annotation_format
+            self,
+            wx_("Footprint Annotation") + ":",
+            element_info.annotation_format,
+            validator=AnnotationValidator(),
         )
 
         key_position = ElementPositionWidget(self, ZERO_POSITION, disable_offsets=True)

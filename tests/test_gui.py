@@ -11,6 +11,7 @@ import wx
 
 from kbplacer.element_position import ElementInfo, ElementPosition, PositionOption, Side
 from kbplacer.kbplacer_dialog import (
+    AnnotationValidator,
     FloatValidator,
     WindowState,
     load_window_state_from_log,
@@ -316,7 +317,7 @@ class TestValidators:
         "1e3",  # scientific notation (supported)
         "-2e-2",
     ]
-    INVALID_INPUTS = [
+    INVALID_FLOAT_INPUTS = [
         "abc",  # non-numeric
         "12a",  # mixed
         "++1",  # double sign
@@ -324,24 +325,49 @@ class TestValidators:
         "1..2",  # multiple dots
         "1.2.3",
         "0x123",  # hex-like
-        "1e3.5",  # malformed sci notation
+        "1e3.5",  # malformed scientific notation
         "",  # empty string
         " ",  # whitespace
         ".",  # standalone dot
         "-",  # standalone minus
         "+",  # standalone plus
     ]
+    VALID_ANNOTATIONS = [
+        "SW{}",
+        "{}SW",
+        "SW {}",
+        "SW_{}",
+        "SW_{}_a",
+    ]
+    INVALID_ANNOTATIONS = [
+        "SW",
+        "SW{",
+        "SW{}{}",
+        "{}",
+        "  {}",
+    ]
 
     @pytest.fixture
-    def ctrl(self):
+    def frame(self):
         frame = wx.Frame(None)
-        ctrl = wx.TextCtrl(frame, validator=FloatValidator(), name="TestFloat")
-        frame.Show()
-        yield ctrl
+        yield frame
         frame.Destroy()
 
-    @pytest.mark.parametrize("text", VALID_FLOATS + VALID_INTS)
-    def test_valid_float(self, ctrl, monkeypatch, text):
+    @pytest.fixture
+    def float_ctrl(self, frame):
+        ctrl = wx.TextCtrl(frame, validator=FloatValidator(), name="TestFloat")
+        frame.Show()
+        return ctrl
+
+    @pytest.fixture
+    def annotation_ctrl(self, frame):
+        ctrl = wx.TextCtrl(
+            frame, validator=AnnotationValidator(), name="TestAnnotation"
+        )
+        frame.Show()
+        return ctrl
+
+    def valid(self, ctrl, monkeypatch, text):
         call_count = {"count": 0}
 
         def fake_messagebox(msg, caption, *args, **kwargs):
@@ -354,9 +380,15 @@ class TestValidators:
         assert ctrl.GetValidator().Validate(ctrl.GetParent() or ctrl)
         assert call_count["count"] == 0
 
-    @pytest.mark.parametrize("text", INVALID_INPUTS)
-    def test_invalid_float(self, ctrl, monkeypatch, text):
-        expected_err = r"Invalid 'TestFloat' value: '.*' is not a number!"
+    @pytest.mark.parametrize("text", VALID_FLOATS + VALID_INTS)
+    def test_valid_float(self, float_ctrl, monkeypatch, text):
+        self.valid(float_ctrl, monkeypatch, text)
+
+    @pytest.mark.parametrize("text", VALID_ANNOTATIONS)
+    def test_valid_annotation(self, annotation_ctrl, monkeypatch, text):
+        self.valid(annotation_ctrl, monkeypatch, text)
+
+    def invalid(self, ctrl, monkeypatch, text, expected_err):
         captured = {}
 
         def fake_messagebox(msg, caption, *args, **kwargs):
@@ -370,3 +402,17 @@ class TestValidators:
         assert not ctrl.GetValidator().Validate(ctrl.GetParent() or ctrl)
         assert captured["caption"] == "Error"
         assert re.match(expected_err, captured["msg"])
+
+    @pytest.mark.parametrize("text", INVALID_FLOAT_INPUTS)
+    def test_invalid_float(self, float_ctrl, monkeypatch, text):
+        expected_err = r"Invalid 'TestFloat' value: '.*' is not a number!"
+        self.invalid(float_ctrl, monkeypatch, text, expected_err)
+
+    @pytest.mark.parametrize("text", INVALID_ANNOTATIONS)
+    def test_invalid_annotation(self, annotation_ctrl, monkeypatch, text):
+        expected_err = (
+            r"Invalid 'TestAnnotation' value. Annotation must have exactly one "
+            "'{}' placeholder, and it must be a part of non-whitespace content. "
+            "Received: '.*'"
+        )
+        self.invalid(annotation_ctrl, monkeypatch, text, expected_err)
