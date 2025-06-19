@@ -11,7 +11,7 @@ try:
 except ImportError:
     __version__ = "not-found"
 
-__license__ = "GPL-3.0-only"
+__license__ = "GPL-3.0-or-later"
 __version__ = __version__
 
 logging.getLogger(__name__).addHandler(NullHandler())
