@@ -486,7 +486,14 @@ def test_switch_iterator_default_mode_ignore_decal(request) -> None:
     assert_iterator_end(iterator)
 
 
-def test_switch_iterator_via_annotation_mode(request) -> None:
+@pytest.mark.parametrize(
+    "labels",
+    [
+        ["0, 0", "0, 1", "1, 0", "1, 1"],
+        ["R0, C0", "R0, C1", "R1, C0", "R1, C1"],
+    ],
+)
+def test_switch_iterator_via_annotation_mode(request, labels) -> None:
     board = get_board_for_2x2_example(request)
 
     def _swap_columns(s1: str, s2: str):
@@ -506,7 +513,6 @@ def test_switch_iterator_via_annotation_mode(request) -> None:
     with open(get_2x2_layout_path(request), "r") as f:
         layout = json.load(f)
         keyboard = get_keyboard(layout)
-    labels = ["0, 0", "0, 1", "1, 0", "1, 1"]
     for i, k in enumerate(keyboard.keys):
         k.set_label(MatrixAnnotatedKeyboard.MATRIX_COORDINATES_LABEL, labels[i])
     # make sure that decal does not affect iterator
