@@ -21,10 +21,10 @@ from kbplacer.element_position import Side
 from .conftest import (
     KICAD_VERSION,
     add_track,
-    generate_render,
     get_footprints_dir,
     pointMM,
     prepare_project_file,
+    save_and_render,
     update_netinfo,
 )
 
@@ -56,12 +56,6 @@ def add_nets(board, netnames) -> None:
         net = pcbnew.NETINFO_ITEM(board, n, net_count + i)
         update_netinfo(board, net)
         board.Add(net)
-
-
-def save_and_render(board: pcbnew.BOARD, tmpdir, request) -> None:
-    pcb_path = f"{tmpdir}/test.kicad_pcb"
-    board.Save(pcb_path)
-    generate_render(request, pcb_path)
 
 
 def __get_parameters():

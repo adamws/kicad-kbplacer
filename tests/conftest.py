@@ -331,6 +331,12 @@ def generate_render(
     new_tree.write(f"{destination_dir}/report/{pcb_name}.svg")
 
 
+def save_and_render(board: pcbnew.BOARD, tmpdir, request) -> None:
+    pcb_path = f"{tmpdir}/test.kicad_pcb"
+    board.Save(pcb_path)
+    generate_render(request, pcb_path)
+
+
 def ignore_selected_drc_rules(board_path: Union[str, os.PathLike]) -> None:
     project_file = Path(board_path).with_suffix(".kicad_pro")
     assert project_file.exists(), "Could not ignore DRC rules without .kicad_pro file"

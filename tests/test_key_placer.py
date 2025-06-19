@@ -38,7 +38,7 @@ from .conftest import (
     add_led_footprint,
     add_switch_footprint,
     equal_ignore_order,
-    generate_render,
+    save_and_render,
     update_netinfo,
 )
 
@@ -76,12 +76,6 @@ def get_board_with_one_switch(
             p.SetNet(column_net)
 
     return board, switch, diodes
-
-
-def save_and_render(board: pcbnew.BOARD, tmpdir, request) -> None:
-    pcb_path = f"{tmpdir}/test.kicad_pcb"
-    board.Save(pcb_path)
-    generate_render(request, pcb_path)
 
 
 def assert_board_tracks(

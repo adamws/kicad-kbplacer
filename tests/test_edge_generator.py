@@ -14,17 +14,11 @@ import pytest
 from kbplacer.board_modifier import set_position
 from kbplacer.edge_generator import build_board_outline, convex_hull
 
-from .conftest import KICAD_VERSION, add_switch_footprint, add_track, generate_render
+from .conftest import KICAD_VERSION, add_switch_footprint, add_track, save_and_render
 
 logger = logging.getLogger(__name__)
 
 KEY_DISTANCE = 20
-
-
-def save_and_render(board: pcbnew.BOARD, tmpdir, request) -> None:
-    pcb_path = f"{tmpdir}/test.kicad_pcb"
-    board.Save(pcb_path)
-    generate_render(request, pcb_path)
 
 
 def get_board_with_switch_array(
