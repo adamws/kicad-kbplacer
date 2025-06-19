@@ -8,6 +8,7 @@ import json
 import locale
 import logging
 import os
+import random
 import shutil
 import subprocess
 import sys
@@ -21,6 +22,8 @@ import pyurlon
 import yaml
 
 from kbplacer.kle_serial import (
+    KEY_MAX_LABELS,
+    Key,
     Keyboard,
     MatrixAnnotatedKeyboard,
     get_keyboard_from_file,
@@ -487,6 +490,15 @@ def test_with_via_layouts(tmpdir, request, example, collapses) -> None:
         reference_collapsed = _reference_keyboard(f"{example}-internal-collapsed.json")
         assert result.keys == reference_collapsed.keys
         assert result.alternative_keys == reference_collapsed.alternative_keys
+        # check iterator
+        keys_without_alternative = list(result.key_iterator(ignore_alternative=True))
+        assert all(
+            elem not in keys_without_alternative for elem in result.alternative_keys
+        )
+        keys_with_alternative = list(result.key_iterator(ignore_alternative=False))
+        assert result.keys == keys_without_alternative
+        assert result.keys + result.alternative_keys == keys_with_alternative
+
         # convert back to `Keyboard` dataclass preserving expected key order:
         result = Keyboard(meta=result.meta, keys=result.keys_in_matrix_order())
         reference_collapsed_as_keyboard = Keyboard(
@@ -522,6 +534,43 @@ def test_with_qmk_layouts(tmpdir, request, example) -> None:
         reference_collapsed = MatrixAnnotatedKeyboard(reference.meta, reference.keys)
         assert result.keys == reference_collapsed.keys
         assert result.alternative_keys == reference_collapsed.alternative_keys
+
+
+class TestQmkCorruptedData:
+    @pytest.fixture()
+    def qmk(self, request):
+        test_dir = request.fspath.dirname
+        example = "0_sixty"
+
+        with open(Path(test_dir) / f"data/qmk-layouts/{example}.json", "r") as f:
+            layout = json.load(f)
+            yield layout
+
+    def test_missing_layouts_value(self, qmk) -> None:
+        del qmk["layouts"]
+        with pytest.raises(
+            RuntimeError, match="Invalid QMK data, required 'layouts' value not found"
+        ):
+            _ = parse_qmk(qmk)
+
+    def test_missing_layout_value(self, qmk) -> None:
+        key_to_delete_from = random.choice(list(qmk["layouts"].keys()))
+        del qmk["layouts"][key_to_delete_from]["layout"]
+        with pytest.raises(
+            RuntimeError, match="Invalid QMK data, required 'layout' value not found"
+        ):
+            _ = parse_qmk(qmk)
+
+    def test_invalid_layouts_type(self, qmk) -> None:
+        layout_to_corrupt = random.choice(list(qmk["layouts"].keys()))
+        qmk["layouts"][layout_to_corrupt]["layout"][
+            0
+        ] = "expected dict, this is a string"
+        with pytest.raises(
+            RuntimeError,
+            match="Unexpected data appeared while parsing QMK layout: '.*'",
+        ):
+            _ = parse_qmk(qmk)
 
 
 @pytest.mark.parametrize(
@@ -837,3 +886,9 @@ def test_utf8_label(request) -> None:
     keyboard = get_keyboard_from_file(layout_path)
     assert len(keyboard.keys) == 1
     assert keyboard.keys[0].labels == ["😊"]
+
+
+def test_illegal_key_label_position() -> None:
+    k = Key()
+    with pytest.raises(RuntimeError, match="Illegal key label index"):
+        k.set_label(KEY_MAX_LABELS, "Enter")

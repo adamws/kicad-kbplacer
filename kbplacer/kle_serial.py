@@ -534,10 +534,18 @@ def cleanup_key(key: Key) -> None:
 def parse_qmk(layout) -> MatrixAnnotatedKeyboard:
     metadata: KeyboardMetadata = KeyboardMetadata()
 
+    if "layouts" not in layout:
+        msg = "Invalid QMK data, required 'layouts' value not found"
+        raise RuntimeError(msg)
+
     layouts = layout["layouts"]
     keys: Dict[Tuple[int, int], List[Key]] = defaultdict(list)
 
     for i, layout in enumerate(layouts.values()):
+        if "layout" not in layout:
+            msg = "Invalid QMK data, required 'layout' value not found"
+            raise RuntimeError(msg)
+
         for item in layout["layout"]:
             if not isinstance(item, dict):
                 msg = f"Unexpected data appeared while parsing QMK layout: '{item}'"
