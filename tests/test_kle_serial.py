@@ -271,6 +271,7 @@ def __get_parameters():
         "iso-105",
         "kinesis-advantage",
         "symbolics-spacecadet",
+        "three-keys-middle-non-default-smsbst-right-ghosted"
     ]
     for f in kle_presets:
         param = pytest.param(
