@@ -28,8 +28,14 @@ from kbplacer.key_placer import (
     KeyboardSwitchIterator,
     KeyMatrix,
     KeyPlacer,
+    MatrixAnnotatedKeyboardSwitchIterator,
 )
-from kbplacer.kle_serial import Keyboard, get_keyboard, get_keyboard_from_file
+from kbplacer.kle_serial import (
+    Keyboard,
+    MatrixAnnotatedKeyboard,
+    get_keyboard,
+    get_keyboard_from_file,
+)
 from kbplacer.plugin_error import PluginError
 
 from .conftest import (
@@ -474,6 +480,44 @@ def test_switch_iterator_default_mode_ignore_decal(request) -> None:
     iterator = KeyboardSwitchIterator(keyboard, key_matrix)
     expected_keys = iter(keyboard.keys[0:4])
     expected_footprints = iter(["SW1", "SW2", "SW3", "SW4"])
+    for key, footprint in iterator:
+        assert key == next(expected_keys)
+        assert footprint.GetReference() == next(expected_footprints)
+    assert_iterator_end(iterator)
+
+
+def test_switch_iterator_via_annotation_mode(request) -> None:
+    board = get_board_for_2x2_example(request)
+
+    def _swap_columns(s1: str, s2: str):
+        sw1 = board.FindFootprintByReference(s1)
+        sw1p1 = sw1.FindPadByNumber("1")
+        n1 = sw1p1.GetNet()
+        sw2 = board.FindFootprintByReference(s2)
+        sw2p1 = sw2.FindPadByNumber("1")
+        n2 = sw2p1.GetNet()
+        sw1p1.SetNet(n2)
+        sw2p1.SetNet(n1)
+
+    _swap_columns("SW1", "SW2")
+    _swap_columns("SW3", "SW4")
+
+    key_matrix = KeyMatrix(board, "SW{}", "D{}")
+    with open(get_2x2_layout_path(request), "r") as f:
+        layout = json.load(f)
+        keyboard = get_keyboard(layout)
+    labels = ["0, 0", "0, 1", "1, 0", "1, 1"]
+    for i, k in enumerate(keyboard.keys):
+        k.set_label(MatrixAnnotatedKeyboard.MATRIX_COORDINATES_LABEL, labels[i])
+    # make sure that decal does not affect iterator
+    decal = copy.copy(keyboard.keys[0])
+    decal.decal = True
+    keyboard.keys.append(decal)
+    keyboard = MatrixAnnotatedKeyboard(meta=keyboard.meta, keys=keyboard.keys)
+    iterator = MatrixAnnotatedKeyboardSwitchIterator(keyboard, key_matrix)
+    expected_order = ["2", "1", "4", "3"]
+    expected_keys = iter(keyboard.keys)
+    expected_footprints = iter([f"SW{i}" for i in expected_order])
     for key, footprint in iterator:
         assert key == next(expected_keys)
         assert footprint.GetReference() == next(expected_footprints)
