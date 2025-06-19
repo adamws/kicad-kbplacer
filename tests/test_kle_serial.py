@@ -9,6 +9,7 @@ import locale
 import logging
 import os
 import random
+import re
 import shutil
 import subprocess
 import sys
@@ -569,6 +570,18 @@ class TestQmkCorruptedData:
         with pytest.raises(
             RuntimeError,
             match="Unexpected data appeared while parsing QMK layout: '.*'",
+        ):
+            _ = parse_qmk(qmk)
+
+    @pytest.mark.parametrize("new_value", ["string", [0, 1, 3], [], [0], {}])
+    def test_invalid_matrix(self, qmk, new_value) -> None:
+        layout_to_corrupt = random.choice(list(qmk["layouts"].keys()))
+        qmk["layouts"][layout_to_corrupt]["layout"][0]["matrix"] = new_value
+        with pytest.raises(
+            RuntimeError,
+            match=re.escape(
+                f"Unexpected key matrix position appeared while parsing QMK layout: '{new_value}'"
+            ),
         ):
             _ = parse_qmk(qmk)
 

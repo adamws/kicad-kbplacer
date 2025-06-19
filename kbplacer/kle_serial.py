@@ -571,7 +571,7 @@ def parse_qmk(layout) -> MatrixAnnotatedKeyboard:
             # labels (which qmk layout also can define), use approach from via
             # layouts, i.e. encode matrix position in first label
             matrix_position = item["matrix"]
-            if not isinstance(matrix_position, list):
+            if not isinstance(matrix_position, list) or len(matrix_position) != 2:
                 msg = (
                     "Unexpected key matrix position appeared while parsing QMK "
                     f"layout: '{matrix_position}'"
