@@ -225,6 +225,7 @@ def __get_invalid_parse_parameters():
     test_params.append(pytest.param(["", ""], id="list-of-unexpected-type"))
     test_params.append(pytest.param([{}, {}], id="list-with-wrong-dict-position"))
     test_params.append(pytest.param([[], {}], id="list-with-wrong-dict-position-2"))
+    test_params.append(pytest.param([[True]], id="unexpected-type"))
     return test_params
 
 
