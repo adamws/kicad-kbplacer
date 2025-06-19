@@ -8,6 +8,7 @@ import argparse
 import copy
 import json
 import logging
+import os
 import pprint
 import re
 import sys
@@ -891,7 +892,7 @@ def get_keyboard(layout: dict) -> Keyboard:
     raise RuntimeError(msg)
 
 
-def get_keyboard_from_file(layout_path: str) -> Keyboard:
+def get_keyboard_from_file(layout_path: Union[str, os.PathLike]) -> Keyboard:
     # Layout downloaded from keyboard-layout-editor is most likely using utf-8.
     # Use it explicitly in case the platform locale sets different encoding.
     with open(layout_path, "r", encoding="utf-8") as f:

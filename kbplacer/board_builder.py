@@ -87,9 +87,9 @@ class BoardBuilder:
 
     def create_board(
         self,
-        keyboard: Union[str, MatrixAnnotatedKeyboard],
+        keyboard: Union[str, os.PathLike, MatrixAnnotatedKeyboard],
     ) -> pcbnew.BOARD:
-        if isinstance(keyboard, str):
+        if isinstance(keyboard, str) or isinstance(keyboard, os.PathLike):
             with open(keyboard, "r", encoding="utf-8") as f:
                 layout = json.load(f)
                 tmp: Keyboard = get_keyboard(layout)
