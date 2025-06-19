@@ -8,7 +8,7 @@ import copy
 import json
 import logging
 from pathlib import Path
-from typing import List, Tuple
+from typing import Iterator, List, Tuple
 
 import pcbnew
 import pytest
@@ -76,6 +76,11 @@ def get_board_with_one_switch(
             p.SetNet(column_net)
 
     return board, switch, diodes
+
+
+def assert_iterator_end(iterator: Iterator) -> None:
+    with pytest.raises(StopIteration):
+        next(iterator)
 
 
 def assert_board_tracks(
@@ -388,6 +393,7 @@ def test_switch_iterator_default_mode(request) -> None:
     for key, footprint in iterator:
         assert key == next(expected_keys)
         assert footprint.GetReference() == next(expected_footprints)
+    assert_iterator_end(iterator)
 
 
 def test_switch_iterator_default_mode_missing_footprint(request) -> None:
@@ -427,6 +433,7 @@ def test_switch_iterator_explicit_annotation_mode(request) -> None:
     for key, footprint in iterator:
         assert key == next(expected_keys)
         assert footprint.GetReference() == next(expected_footprints)
+    assert_iterator_end(iterator)
 
 
 def test_switch_iterator_explicit_annotation_mode_missing_footprint(request) -> None:
@@ -470,6 +477,7 @@ def test_switch_iterator_default_mode_ignore_decal(request) -> None:
     for key, footprint in iterator:
         assert key == next(expected_keys)
         assert footprint.GetReference() == next(expected_footprints)
+    assert_iterator_end(iterator)
 
 
 def test_placer_board_without_matching_switches(request) -> None:
