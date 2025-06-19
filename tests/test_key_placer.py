@@ -828,3 +828,18 @@ def test_column_routing(
     assert len(added_tracks) == len(expected_tracks) - 1
 
     assert_board_tracks(expected_tracks, board)
+
+
+def test_switches_references_by_netname(request) -> None:
+    board = get_board_for_2x2_example(request)
+    key_matrix = KeyMatrix(board, "SW{}", "D{}")
+    nets_to_switches = {
+        "ROW0": ["SW1", "SW2"],
+        "ROW1": ["SW3", "SW4"],
+        "COL0": ["SW1", "SW3"],
+        "COL1": ["SW2", "SW4"],
+    }
+    for k, v in nets_to_switches.items():
+        # this API is not used/tested elsewhere:
+        result = key_matrix.switches_references_by_netname(k)
+        assert sorted(result) == v
