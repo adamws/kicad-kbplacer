@@ -1,7 +1,6 @@
-"""Brand new atopile project!"""
 #pragma experiment("MODULE_TEMPLATING")
 
-from "components/matrix.py" import SwitchDiode, KeyboardMatrix
+from "components/matrix.py" import KeyboardMatrix
 
 module App:
     matrix = new KeyboardMatrix<layout_path="/home/aws/git/pyrope-keyboard/pcb-v2/kle.json">

@@ -1,6 +1,7 @@
 import re
 import json
 import logging
+import os
 from pathlib import Path
 from typing import List, Tuple, Union, Dict
 from collections import defaultdict
@@ -16,7 +17,8 @@ from faebryk.libs.util import times
 from kbplacer.kle_serial import Key, MatrixAnnotatedKeyboard, get_keyboard
 
 logger = logging.getLogger(__name__)
-
+components_dir = os.path.dirname(os.path.abspath(__file__))
+footprints_dir = components_dir + "/../footprints"
 
 class SwitchDiode(Module):
     # in_: F.ElectricSignal
@@ -31,20 +33,13 @@ class SwitchDiode(Module):
         self.y = y
 
     def __preinit__(self) -> None:
-        print(f"__preinit__ SwitchDiode: {self.x=} {self.y=}")
-        # self.out_.line.connect_via(
-        #    [self.switch, self.diode], self.out_.reference.lv
-        # )
-
         self.diode.anode.connect(self.switch.unnamed[1])
 
-        fp = F.KicadFootprint(pin_names=["1", "2"])
-        fp.add(F.KicadFootprint.has_kicad_identifier("marbastlib-mx:SW_MX_1u"))
-        self.switch.attach_to_footprint.attach(fp)
+        #switch_fp = F.KicadFootprint.from_path(f"{footprints_dir}/SW_MX_1u.kicad_mod", "footprints")
+        switch_fp = F.KicadFootprint.from_path(f"{footprints_dir}/SW_MX_1u.kicad_mod", "footprints")
+        self.switch.attach_to_footprint.attach(switch_fp)
 
-        diode_fp = F.KicadFootprint(pin_names=["1", "2"])
-        diode_fp.add(F.KicadFootprint.has_kicad_identifier("Diode_SMD:D_SOD-123"))
-
+        diode_fp = F.KicadFootprint.from_path(f"{footprints_dir}/D_SOD-123.kicad_mod", "footprints")
         self.diode.add(
             F.can_attach_to_footprint_via_pinmap(
                 {
