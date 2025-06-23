@@ -478,6 +478,20 @@ class MatrixAnnotatedKeyboard(Keyboard):
     def to_keyboard(self) -> Keyboard:
         return Keyboard(meta=self.meta, keys=self.keys_in_matrix_order())
 
+    @classmethod
+    def from_keyboard(cls, keyboard: Keyboard) -> MatrixAnnotatedKeyboard:
+        if not isinstance(keyboard, MatrixAnnotatedKeyboard):
+            try:
+                converted = MatrixAnnotatedKeyboard(keyboard.meta, keyboard.keys)
+                return converted
+            except Exception as e:
+                msg = (
+                    "Keyboard object not convertible to "
+                    f"matrix annotated keyboard: {e}"
+                )
+                raise RuntimeError(msg) from e
+        return keyboard
+
 
 def reorder_items(items: List[Any], align: int) -> List[Any]:
     ret: List[Any] = KEY_MAX_LABELS * [None]

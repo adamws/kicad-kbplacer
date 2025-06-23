@@ -43,15 +43,7 @@ def load_keyboard(layout_path) -> MatrixAnnotatedKeyboard:
         else:
             layout = json.load(f)
         _keyboard = get_keyboard(layout)
-        if not isinstance(_keyboard, MatrixAnnotatedKeyboard):
-            try:
-                _keyboard = MatrixAnnotatedKeyboard(_keyboard.meta, _keyboard.keys)
-            except Exception as e:
-                msg = (
-                    f"Layout from {_keyboard} is not convertible to "
-                    "matrix annotated keyboard which is required for schematic create"
-                )
-                raise RuntimeError(msg) from e
+        _keyboard = MatrixAnnotatedKeyboard.from_keyboard(_keyboard)
         _keyboard.collapse()
         return _keyboard
 

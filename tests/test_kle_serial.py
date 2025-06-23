@@ -27,6 +27,7 @@ from kbplacer.kle_serial import (
     Key,
     Keyboard,
     MatrixAnnotatedKeyboard,
+    get_keyboard,
     get_keyboard_from_file,
     parse_ergogen_points,
     parse_kle,
@@ -98,7 +99,7 @@ def test_labels(layout, expected) -> None:
 )
 def test_via_labels(layout, expected) -> None:
     keyboard = parse_kle(layout)
-    annotated_keyboard = MatrixAnnotatedKeyboard(keyboard.meta, keyboard.keys)
+    annotated_keyboard = MatrixAnnotatedKeyboard.from_keyboard(keyboard)
     assert (
         MatrixAnnotatedKeyboard.get_matrix_position(annotated_keyboard.keys[0])
         == expected
@@ -116,10 +117,12 @@ def test_via_labels(layout, expected) -> None:
 )
 def test_illegal_via_labels(layout) -> None:
     with pytest.raises(
-        RuntimeError, match=r"Matrix coordinates label missing or invalid"
+        RuntimeError,
+        match="Keyboard object not convertible to matrix annotated keyboard: "
+        "Matrix coordinates label missing or invalid",
     ):
         keyboard = parse_kle(layout)
-        annotated_keyboard = MatrixAnnotatedKeyboard(keyboard.meta, keyboard.keys)
+        annotated_keyboard = MatrixAnnotatedKeyboard.from_keyboard(keyboard)
         MatrixAnnotatedKeyboard.get_matrix_position(annotated_keyboard.keys[0])
 
 
@@ -271,7 +274,7 @@ def __get_parameters():
         "iso-105",
         "kinesis-advantage",
         "symbolics-spacecadet",
-        "three-keys-middle-non-default-smsbst-right-ghosted"
+        "three-keys-middle-non-default-smsbst-right-ghosted",
     ]
     for f in kle_presets:
         param = pytest.param(
@@ -294,14 +297,17 @@ def __get_parameters():
 
 
 @pytest.mark.parametrize("layout_file,reference_file", __get_parameters())
-def test_with_kle_references(layout_file, reference_file, request) -> None:
+@pytest.mark.parametrize("get_function", [parse_kle, get_keyboard])
+def test_with_kle_references(
+    layout_file, reference_file, get_function, request
+) -> None:
     test_dir = request.fspath.dirname
 
     reference = get_reference(Path(test_dir) / reference_file)
 
     with open(Path(test_dir) / layout_file, "r") as f:
         layout = json.load(f)
-        result = parse_kle(layout)
+        result = get_function(layout)
         assert result == reference
 
         f.seek(0)
@@ -311,7 +317,8 @@ def test_with_kle_references(layout_file, reference_file, request) -> None:
 
 
 @pytest.mark.parametrize("example", ["2x2", "1x2-with-2U-bottom", "1x1-rotated"])
-def test_with_ergogen(tmpdir, example, request) -> None:
+@pytest.mark.parametrize("get_function", [parse_ergogen_points, get_keyboard])
+def test_with_ergogen(tmpdir, example, get_function, request) -> None:
     test_dir = request.fspath.dirname
 
     reference = get_reference(
@@ -321,14 +328,14 @@ def test_with_ergogen(tmpdir, example, request) -> None:
     # very simple example layout
     with open(Path(test_dir) / f"data/ergogen-layouts/{example}.json", "r") as f:
         layout = json.load(f)
-        result = parse_ergogen_points(layout)
+        result = get_function(layout)
         keyboard_to_url(tmpdir, result)
         assert result == reference
 
 
 def _layout_collapse(layout) -> MatrixAnnotatedKeyboard:
     tmp = parse_kle(layout)
-    keyboard = MatrixAnnotatedKeyboard(meta=tmp.meta, keys=tmp.keys)
+    keyboard = MatrixAnnotatedKeyboard.from_keyboard(tmp)
     keyboard.collapse()
     return keyboard
 
@@ -348,9 +355,7 @@ def test_iso_enter_layout_collapse() -> None:
     # fmt: on
     result = _layout_collapse(layout)
     expected_keyboard = parse_kle(expected)
-    expected_keyboard = MatrixAnnotatedKeyboard(
-        meta=expected_keyboard.meta, keys=expected_keyboard.keys
-    )
+    expected_keyboard = MatrixAnnotatedKeyboard.from_keyboard(expected_keyboard)
     expected_keyboard.collapsed = True
     assert result == expected_keyboard
 
@@ -370,9 +375,7 @@ def test_bottom_row_collapse_no_extra_keys() -> None:
     # fmt: on
     result = _layout_collapse(layout)
     expected_keyboard = parse_kle(expected)
-    expected_keyboard = MatrixAnnotatedKeyboard(
-        meta=expected_keyboard.meta, keys=expected_keyboard.keys
-    )
+    expected_keyboard = MatrixAnnotatedKeyboard.from_keyboard(expected_keyboard)
     expected_keyboard.collapsed = True
     assert result == expected_keyboard
     assert len(result.alternative_keys) == 0
@@ -390,9 +393,7 @@ def test_bottom_row_decal_handling() -> None:
     # fmt: on
     result = _layout_collapse(layout)
     expected_keyboard = parse_kle(expected)
-    expected_keyboard = MatrixAnnotatedKeyboard(
-        meta=expected_keyboard.meta, keys=expected_keyboard.keys
-    )
+    expected_keyboard = MatrixAnnotatedKeyboard.from_keyboard(expected_keyboard)
     expected_keyboard.collapsed = True
     assert result == expected_keyboard
     assert len(result.alternative_keys) == 1
@@ -413,9 +414,7 @@ def test_collapse_ignores_decal_keys_in_default_key_group() -> None:
     # fmt: on
     result = _layout_collapse(layout)
     expected_keyboard = parse_kle(expected)
-    expected_keyboard = MatrixAnnotatedKeyboard(
-        meta=expected_keyboard.meta, keys=expected_keyboard.keys
-    )
+    expected_keyboard = MatrixAnnotatedKeyboard.from_keyboard(expected_keyboard)
     expected_keyboard.collapsed = True
     assert result == expected_keyboard
     assert len(result.alternative_keys) == 1
@@ -437,9 +436,7 @@ def test_collapse_detects_duplicated_keys() -> None:
     # fmt: on
     result = _layout_collapse(layout)
     expected_keyboard = parse_kle(expected)
-    expected_keyboard = MatrixAnnotatedKeyboard(
-        meta=expected_keyboard.meta, keys=expected_keyboard.keys
-    )
+    expected_keyboard = MatrixAnnotatedKeyboard.from_keyboard(expected_keyboard)
     expected_keyboard.collapsed = True
     assert result == expected_keyboard
     assert len(result.alternative_keys) == 2
@@ -453,8 +450,9 @@ def test_duplicate_matrix_position_in_default_group_not_allowed() -> None:
     ]
     # fmt: on
     with pytest.raises(
-        ValueError,
-        match=r"Duplicate matrix position for default layout keys not allowed",
+        RuntimeError,
+        match="Keyboard object not convertible to matrix annotated keyboard: "
+        "Duplicate matrix position for default layout keys not allowed",
     ):
         _ = _layout_collapse(layout)
 
@@ -473,17 +471,22 @@ def test_illegal_layout_option_label() -> None:
 
 
 @pytest.mark.parametrize("example", ["0_sixty", "crkbd", "wt60_a", "wt60_d"])
+@pytest.mark.parametrize("get_function", [parse_via, get_keyboard])
 @pytest.mark.parametrize("collapses", [1, 2])
-def test_with_via_layouts(tmpdir, request, example, collapses) -> None:
+def test_with_via_layouts(tmpdir, request, example, get_function, collapses) -> None:
     test_dir = request.fspath.dirname
 
     def _reference_keyboard(filename: str) -> MatrixAnnotatedKeyboard:
         reference = get_reference(Path(test_dir) / "data/via-layouts" / filename)
-        return MatrixAnnotatedKeyboard(reference.meta, reference.keys)
+        return MatrixAnnotatedKeyboard.from_keyboard(reference)
 
     with open(Path(test_dir) / f"data/via-layouts/{example}.json", "r") as f:
         layout = json.load(f)
-        result = parse_via(layout)
+        result = get_function(layout)
+        assert isinstance(result, MatrixAnnotatedKeyboard)
+        # calling MatrixAnnotatedKeyboard.from_keyboard on
+        # MatrixAnnotatedKeyboard must be noop:
+        assert MatrixAnnotatedKeyboard.from_keyboard(result) == result
         keyboard_to_url(tmpdir, result)
         assert result == _reference_keyboard(f"{example}-internal.json")
         # calling this multiple times should not matter
@@ -503,21 +506,21 @@ def test_with_via_layouts(tmpdir, request, example, collapses) -> None:
         assert result.keys + result.alternative_keys == keys_with_alternative
 
         # convert back to `Keyboard` dataclass preserving expected key order:
-        result = Keyboard(meta=result.meta, keys=result.keys_in_matrix_order())
-        reference_collapsed_as_keyboard = Keyboard(
-            meta=reference_collapsed.meta,
-            keys=reference_collapsed.keys_in_matrix_order(),
-        )
-        assert result.keys == reference_collapsed_as_keyboard.keys
+        result = result.to_keyboard()
+        reference_collapsed = reference_collapsed.to_keyboard()
+        assert result.keys == reference_collapsed.keys
 
 
 @pytest.mark.parametrize("example", ["0_sixty", "crkbd", "wt60_a", "wt60_d"])
-def test_with_qmk_layouts(tmpdir, request, example) -> None:
+@pytest.mark.parametrize("get_function", [parse_qmk, get_keyboard])
+def test_with_qmk_layouts(tmpdir, request, example, get_function) -> None:
     test_dir = request.fspath.dirname
 
     with open(Path(test_dir) / f"data/qmk-layouts/{example}.json", "r") as f:
         layout = json.load(f)
-        result = parse_qmk(layout).to_keyboard()
+        result = get_function(layout)
+        assert isinstance(result, MatrixAnnotatedKeyboard)
+        result = result.to_keyboard()
         keyboard_to_url(tmpdir, result)
         # qmk layouts are already 'collapsed', i.e. keys are at final positions
         # and there are no duplicates
@@ -527,14 +530,14 @@ def test_with_qmk_layouts(tmpdir, request, example) -> None:
         assert result.keys == reference.keys
 
         # qmk layout should be convertible to `MatrixAnnotatedKeyboard` type
-        result = MatrixAnnotatedKeyboard(result.meta, result.keys)
+        result = MatrixAnnotatedKeyboard.from_keyboard(result)
         # there is no automatic detection if layout is already collapsed (prior to calling `collapse`
         # for the first time, this would require implementing rotated polygons collision detection
         # which is too much work for now for this one edge case
         result.collapsed = True
         result.collapse()
 
-        reference_collapsed = MatrixAnnotatedKeyboard(reference.meta, reference.keys)
+        reference_collapsed = MatrixAnnotatedKeyboard.from_keyboard(reference)
         assert result.keys == reference_collapsed.keys
         assert result.alternative_keys == reference_collapsed.alternative_keys
 
@@ -628,7 +631,7 @@ def test_keys_in_matrix_order(layout, expected_order) -> None:
     tmp = parse_kle(layout)
     layout_order = copy(tmp.keys)
 
-    keyboard = MatrixAnnotatedKeyboard(meta=tmp.meta, keys=tmp.keys)
+    keyboard = MatrixAnnotatedKeyboard.from_keyboard(tmp)
     keys = keyboard.keys_in_matrix_order()
 
     for k, index in zip(keys, expected_order):
@@ -646,7 +649,7 @@ def test_keys_in_matrix_order(layout, expected_order) -> None:
 )
 def test_keys_in_matrix_order_illegal_labels(layout) -> None:
     tmp = parse_kle(layout)
-    keyboard = MatrixAnnotatedKeyboard(meta=tmp.meta, keys=tmp.keys)
+    keyboard = MatrixAnnotatedKeyboard.from_keyboard(tmp)
     with pytest.raises(ValueError, match=r"No numeric part for row or column found in"):
         keyboard.keys_in_matrix_order()
 

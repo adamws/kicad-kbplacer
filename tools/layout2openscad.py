@@ -110,7 +110,7 @@ def load_keyboard(layout_path) -> Keyboard:
         layout = json.load(f)
         _keyboard = get_keyboard(layout)
         try:
-            _keyboard = MatrixAnnotatedKeyboard(_keyboard.meta, _keyboard.keys)
+            _keyboard = MatrixAnnotatedKeyboard.from_keyboard(_keyboard)
             _keyboard.collapse()
         except Exception:
             pass
