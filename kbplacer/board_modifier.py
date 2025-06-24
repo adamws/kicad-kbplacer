@@ -64,8 +64,13 @@ def position_in_cartesian_coordinates(
     return pcbnew.VECTOR2I(int(x), int(y))
 
 
+def __get_filename(board: pcbnew.BOARD) -> str:
+    filename = board.GetFileName()
+    return filename if filename != "" else "<unsaved>"
+
+
 def get_footprint(board: pcbnew.BOARD, reference: str) -> pcbnew.FOOTPRINT:
-    logger.debug(f"Searching for {reference} footprint in {board.GetFileName()}")
+    logger.debug(f"Searching for {reference} footprint in {__get_filename(board)}")
     footprint = board.FindFootprintByReference(reference)
     if footprint is None:
         msg = f"Cannot find footprint {reference}"
@@ -77,7 +82,7 @@ def get_optional_footprint(
     board: pcbnew.BOARD, reference: str
 ) -> pcbnew.FOOTPRINT | None:
     logger.debug(
-        f"Searching for optional {reference} footprint in {board.GetFileName()}"
+        f"Searching for optional {reference} footprint in {__get_filename(board)}"
     )
     footprint = board.FindFootprintByReference(reference)
     if footprint is None:
