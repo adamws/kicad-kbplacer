@@ -53,9 +53,15 @@ from .kle_serial import Key, Keyboard, MatrixAnnotatedKeyboard, get_keyboard_fro
 from .plugin_error import PluginError
 
 logger = logging.getLogger(__name__)
+ANNOTATION_GUIDE_URL = (
+    "https://github.com/adamws/kicad-kbplacer/blob/master/docs/annotation_guide.md"
+)
 
 
 class KeyMatrix:
+    SUPPORTED_ROW_NAMES = ["ROW{}", "R{}"]
+    SUPPORTED_COLUMN_NAMES = ["COLUMN{}", "COL{}", "C{}"]
+
     def __init__(self, board: pcbnew.BOARD, key_format: str, diode_format: str) -> None:
         self.key_format = key_format
         self.diode_format = diode_format
@@ -126,10 +132,10 @@ class KeyMatrix:
                 self._switches_references_by_net = {}
                 break
         logger.debug(f"Switches by nets: {self._switches_references_by_net}")
-        diodes_by_switch = {
+        self._diodes_references_by_switch = {
             k: [f.GetReference() for f in v] for k, v in self._diodes_by_switch.items()
         }
-        logger.debug(f"Diodes by switch: {diodes_by_switch}")
+        logger.debug(f"Diodes by switch: {self._diodes_references_by_switch}")
 
     def first_switch_reference(self) -> str:
         return min(self._switches)
@@ -161,6 +167,19 @@ class KeyMatrix:
     def is_matrix_ok(self) -> bool:
         return len(self._switches_references_by_net) != 0
 
+    def is_likely_direct_pin(self) -> bool:
+        # assume that matrix netlist is direct-pin if:
+        # 1) none of the switch has diode connected to it
+        # 2) all of the switches are connected to GND on the one side
+        no_diodes = all(
+            len(lst) == 0 for lst in self._diodes_references_by_switch.values()
+        )
+        all_use_gnd = all(
+            any(net in key for net in ["GND", "Gnd", "gnd"])
+            for key in self._switches_references_by_net.keys()
+        )
+        return no_diodes and all_use_gnd
+
     def __guess_format(self, guesses: List[str]) -> str:
         for guess in guesses:
             pattern = re.compile(guess.format("(\\d)+"))
@@ -173,13 +192,13 @@ class KeyMatrix:
     @property
     def row_format(self) -> str:
         if not self._row_format:
-            self._row_format = self.__guess_format(["ROW{}", "R{}"])
+            self._row_format = self.__guess_format(KeyMatrix.SUPPORTED_ROW_NAMES)
         return self._row_format
 
     @property
     def column_format(self) -> str:
         if not self._column_format:
-            self._column_format = self.__guess_format(["COLUMN{}", "COL{}", "C{}"])
+            self._column_format = self.__guess_format(KeyMatrix.SUPPORTED_COLUMN_NAMES)
         return self._column_format
 
     def switches_references_by_coordinates(self, row: int, column: int) -> List[str]:
@@ -293,28 +312,53 @@ class MatrixAnnotatedKeyboardSwitchIterator:
 
     def __get_footprint(self, key: Key) -> Optional[pcbnew.FOOTPRINT]:
         matrix_coordinates = MatrixAnnotatedKeyboard.get_matrix_position(key)
+        layout_option = self._seen.count(matrix_coordinates)
+
         if all(c.isdigit() for c in matrix_coordinates):
             switches = self._key_matrix.switches_references_by_coordinates(
                 *map(int, matrix_coordinates)
             )
+            net_names_inferred = True
         else:
+            # supporting via-like annotation where net names are explicitly
+            # stated in layout file
             switches = self._key_matrix.switches_references_by_netnames(
                 *matrix_coordinates
             )
+            net_names_inferred = False
         switches = sorted(switches)
         logger.debug(f"Got {switches} for {matrix_coordinates} position")
+        if len(switches) == 0:
+            msg = (
+                f"Could not find switches connected to {matrix_coordinates} matrix position "
+                "which is used in provided layout.\n"
+                "Either required footprint is missing or it can't be found due to unexpected "
+                "net names.\n"
+            )
+            if net_names_inferred:
+                names = KeyMatrix.SUPPORTED_ROW_NAMES + KeyMatrix.SUPPORTED_COLUMN_NAMES
+                msg += (
+                    "When using via-annotated layouts it must be possible to associate "
+                    "footprints with following net names:\n" + ", ".join(names)
+                )
+            raise PluginError(msg)
+
         # assume that alternative keys have same annotation with
         # some sort of suffix so after sorting
         # the option index would get us correct footprint
         try:
             # due to layout collapsing the choices might be missing,
             # instead of using choice value use number of already seen switches
-            switch = switches[self._seen.count(matrix_coordinates)]
+            switch = switches[layout_option]
             fp = self._key_matrix.switch_by_reference(switch)
             self._seen.append(matrix_coordinates)
             return fp
         except Exception:
-            logger.warning("Could not find alternative layout footprint")
+            logger.warning(
+                "Could not find {} layout footprint".format(
+                    "default" if layout_option == 0 else "alternative"
+                )
+            )
             return None
 
     def __next__(self):
@@ -339,11 +383,18 @@ def get_key_iterator(
                 "Detected layout file with via-annotated matrix positions "
                 "while not all footprints on PCB can be unambiguously associated "
                 "with row/column position.\n"
-                "Either net names are unrecognized, netlist is invalid or "
-                "or using direct-pin switch connections.\n"
-                "Fix netlist problems or use layout file with 'explicit annotation'.\n"
-                "For details see https://github.com/adamws/kicad-kbplacer/"
-                "blob/master/docs/annotation_guide.md"
+                "Either net names are unrecognized or netlist is invalid.\n"
+                "Fix netlist problems or use layout file which uses 'explicit annotation'.\n"
+                f"For details see {ANNOTATION_GUIDE_URL}"
+            )
+            raise PluginError(msg)
+        if key_matrix.is_likely_direct_pin():
+            msg = (
+                "Detected layout file with via-annotated matrix positions "
+                "while key connections appear to be direct-pin (no matrix with diodes found).\n"
+                "This means that footprints on PCB can't be reliably matched to layout.\n"
+                "Please use layout file which uses 'explicit annotation'.\n"
+                f"For details see {ANNOTATION_GUIDE_URL}"
             )
             raise PluginError(msg)
         _iter = MatrixAnnotatedKeyboardSwitchIterator(keyboard, key_matrix)

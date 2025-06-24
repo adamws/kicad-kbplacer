@@ -7,6 +7,9 @@ from __future__ import annotations
 import copy
 import json
 import logging
+import re
+from contextlib import contextmanager
+from enum import Enum, auto
 from pathlib import Path
 from typing import Iterator, List, Tuple
 
@@ -25,6 +28,7 @@ from kbplacer.board_modifier import (
 from kbplacer.defaults import DEFAULT_DIODE_POSITION, ZERO_POSITION
 from kbplacer.element_position import ElementInfo, PositionOption, Side
 from kbplacer.key_placer import (
+    ANNOTATION_GUIDE_URL,
     KeyboardSwitchIterator,
     KeyMatrix,
     KeyPlacer,
@@ -47,6 +51,8 @@ from .conftest import (
     save_and_render,
     update_netinfo,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def get_board_with_one_switch(
@@ -301,6 +307,33 @@ def get_board_for_2x2_example(request) -> pcbnew.BOARD:
         diode = add_diode_footprint(board, request, i)
         diode.FindPadByNumber("1").SetNet(netcodes_map[f"ROW{i // 3}"])
         diode.FindPadByNumber("2").SetNet(netcodes_map[f"Net-D{i}-Pad2"])
+    return board
+
+
+def add_2x2_direct_pin_nets(board):
+    net_count = board.GetNetCount()
+    for i, n in enumerate(
+        [
+            "GND",
+            "SW1",
+            "SW2",
+            "SW3",
+            "SW4",
+        ]
+    ):
+        net = pcbnew.NETINFO_ITEM(board, n, net_count + i)
+        update_netinfo(board, net)
+        board.Add(net)
+    return board.GetNetInfo().NetsByName()
+
+
+def get_board_for_2x2_direct_pin_example(request) -> pcbnew.BOARD:
+    board = pcbnew.CreateEmptyBoard()
+    netcodes_map = add_2x2_direct_pin_nets(board)
+    for i in range(1, 5):
+        switch = add_switch_footprint(board, request, i)
+        switch.FindPadByNumber("1").SetNet(netcodes_map[f"SW{i}"])
+        switch.FindPadByNumber("2").SetNet(netcodes_map["GND"])
     return board
 
 
@@ -655,72 +688,122 @@ def test_placer_diode_from_illegal_preset(tmpdir, request) -> None:
     save_and_render(board, tmpdir, request)
 
 
-def get_board_for_2x2_without_diodes_example(request) -> pcbnew.BOARD:
-    board = get_board_for_2x2_example(request)
-    netcodes_map = board.GetNetInfo().NetsByNetcode()
+class TestPlacerNoDiodes:
+    class BoardType(Enum):
+        PIN_UNCONNECTED = auto()
+        PIN_OLD_DIODE_NET = auto()
+        REALISTIC_DIRECT_PIN = auto()
 
-    for f in board.GetFootprints():
-        ref = f.GetReference()
-        if ref.startswith("D"):
-            board.RemoveNative(f)
-        elif ref.startswith("SW"):
-            sw_pad = f.FindPadByNumber("2")
-            sw_pad.SetNet(netcodes_map[0])
-    return board
+    @pytest.fixture()
+    def board(self, tmpdir, request):
+        @contextmanager
+        def _get_board(board_type: TestPlacerNoDiodes.BoardType):
+            if board_type == TestPlacerNoDiodes.BoardType.REALISTIC_DIRECT_PIN:
+                board = get_board_for_2x2_direct_pin_example(request)
+            else:
+                board = get_board_for_2x2_example(request)
+                netcodes_map = board.GetNetInfo().NetsByNetcode()
 
+                for f in board.GetFootprints():
+                    ref = f.GetReference()
+                    if ref.startswith("D"):
+                        board.RemoveNative(f)
+                    elif ref.startswith("SW"):
+                        sw_pad = f.FindPadByNumber("2")
+                        if board_type == TestPlacerNoDiodes.BoardType.PIN_UNCONNECTED:
+                            sw_pad.SetNet(netcodes_map[0])
 
-def test_placer_no_diodes(tmpdir, request) -> None:
-    """Tests if placing switches works when diodes can't be found.
-    This can be intentional when using direct-pin switch connections
-    (there is no matrix, each switch is connected directed to MCU).
-    For such PCBs placer should still work as long as layout file is not
-    via-annotated (row/column assignments makes no sense for direct-pin).
-    QMK solves that by creating virtual key matrix, but for that we
-    would need to define switch mcu nets to virtual row/key mapping.
-    """
-    board = get_board_for_2x2_without_diodes_example(request)
-    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
-    diode_info = ElementInfo("", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, "")
-    layout_path = f"{request.fspath.dirname}/../examples/2x2/kle.json"
+            yield board
+            save_and_render(board, tmpdir, request)
 
-    key_placer = KeyPlacer(board)
-    # enable routing, we expect that no tracks are added
-    key_placer.run(layout_path, key_info, diode_info, route_rows_and_columns=True)
+        yield _get_board
 
-    save_and_render(board, tmpdir, request)
+    @pytest.mark.parametrize("board_type", [e for e in BoardType])
+    def test_placer_no_diodes(self, request, board, board_type) -> None:
+        """Tests if placing switches works when diodes can't be found.
+        This can be intentional when using direct-pin switch connections
+        (there is no matrix, each switch is connected directed to MCU).
+        For such PCBs placer should still work as long as layout file is not
+        via-annotated (row/column assignments makes no sense for direct-pin).
+        QMK solves that by creating virtual key matrix, but for that we
+        would need to define switch mcu nets to virtual row/key mapping.
+        """
+        key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
+        diode_info = ElementInfo("", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, "")
+        layout_path = f"{request.fspath.dirname}/../examples/2x2/kle.json"
+        with board(board_type) as board:
+            key_placer = KeyPlacer(board)
+            key_placer.run(
+                layout_path, key_info, diode_info, route_rows_and_columns=True
+            )
 
-    assert_2x2_layout_switches(board, (19.05, 19.05))
-    assert len(board.GetTracks()) == 0
+        assert_2x2_layout_switches(board, (19.05, 19.05))
+        if board_type == TestPlacerNoDiodes.BoardType.PIN_UNCONNECTED:
+            # routing has been enabled, when one side of the switch has no net then matrix is invalid
+            # and there is no tracks added
+            assert len(board.GetTracks()) == 0
+        elif board_type == TestPlacerNoDiodes.BoardType.PIN_OLD_DIODE_NET:
+            # but when second pin has valid net (even when diode does not exist anymore)
+            # then COLUMN routing should succeed
+            assert len(board.GetTracks()) == 2
+        elif board_type == TestPlacerNoDiodes.BoardType.REALISTIC_DIRECT_PIN:
+            # each switch has unique net and shared GND (ground would be routed)
+            assert len(board.GetTracks()) == 3
 
+    def _get_expected_error(self, board_type: TestPlacerNoDiodes.BoardType) -> str:
+        if board_type == TestPlacerNoDiodes.BoardType.PIN_UNCONNECTED:
+            return (
+                "Detected layout file with via-annotated matrix positions "
+                "while not all footprints on PCB can be unambiguously associated "
+                "with row/column position."
+            )
+        if board_type == TestPlacerNoDiodes.BoardType.PIN_OLD_DIODE_NET:
+            return (
+                "Could not find switches connected to ('0', '0') matrix position "
+                "which is used in provided layout.\n"
+                "Either required footprint is missing or it can't be found due to "
+                "unexpected net names.\n"
+                "When using via-annotated layouts it must be possible to associate "
+                "footprints with following net names:\n"
+                "ROW{}, R{}, COLUMN{}, COL{}, C{}"
+            )
+        if board_type == TestPlacerNoDiodes.BoardType.REALISTIC_DIRECT_PIN:
+            return (
+                "Detected layout file with via-annotated matrix positions "
+                "while key connections appear to be direct-pin (no matrix with diodes found).\n"
+                "This means that footprints on PCB can't be reliably matched to layout.\n"
+                "Please use layout file which uses 'explicit annotation'.\n"
+                f"For details see {ANNOTATION_GUIDE_URL}"
+            )
 
-def test_placer_no_diodes_via_annotated_layout(tmpdir, request) -> None:
-    """If via-annotated layout detected and no diodes,
-    best we can do is raise clear error message with suggestion to use
-    implicit annotations.
-    """
-    board = get_board_for_2x2_without_diodes_example(request)
-    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
-    diode_info = ElementInfo("", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, "")
-    layout_path = f"{request.fspath.dirname}/../examples/2x2/kle-annotated.json"
+    @pytest.mark.parametrize("board_type", [e for e in BoardType])
+    def test_placer_no_diodes_via_annotated_layout(
+        self, request, board, board_type
+    ) -> None:
+        """If via-annotated layout detected and no diodes,
+        best we can do is raise clear error message with suggestion to use
+        implicit annotations.
+        The error message details will be different depending on which 'diodeless'
+        key matrix is used.
+        """
+        key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
+        diode_info = ElementInfo("", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, "")
+        layout_path = f"{request.fspath.dirname}/../examples/2x2/kle-annotated.json"
 
-    key_placer = KeyPlacer(board)
+        with board(board_type) as board:
+            key_placer = KeyPlacer(board)
 
-    with pytest.raises(
-        PluginError,
-        match=(
-            "Detected layout file with via-annotated matrix positions "
-            "while not all footprints on PCB can be unambiguously associated "
-            "with row/column position."
-        ),
-    ):
-        key_placer.run(layout_path, key_info, diode_info, route_rows_and_columns=True)
+            with pytest.raises(
+                PluginError, match=re.escape(self._get_expected_error(board_type))
+            ):
+                key_placer.run(
+                    layout_path, key_info, diode_info, route_rows_and_columns=True
+                )
 
-    switches = [get_footprint(board, f"SW{i}") for i in range(1, 5)]
-    for sw in switches:
-        assert sw.GetPosition() == pcbnew.VECTOR2I(0, 0)
-    assert len(board.GetTracks()) == 0
-
-    save_and_render(board, tmpdir, request)
+        switches = [get_footprint(board, f"SW{i}") for i in range(1, 5)]
+        for sw in switches:
+            assert sw.GetPosition() == pcbnew.VECTOR2I(0, 0)
+        assert len(board.GetTracks()) == 0
 
 
 def get_board_with_column(
