@@ -429,9 +429,12 @@ def test_switch_iterator_default_mode(request) -> None:
     iterator = KeyboardSwitchIterator(keyboard, key_matrix)
     expected_keys = iter(keyboard.keys)
     expected_footprints = iter(["SW1", "SW2", "SW3", "SW4"])
+    count = 0
     for key, footprint in iterator:
+        count += 1
         assert key == next(expected_keys)
         assert footprint.GetReference() == next(expected_footprints)
+    assert count == 4
     assert_iterator_end(iterator)
 
 
@@ -469,9 +472,12 @@ def test_switch_iterator_explicit_annotation_mode(request) -> None:
     iterator = KeyboardSwitchIterator(keyboard, key_matrix)
     expected_keys = iter(keyboard.keys)
     expected_footprints = iter([f"SW{i}" for i in expected_order])
+    count = 0
     for key, footprint in iterator:
+        count += 1
         assert key == next(expected_keys)
         assert footprint.GetReference() == next(expected_footprints)
+    assert count == 4
     assert_iterator_end(iterator)
 
 
@@ -513,9 +519,12 @@ def test_switch_iterator_default_mode_ignore_decal(request) -> None:
     iterator = KeyboardSwitchIterator(keyboard, key_matrix)
     expected_keys = iter(keyboard.keys[0:4])
     expected_footprints = iter(["SW1", "SW2", "SW3", "SW4"])
+    count = 0
     for key, footprint in iterator:
+        count += 1
         assert key == next(expected_keys)
         assert footprint.GetReference() == next(expected_footprints)
+    assert count == 4
     assert_iterator_end(iterator)
 
 
@@ -523,7 +532,7 @@ def test_switch_iterator_default_mode_ignore_decal(request) -> None:
     "labels",
     [
         ["0, 0", "0, 1", "1, 0", "1, 1"],
-        ["R0, C0", "R0, C1", "R1, C0", "R1, C1"],
+        ["ROW0, COL0", "ROW0, COL1", "ROW1, COL0", "ROW1, COL1"],
     ],
 )
 def test_switch_iterator_via_annotation_mode(request, labels) -> None:
@@ -557,9 +566,12 @@ def test_switch_iterator_via_annotation_mode(request, labels) -> None:
     expected_order = ["2", "1", "4", "3"]
     expected_keys = iter(keyboard.keys)
     expected_footprints = iter([f"SW{i}" for i in expected_order])
+    count = 0
     for key, footprint in iterator:
+        count += 1
         assert key == next(expected_keys)
         assert footprint.GetReference() == next(expected_footprints)
+    assert count == 4
     assert_iterator_end(iterator)
 
 

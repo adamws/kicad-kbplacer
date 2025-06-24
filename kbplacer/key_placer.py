@@ -248,6 +248,8 @@ class KeyboardSwitchIterator:
         self._keyboard = keyboard
         self._key_matrix = key_matrix
         self._explicit_annotations = self.__check_explicit_annotations(keyboard)
+        self._keys = iter(self._keyboard.keys)
+        self._current_key = 1
 
     def __check_explicit_annotations(self, keyboard: Keyboard) -> bool:
         number_of_explicit_annotations = sum(
@@ -257,8 +259,6 @@ class KeyboardSwitchIterator:
         return number_of_explicit_annotations == len(keyboard.keys)
 
     def __iter__(self):
-        self._keys = iter(self._keyboard.keys)
-        self._current_key = 1
         return self
 
     def __get_footprint(self, key: Key) -> pcbnew.FOOTPRINT:
@@ -304,10 +304,10 @@ class MatrixAnnotatedKeyboardSwitchIterator:
     ) -> None:
         self._keyboard = keyboard
         self._key_matrix = key_matrix
-
-    def __iter__(self):
         self._keys = self._keyboard.key_iterator(ignore_alternative=False)
         self._seen: List[Tuple[str, str]] = []
+
+    def __iter__(self):
         return self
 
     def __get_footprint(self, key: Key) -> Optional[pcbnew.FOOTPRINT]:
