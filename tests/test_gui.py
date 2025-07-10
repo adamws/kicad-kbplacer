@@ -11,7 +11,7 @@ import subprocess
 from dataclasses import asdict
 
 import pytest
-import wx
+import wx  # problems if this imported from more than one test
 
 from kbplacer.element_position import ElementInfo, ElementPosition, PositionOption, Side
 from kbplacer.kbplacer_dialog import (
