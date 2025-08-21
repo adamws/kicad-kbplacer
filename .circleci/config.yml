@@ -173,6 +173,11 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Downgrade brew
+          command: | # workaround for https://github.com/orgs/Homebrew/discussions/6351
+            cd "$(brew --repo)"
+            git checkout 4.6.3
+      - run:
           name: Install KiCad
           command: |
             if [ "<<parameters.kicad-version>>" = "6.0.11" ]; then
@@ -219,6 +224,9 @@ jobs:
               filepath=Casks/k/kicad.rb
             elif [ "<<parameters.kicad-version>>" = "9.0.3" ]; then
               revision=2dd81f13990982761946fa73cc1d7b7dc74eb0b0
+              filepath=Casks/k/kicad.rb
+            elif [ "<<parameters.kicad-version>>" = "9.0.4" ]; then
+              revision=f9214eaa52048e16dbcfaac9ffd22caea1b92fad
               filepath=Casks/k/kicad.rb
             else
               echo "Unsupported KiCad version!"
@@ -413,12 +421,12 @@ workflows:
                 - 7.0.11-mantic
                 - 8.0.9-focal
                 - 8.0.9-jammy
-                - 9.0.3-jammy
+                - 9.0.4-jammy
       - test-linux-performance:
           matrix:
             parameters:
               version:
-                - 9.0.3-jammy
+                - 9.0.4-jammy
       - collect-coverage:
           requires:
             - test-linux
@@ -432,20 +440,20 @@ workflows:
                 - 6.0.11
                 - 7.0.11
                 - 8.0.9
-                - 9.0.3
+                - 9.0.4
       - test-macos:
           matrix:
             parameters:
               kicad-version:
                 - 7.0.11
                 - 8.0.9
-                - 9.0.3
+                - 9.0.4
       - run-tools-sanity-checks:
           matrix:
             parameters:
               version:
                 - 8.0.9-jammy
-                - 9.0.3-jammy
+                - 9.0.4-jammy
       - create-pcm-package:
           requires: &required-tests
             - test-linux
