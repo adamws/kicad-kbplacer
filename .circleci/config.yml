@@ -412,6 +412,10 @@ jobs:
 
 workflows:
   main:
+    # some GUI tests and some macos tests are flaky
+    # use new circleci auto-rerun feature:
+    # https://circleci.com/docs/guides/orchestrate/automatic-reruns/
+    max_auto_reruns: 3
     jobs:
       - test-linux:
           matrix:
