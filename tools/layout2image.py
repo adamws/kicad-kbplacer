@@ -206,7 +206,7 @@ def create_images(input_path: str, output_path):
         width = k.width
         height = k.height
         x = KEY_WIDTH_PX * k.x
-        y = KEY_WIDTH_PX * k.y
+        y = KEY_HEIGHT_PX * k.y
 
         key = build_key(k)
 
@@ -215,7 +215,7 @@ def create_images(input_path: str, output_path):
         if angle != 0:
             rot_x = KEY_WIDTH_PX * k.rotation_x
             rot_y = KEY_HEIGHT_PX * k.rotation_y
-            args["transform"] = f"rotate({angle} {rot_x} {rot_y})"
+            args["transform"] = f"rotate({angle} {rot_x + ORIGIN_X} {rot_y + ORIGIN_Y})"
         d.append(dw.Use(key, x + ORIGIN_X, y + ORIGIN_Y, **args))
 
     d.save_svg(output_path)

@@ -551,7 +551,7 @@ The `kbplacer` is used by additional tools available in [tools](tools/README.md)
     </tr>
     <tr>
         <td><code>layout2image.py</code> - generates KLE-like image for layout</td>
-        <td><img src="resources/absolem-layout.png"/></td>
+        <td><img src="resources/absolem.svg"/></td>
     </tr>
     <tr>
         <td><code>layout2schematic.py</code> - generates KiCad schematic file with switch matrix</td>

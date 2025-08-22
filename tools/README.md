@@ -48,11 +48,6 @@ hatch run tools:layout2image --in tests/data/ergogen-layouts/absolem-simple-poin
 
 ![absolem-svg](../resources/absolem.svg)
 
-As you can see, there are slight rotation issues on this generated image.
-This is the problem with SVG generation code because layout imported to KLE looks ok:
-
-![absolem-png](../resources/absolem-layout.png)
-
 To generate KLE url for run:
 
 ```shell
