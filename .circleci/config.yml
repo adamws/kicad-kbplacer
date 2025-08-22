@@ -111,6 +111,10 @@ jobs:
           command: |
             python3 -m pip install --upgrade hatch
       - run:
+          name: Run tools tests
+          command: |
+            hatch run tools:test
+      - run:
           name: Run layout2image example
           command: |
             mkdir output_svgs
@@ -372,7 +376,7 @@ jobs:
             docker build -t admwscki/$IMAGE_NAME:$TAG -f docker/Dockerfile .
             docker run --rm -v $(pwd):/kicad/tmp -w /kicad/tmp admwscki/$IMAGE_NAME:$TAG \
               /bin/bash -c \
-              "python -m pip install -r dev-requirements.txt && python -m pytest -c /dev/null --test-plugin-installation --continue-on-collection-errors -k test_with_examples"
+              "python -m pip install -r dev-requirements.txt && python -m pytest -c /dev/null --ignore tools --test-plugin-installation --continue-on-collection-errors -k test_with_examples"
       - when: # run only on master or tag
           condition:
             or:

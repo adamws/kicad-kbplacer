@@ -147,6 +147,7 @@ dependencies = [
   "PyYAML==6.0.1",
   "shapely==2.0.6",
   "solidpython==1.1.3",
+  "pytest>=6.0.0",
 ]
 [tool.hatch.envs.tools.scripts]
 layout2image = "python tools/layout2image.py {args}"
@@ -154,3 +155,4 @@ layout2schematic = "python tools/layout2schematic.py {args}"
 layout2url = "python tools/layout2url.py {args}"
 layout2openscad = "python tools/layout2openscad.py {args}"
 kle2kle = "python tools/kle2kle.py {args}"
+test = "python tools/run_tests.py {args}"
