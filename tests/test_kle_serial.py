@@ -711,11 +711,11 @@ class TestKleSerialCli:
             package_path,
             package_name,
             {
-                "-in": raw,
-                "-inform": "KLE_RAW",
-                "-out": str(internal_tmp),
-                "-outform": "KLE_INTERNAL",
-                "-text": "",
+                "--in": raw,
+                "--inform": "KLE_RAW",
+                "--out": str(internal_tmp),
+                "--outform": "KLE_INTERNAL",
+                "--text": "",
             },
         )
         p.communicate()
@@ -728,11 +728,11 @@ class TestKleSerialCli:
             package_path,
             package_name,
             {
-                "-in": str(internal_tmp),
-                "-inform": "KLE_INTERNAL",
-                "-out": str(raw_tmp),
-                "-outform": "KLE_RAW",
-                "-text": "",
+                "--in": str(internal_tmp),
+                "--inform": "KLE_INTERNAL",
+                "--out": str(raw_tmp),
+                "--outform": "KLE_RAW",
+                "--text": "",
             },
         )
         p.communicate()
@@ -776,14 +776,14 @@ class TestKleSerialCli:
         tmp_file = Path(layout_in).with_suffix(".json.tmp")
 
         args = {
-            "-in": layout_in,
-            "-inform": inform,
-            "-out": str(tmp_file),
-            "-outform": outform,
-            "-text": "",
+            "--in": layout_in,
+            "--inform": inform,
+            "--out": str(tmp_file),
+            "--outform": outform,
+            "--text": "",
         }
         if collapse:
-            args["-collapse"] = ""
+            args["--collapse"] = ""
 
         p = self._run_subprocess(package_path, package_name, args)
         p.communicate()
@@ -828,14 +828,14 @@ class TestKleSerialCli:
         tmp_file = Path(layout_file).with_suffix(".json.tmp")
 
         args = {
-            "-in": layout_file,
-            "-inform": "ERGOGEN_INTERNAL",
-            "-out": str(tmp_file),
-            "-outform": "KLE_RAW",
-            "-text": "",
+            "--in": layout_file,
+            "--inform": "ERGOGEN_INTERNAL",
+            "--out": str(tmp_file),
+            "--outform": "KLE_RAW",
+            "--text": "",
         }
         if ergogen_filter:
-            args["-ergogen-filter"] = ergogen_filter
+            args["--ergogen-filter"] = ergogen_filter
         p = self._run_subprocess(package_path, package_name, args)
         p.communicate()
         assert p.returncode == 0
@@ -856,11 +856,11 @@ class TestKleSerialCli:
         layout_file = f"{tmpdir}/{example}-points.yaml"
         tmp_file = Path(layout_file).with_suffix(".json.tmp")
         args = {
-            "-in": layout_file,
-            "-inform": "ERGOGEN_INTERNAL",
-            "-out": str(tmp_file),
-            "-outform": "KLE_RAW",
-            "-text": "",
+            "--in": layout_file,
+            "--inform": "ERGOGEN_INTERNAL",
+            "--out": str(tmp_file),
+            "--outform": "KLE_RAW",
+            "--text": "",
         }
         p = self._run_subprocess(package_path, package_name, args)
         p.communicate()
@@ -880,11 +880,11 @@ class TestKleSerialCli:
             package_path,
             package_name,
             {
-                "-in": f"{tmpdir}/in.json",
-                "-inform": form,
-                "-out": f"{tmpdir}/out.json",
-                "-outform": form,
-                "-text": "",
+                "--in": f"{tmpdir}/in.json",
+                "--inform": form,
+                "--out": f"{tmpdir}/out.json",
+                "--outform": form,
+                "--text": "",
             },
         )
         outs, _ = p.communicate()

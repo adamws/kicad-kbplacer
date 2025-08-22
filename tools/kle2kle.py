@@ -48,20 +48,20 @@ def annotate_keys(keys: List[Key]) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="KLE edit")
-    parser.add_argument("-in", required=True, help="Layout file")
-    parser.add_argument("-out", required=False, help="Result file")
+    parser.add_argument("-i", "--in", required=True, help="Layout file")
+    parser.add_argument("-o", "--out", required=False, help="Result file")
     parser.add_argument(
-        "-text", required=False, action="store_true", help="Print KLE raw data"
+        "--text", required=False, action="store_true", help="Print KLE raw data"
     )
 
     parser.add_argument(
-        "-remove-labels", action="store_true", help="Remove all key labels"
+        "--remove-labels", action="store_true", help="Remove all key labels"
     )
     parser.add_argument(
-        "-reset-colors", action="store_true", help="Reset colors to defaults"
+        "--reset-colors", action="store_true", help="Reset colors to defaults"
     )
     parser.add_argument(
-        "-annotate",
+        "--annotate",
         action="store_true",
         help=(
             "Automatically annotate keys with row,column labels. "

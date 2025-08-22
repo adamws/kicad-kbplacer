@@ -219,16 +219,20 @@ if __name__ == "__main__":
         description="Keyboard layout to KiCad schematic",
     )
 
-    parser.add_argument("-in", required=True, help="Layout file")
-    parser.add_argument("-out", required=True, help="Output path")
+    parser.add_argument("-i", "--in", required=True, help="Layout file")
+    parser.add_argument("-o", "--out", required=True, help="Output path")
     parser.add_argument(
         "-f",
         "--force",
         action="store_true",
         help="Override output if already exists",
     )
-    parser.add_argument("-swf", required=False, help="Switch footprint")
-    parser.add_argument("-df", required=False, help="Diode footprint")
+    parser.add_argument(
+        "-swf", "--switch-footprint", required=False, help="Switch footprint"
+    )
+    parser.add_argument(
+        "-df", "--diode-footprint", required=False, help="Diode footprint"
+    )
     parser.add_argument(
         "--log-level",
         required=False,
@@ -242,8 +246,8 @@ if __name__ == "__main__":
     input_path = getattr(args, "in")
     output_path = getattr(args, "out")
     force = args.force
-    switch_footprint = getattr(args, "swf")
-    diode_footprint = getattr(args, "df")
+    switch_footprint = args.switch_footprint
+    diode_footprint = args.diode_footprint
 
     # set up logger
     logging.basicConfig(

@@ -117,8 +117,8 @@ jobs:
             layouts=(0_sixty arya)
             for l in "${layouts[@]}"; do
                 hatch run tools:layout2image \
-                    -in tests/data/via-layouts/$l.json \
-                    -out output_svgs/$l.svg
+                    --in tests/data/via-layouts/$l.json \
+                    --out output_svgs/$l.svg
             done
       - store_artifacts:
           path: output_svgs

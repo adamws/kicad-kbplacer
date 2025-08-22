@@ -120,8 +120,8 @@ def load_keyboard(layout_path) -> Keyboard:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Keyboard layout file to OpenSCAD")
-    parser.add_argument("-in", required=True, help="Layout file")
-    parser.add_argument("-out", required=True, help="Output path")
+    parser.add_argument("-i", "--in", required=True, help="Layout file")
+    parser.add_argument("-o", "--out", required=True, help="Output path")
     parser.add_argument(
         "-f",
         "--force",
@@ -129,14 +129,14 @@ if __name__ == "__main__":
         help="Override output if already exists",
     )
     parser.add_argument(
-        "-margin",
+        "--margin",
         type=float,
         required=False,
         default=0.0,
         help="Margin too add (in mm)",
     )
     parser.add_argument(
-        "-shape",
+        "--shape",
         type=PlateShape,
         choices=list(PlateShape),
         required=False,
@@ -165,7 +165,7 @@ if __name__ == "__main__":
         help=("Size of switch cutout, 14 by default"),
     )
     parser.add_argument(
-        "--plate_thickness",
+        "--plate-thickness",
         type=float,
         required=False,
         default=3,

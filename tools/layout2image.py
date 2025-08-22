@@ -224,9 +224,14 @@ def create_images(input_path: str, output_path):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Layout file to images")
     parser.add_argument(
-        "-in", nargs="?", type=str, default="-", help="Input path or '-' for stdin"
+        "-i",
+        "--in",
+        nargs="?",
+        type=str,
+        default="-",
+        help="Input path or '-' for stdin",
     )
-    parser.add_argument("-out", required=True, help="Output path")
+    parser.add_argument("-o", "--out", required=True, help="Output path")
     parser.add_argument(
         "-f",
         "--force",

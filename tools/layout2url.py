@@ -14,7 +14,12 @@ from kbplacer.kle_serial import Keyboard, get_keyboard
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="KLE format converter")
     parser.add_argument(
-        "-in", nargs="?", type=str, default="-", help="Input path or '-' for stdin"
+        "-i",
+        "--in",
+        nargs="?",
+        type=str,
+        default="-",
+        help="Input path or '-' for stdin",
     )
 
     args = parser.parse_args()

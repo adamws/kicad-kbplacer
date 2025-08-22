@@ -925,33 +925,33 @@ def get_keyboard_from_file(layout_path: Union[str, os.PathLike]) -> Keyboard:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="KLE format converter")
-    parser.add_argument("-in", required=True, help="Layout file")
+    parser.add_argument("-i", "--in", required=True, help="Layout file")
     parser.add_argument(
-        "-inform",
+        "--inform",
         required=False,
         default="KLE_RAW",
         choices=["KLE_RAW", "KLE_VIA", "KLE_INTERNAL", "ERGOGEN_INTERNAL", "QMK"],
         help="Specifies the input format",
     )
-    parser.add_argument("-out", required=False, help="Result file")
+    parser.add_argument("-o", "--out", required=False, help="Result file")
     parser.add_argument(
-        "-outform",
+        "--outform",
         required=False,
         default="KLE_INTERNAL",
         choices=["KLE_RAW", "KLE_INTERNAL"],
         help="Specifies the output format",
     )
     parser.add_argument(
-        "-text", required=False, action="store_true", help="Print result"
+        "--text", required=False, action="store_true", help="Print result"
     )
     parser.add_argument(
-        "-ergogen-filter",
+        "--ergogen-filter",
         required=False,
         type=str,
         help="Ergogen zone filter regular expression, applicable only when -inform ERGOGEN_INTERNAL",
     )
     parser.add_argument(
-        "-collapse",
+        "--collapse",
         action="store_true",
         help=(
             "Collapse via-like annotated layout, "

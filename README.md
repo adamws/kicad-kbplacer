@@ -510,8 +510,8 @@ For example, to convert ergogen point file to KLE layout file:
 
 ```shell
 python -m kbplacer.kle_serial \
-  -in tests/data/ergogen-layouts/absolem-simple-points.yaml -inform ERGOGEN_INTERNAL \
-  -out $(pwd)/absolem-kle.json -outform KLE_RAW
+  --in tests/data/ergogen-layouts/absolem-simple-points.yaml --inform ERGOGEN_INTERNAL \
+  --out $(pwd)/absolem-kle.json --outform KLE_RAW
 ```
 
 This command generates [this](./tests/data/ergogen-layouts/absolem-simple-reference.json) file
@@ -521,8 +521,8 @@ In case of VIA-like annotated layouts there is an option to perform 'collapse' o
 
 ```shell
 python -m kbplacer.kle_serial \
-  -in tests/data/via-layouts/wt60_d.json -inform KLE_VIA \
-  -out $(pwd)/wt60_d-internal-collapsed.json -outform KLE_INTERNAL -collapse
+  --in tests/data/via-layouts/wt60_d.json --inform KLE_VIA \
+  --out $(pwd)/wt60_d-internal-collapsed.json --outform KLE_INTERNAL --collapse
 ```
 
 <table>
@@ -561,7 +561,7 @@ The `kbplacer` is used by additional tools available in [tools](tools/README.md)
         <td><code>layout2url.py</code> - small utility to generate KLE url</td>
         <td>
             To open new firefox tab with layout using <a href="http://www.keyboard-layout-editor.com/">keyboard-layout-editor</a> run</br>
-            <code>python layout2url.py -in kle.json | xargs firefox</code></br>
+            <code>python layout2url.py --in kle.json | xargs firefox</code></br>
             Example result: <a href="http://www.keyboard-layout-editor.com/##@@_a:7%3B&=&=%3B&@=&=">url</a>
         </td>
     </tr>

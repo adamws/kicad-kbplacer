@@ -48,15 +48,15 @@ COPY template.kicad_pro $WORK_PATH/$PROJECT_NAME.kicad_pro
 RUN sed -i 's/template\.kicad_pro/$PROJECT_NAME\.kicad_pro/g' $PROJECT_NAME.kicad_pro
 
 RUN python3 -m kbplacer.kle_serial \
-  -in points.yaml -inform ERGOGEN_INTERNAL \
-  -outform KLE_RAW -out $PROJECT_NAME-kle.json
+  --in points.yaml --inform ERGOGEN_INTERNAL \
+  --outform KLE_RAW --out $PROJECT_NAME-kle.json
 
 # fix labels (to be fixed in kbplacer)
 RUN sed -i 's/[RC]//g' $PROJECT_NAME-kle.json
 
 RUN cd /kicad-kbplacer \
-  && hatch run tools:layout2schematic -in $WORK_PATH/$PROJECT_NAME-kle.json \
-  -out $WORK_PATH/$PROJECT_NAME.kicad_sch -f \
+  && hatch run tools:layout2schematic --in $WORK_PATH/$PROJECT_NAME-kle.json \
+  --out $WORK_PATH/$PROJECT_NAME.kicad_sch -f \
   -swf "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.00u" \
   -df "Diode_SMD:D_SOD-123F"
 

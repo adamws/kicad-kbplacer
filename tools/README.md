@@ -32,7 +32,7 @@ python tools/layout2openscad.py {args...}
 To generate schematic file and schematic image based on layout file:
 
 ```shell
-hatch run tools:layout2schematic -in examples/2x2/via.json -out 2x2.kicad_sch
+hatch run tools:layout2schematic --in examples/2x2/via.json --out 2x2.kicad_sch
 kicad-cli sch export svg -e 2x2.kicad_sch
 ```
 
@@ -42,8 +42,8 @@ kicad-cli sch export svg -e 2x2.kicad_sch
 To generate layout image based on layout file:
 
 ```shell
-hatch run tools:layout2image -in tests/data/ergogen-layouts/absolem-simple-points.yaml \
-  -out absolem.svg
+hatch run tools:layout2image --in tests/data/ergogen-layouts/absolem-simple-points.yaml \
+  --out absolem.svg
 ```
 
 ![absolem-svg](../resources/absolem.svg)
@@ -56,7 +56,7 @@ This is the problem with SVG generation code because layout imported to KLE look
 To generate KLE url for run:
 
 ```shell
-hatch run tools:layout2url -in tests/data/ergogen-layouts/absolem-simple-points.yaml
+hatch run tools:layout2url --in tests/data/ergogen-layouts/absolem-simple-points.yaml
 ```
 
 This will produce following
