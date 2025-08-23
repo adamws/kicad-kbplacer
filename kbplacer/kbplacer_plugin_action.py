@@ -16,7 +16,7 @@ from .error_dialog import ErrorDialog
 from .kbplacer_dialog import KbplacerDialog, load_window_state_from_log
 from .kbplacer_plugin import run_from_gui
 from .plugin_error import PluginError
-from .warning_dialog import show_warnings_from_log
+from .warning_dialog import get_warnings_from_log
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +95,8 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
     def Run(self) -> None:
         try:
             self.__run()
-            show_warnings_from_log(self.window, self.log_file)
+            if warning := get_warnings_from_log(self.window, self.log_file):
+                warning.ShowModal()
         except Exception as e:
             error = ErrorDialog(self.window, e)
             error.ShowModal()

@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from typing import List
+from typing import List, Optional
 
 import wx
 
@@ -51,21 +51,22 @@ class WarningDialog(MessageDialog):
         self.SetSizerAndFit(box)
 
 
-def show_warnings_from_log(
+def get_warnings_from_log(
     parent: wx.Window, log_file: str, *, prefix: str = "WARNING:"
-) -> None:
+) -> Optional[wx.Dialog]:
     # keeping python 3.8 compatibility which had no `removeprefix`:
     def _remove_prefix(text, prefix):
         if text.startswith(prefix):
-            return text[len(prefix):]
+            return text[len(prefix) :]
         return text
+
     with open(log_file, "r") as f:
         warnings = [
             _remove_prefix(l, prefix).strip() for l in f if l.startswith(prefix)
         ]
     if warnings:
-        warning = WarningDialog(parent, warnings)
-        warning.ShowModal()
+        return WarningDialog(parent, warnings)
+    return None
 
 
 if __name__ == "__main__":
@@ -87,6 +88,6 @@ if __name__ == "__main__":
     logger.debug("This is debug which should be ignored")
     logger.warning("And this is warning number 2")
 
-    show_with_test_support(show_warnings_from_log, None, tmp_log)
+    show_with_test_support(get_warnings_from_log, None, tmp_log)
     os.remove(tmp_log)
     print("exit ok")

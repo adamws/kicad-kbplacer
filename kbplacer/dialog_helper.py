@@ -57,7 +57,7 @@ def show_with_test_support(class_or_func, *args, **kwargs) -> wx.Dialog:
 
         dlg.Show()
         app.MainLoop()
-    elif dlg:
+    else:
         dlg.ShowModal()
 
     return dlg
