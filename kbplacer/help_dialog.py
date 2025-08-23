@@ -8,13 +8,14 @@ import webbrowser
 import wx
 
 from . import __version__
+from .dialog_helper import MessageDialog
 
 wx_ = wx.GetTranslation
 
 
-class HelpDialog(wx.Dialog):
+class HelpDialog(MessageDialog):
     def __init__(self, parent) -> None:
-        super(HelpDialog, self).__init__(parent, -1, "kbplacer help")
+        super(HelpDialog, self).__init__(parent, "kbplacer help")
 
         # inherit translations from parent:
         self._ = parent._ if parent else (lambda x: x)
@@ -40,7 +41,7 @@ class HelpDialog(wx.Dialog):
         icon_file_name = os.path.join(source_dir, "icon.png")
         icon = wx.Image(icon_file_name, wx.BITMAP_TYPE_ANY)
         icon_bitmap = wx.Bitmap(icon)
-        static_icon_bitmap = wx.StaticBitmap(self, wx.ID_ANY, icon_bitmap)
+        static_icon_bitmap = wx.StaticBitmap(self, wx.ID_ANY, bitmap=icon_bitmap)
 
         font = wx.Font(
             12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD
@@ -142,42 +143,20 @@ class HelpDialog(wx.Dialog):
         dc.SetFont(regular_font)
 
         number_of_lines = help_message.GetNumberOfLines()
-        size = (0, 0)
+        longest_line = ""
         for i in range(0, number_of_lines):
             line = help_message.GetLineText(i)
-            size_new = dc.GetTextExtent(line)
-            if size_new[0] > size[0]:
-                size = size_new
+            if len(line) > len(longest_line):
+                longest_line = line
 
-        margin = 20
-        size = (size[0] + margin, size[1] * number_of_lines + margin)
-        help_message.SetMinSize(size)
+        self.adjust_size_to_text(help_message, longest_line)
 
         box.Add(help_message, 0, wx.EXPAND | wx.ALL, 5)
         return box
 
 
 if __name__ == "__main__":
-    import threading
+    from .dialog_helper import show_with_test_support
 
-    app = wx.App()
-    dlg = HelpDialog(None)
-
-    if "PYTEST_CURRENT_TEST" in os.environ:
-        # use stdin for gracefully closing GUI when running
-        # from pytest. This is required when measuring
-        # coverage and process kill would cause measurement to be lost
-        def listen_for_exit():
-            input("Press any key to exit: ")
-            dlg.Close()
-            wx.Exit()
-
-        input_thread = threading.Thread(target=listen_for_exit)
-        input_thread.start()
-
-        dlg.Show()
-        app.MainLoop()
-    else:
-        dlg.ShowModal()
-
+    show_with_test_support(HelpDialog, None)
     print("exit ok")

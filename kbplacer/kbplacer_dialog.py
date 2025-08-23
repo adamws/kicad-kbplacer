@@ -1044,8 +1044,8 @@ def load_window_state_from_log(filepath: str) -> WindowState:
 # used for tests
 if __name__ == "__main__":
     import argparse
-    import threading
 
+    from .dialog_helper import show_with_test_support
     from .kbplacer_plugin import run_from_gui
 
     parser = argparse.ArgumentParser(description="dialog test")
@@ -1072,27 +1072,9 @@ if __name__ == "__main__":
 
     initial_state = load_window_state_from_log(args.initial_state_file)
     if not args.run_without_dialog:
-        app = wx.App()
-        dlg = KbplacerDialog(None, "kbplacer", initial_state=initial_state)
-
-        if "PYTEST_CURRENT_TEST" in os.environ:
-            print(f"Using {wx.version()}")
-
-            # use stdin for gracefully closing GUI when running
-            # from pytest. This is required when measuring
-            # coverage and process kill would cause measurement to be lost
-            def listen_for_exit() -> None:
-                input("Press any key to exit: ")
-                dlg.Close()
-                wx.Exit()
-
-            input_thread = threading.Thread(target=listen_for_exit)
-            input_thread.start()
-
-            dlg.Show()
-            app.MainLoop()
-        else:
-            dlg.ShowModal()
+        dlg = show_with_test_support(
+            KbplacerDialog, None, "kbplacer", initial_state=initial_state
+        )
 
         with open(f"{args.output_dir}/window_state.json", "w") as f:
             f.write(f"{dlg.get_window_state()}")

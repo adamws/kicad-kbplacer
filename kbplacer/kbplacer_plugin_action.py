@@ -16,6 +16,7 @@ from .error_dialog import ErrorDialog
 from .kbplacer_dialog import KbplacerDialog, load_window_state_from_log
 from .kbplacer_plugin import run_from_gui
 from .plugin_error import PluginError
+from .warning_dialog import show_warnings_from_log
 
 logger = logging.getLogger(__name__)
 
@@ -53,26 +54,26 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
         for handler in logging.root.handlers[:]:
             logging.root.removeHandler(handler)
 
-        log_file = "kbplacer.log"
+        self.log_file = "kbplacer.log"
 
         # if log file already exist (from previous plugin run),
         # try to get window state from it, must be done before setting up new logger
-        self.window_state = load_window_state_from_log(log_file)
+        self.window_state = load_window_state_from_log(self.log_file)
 
         # set up logger
         logging.basicConfig(
             level=logging.DEBUG,
-            filename=log_file,
+            filename=self.log_file,
             filemode="w",
-            format="[%(filename)s:%(lineno)d]: %(message)s",
+            format="%(levelname)s: %(filename)s:%(lineno)d: %(message)s",
         )
         logger.info(f"Plugin version: {__version__}")
         logger.info(f"Python version: {repr(sys.version)}")
         logger.info(f"KiCad version: {version} with {wx.version()}")
 
     def __run(self) -> None:
-        self.initialize()
         self.window = wx.GetActiveWindow()
+        self.initialize()
         dlg = KbplacerDialog(self.window, "kbplacer", initial_state=self.window_state)
         if dlg.ShowModal() == wx.ID_OK:
             gui_state = dlg.get_window_state()
@@ -94,6 +95,7 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
     def Run(self) -> None:
         try:
             self.__run()
+            show_warnings_from_log(self.window, self.log_file)
         except Exception as e:
             error = ErrorDialog(self.window, e)
             error.ShowModal()
