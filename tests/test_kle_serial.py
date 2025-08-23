@@ -26,9 +26,11 @@ from kbplacer.kle_serial import (
     KEY_MAX_LABELS,
     Key,
     Keyboard,
+    KeyboardTag,
     MatrixAnnotatedKeyboard,
     get_keyboard,
     get_keyboard_from_file,
+    layout_classification,
     parse_ergogen_points,
     parse_kle,
     parse_qmk,
@@ -910,3 +912,44 @@ def test_illegal_key_label_position() -> None:
     k = Key()
     with pytest.raises(RuntimeError, match="Illegal key label index"):
         k.set_label(KEY_MAX_LABELS, "Enter")
+
+
+def __get_layout_classification_parameters():
+    test_params = []
+    kle_presets = [
+        # some standard layouts from keyboard-layout-editor.com
+        (
+            "ansi-104-big-ass-enter",
+            [KeyboardTag.ROW_STAGGERED, KeyboardTag.WITH_UNREZOGNIZED_KEY_SHAPE],
+        ),
+        ("ansi-104", [KeyboardTag.ROW_STAGGERED]),
+        ("atreus", [KeyboardTag.OTHER]),
+        ("ergodox", [KeyboardTag.OTHER]),
+        ("iso-105", [KeyboardTag.ROW_STAGGERED, KeyboardTag.ISO]),
+        ("kinesis-advantage", [KeyboardTag.OTHER]),
+        ("planck", [KeyboardTag.ORTHOLINEAR]),
+        # and column stagger example:
+        ("jiran", [KeyboardTag.COLUMN_STAGGERED]),
+    ]
+    for f, expected in kle_presets:
+        param = pytest.param(
+            f"./data/kle-layouts/{f}.json",
+            expected,
+            id=f,
+        )
+        test_params.append(param)
+
+    return test_params
+
+
+@pytest.mark.parametrize(
+    "layout_file,expected_tags", __get_layout_classification_parameters()
+)
+def test_layout_classification(layout_file, expected_tags, request) -> None:
+    test_dir = request.fspath.dirname
+
+    with open(Path(test_dir) / layout_file, "r") as f:
+        layout = json.load(f)
+        result = get_keyboard(layout)
+        tags = layout_classification(result)
+        assert tags == expected_tags

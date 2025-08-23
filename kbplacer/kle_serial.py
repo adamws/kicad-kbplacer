@@ -14,6 +14,7 @@ import re
 import sys
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field, fields
+from enum import Enum, auto
 from itertools import chain
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
 
@@ -921,6 +922,90 @@ def get_keyboard_from_file(layout_path: Union[str, os.PathLike]) -> Keyboard:
         layout = json.load(f)
     logger.info(f"User layout: {layout}")
     return get_keyboard(layout)
+
+
+class KeyboardTag(Enum):
+    ORTHOLINEAR = auto()
+    ROW_STAGGERED = auto()
+    COLUMN_STAGGERED = auto()
+    OTHER = auto()
+    ISO = auto()
+    WITH_UNREZOGNIZED_KEY_SHAPE = auto()
+
+
+def layout_classification(keyboard: Keyboard) -> List[KeyboardTag]:
+    """Get the list of tags based on layout characteristics"""
+    tags = []
+
+    def is_standard_shape(key: Key) -> bool:
+        if key.width2 == key.width and key.height2 == key.height:
+            return True
+        return False
+
+    def is_iso_enter(key: Key) -> bool:
+        if (
+            key.width == 1.25
+            and key.height == 2
+            and key.width2 == 1.5
+            and key.height2 == 1
+        ):
+            return True
+        return False
+
+    if isinstance(keyboard, MatrixAnnotatedKeyboard):
+        keys = keyboard.keys_in_matrix_order()
+    else:
+        keys = keyboard.keys
+
+    reference_key = keys[0]
+
+    x_ortholinear_keys = 0
+    y_ortholinear_keys = 0
+    rotated_keys = 0
+    encoders = 0
+    iso_enters = 0
+    unrecognized_shape_keys = 0
+
+    for k in keys:
+        if float(k.x - reference_key.x).is_integer():
+            x_ortholinear_keys += 1
+        if float(k.y - reference_key.y).is_integer():
+            y_ortholinear_keys += 1
+        if k.rotation_angle != 0:
+            rotated_keys += 1
+        if not is_standard_shape(k):
+            if is_iso_enter(k):
+                iso_enters += 1
+            else:
+                unrecognized_shape_keys += 1
+
+    logger.debug(
+        f"Layout with: {x_ortholinear_keys=}, {y_ortholinear_keys=}, {rotated_keys=}, "
+        f"{encoders=}, {iso_enters=} and {unrecognized_shape_keys=}"
+    )
+
+    all_keys = len(keyboard.keys) - encoders
+    if (
+        x_ortholinear_keys == all_keys
+        and y_ortholinear_keys == all_keys
+        and rotated_keys == 0
+    ):
+        tags.append(KeyboardTag.ORTHOLINEAR)
+    elif rotated_keys != 0:
+        tags.append(KeyboardTag.OTHER)
+    elif x_ortholinear_keys == all_keys:
+        tags.append(KeyboardTag.COLUMN_STAGGERED)
+    else:
+        tags.append(KeyboardTag.ROW_STAGGERED)
+
+    if iso_enters != 0:
+        tags.append(KeyboardTag.ISO)
+
+    if unrecognized_shape_keys != 0:
+        tags.append(KeyboardTag.WITH_UNREZOGNIZED_KEY_SHAPE)
+
+    logger.debug(f"Layout tagged: {tags}")
+    return tags
 
 
 if __name__ == "__main__":
