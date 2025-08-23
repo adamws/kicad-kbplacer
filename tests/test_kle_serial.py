@@ -920,7 +920,7 @@ def __get_layout_classification_parameters():
         # some standard layouts from keyboard-layout-editor.com
         (
             "ansi-104-big-ass-enter",
-            [KeyboardTag.ROW_STAGGERED, KeyboardTag.WITH_UNREZOGNIZED_KEY_SHAPE],
+            [KeyboardTag.ROW_STAGGERED, KeyboardTag.WITH_UNRECOGNIZED_KEY_SHAPE],
         ),
         ("ansi-104", [KeyboardTag.ROW_STAGGERED]),
         ("atreus", [KeyboardTag.OTHER]),

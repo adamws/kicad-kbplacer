@@ -49,7 +49,14 @@ from .board_modifier import (
     set_side,
 )
 from .element_position import ElementInfo, ElementPosition, PositionOption
-from .kle_serial import Key, Keyboard, MatrixAnnotatedKeyboard, get_keyboard_from_file
+from .kle_serial import (
+    Key,
+    Keyboard,
+    KeyboardTag,
+    MatrixAnnotatedKeyboard,
+    get_keyboard_from_file,
+    layout_classification,
+)
 from .plugin_error import PluginError
 
 logger = logging.getLogger(__name__)
@@ -247,7 +254,7 @@ class KeyboardSwitchIterator:
     ) -> None:
         self._keyboard = keyboard
         self._key_matrix = key_matrix
-        self._explicit_annotations = self.__check_explicit_annotations(keyboard)
+        self.explicit_annotations = self.__check_explicit_annotations(keyboard)
         self._keys = iter(self._keyboard.keys)
         self._current_key = 1
 
@@ -262,7 +269,7 @@ class KeyboardSwitchIterator:
         return self
 
     def __get_footprint(self, key: Key) -> pcbnew.FOOTPRINT:
-        if self._explicit_annotations:
+        if self.explicit_annotations:
             label = key.labels[self.EXPLICIT_ANNOTATION_LABEL]
             try:
                 sw = self._key_matrix.switch_by_format_value(label)
@@ -716,6 +723,23 @@ class KeyPlacer(BoardModifier):
         offset = self._calculate_reference_coordinate(keyboard, key_matrix)
         logger.debug(f"Layout offset: {offset}")
         key_iterator: Iterator = get_key_iterator(keyboard, key_matrix)
+
+        if (
+            isinstance(key_iterator, KeyboardSwitchIterator)
+            and not key_iterator.explicit_annotations
+        ):
+            layout_tags = layout_classification(keyboard)
+            if (
+                KeyboardTag.COLUMN_STAGGERED in layout_tags
+                or KeyboardTag.OTHER in layout_tags
+            ):
+                msg = (
+                    "Layout of this kind with missing key matrix annotations may "
+                    "produce unexpected footprint order. "
+                    f"For details see: {ANNOTATION_GUIDE_URL}"
+                )
+                logger.warning(msg)
+
         for key, switch_footprint in key_iterator:
             reset_rotation(switch_footprint)
             if key_position:

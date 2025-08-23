@@ -859,6 +859,14 @@ def parse_ergogen_points(layout: dict, *, zone_filter: str = "") -> Keyboard:
         column = meta.get("column_net", "")
         if row and column:
             key.labels.append(f"{row},{column}")
+        else:
+            ergogen_guide_url = "https://adamws.github.io/keyboard-pcb-design-with-ergogen-and-kbplacer/"
+            msg = (
+                "Ergogen layout without matrix annotations will likely produce "
+                "unexpected result. For best results add `row_net` and `column_net` "
+                f"metadata. For details see: {ergogen_guide_url}"
+            )
+            logger.warning(msg)
 
         keys.append(key)
 
@@ -930,7 +938,7 @@ class KeyboardTag(Enum):
     COLUMN_STAGGERED = auto()
     OTHER = auto()
     ISO = auto()
-    WITH_UNREZOGNIZED_KEY_SHAPE = auto()
+    WITH_UNRECOGNIZED_KEY_SHAPE = auto()
 
 
 def layout_classification(keyboard: Keyboard) -> List[KeyboardTag]:
@@ -1002,7 +1010,7 @@ def layout_classification(keyboard: Keyboard) -> List[KeyboardTag]:
         tags.append(KeyboardTag.ISO)
 
     if unrecognized_shape_keys != 0:
-        tags.append(KeyboardTag.WITH_UNREZOGNIZED_KEY_SHAPE)
+        tags.append(KeyboardTag.WITH_UNRECOGNIZED_KEY_SHAPE)
 
     logger.debug(f"Layout tagged: {tags}")
     return tags
