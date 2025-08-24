@@ -165,10 +165,24 @@ def test_help_dialog(tmpdir, package_path, package_name, screen_manager) -> None
     run_gui_test(tmpdir, screen_manager, "kbplacer help", _callback)
 
 
-def test_error_dialog(tmpdir, package_path, package_name, screen_manager) -> None:
+def test_error_dialog_with_generic_error(
+    tmpdir, package_path, package_name, screen_manager
+) -> None:
     def _callback():
         return run_process(
             ["python3", "-m", f"{package_name}.error_dialog"], package_path
+        )
+
+    run_gui_test(tmpdir, screen_manager, "kbplacer error", _callback)
+
+
+def test_error_dialog_with_plugin_error(
+    tmpdir, package_path, package_name, screen_manager
+) -> None:
+    def _callback():
+        return run_process(
+            ["python3", "-m", f"{package_name}.error_dialog", "--plugin-error"],
+            package_path,
         )
 
     run_gui_test(tmpdir, screen_manager, "kbplacer error", _callback)

@@ -22,6 +22,7 @@ class WarningDialog(MessageDialog):
         warnings_header = wx.TextCtrl(
             self, value=header_text, style=wx.TE_READONLY | wx.NO_BORDER
         )
+        warnings_header.SetBackgroundColour(self.GetBackgroundColour())
         self.adjust_size_to_text(warnings_header, header_text)
 
         warning_icon = wx.ArtProvider.GetBitmap(

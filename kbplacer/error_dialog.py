@@ -15,16 +15,20 @@ class ErrorDialog(MessageDialog):
         super(ErrorDialog, self).__init__(parent, "kbplacer error")
         box = wx.BoxSizer(wx.VERTICAL)
 
+        multiline_header = 0
         if type(e) == PluginError:
             message = e.message
+            if "\n" in message:
+                multiline_header = wx.TE_MULTILINE
             add_traceback = False
         else:
             message = getattr(e, "message", f"{e.__class__.__name__}: {e}")
             add_traceback = True
 
         error_header = wx.TextCtrl(
-            self, value=message, style=wx.TE_READONLY | wx.NO_BORDER | wx.TE_MULTILINE
+            self, value=message, style=wx.TE_READONLY | wx.NO_BORDER | multiline_header
         )
+        error_header.SetBackgroundColour(self.GetBackgroundColour())
         self.adjust_size_to_text(error_header, message)
 
         error_icon = wx.ArtProvider.GetBitmap(
@@ -56,10 +60,21 @@ class ErrorDialog(MessageDialog):
 
 
 if __name__ == "__main__":
+    import argparse
+
     from .dialog_helper import show_with_test_support
 
-    try:
-        _ = 1 / 0
-    except Exception as e:
+    parser = argparse.ArgumentParser(description="dialog test")
+    parser.add_argument("--plugin-error", required=False, action="store_true", help="")
+    args = parser.parse_args()
+
+    if args.plugin_error:
+        msg = "This is PluginError's message\nWhich can be multiline"
+        e = PluginError(msg)
         show_with_test_support(ErrorDialog, None, e)
+    else:
+        try:
+            _ = 1 / 0
+        except Exception as e:
+            show_with_test_support(ErrorDialog, None, e)
     print("exit ok")
