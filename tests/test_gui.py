@@ -20,6 +20,7 @@ from kbplacer.kbplacer_dialog import (
     WindowState,
     load_window_state_from_log,
 )
+from kbplacer.warning_dialog import WarningDialog
 
 from .conftest import get_screen_manager
 
@@ -180,6 +181,11 @@ def test_warning_dialog(tmpdir, package_path, package_name, screen_manager) -> N
         )
 
     run_gui_test(tmpdir, screen_manager, "kbplacer warning", _callback)
+
+
+def test_warning_dialog_raises_on_no_warnings() -> None:
+    with pytest.raises(RuntimeError):
+        WarningDialog(None, [])
 
 
 def merge_dicts(dict1, dict2):
