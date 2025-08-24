@@ -17,11 +17,14 @@ def main():
     # Run pytest with any additional arguments
     # Override the main project's pytest.ini settings that conflict with tools testing
     args = [
-        "python", "-m", "pytest", ".",
+        "python",
+        "-m",
+        "pytest",
+        ".",
         "--override-ini=addopts=--tb=short",
-        "--no-header"
+        "--no-header",
     ] + sys.argv[1:]
-    return subprocess.run(args).returncode
+    return subprocess.run(args, check=False).returncode
 
 
 if __name__ == "__main__":

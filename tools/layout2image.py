@@ -164,14 +164,10 @@ def calcualte_canvas_corners(key_iterator: Iterator) -> tuple[int, int, int, int
                 rot_y = KEY_HEIGHT_PX * k.rotation_y
                 x, y = rotate((rot_x, rot_y), (x, y), angle)
             x, y = int(x), int(y)
-            if x <= min_x:
-                min_x = x
-            if x >= max_x:
-                max_x = x
-            if y <= min_y:
-                min_y = y
-            if y >= max_y:
-                max_y = y
+            min_x = min(x, min_x)
+            max_x = max(x, max_x)
+            min_y = min(y, min_y)
+            max_y = max(y, max_y)
 
     return min_x, min_y, max_x + 2 * ORIGIN_X, max_y + 2 * ORIGIN_Y
 

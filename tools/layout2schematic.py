@@ -141,10 +141,9 @@ def create_schematic(
         column_label = f"{column_label_prefix}{column}"
 
         used_slots = len(progress[position])
-        if used_slots > 3:
-            # clamp to maximum value (use same slot for all 3+ alternative keys)
-            # schematic readability will suffer but such layouts are uncommon anyway
-            used_slots = 3
+        # clamp to maximum value (use same slot for all 3+ alternative keys)
+        # schematic readability will suffer but such layouts are uncommon anyway
+        used_slots = min(used_slots, 3)
 
         switch = base_switch.clone()
         if used_slots == 0:
