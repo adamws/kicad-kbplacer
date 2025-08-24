@@ -8,6 +8,7 @@ import shutil
 import sys
 from enum import Enum
 from pathlib import Path
+from typing import List
 
 import shapely
 from shapely import MultiPoint, affinity, centroid, envelope
@@ -47,18 +48,27 @@ def generate(
     plate_thickness=3,
     margin: float = 0,
     shape: PlateShape = PlateShape.ENVELOPE,
+    outline_ignore: List[int] = [],
     align_origin=False,
+    ignore_alternative=False,
 ) -> OpenSCADObject:
-    switches = []
+    # for keeping track of switches polygons in order to calculate plate shape later
+    # normally would include all switch polygons but could be filtered
+    outline_switches = []
+
     holes = []
     if isinstance(keyboard, MatrixAnnotatedKeyboard):
         keys = keyboard.keys_in_matrix_order()
+        if ignore_alternative:
+            keys = [
+                k for k in keys if MatrixAnnotatedKeyboard.get_layout_option(k) == 0
+            ]
     else:
         keys = keyboard.keys
         keys = sorted(keys, key=lambda k: [k.y, k.x])
 
     offset = None
-    for k in keys:
+    for i, k in enumerate(keys):
         if k.decal:
             continue
         p = shapely.box(k.x, -k.y, k.x + k.width, -k.y - k.height)
@@ -70,8 +80,8 @@ def generate(
                 offset = centroid(p)
             p = affinity.translate(p, -offset.x, -offset.y, 0)
 
-        # keep track of switches polygons in order to calculate plate shape later
-        switches.append(p)
+        if i not in outline_ignore:
+            outline_switches.append(p)
 
         # get switch center and create cube hole based on it
         c = centroid(p)
@@ -86,7 +96,7 @@ def generate(
         holes.append(plate_hole)
 
     points = []
-    for poly in switches:
+    for poly in outline_switches:
         for c in poly.exterior.coords:
             points.append((c[0] * dx, c[1] * dy))
 
@@ -176,6 +186,19 @@ if __name__ == "__main__":
         action="store_true",
         help=("Place first layout switch at (0,0,0)"),
     )
+    parser.add_argument(
+        "--ignore-alternative-layouts",
+        action="store_true",
+        help=("Ignore alternative layout keys"),
+    )
+    parser.add_argument(
+        "--outline-ignore-keys",
+        required=False,
+        default="",
+        help=(
+            "Comma separated list of key indexes to ignore when calculating plate shape"
+        ),
+    )
 
     args = parser.parse_args()
     input_path = getattr(args, "in")
@@ -190,6 +213,10 @@ if __name__ == "__main__":
         )
         sys.exit(1)
 
+    outline_ignore = []
+    if args.outline_ignore_keys:
+        outline_ignore = [int(val) for val in args.outline_ignore_keys.split(",")]
+
     keyboard = load_keyboard(input_path)
     args = {
         "dx": args.key_distance_x,
@@ -198,7 +225,9 @@ if __name__ == "__main__":
         "plate_thickness": args.plate_thickness,
         "margin": args.margin,
         "shape": args.shape,
+        "outline_ignore": outline_ignore,
         "align_origin": args.align_origin,
+        "ignore_alternative": args.ignore_alternative_layouts,
     }
     result = generate(keyboard, **args)
 
