@@ -1051,6 +1051,14 @@ if __name__ == "__main__":
             "applicable only when -inform equal KLE_RAW, KLE_VIA or KLE_INTERNAL"
         ),
     )
+    parser.add_argument(
+        "--log-level",
+        required=False,
+        default="WARNING",
+        choices=logging._nameToLevel.keys(),
+        type=str,
+        help="Provide logging level, default=%(default)s",
+    )
 
     args = parser.parse_args()
     input_path = getattr(args, "in")
@@ -1060,6 +1068,11 @@ if __name__ == "__main__":
     print_result = args.text
     ergogen_filter = args.ergogen_filter
     collapse = args.collapse
+
+    # set up logger
+    logging.basicConfig(
+        level=args.log_level, format="%(asctime)s: %(message)s", datefmt="%H:%M:%S"
+    )
 
     if input_format == output_format and not collapse:
         print("Output format equal input format, nothing to do...")
