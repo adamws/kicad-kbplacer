@@ -532,9 +532,15 @@ class BoardModifier:
 
         Returns True if routing done, False otherwise
         """
+        def _pad_str(pad: pcbnew.PAD) -> str:
+            return f"{pad.GetParentAsString()}:{pad.GetPadName()}"
+
         layers = get_common_layers(pad1, pad2)
         if not layers:
-            logger.warning("Could not route pads, no common layers found")
+            logger.warning(
+                "Could not route pads, no common layers found. "
+                f"Pads: '{_pad_str(pad1)}', '{_pad_str(pad2)}'"
+            )
             return False
 
         layer = layers[0]
@@ -613,13 +619,14 @@ class BoardModifier:
         else:
             logger.warning(
                 "Could not route pads when parent footprints not rotated the same, "
-                f"orientations: {orientation1} and {orientation2}"
+                f"footprint1: {parent1.GetReference()} at {orientation1} degree(s) and "
+                f"footprint2: {parent2.GetReference()} at {orientation2} degree(s)"
             )
             return False
 
         logger.debug(
-            f"Routing pad '{pad1.GetParentAsString()}:{pad1.GetPadName()}' at {pos1} "
-            f"with pad '{pad2.GetParentAsString()}:{pad2.GetPadName()}' at {pos2} "
+            f"Routing pad '{_pad_str(pad1)}' at {pos1} "
+            f"with pad '{_pad_str(pad2)}' at {pos2} "
             f"using coordinate system rotated by {angle} degree(s)"
         )
 
