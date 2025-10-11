@@ -1,6 +1,6 @@
 # Annotation guide
 
-Since [keyboard-layout-editor](http://www.keyboard-layout-editor.com/) layout
+Since [Keyboard Layout Editor NG](http://www.keyboard-layout-editor.com/) layout
 files contain only informations about the key location and its
 appearance (like size, color and labels) the `kbplacer` plugin
 must use some assumptions in order to find corresponding

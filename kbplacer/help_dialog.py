@@ -108,12 +108,12 @@ class HelpDialog(MessageDialog):
         help_message.AppendText(
             self._(
                 "Plugin for mechanical keyboard design. "
-                "It features automatic key placement \nbased on popular "
+                "It features automatic key placement \nbased on "
                 "layout description from "
             )
         )
         help_message.SetDefaultStyle(wx.TextAttr(wx.BLUE))
-        help_message.AppendText("www.keyboard-layout-editor.com")
+        help_message.AppendText("https://editor.keyboard-tools.xyz/")
 
         def on_open_url(event: wx.TextUrlEvent) -> None:
             url = help_message.GetValue()[event.GetURLStart() : event.GetURLEnd()]

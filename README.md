@@ -8,7 +8,7 @@
 [![Weblate](https://hosted.weblate.org/widgets/kicad-kbplacer/-/master-source/svg-badge.svg)](https://hosted.weblate.org/engage/kicad-kbplacer/)
 
 KiCad plugin for mechanical keyboard design. It features automatic key placement and routing
-based on popular layout descriptions from [keyboard-layout-editor](http://www.keyboard-layout-editor.com/)
+based on layout descriptions from [Keyboard Layout Editor NG](https://editor.keyboard-tools.xyz)
 and [ergogen](https://github.com/ergogen/ergogen).
 
 **Table of Contents**
@@ -50,6 +50,13 @@ by reducing tedious element placement and routing tasks.
 - User selectable diode position in relation to key position
 - Configurable additional elements placement
 - Board outline generation
+
+> [!NOTE]
+> KLE is a layout description format established by https://github.com/ijprest
+> and used by https://www.keyboard-layout-editor.com/
+> 
+> The [Keyboard Layout Editor NG](https://editor.keyboard-tools.xyz/) referenced in
+> this documentation is a modernized re-implementation using same data format.
 
 > [!WARNING]
 > Ergogen support is new experimental feature and it has not been tested extensively
@@ -146,20 +153,17 @@ To use this tool in this way, it needs to be installed following [plugin install
   ![schematic-example](resources/schematic-example.png)
 
 - Create new PCB and load netlist
-- Obtain json layout file from [keyboard-layout-editor](http://www.keyboard-layout-editor.com/) or
+- Obtain json layout file from [Keyboard Layout Editor NG](https://editor.keyboard-tools.xyz) or
   convert [ergogen](https://github.com/ergogen/ergogen) points file to json
 
   <details>
-  <summary>keyboard-layout-editor details <i>(click to expand)</i></summary>
+  <summary>Keyboard Layout Editor NG details <i>(click to expand)</i></summary>
 
     ![kle-download](resources/kle-download.png)
 
-    Plugin supports internal [kle-serial](https://github.com/ijprest/kle-serial) layout files
+    Plugin supports both raw and internal [kle-serial](https://github.com/ijprest/kle-serial) layout files
     and [via](https://www.caniusevia.com/docs/layouts) files.
     Detection of layout format will be done automatically.
-    Conversion between layout downloaded from keyboard-layout-editor and its internal form
-    can be done with [https://adamws.github.io/kle-serial](https://adamws.github.io/kle-serial/)
-    or [keyboard-tools.xyz/kle-converter](http://keyboard-tools.xyz/kle-converter)
 
     > [!NOTE]
     > When using `via` layouts, switch matrix **must** be annotated according to `via` rules.
@@ -212,7 +216,7 @@ python -m com_github_adamws_kicad-kbplacer --help
     <td rowspan="5" align="center" style="vertical-align: middle;">Switch settings</td>
     <td align="center" style="vertical-align: middle;">Keyboard layout file</td>
     <td>
-      Layout file path. Supports <a href="http://www.keyboard-layout-editor.com/">keyboard-layout-editor</a>
+      Layout file path. Supports <a href="https://editor.keyboard-tools.xyz/">Keyboard Layout Editor NG</a>
       json layouts in both raw and internal form, <a href="https://www.caniusevia.com/docs/layouts">via</a>
       and <a href="https://docs.qmk.fm/reference_info_json#layouts">qmk</a> json layouts and <a href="https://docs.ergogen.xyz/formats">ergogen</a>
       canonical yaml points files converted to json.</br>
@@ -515,7 +519,7 @@ python -m kbplacer.kle_serial \
 ```
 
 This command generates [this](./tests/data/ergogen-layouts/absolem-simple-reference.json) file
-which can be loaded by keyboard-layout-editor website.
+which can be loaded by Keyboard Layout Editor NG.
 
 In case of VIA-like annotated layouts there is an option to perform 'collapse' operation.
 

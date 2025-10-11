@@ -54,7 +54,7 @@ description = "Plugin for mechanical keyboard design"
 description_full = [
   "Plugin for mechanical keyboard design.\n",
   "It features automatic key placement and routing based on various ",
-  "layout descriptions like <a href='www.keyboard-layout-editor.com'>kle</a>, ",
+  "layout descriptions like <a href='https://editor.keyboard-tools.xyz'>kle</a>, ",
   "<a href='www.github.com/ergogen/ergogen'>ergogen</a> and ",
   "<a href='www.caniusevia.com'>via</a>.\n",
   "To learn more visit project's homepage.",

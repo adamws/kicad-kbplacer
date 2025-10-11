@@ -915,7 +915,7 @@ def _load_layout_from_file_or_stream(input_path: Union[str, os.PathLike]):
                 pass
         return json.load(sys.stdin)
     else:
-        # Layout downloaded from keyboard-layout-editor is most likely using utf-8.
+        # Layout downloaded from keyboard-layout-editor/kle-ng is most likely using utf-8.
         # Use it explicitly in case the platform locale sets different encoding.
         with open(input_path, "r", encoding="utf-8") as f:
             if str(input_path).endswith(("yaml", "yml")):
