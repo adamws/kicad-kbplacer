@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import argparse
 import itertools
-import json
 import logging
 import math
 import shutil
@@ -15,11 +14,15 @@ from pathlib import Path
 from typing import Iterator
 
 import drawsvg as dw
-import yaml
 from colormath.color_conversions import convert_color
 from colormath.color_objects import LabColor, sRGBColor
 
-from kbplacer.kle_serial import Key, Keyboard, MatrixAnnotatedKeyboard, get_keyboard
+from kbplacer.kle_serial import (
+    Key,
+    Keyboard,
+    MatrixAnnotatedKeyboard,
+    get_keyboard_from_file,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -173,19 +176,7 @@ def calcualte_canvas_corners(key_iterator: Iterator) -> tuple[int, int, int, int
 
 
 def create_images(input_path: str, output_path):
-    if input_path != "-":
-        with open(input_path, "r", encoding="utf-8") as f:
-            if input_path.endswith("yaml") or input_path.endswith("yml"):
-                layout = yaml.safe_load(f)
-            else:
-                layout = json.load(f)
-    else:
-        try:
-            layout = yaml.safe_load(sys.stdin)
-        except Exception:
-            layout = json.load(sys.stdin)
-
-    _keyboard: Keyboard = get_keyboard(layout)
+    _keyboard: Keyboard = get_keyboard_from_file(input_path)
 
     def _get_iterator():
         if isinstance(_keyboard, MatrixAnnotatedKeyboard):

@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import argparse
-import json
 import shutil
 import sys
 from enum import Enum
@@ -23,7 +22,11 @@ from solid import (
     translate,
 )
 
-from kbplacer.kle_serial import Keyboard, MatrixAnnotatedKeyboard, get_keyboard
+from kbplacer.kle_serial import (
+    Keyboard,
+    MatrixAnnotatedKeyboard,
+    get_keyboard_from_file,
+)
 
 
 class PlateShape(str, Enum):
@@ -116,16 +119,14 @@ def generate(
 
 
 def load_keyboard(layout_path) -> Keyboard:
-    with open(layout_path, "r", encoding="utf-8") as f:
-        layout = json.load(f)
-        _keyboard = get_keyboard(layout)
-        try:
-            _keyboard = MatrixAnnotatedKeyboard.from_keyboard(_keyboard)
-            _keyboard.collapse()
-        except Exception:
-            pass
+    _keyboard = get_keyboard_from_file(layout_path)
+    try:
+        _keyboard = MatrixAnnotatedKeyboard.from_keyboard(_keyboard)
+        _keyboard.collapse()
+    except Exception:
+        pass
 
-        return _keyboard
+    return _keyboard
 
 
 if __name__ == "__main__":

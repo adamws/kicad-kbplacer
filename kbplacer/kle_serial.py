@@ -18,6 +18,14 @@ from enum import Enum, auto
 from itertools import chain
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
 
+try:
+    import yaml
+
+    WITH_YAML_SUPPORT = True
+except ImportError:
+    yaml = None
+    WITH_YAML_SUPPORT = False
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_KEY_COLOR = "#cccccc"
@@ -898,6 +906,31 @@ def parse_ergogen_points(layout: dict, *, zone_filter: str = "") -> Keyboard:
     return Keyboard(meta=metadata, keys=keys)
 
 
+def _load_layout_from_file_or_stream(input_path: Union[str, os.PathLike]):
+    if input_path == "-":
+        if WITH_YAML_SUPPORT and yaml is not None:
+            try:
+                return yaml.safe_load(sys.stdin)
+            except Exception:
+                pass
+        return json.load(sys.stdin)
+    else:
+        # Layout downloaded from keyboard-layout-editor is most likely using utf-8.
+        # Use it explicitly in case the platform locale sets different encoding.
+        with open(input_path, "r", encoding="utf-8") as f:
+            if str(input_path).endswith(("yaml", "yml")):
+                if WITH_YAML_SUPPORT and yaml is not None:
+                    try:
+                        return yaml.safe_load(f)
+                    except yaml.error.YAMLError as e:
+                        msg = "Failed to parse yaml file"
+                        raise RuntimeError(msg) from e
+                else:
+                    msg = "Could not load yaml file, make sure that `PyYAML` installed"
+                    raise RuntimeError(msg)
+            return json.load(f)
+
+
 def get_keyboard(layout: dict) -> Keyboard:
     try:
         return parse_kle(layout)
@@ -924,10 +957,7 @@ def get_keyboard(layout: dict) -> Keyboard:
 
 
 def get_keyboard_from_file(layout_path: Union[str, os.PathLike]) -> Keyboard:
-    # Layout downloaded from keyboard-layout-editor is most likely using utf-8.
-    # Use it explicitly in case the platform locale sets different encoding.
-    with open(layout_path, "r", encoding="utf-8") as f:
-        layout = json.load(f)
+    layout = _load_layout_from_file_or_stream(layout_path)
     logger.info(f"User layout: {layout}")
     return get_keyboard(layout)
 
@@ -1094,46 +1124,32 @@ if __name__ == "__main__":
             pprint.pprint(result)
         return result
 
-    with open(input_path, "r", encoding="utf-8") as input_file:
-        if input_path.endswith("yaml") or input_path.endswith("yml"):
-            try:
-                import yaml
+    layout = _load_layout_from_file_or_stream(input_path)
+    result = ""
+    if input_format == "KLE_RAW":
+        keyboard = parse_kle(layout)
+    elif input_format == "KLE_VIA":
+        # 'parse_via' creates MatrixAnnotatedKeyboard which is our
+        # internal representation and it is not the same thing
+        # as KLE_INTERNAL format, so it is not used here
+        keyboard = parse_kle(layout["layouts"]["keymap"])
+    elif input_format == "KLE_INTERNAL":
+        keyboard = Keyboard.from_json(layout)
+    elif input_format == "ERGOGEN_INTERNAL":
+        keyboard = parse_ergogen_points(layout, zone_filter=ergogen_filter)
+    else:  # QMK
+        keyboard = parse_qmk(layout).to_keyboard()
 
-                layout = yaml.safe_load(input_file)
-            except Exception as e:
-                msg = (
-                    "Could not load yaml file, make sure that `PyYAML` installed "
-                    "and yaml file format correct"
-                )
-                raise RuntimeError(msg) from e
-        else:
-            layout = json.load(input_file)
+    if collapse:
+        keyboard = MatrixAnnotatedKeyboard(meta=keyboard.meta, keys=keyboard.keys)
+        keyboard.collapse()
+        keyboard = keyboard.to_keyboard()
 
-        result = ""
-        if input_format == "KLE_RAW":
-            keyboard = parse_kle(layout)
-        elif input_format == "KLE_VIA":
-            # 'parse_via' creates MatrixAnnotatedKeyboard which is our
-            # internal representation and it is not the same thing
-            # as KLE_INTERNAL format, so it is not used here
-            keyboard = parse_kle(layout["layouts"]["keymap"])
-        elif input_format == "KLE_INTERNAL":
-            keyboard = Keyboard.from_json(layout)
-        elif input_format == "ERGOGEN_INTERNAL":
-            keyboard = parse_ergogen_points(layout, zone_filter=ergogen_filter)
-        else:  # QMK
-            keyboard = parse_qmk(layout).to_keyboard()
+    if output_format == "KLE_INTERNAL":
+        result = _keyboard_to_kle_internal(keyboard)
+    else:  # KLE_RAW
+        result = _keyboard_to_kle_raw(keyboard)
 
-        if collapse:
-            keyboard = MatrixAnnotatedKeyboard(meta=keyboard.meta, keys=keyboard.keys)
-            keyboard.collapse()
-            keyboard = keyboard.to_keyboard()
-
-        if output_format == "KLE_INTERNAL":
-            result = _keyboard_to_kle_internal(keyboard)
-        else:  # KLE_RAW
-            result = _keyboard_to_kle_raw(keyboard)
-
-        if output_path:
-            with open(output_path, "w", encoding="utf-8") as output_file:
-                json.dump(result, output_file, indent=2)
+    if output_path:
+        with open(output_path, "w", encoding="utf-8") as output_file:
+            json.dump(result, output_file, indent=2)

@@ -4,12 +4,10 @@
 
 import argparse
 import json
-import sys
 
-import yaml
 from pyurlon import stringify
 
-from kbplacer.kle_serial import Keyboard, get_keyboard
+from kbplacer.kle_serial import Keyboard, get_keyboard_from_file
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="KLE format converter")
@@ -25,19 +23,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     input_path = getattr(args, "in")
 
-    if input_path != "-":
-        with open(input_path, "r", encoding="utf-8") as f:
-            if input_path.endswith("yaml") or input_path.endswith("yml"):
-                layout = yaml.safe_load(f)
-            else:
-                layout = json.load(f)
-    else:
-        try:
-            layout = yaml.safe_load(sys.stdin)
-        except Exception:
-            layout = json.load(sys.stdin)
-
-    keyboard: Keyboard = get_keyboard(layout)
+    keyboard: Keyboard = get_keyboard_from_file(input_path)
     kle_raw = json.loads("[" + keyboard.to_kle() + "]")
 
     # keyboard-layout-editor uses old version of urlon,
