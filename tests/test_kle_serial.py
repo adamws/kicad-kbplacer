@@ -19,8 +19,8 @@ from pathlib import Path
 from typing import Tuple
 
 import pytest
-import pyurlon
 import yaml
+from lzstring import LZString
 
 from kbplacer.kle_serial import (
     KEY_MAX_LABELS,
@@ -40,6 +40,7 @@ from kbplacer.kle_serial import (
 from .conftest import add_url_to_report
 
 logger = logging.getLogger(__name__)
+lz = LZString()
 
 
 def __minify(string: str) -> str:
@@ -49,13 +50,9 @@ def __minify(string: str) -> str:
 
 
 def keyboard_to_url(tmpdir, keyboard: Keyboard) -> None:
-    kle_raw = json.loads("[" + keyboard.to_kle() + "]")
-    if isinstance(kle_raw[0], dict):
-        for k, v in kle_raw[0].items():
-            kle_raw[0][k] = v.replace("_", "-")
-    kle_url = pyurlon.stringify(kle_raw)
-    kle_url = kle_url.replace("$", "_")
-    kle_url = "http://www.keyboard-layout-editor.com/##" + kle_url
+    kle_raw = "[" + keyboard.to_kle() + "]"
+    encoded = lz.compressToEncodedURIComponent(kle_raw)
+    kle_url = "https://editor.keyboard-tools.xyz/#share=" + encoded
     add_url_to_report(tmpdir, kle_url)
 
 

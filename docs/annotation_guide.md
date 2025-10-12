@@ -1,6 +1,6 @@
 # Annotation guide
 
-Since [Keyboard Layout Editor NG](http://www.keyboard-layout-editor.com/) layout
+Since [Keyboard Layout Editor NG](https://editor.keyboard-tools.xyz) layout
 files contain only informations about the key location and its
 appearance (like size, color and labels) the `kbplacer` plugin
 must use some assumptions in order to find corresponding
@@ -90,7 +90,7 @@ The VIA supports multiple layout options for physical layout of keys.
 This is supported by `kbplacer` as well. Consider following example:
 
 ![soyuz-layout](../resources/souyz-layout.png)
-[(open in keyboard-layout-editor)](http://www.keyboard-layout-editor.com/##@@_c=%23777777%3B&=0,0&_c=%23aaaaaa%3B&=0,1&=0,2&=0,3%3B&@_c=%23cccccc%3B&=1,0&=1,1&=1,2&_c=%23aaaaaa&h:2%3B&=2,3%0A%0A%0A0,0%3B&@_c=%23cccccc%3B&=2,0&=2,1&=2,2%3B&@=3,0&=3,1&=3,2&_c=%23777777&h:2%3B&=4,3%0A%0A%0A1,0%3B&@_c=%23cccccc&w:2%3B&=4,1%0A%0A%0A2,0&=4,2%3B&@_x:4.5&y:-4&c=%23aaaaaa%3B&=1,3%0A%0A%0A0,1%3B&@_x:4.5%3B&=2,3%0A%0A%0A0,1%3B&@_x:4.5&c=%23777777%3B&=3,3%0A%0A%0A1,1%3B&@_x:4.5%3B&=4,3%0A%0A%0A1,1%3B&@_y:0.5&c=%23cccccc%3B&=4,0%0A%0A%0A2,1&=4,1%0A%0A%0A2,1)
+[(open in editor)](https://editor.keyboard-tools.xyz/#share=NrDeCIGNwLnBiA7Ml4C+AacAGD3wYTRzwCG5F6WuAjAThgEz24DM4AuhmFLApAMFVwNPPVF0so5oV4kKlLAAtYjTOEYZWAHQB2evbnyyAHrGwA6AKzrRO-Q9qduRPvEFD1m4xoyTfMhBmMDTWWMQICuTCmvYGuk5cPBHuHtDqrGJYmf6ZgXIIKKjKquoALFrxeqLGQebWGZUO1X7OyW5p0FgA7qVYFTRVut70FfnBoVbhbkXIwhVxDhJtEACe9VMFqR7zeEOa-gP7rRwcQA)
 
 This layout uses three 2U keys which can be independently replaced with two 1U keys instead.
 Schematic for such keyboard and resulting PCB should look something like this:

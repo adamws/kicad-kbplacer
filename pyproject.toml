@@ -143,6 +143,7 @@ dependencies = [
   "colormath==3.0.0",
   "drawsvg==2.4.0",
   "kicad-skip==0.2.5",
+  "lzstring==1.0.4",
   "pyurlon==0.1.0",
   "PyYAML==6.0.1",
   "shapely==2.0.6",

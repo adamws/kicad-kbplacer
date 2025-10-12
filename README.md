@@ -54,7 +54,7 @@ by reducing tedious element placement and routing tasks.
 > [!NOTE]
 > KLE is a layout description format established by https://github.com/ijprest
 > and used by https://www.keyboard-layout-editor.com/
-> 
+>
 > The [Keyboard Layout Editor NG](https://editor.keyboard-tools.xyz/) referenced in
 > this documentation is a modernized re-implementation using same data format.
 
@@ -564,9 +564,9 @@ The `kbplacer` is used by additional tools available in [tools](tools/README.md)
     <tr>
         <td><code>layout2url.py</code> - small utility to generate KLE url</td>
         <td>
-            To open new firefox tab with layout using <a href="http://www.keyboard-layout-editor.com/">keyboard-layout-editor</a> run</br>
+            To open new firefox tab with layout using <a href="http://editor.keyboard-tools.xyz">Keyboard Layout Editor NG</a> run</br>
             <code>python layout2url.py --in kle.json | xargs firefox</code></br>
-            Example result: <a href="http://www.keyboard-layout-editor.com/##@@_a:7%3B&=&=%3B&@=&=">url</a>
+            Example result: <a href="http://editor.keyboard-tools.xyz/#share=NrDeCIENwLgBgL4BpzheAuk4r0Y0A">url</a>
         </td>
     </tr>
     <tr>
