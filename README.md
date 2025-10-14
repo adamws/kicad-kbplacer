@@ -175,7 +175,11 @@ To use this tool in this way, it needs to be installed following [plugin install
   <details>
   <summary>ergogen details <i>(click to expand)</i></summary>
 
-    - open your design in https://ergogen.cache.works/ and download `points.yaml`
+    - open your design in https://ergogen.xyz/ and enable `Debug` in options
+
+      ![ergogen-enbled-debug](resources/ergogen-enable-debug.png)
+
+    - download `points.yaml`
 
       ![ergogen-points](resources/ergogen-points.png)
 
