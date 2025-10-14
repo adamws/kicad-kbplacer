@@ -1,13 +1,13 @@
 ARG WORK_PATH=/keyboard
 ARG PROJECT_NAME=absolem
 
-FROM admwscki/kicad-kbplacer-primary:8.0.9-jammy
+FROM admwscki/kicad-kbplacer-primary:9.0.5-noble
 
 # this revision has been used when [1] has been written
 # [1] https://adamws.github.io/keyboard-pcb-design-with-ergogen-and-kbplacer/
 ARG KBPLACER_REVISION=ca69cbc0f1de216fd50f63ba26180ad683a91270
 
-ARG KICAD_3RDPARTY_PATH=/root/.local/share/kicad/8.0/3rdparty
+ARG KICAD_3RDPARTY_PATH=/root/.local/share/kicad/9.0/3rdparty
 ARG WORK_PATH
 ARG PROJECT_NAME
 
