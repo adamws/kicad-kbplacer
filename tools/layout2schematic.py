@@ -129,6 +129,7 @@ def create_schematic(
 
     current_ref = 1
     labels = set()
+    labels_positions = dict()
 
     for row, column in matrix:
         position = (row, column)
@@ -168,9 +169,16 @@ def create_schematic(
             label.move(column_wire.end.value[0], column_wire.end.value[1], 270)
             label.value = column_label
             labels.add(column_label)
+            labels_positions[column_label] = label.at
         else:
             junc = sch.junction.new()
             junc.move(wire.end)
+            # must add explicit wire from junction back to label
+            # kicad will be able to open and fix the schematic automatically
+            # if we don't do it, but we want to avoid using eeschema in our workflow
+            wire = sch.wire.new()
+            wire.start_at(junc.at)
+            wire.end_at(labels_positions[column_label])
 
         if used_slots == 0:
             diode = base_diode.clone()
@@ -196,9 +204,15 @@ def create_schematic(
                 label.effects.justify.value = "left"
                 label.value = row_label
                 labels.add(row_label)
+                labels_positions[row_label] = label.at
             else:
                 junc = sch.junction.new()
                 junc.move(wire.end)
+                # explicit wire from junction to label (same as for columns)
+                wire = sch.wire.new()
+                wire.start_at(junc.at)
+                wire.end_at(labels_positions[row_label])
+
             current_ref += 1
 
         progress[position].append(switch_reference)

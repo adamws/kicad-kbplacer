@@ -57,10 +57,6 @@ RUN cd /kicad-kbplacer \
   -swf "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.00u" \
   -df "Diode_SMD:D_SOD-123F"
 
-# this is required, otherwise netlist will contain many 'unconnected' pads
-COPY eeschema-open-and-save.sh $WORK_PATH
-RUN xvfb-run ./eeschema-open-and-save.sh $PROJECT_NAME.kicad_sch
-
 RUN kicad-cli sch export netlist --output $PROJECT_NAME.net $PROJECT_NAME.kicad_sch
 RUN python3 -m pip install kinet2pcb==1.1.2
 RUN kinet2pcb -i $PROJECT_NAME.net \
