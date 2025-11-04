@@ -20,6 +20,7 @@ from solid import (
     rotate,
     scad_render_to_file,
     translate,
+    union,
 )
 
 from kbplacer.kle_serial import (
@@ -34,8 +35,8 @@ class PlateShape(str, Enum):
     CONVEX_HULL = "convex_hull"  # minimum convex geometry that encloses switches
 
 
-def _get_cube_hole(rotation, hole_size, plate_thickness):
-    c = cube((hole_size, hole_size, 2 * plate_thickness + 2), center=True)
+def _get_cube(rotation, x, y, z):
+    c = cube((x, y, z), center=True)
     if rotation == 0:
         return c
     else:
@@ -48,6 +49,7 @@ def generate(
     dx: float = 19.05,
     dy: float = 19.05,
     cutout_size=14.0,
+    cutout_outline_thickness=0,
     plate_thickness=3,
     margin: float = 0,
     shape: PlateShape = PlateShape.ENVELOPE,
@@ -60,6 +62,11 @@ def generate(
     outline_switches = []
 
     holes = []
+
+    cutout_outline_width = 2.0
+    add_hole_outline = cutout_outline_thickness != 0
+    holes_outlines = []
+
     if isinstance(keyboard, MatrixAnnotatedKeyboard):
         keys = keyboard.keys_in_matrix_order()
         if ignore_alternative:
@@ -89,14 +96,21 @@ def generate(
         # get switch center and create cube hole based on it
         c = centroid(p)
 
-        plate_hole = translate(
-            (
-                dx * c.x,
-                dy * c.y,
-                0,
+        plate_hole = translate((dx * c.x, dy * c.y, 0))(
+            _get_cube(
+                -k.rotation_angle,
+                cutout_size,
+                cutout_size,
+                2 * (plate_thickness + cutout_outline_thickness),
             )
-        )(_get_cube_hole(-k.rotation_angle, cutout_size, plate_thickness))
+        )
         holes.append(plate_hole)
+        if add_hole_outline:
+            size = cutout_size + cutout_outline_width
+            hole_outline = translate((dx * c.x, dy * c.y, plate_thickness))(
+                _get_cube(-k.rotation_angle, size, size, cutout_outline_thickness)
+            )
+            holes_outlines.append(hole_outline)
 
     points = []
     for poly in outline_switches:
@@ -114,7 +128,8 @@ def generate(
     _, coords, _ = shapely.to_ragged_array([plate_polygon])
     plate = linear_extrude(height=plate_thickness)(polygon(coords))
 
-    result = plate - hole()(*holes)
+    plate_and_hole_outlines = union()(plate, *holes_outlines)
+    result = plate_and_hole_outlines - hole()(*holes)
     return result
 
 
@@ -176,6 +191,13 @@ if __name__ == "__main__":
         help=("Size of switch cutout, 14 by default"),
     )
     parser.add_argument(
+        "--cutout-outline-thickness",
+        type=float,
+        required=False,
+        default=0,
+        help=("Thickness for per-key outline, for prototyping"),
+    )
+    parser.add_argument(
         "--plate-thickness",
         type=float,
         required=False,
@@ -223,6 +245,7 @@ if __name__ == "__main__":
         "dx": args.key_distance_x,
         "dy": args.key_distance_y,
         "cutout_size": args.cutout_size,
+        "cutout_outline_thickness": args.cutout_outline_thickness,
         "plate_thickness": args.plate_thickness,
         "margin": args.margin,
         "shape": args.shape,
