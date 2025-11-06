@@ -14,6 +14,9 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import yaml
+import shapely
+from shapely import affinity
+from shapely.geometry import MultiPoint
 
 from kbplacer.kle_serial import Keyboard, MatrixAnnotatedKeyboard, get_keyboard
 
@@ -70,12 +73,45 @@ def create_plot(
     else:
         keys = list(keyboard.keys)
 
-    # Stage 2: Identify outline keys (all non-decal keys by default)
+    # Stage 2: Identify outline keys using computational geometry
     outline_key_indexes = []
     if stage >= 2:
+        # Create shapely polygons for each key
+        key_polygons = []
         for i, key in enumerate(keys):
-            if not key.decal:
-                outline_key_indexes.append(i)
+            if key.decal:
+                key_polygons.append(None)
+                continue
+
+            # Create box for the key
+            p = shapely.box(key.x, key.y, key.x + key.width, key.y + key.height)
+
+            # Apply rotation if needed
+            if key.rotation_angle != 0:
+                p = affinity.rotate(p, key.rotation_angle, origin=(key.rotation_x, key.rotation_y))
+
+            key_polygons.append(p)
+
+        # Get all points from non-decal keys to compute convex hull
+        all_points = []
+        for poly in key_polygons:
+            if poly is not None:
+                for coord in poly.exterior.coords:
+                    all_points.append(coord)
+
+        # Calculate convex hull of all key positions
+        if len(all_points) > 0:
+            convex_hull = MultiPoint(all_points).convex_hull
+
+            # Find which keys intersect with the convex hull boundary
+            hull_boundary = convex_hull.boundary
+
+            for i, poly in enumerate(key_polygons):
+                if poly is not None:
+                    # Check if this key polygon touches the hull boundary
+                    if poly.intersects(hull_boundary) or poly.touches(hull_boundary):
+                        outline_key_indexes.append(i)
+
         logger.info(f"Stage 2: Found {len(outline_key_indexes)} outline keys out of {len(keys)} total keys")
 
     # Process each key in the layout
