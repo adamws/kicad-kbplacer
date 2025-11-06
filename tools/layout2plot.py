@@ -51,6 +51,13 @@ def create_plot(
 
     keyboard: Keyboard = get_keyboard(layout)
 
+    # Try to convert to MatrixAnnotatedKeyboard for alternative layout support
+    try:
+        keyboard = MatrixAnnotatedKeyboard.from_keyboard(keyboard)
+        keyboard.collapse()
+    except Exception:
+        pass
+
     # Create figure and axis
     fig, ax = plt.subplots(1, 1, figsize=(12, 8))
     ax.set_aspect('equal')
