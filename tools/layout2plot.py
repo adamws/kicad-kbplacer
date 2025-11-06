@@ -92,19 +92,24 @@ def create_plot(
 
             key_polygons.append(p)
 
-        # Get all points from non-decal keys to compute convex hull
+        # Get all points from non-decal keys to compute concave hull
         all_points = []
         for poly in key_polygons:
             if poly is not None:
                 for coord in poly.exterior.coords:
                     all_points.append(coord)
 
-        # Calculate convex hull of all key positions
+        # Calculate concave hull of all key positions
         if len(all_points) > 0:
-            convex_hull = MultiPoint(all_points).convex_hull
+            multipoint = MultiPoint(all_points)
 
-            # Find which keys intersect with the convex hull boundary
-            hull_boundary = convex_hull.boundary
+            # Use concave_hull (available in shapely 2.0+)
+            # ratio=0.3 gives a moderately tight hull that follows the shape better
+            from shapely import concave_hull as compute_concave_hull
+            hull = compute_concave_hull(multipoint, ratio=0.3)
+
+            # Find which keys intersect with the concave hull boundary
+            hull_boundary = hull.boundary
 
             for i, poly in enumerate(key_polygons):
                 if poly is not None:
