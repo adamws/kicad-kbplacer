@@ -416,6 +416,11 @@ workflows:
     # use new circleci auto-rerun feature:
     # https://circleci.com/docs/guides/orchestrate/automatic-reruns/
     max_auto_reruns: 3
+    when:
+      not:
+        matches:
+          pattern: "^claude/.*"
+          value: << pipeline.git.branch >>
     jobs:
       - test-linux:
           matrix:
