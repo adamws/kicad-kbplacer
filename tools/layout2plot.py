@@ -26,6 +26,7 @@ def create_plot(
     rect_width: float,
     rect_height: float,
     ignore_alternative: bool = False,
+    stage: int = 1,
 ):
     """
     Create a matplotlib plot showing rectangles at each key position from a KLE layout file.
@@ -35,6 +36,7 @@ def create_plot(
     :param rect_width: Width of each rectangle in the layout units
     :param rect_height: Height of each rectangle in the layout units
     :param ignore_alternative: Ignore alternative layout keys
+    :param stage: Algorithm stage (1=basic plot, 2=highlight outline keys, etc.)
     """
     # Load layout file
     if input_path != "-":
@@ -64,12 +66,20 @@ def create_plot(
 
     # Get the appropriate key iterator
     if isinstance(keyboard, MatrixAnnotatedKeyboard):
-        keys = keyboard.key_iterator(ignore_alternative=ignore_alternative)
+        keys = list(keyboard.key_iterator(ignore_alternative=ignore_alternative))
     else:
-        keys = iter(keyboard.keys)
+        keys = list(keyboard.keys)
+
+    # Stage 2: Identify outline keys (all non-decal keys by default)
+    outline_key_indexes = []
+    if stage >= 2:
+        for i, key in enumerate(keys):
+            if not key.decal:
+                outline_key_indexes.append(i)
+        logger.info(f"Stage 2: Found {len(outline_key_indexes)} outline keys out of {len(keys)} total keys")
 
     # Process each key in the layout
-    for key in keys:
+    for i, key in enumerate(keys):
         # Calculate center position of the key
         center_x = key.x + key.width / 2
         center_y = key.y + key.height / 2
@@ -79,14 +89,26 @@ def create_plot(
         rect_x = center_x - rect_width / 2
         rect_y = center_y - rect_height / 2
 
+        # Determine colors based on stage and whether key is in outline
+        if stage >= 2 and i in outline_key_indexes:
+            # Outline keys in stage 2+
+            facecolor = 'lightblue'
+            edgecolor = 'blue'
+            linewidth = 2
+        else:
+            # Default keys
+            facecolor = 'lightgray'
+            edgecolor = 'black'
+            linewidth = 1
+
         # Create rectangle
         rect = patches.Rectangle(
             (rect_x, rect_y),
             rect_width,
             rect_height,
-            linewidth=1,
-            edgecolor='black',
-            facecolor='lightgray',
+            linewidth=linewidth,
+            edgecolor=edgecolor,
+            facecolor=facecolor,
             alpha=0.7
         )
 
@@ -130,7 +152,16 @@ def create_plot(
 
     # Add grid for reference
     ax.grid(True, alpha=0.3)
-    ax.set_title(f'Keyboard Layout Visualization\nRectangle size: {rect_width} x {rect_height}')
+
+    # Set title based on stage
+    if stage == 1:
+        title = f'Stage 1: Basic Layout\nRectangle size: {rect_width} x {rect_height}'
+    elif stage == 2:
+        title = f'Stage 2: Outline Keys (blue)\nRectangle size: {rect_width} x {rect_height}\nOutline keys: {len(outline_key_indexes)}/{len(keys)}'
+    else:
+        title = f'Stage {stage}: Keyboard Layout\nRectangle size: {rect_width} x {rect_height}'
+
+    ax.set_title(title)
 
     # Auto-scale to fit all rectangles
     ax.autoscale()
@@ -181,6 +212,13 @@ if __name__ == "__main__":
         help="Override output if already exists",
     )
     parser.add_argument(
+        "-s",
+        "--stage",
+        type=int,
+        default=1,
+        help="Algorithm stage (1=basic plot, 2=highlight outline keys), default=1",
+    )
+    parser.add_argument(
         "--ignore-alternative-layouts",
         action="store_true",
         help="Ignore alternative layout keys",
@@ -211,5 +249,5 @@ if __name__ == "__main__":
         sys.exit(1)
 
     create_plot(
-        input_path, output_path, rect_width, rect_height, args.ignore_alternative_layouts
+        input_path, output_path, rect_width, rect_height, args.ignore_alternative_layouts, args.stage
     )
