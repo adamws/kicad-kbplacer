@@ -803,6 +803,8 @@ def parse_ergogen_points(layout: dict, *, zone_filter: str = "") -> Keyboard:
         msg = "Expected non-empty object"
         raise RuntimeError(msg)
 
+    warning_logged = False
+
     metadata: KeyboardMetadata = KeyboardMetadata()
     keys = []
 
@@ -867,7 +869,7 @@ def parse_ergogen_points(layout: dict, *, zone_filter: str = "") -> Keyboard:
         column = meta.get("column_net", "")
         if row and column:
             key.labels.append(f"{row},{column}")
-        else:
+        elif not warning_logged:
             ergogen_guide_url = "https://adamws.github.io/keyboard-pcb-design-with-ergogen-and-kbplacer/"
             msg = (
                 "Ergogen layout without matrix annotations will likely produce "
@@ -875,6 +877,7 @@ def parse_ergogen_points(layout: dict, *, zone_filter: str = "") -> Keyboard:
                 f"metadata. For details see: {ergogen_guide_url}"
             )
             logger.warning(msg)
+            warning_logged = True
 
         keys.append(key)
 
