@@ -251,12 +251,13 @@ class KeyboardSwitchIterator:
         self,
         keyboard: Keyboard,
         key_matrix: KeyMatrix,
+        start_index: int = 1,
     ) -> None:
         self._keyboard = keyboard
         self._key_matrix = key_matrix
         self.explicit_annotations = self.__check_explicit_annotations(keyboard)
         self._keys = iter(self._keyboard.keys)
-        self._current_key = 1
+        self._current_key = start_index
 
     def __check_explicit_annotations(self, keyboard: Keyboard) -> bool:
         number_of_explicit_annotations = sum(
@@ -383,6 +384,7 @@ class MatrixAnnotatedKeyboardSwitchIterator:
 def get_key_iterator(
     keyboard: Keyboard,
     key_matrix: KeyMatrix,
+    start_index: int = 1,
 ) -> Iterator:
     if isinstance(keyboard, MatrixAnnotatedKeyboard):
         if not key_matrix.is_matrix_ok():
@@ -406,7 +408,7 @@ def get_key_iterator(
             raise PluginError(msg)
         _iter = MatrixAnnotatedKeyboardSwitchIterator(keyboard, key_matrix)
     else:
-        _iter = KeyboardSwitchIterator(keyboard, key_matrix)
+        _iter = KeyboardSwitchIterator(keyboard, key_matrix, start_index)
     return iter(_iter)
 
 
@@ -415,6 +417,7 @@ class KeyPlacer(BoardModifier):
         self,
         board: pcbnew.BOARD,
         key_distance: Tuple[float, float] = (19.05, 19.05),
+        start_index: int = 1,
     ) -> None:
         super().__init__(board)
 
@@ -424,6 +427,8 @@ class KeyPlacer(BoardModifier):
         logger.debug(
             f"Set key 1U distance: {self.__key_distance_x}/{self.__key_distance_y}"
         )
+        # starting index for footprint numbering (allows using offsets other than 1)
+        self._start_index = start_index
 
     def apply_switch_connection_template(
         self,
@@ -615,7 +620,7 @@ class KeyPlacer(BoardModifier):
         element. If `key_format` element is rotated, resulting coordinates are rotated
         back so the template is always in natural (0) orientation.
         """
-        switch = get_footprint(self.board, key_format.format(1))
+        switch = get_footprint(self.board, key_format.format(self._start_index))
 
         logger.info(
             "Looking for connection template between "
@@ -707,7 +712,7 @@ class KeyPlacer(BoardModifier):
 
         offset_x = 0
         offset_y = 0
-        key_iterator: Iterator = get_key_iterator(keyboard, key_matrix)
+        key_iterator: Iterator = get_key_iterator(keyboard, key_matrix, self._start_index)
         first_key, _ = next(key_iterator)
         if first_key:
             offset_x = _offset(self.__key_distance_x, first_key.x, first_key.width)
@@ -722,7 +727,7 @@ class KeyPlacer(BoardModifier):
     ) -> None:
         offset = self._calculate_reference_coordinate(keyboard, key_matrix)
         logger.debug(f"Layout offset: {offset}")
-        key_iterator: Iterator = get_key_iterator(keyboard, key_matrix)
+        key_iterator: Iterator = get_key_iterator(keyboard, key_matrix, self._start_index)
 
         if (
             isinstance(key_iterator, KeyboardSwitchIterator)
@@ -937,8 +942,8 @@ class KeyPlacer(BoardModifier):
             PositionOption.PRESET,
         ]:
             source = self._get_relative_position_source(element)
-            element1 = get_footprint(source, key_info.annotation_format.format(1))
-            element2 = get_footprint(source, element.annotation_format.format(1))
+            element1 = get_footprint(source, key_info.annotation_format.format(self._start_index))
+            element2 = get_footprint(source, element.annotation_format.format(self._start_index))
             element.position = self.get_current_relative_element_position(
                 element1, element2
             )

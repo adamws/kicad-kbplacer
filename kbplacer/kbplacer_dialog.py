@@ -80,6 +80,8 @@ class WindowState:
     template_path: str = ""
     generate_outline: bool = False
     outline_delta: float = 0.0
+    # starting index for footprint numbering (default preserves legacy behavior)
+    start_index: int = 1
 
     def __str__(self) -> str:
         return json.dumps(asdict(self), indent=None)
@@ -94,11 +96,13 @@ class WindowState:
         additional_elements = [
             ElementInfo.from_dict(i) for i in data.pop("additional_elements")
         ]
+        start_index = data.pop("start_index", 1)
         return cls(
             key_distance=key_distance,
             key_info=key_info,
             diode_info=diode_info,
             additional_elements=additional_elements,
+            start_index=start_index,
             **data,
         )
 
@@ -196,6 +200,57 @@ class FloatValidator(wx.Validator):
                 or (key == "-" and "-" not in text and current_position == 0)
                 or (key == "." and "." not in text)
             ):
+                event.Skip()
+
+
+class IntValidator(wx.Validator):
+    def __init__(self) -> None:
+        wx.Validator.__init__(self)
+        self.Bind(wx.EVT_CHAR, self.OnChar)
+
+    def Clone(self) -> IntValidator:
+        return IntValidator()
+
+    def Validate(self, _) -> bool:
+        text_ctrl = self.GetWindow()
+        if not text_ctrl.IsEnabled():
+            return True
+
+        text = text_ctrl.GetValue()
+        try:
+            int(text)
+            return True
+        except ValueError:
+            name = text_ctrl.GetName()
+            wx.MessageBox(f"Invalid '{name}' value: '{text}' is not an integer!", "Error")
+            text_ctrl.SetFocus()
+            return False
+
+    def TransferToWindow(self) -> bool:
+        return True
+
+    def TransferFromWindow(self) -> bool:
+        return True
+
+    def OnChar(self, event: wx.KeyEvent) -> None:
+        keycode = int(event.GetKeyCode())
+        if keycode in [
+            wx.WXK_BACK,
+            wx.WXK_DELETE,
+            wx.WXK_LEFT,
+            wx.WXK_RIGHT,
+            wx.WXK_NUMPAD_LEFT,
+            wx.WXK_NUMPAD_RIGHT,
+            wx.WXK_TAB,
+        ]:
+            event.Skip()
+        else:
+            key = chr(keycode)
+            # allow only digits and optional leading '-'
+            text_ctrl = self.GetWindow()
+            text = text_ctrl.GetValue()
+            current_position = text_ctrl.GetInsertionPoint()
+            if key in string.digits or (key == "-" and "-" not in text and current_position == 0):
                 event.Skip()
 
 
@@ -635,6 +690,7 @@ class KbplacerDialog(wx.Dialog):
             layout_path=initial_state.layout_path,
             key_distance=initial_state.key_distance,
             element_info=initial_state.key_info,
+            start_index=initial_state.start_index,
         )
 
         switch_diodes_section = self.get_switch_diodes_section(
@@ -678,6 +734,7 @@ class KbplacerDialog(wx.Dialog):
         element_info: ElementInfo = ElementInfo(
             "SW{}", PositionOption.DEFAULT, ZERO_POSITION, ""
         ),
+        start_index: int = 1,
     ) -> wx.Sizer:
         layout_label = wx.StaticText(self, -1, self._("Keyboard layout file:"))
         layout_picker = get_file_picker(
@@ -718,6 +775,15 @@ class KbplacerDialog(wx.Dialog):
             validator=AnnotationValidator(),
         )
 
+        key_start_index = LabeledTextCtrl(
+            self,
+            wx_("Start index") + ":",
+            value=str(start_index),
+            width=3,
+            validator=IntValidator(),
+            tooltip=self._("Starting index used to match footprint annotations"),
+        )
+
         key_position = ElementPositionWidget(self, ZERO_POSITION, disable_offsets=True)
         if element_info.position:
             key_position.set_position(element_info.position)
@@ -735,6 +801,7 @@ class KbplacerDialog(wx.Dialog):
         row2 = wx.BoxSizer(wx.HORIZONTAL)
         row2.Add(key_annotation, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         row2.Add(key_position, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        row2.Add(key_start_index, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer.Add(row2, 0, wx.EXPAND | wx.ALL, 5)
 
         self.__layout_picker = layout_picker
@@ -742,6 +809,7 @@ class KbplacerDialog(wx.Dialog):
         self.__key_distance_y = key_distance_y.text
         self.__key_annotation_format = key_annotation.text
         self.__key_position = key_position
+        self.__key_start_index = key_start_index.text
 
         return sizer
 
@@ -1023,7 +1091,14 @@ class KbplacerDialog(wx.Dialog):
             template_path=self.get_template_path(),
             generate_outline=self.generate_outline(),
             outline_delta=self.get_outline_delta(),
+            start_index=self.get_start_index(),
         )
+
+    def get_start_index(self) -> int:
+        try:
+            return int(self.__key_start_index.GetValue())
+        except Exception:
+            return 1
 
 
 def load_window_state_from_log(filepath: str) -> WindowState:

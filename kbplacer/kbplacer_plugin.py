@@ -31,6 +31,7 @@ class PluginSettings:
     generate_outline: bool
     outline_delta: float
     template_path: str
+    start_index: int
     create_from_annotated_layout: bool
     switch_footprint: str
     diode_footprint: str
@@ -47,7 +48,7 @@ def run(settings: PluginSettings) -> pcbnew.BOARD:
     else:
         board = pcbnew.LoadBoard(settings.board_path)
 
-    placer = KeyPlacer(board, settings.key_distance)
+    placer = KeyPlacer(board, settings.key_distance, settings.start_index)
     placer.run(
         settings.layout_path,
         settings.key_info,
@@ -82,6 +83,7 @@ def run_from_gui(board_path: str, state: WindowState) -> pcbnew.BOARD:
         layout_path=state.layout_path,
         key_info=state.key_info,
         key_distance=state.key_distance,
+        start_index=state.start_index,
         diode_info=state.diode_info,
         route_switches_with_diodes=state.route_switches_with_diodes,
         optimize_diodes_orientation=state.optimize_diodes_orientation,
