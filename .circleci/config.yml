@@ -432,13 +432,9 @@ workflows:
           matrix:
             parameters:
               version:
-                - 6.0.11-focal
                 - 6.0.11-lunar
-                - 7.0.6-focal
                 - 7.0.6-lunar
-                - 7.0.11-focal
                 - 7.0.11-mantic
-                - 8.0.9-focal
                 - 8.0.9-jammy
                 - 9.0.6-noble
       - test-linux-performance:
