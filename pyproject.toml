@@ -160,6 +160,7 @@ known-first-party = ["hatch_kicad"]
 ban-relative-imports = "all"
 
 [tool.coverage.run]
+patch = ["subprocess"]
 relative_files = true
 omit = [
   "kbplacer/_version.py",
