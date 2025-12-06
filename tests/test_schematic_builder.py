@@ -12,9 +12,12 @@ from pathlib import Path
 
 import pytest
 
+from .conftest import KICAD_VERSION, generate_netlist, generate_schematic_image
+
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.skipif(KICAD_VERSION < (9, 0, 0), reason="Schematic builder not supported")
 class TestSchematicBuilderCli:
     def _run_subprocess(
         self,
@@ -45,17 +48,23 @@ class TestSchematicBuilderCli:
         return p
 
     @pytest.fixture()
-    def example_isolation(self, request, tmpdir, example) -> str:
+    def example_isolation(self, request, tmpdir, example_data) -> str:
+        example, layout_file = example_data[0], example_data[1]
         test_dir = request.fspath.dirname
         source_dir = f"{test_dir}/../examples/{example}"
-        shutil.copy(f"{source_dir}/kle-annotated.json", tmpdir)
-        return f"{tmpdir}/kle-annotated.json"
+        shutil.copy(f"{source_dir}/{layout_file}", tmpdir)
+        return f"{tmpdir}/{layout_file}"
 
     @pytest.mark.parametrize(
-        "example", ["2x2", "3x2-sizes", "2x3-rotations", "1x4-rotations-90-step"]
+        "example_data",
+        [
+            ("2x2", "kle-annotated.json"),
+            ("3x2-sizes", "kle-annotated.json"),
+            ("2x2-with-alternative-layout", "via.json"),
+        ],
     )
     def test_schematic_build(
-        self, package_path, package_name, example_isolation
+        self, tmpdir, package_path, package_name, example_isolation
     ) -> None:
         layout_file = example_isolation
         schematic_file = Path(layout_file).with_suffix(".kicad_sch")
@@ -73,8 +82,8 @@ class TestSchematicBuilderCli:
         logger.info(f"Process stdout: {outs}")
         logger.info(f"Process stderr: {errs}")
 
+        assert errs == ""
         assert p.returncode == 0
 
-        # TODO:
-        # assert that 1) schematic can be opened
-        # 2) netlist can be generated
+        generate_netlist(tmpdir, schematic_file)
+        generate_schematic_image(tmpdir, schematic_file)

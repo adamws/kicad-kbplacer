@@ -380,6 +380,37 @@ def generate_drc(tmpdir, board_path: Union[str, os.PathLike]) -> None:
         logger.debug(f.read())
 
 
+def generate_netlist(tmpdir, schematic_path: Union[str, os.PathLike]) -> None:
+    if KICAD_VERSION < (9, 0, 0):
+        msg = "Schematic to netlist conversion not supported"
+        raise RuntimeError(msg)
+
+    board_path = Path(schematic_path)
+    board_name = board_path.stem
+    netlist_path = tmpdir / f"{board_name}.net"
+
+    subprocess.run(
+        f"{kicad_cli()} sch export netlist --output {netlist_path} {schematic_path}",
+        shell=True,
+        check=False,
+    )
+    assert Path(netlist_path).exists()
+
+
+def generate_schematic_image(tmpdir, schematic_path: Union[str, os.PathLike]) -> None:
+    if KICAD_VERSION < (9, 0, 0):
+        msg = "Schematic to SVG conversion not supported"
+        raise RuntimeError(msg)
+
+    svg_output_dir = tmpdir / "report"
+
+    subprocess.run(
+        f"{kicad_cli()} sch export svg -e --output {svg_output_dir} {schematic_path}",
+        shell=True,
+        check=False,
+    )
+
+
 def prepare_project_file(request, board_path: Union[str, os.PathLike]) -> None:
     test_dir = Path(request.module.__file__).parent
     major = KICAD_VERSION[0] if KICAD_VERSION else 0

@@ -12,6 +12,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from .board_modifier import KICAD_VERSION
 from .kle_serial import (
     Keyboard,
     MatrixAnnotatedKeyboard,
@@ -607,7 +608,11 @@ def create_schematic(
     diode_footprint="",
 ) -> None:
     if not _has_schematic:
-        raise ImportError("Requires optional schematic dependencies")
+        msg = "Requires optional schematic dependencies"
+        raise ImportError(msg)
+    if KICAD_VERSION < (9, 0, 0):
+        msg = "Requires KiCad 9.0 or higher"
+        raise RuntimeError(msg)
 
     matrix = [
         (parse_annotation(pos[0])[1], parse_annotation(pos[1])[1])
