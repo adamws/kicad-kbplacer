@@ -1,36 +1,42 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2025-06-18 20:51+0200\n"
-"PO-Revision-Date: 2023-07-14 20:04+0200\n"
-"Last-Translator: Automatically generated\n"
-"Language-Team: none\n"
+"POT-Creation-Date: 2024-07-20 12:36+0200\n"
+"PO-Revision-Date: 2025-12-07 09:00+0000\n"
+"Last-Translator: Stefan Bjornelund the Gnome "
+"<stefan.bjornelund.gnome@gmail.com>\n"
+"Language-Team: Swedish <https://hosted.weblate.org/projects/kicad-kbplacer/"
+"master-source/sv/>\n"
 "Language: sv\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 5.15-dev\n"
 "Generated-By: pygettext.py 1.5\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
 "based on popular layout description from "
 msgstr ""
+"Plugin för design av mekaniska tangentbord. Den har automatisk "
+"tangentplacering \n"
+"baserat på populär layoutbeskrivning från "
 
 msgid "Project website - "
-msgstr ""
+msgstr "Projektets webbplats - "
 
 msgid "Geekhack forum thread - "
-msgstr ""
+msgstr "Geekhack-forumtråd - "
 
 msgid "Save to:"
-msgstr ""
+msgstr "Spara till:"
 
 msgid "Load from:"
-msgstr ""
+msgstr "Ladda från:"
 
 msgid "Keyboard layout file:"
-msgstr ""
+msgstr "Tangentbordslayoutsfil:"
 
 msgid "How many millimeters 1U spans between switches horizontally"
 msgstr ""
@@ -39,13 +45,13 @@ msgid "How many millimeters 1U spans between switches vertically"
 msgstr ""
 
 msgid "Switch settings"
-msgstr ""
+msgstr "Strömbrytarinställningar"
 
 msgid "Route with switches"
-msgstr ""
+msgstr "Rutt med strömbrytare"
 
 msgid "Automatically adjust orientation"
-msgstr ""
+msgstr "Justera orienteringen automatiskt"
 
 msgid ""
 "Find optimal diode orientation for minimal distance between switch and diode "
@@ -53,22 +59,26 @@ msgid ""
 msgstr ""
 
 msgid "Switch diodes settings"
-msgstr ""
+msgstr "Brytardiods inställningar"
 
+#, fuzzy
 msgid "Additional elements settings"
-msgstr ""
+msgstr "Inställningar för ytterligare element"
 
+#, fuzzy
 msgid "Route rows and columns"
-msgstr ""
+msgstr "Layout i rader och kolumner"
 
 msgid "Controller circuit template file:"
-msgstr ""
+msgstr "Mallfil för styrkrets:"
 
+#, fuzzy
 msgid "Build board outline"
-msgstr ""
+msgstr "Konstruktionsskiss"
 
+#, fuzzy
 msgid "Outline delta:"
-msgstr ""
+msgstr "Konturdelta:"
 
 msgid "Other settings"
-msgstr ""
+msgstr "Andra inställningar"
