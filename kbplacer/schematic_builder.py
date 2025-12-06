@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import argparse
-import json
 import logging
 import re
 import shutil
@@ -14,9 +13,7 @@ from typing import Dict, List, Optional, Tuple
 
 from .board_modifier import KICAD_VERSION
 from .kle_serial import (
-    Keyboard,
     MatrixAnnotatedKeyboard,
-    get_keyboard,
     get_keyboard_from_file,
 )
 
@@ -566,12 +563,6 @@ def load_keyboard(layout_path) -> MatrixAnnotatedKeyboard:
     _keyboard = MatrixAnnotatedKeyboard.from_keyboard(_keyboard)
     _keyboard.collapse()
     return _keyboard
-
-
-def get_keyboard_from_str(layout_str: str) -> Keyboard:
-    layout = json.loads(layout_str)
-    logger.info(f"User layout: {layout}")
-    return get_keyboard(layout)
 
 
 def get_lowest_paper_size(size):
