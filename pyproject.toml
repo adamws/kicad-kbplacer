@@ -86,6 +86,25 @@ fragments = [
   { text = "https://github.com/adamws/kicad-kbplacer" },
 ]
 
+[tool.hatch.envs.test]
+dependencies = [
+  "lzstring==1.0.4",
+  "Pillow==10.4.0",
+  "pytest==8.3.0",
+  "pytest-cov==7.0.0",
+  "pytest-metadata==3.1.1",
+  "pytest-html==4.1.1",
+  "PyVirtualDisplay==3.0",
+  "PyYAML==6.0.1",
+  "svgpathtools==1.6.1",
+  "xmldiff==2.7.0",
+]
+system-packages = true # for `pcbnew` module
+
+[tool.hatch.envs.test.scripts]
+test = "pytest {args:tests}"
+test-plugin-install = "pytest -c /dev/null --ignore tools --test-plugin-installation --continue-on-collection-errors -k test_with_examples tests"
+
 [tool.hatch.envs.lint]
 detached = true
 dependencies = [

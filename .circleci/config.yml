@@ -12,11 +12,11 @@ jobs:
       - run:
           name: Prepare tests
           command: |
-            pip3 install --no-cache-dir -r dev-requirements.txt
+            pip3 install --no-cache-dir hatch
       - run:
           name: Run tests
           command: |
-            pytest --junitxml=test-results/pytest/results.xml tests/
+            hatch run test:test --junitxml=test-results/pytest/results.xml tests/
       - run:
           name: Move coverage file
           command: |
@@ -40,11 +40,11 @@ jobs:
       - run:
           name: Prepare tests
           command: |
-            pip3 install --no-cache-dir -r dev-requirements.txt
+            pip3 install --no-cache-dir hatch
       - run:
           name: Run tests
           command: |
-            pytest --junitxml=test-results/pytest/results.xml \
+            hatch run test:test --junitxml=test-results/pytest/results.xml \
               -k "2x3-rotations-custom-diode and RAW and PRESET" \
               --no-cov --profile tests/
       - store_artifacts:
@@ -156,7 +156,9 @@ jobs:
           command: |
             .\.circleci\scripts\use-kicad-python.ps1
             python -m pip install --upgrade pip
-            pip install --no-cache-dir -r dev-requirements.txt
+            python -m pip install "tomli >= 1.1.0 ; python_version < '3.11'"
+            $deps = python .\.circleci\scripts\get_test_env_deps.py | Where-Object { $_ -ne "" }
+            python -m pip install --no-cache-dir @deps
       - run:
           name: Run tests
           command: |
@@ -250,7 +252,10 @@ jobs:
           name: Install dependencies
           command: |
             source .circleci/scripts/use-kicad-python-macos.sh
-            pip install --no-cache-dir -r dev-requirements.txt
+            python -m pip install --upgrade pip
+            python -m pip install 'tomli >= 1.1.0 ; python_version < "3.11"'
+            python .circleci/scripts/get_test_env_deps.py \
+              | xargs -r python -m pip install --no-cache-dir
       - run:
           name: Run tests
           command: |
@@ -386,8 +391,7 @@ jobs:
           command: |
             docker build -t admwscki/$IMAGE_NAME:$TAG -f docker/Dockerfile .
             docker run --rm -v $(pwd):/kicad/tmp -w /kicad/tmp admwscki/$IMAGE_NAME:$TAG \
-              /bin/bash -c \
-              "python -m pip install -r dev-requirements.txt && python -m pytest -c /dev/null --ignore tools --test-plugin-installation --continue-on-collection-errors -k test_with_examples"
+              /bin/bash -c ".circleci/scripts/test_plugin_installation.sh"
       - when: # run only on master or tag
           condition:
             or:
