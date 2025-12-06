@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import argparse
+import json
 import logging
 import re
 import shutil
@@ -11,12 +12,20 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from skip import Schematic
-
-from kbplacer.kle_serial import (
+from .kle_serial import (
+    Keyboard,
     MatrixAnnotatedKeyboard,
+    get_keyboard,
     get_keyboard_from_file,
 )
+
+try:
+    from skip import Schematic
+except ImportError:
+    _has_schematic = False
+else:
+    _has_schematic = True
+
 
 logger = logging.getLogger(__name__)
 
@@ -558,6 +567,12 @@ def load_keyboard(layout_path) -> MatrixAnnotatedKeyboard:
     return _keyboard
 
 
+def get_keyboard_from_str(layout_str: str) -> Keyboard:
+    layout = json.loads(layout_str)
+    logger.info(f"User layout: {layout}")
+    return get_keyboard(layout)
+
+
 def get_lowest_paper_size(size):
     matrix_size_to_paper = {(8, 19): "A4", (11, 30): "A3", (17, 44): "A2"}
     smallest_size = None
@@ -586,9 +601,14 @@ def get_or_default(value: Optional[str], default: str) -> str:
 
 
 def create_schematic(
-    input_path, output_path, switch_footprint="", diode_footprint=""
+    keyboard: MatrixAnnotatedKeyboard,
+    output_path,
+    switch_footprint="",
+    diode_footprint="",
 ) -> None:
-    keyboard = load_keyboard(input_path)
+    if not _has_schematic:
+        raise ImportError("Requires optional schematic dependencies")
+
     matrix = [
         (parse_annotation(pos[0])[1], parse_annotation(pos[1])[1])
         for pos in (
@@ -783,4 +803,5 @@ if __name__ == "__main__":
         logger.error(f"Output file '{output_path}' already exists, exiting...")
         sys.exit(1)
 
-    create_schematic(input_path, output_path, switch_footprint, diode_footprint)
+    keyboard = load_keyboard(input_path)
+    sch = create_schematic(keyboard, output_path, switch_footprint, diode_footprint)

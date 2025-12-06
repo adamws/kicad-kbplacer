@@ -548,6 +548,22 @@ Layout collapsing moves keys to theirs final physical position and removes
 duplicates. Key is considered duplicate when there is another key of same
 matrix position and size.
 
+#### KiCad schematic generation script
+
+To generate schematic file and schematic image based on layout file:
+
+```shell
+python -m kbplacer.schematic_builder --in <via-annotated-layout.json> --out output.kicad_sch
+kicad-cli sch export svg -e output.kicad_sch
+```
+
+![example-svg](./resources/example-schematic.svg)
+
+> [!WARNING]
+> This requires installation with optional <code>schematic</code> dependencies:
+>
+> <code>pip install kbplacer[schematic]</code>
+
 #### Extra tools
 
 The `kbplacer` is used by additional tools available in [tools](tools/README.md) directory.
@@ -560,10 +576,6 @@ The `kbplacer` is used by additional tools available in [tools](tools/README.md)
     <tr>
         <td><code>layout2image.py</code> - generates KLE-like image for layout</td>
         <td><img src="resources/absolem.svg"/></td>
-    </tr>
-    <tr>
-        <td><code>layout2schematic.py</code> - generates KiCad schematic file with switch matrix</td>
-        <td><img src="resources/example-schematic.svg"/></td>
     </tr>
     <tr>
         <td><code>layout2url.py</code> - small utility to generate KLE url</td>
@@ -613,7 +625,7 @@ with [skidl](https://devbisme.github.io/skidl/) and aims to introduce no-schemat
 or provide decent starting point for traditional KiCad projects.
 
 Creating keyboard PCB file from scratch (without skidl or using schematic generated with
-`layout2schematic` tool) is also possible using `kbplacer` CLI interface although it is
+`schematic_builder` module) is also possible using `kbplacer` CLI interface although it is
 currently considered experimental.
 
 <!-- TOC --><a name="demo-keyboard-project"></a>

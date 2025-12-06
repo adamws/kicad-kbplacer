@@ -33,11 +33,11 @@ RUN cd $KICAD_3RDPARTY_PATH \
   && mv footprints ../footprints/$SWITCH_LIBRARY \
   && cd .. && rm -rf tmp
 
-RUN python3 -m pip install hatch PyYAML==6.0.1
+RUN python3 -m pip install PyYAML==6.0.1
 RUN git clone https://github.com/adamws/kicad-kbplacer.git \
   && cd kicad-kbplacer \
   && git checkout $KBPLACER_REVISION \
-  && python3 -m pip install .
+  && python3 -m pip install .[schematic]
 
 RUN mkdir -p $WORK_PATH
 COPY points.yaml $WORK_PATH
@@ -51,8 +51,7 @@ RUN python3 -m kbplacer.kle_serial \
   --in points.yaml --inform ERGOGEN_INTERNAL \
   --outform KLE_RAW --out $PROJECT_NAME-kle.json
 
-RUN cd /kicad-kbplacer \
-  && hatch run tools:layout2schematic --in $WORK_PATH/$PROJECT_NAME-kle.json \
+RUN python3 -m kbplacer.schematic_builder --in $WORK_PATH/$PROJECT_NAME-kle.json \
   --out $WORK_PATH/$PROJECT_NAME.kicad_sch -f \
   -swf "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.00u" \
   -df "Diode_SMD:D_SOD-123F"

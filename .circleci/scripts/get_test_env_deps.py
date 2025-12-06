@@ -10,3 +10,6 @@ with open("pyproject.toml", "rb") as f:
 
 for dep in cfg["tool"]["hatch"]["envs"]["test"]["dependencies"]:
     print(dep)
+
+for dep in cfg["project"]["optional-dependencies"]["schematic"]:
+    print(dep)

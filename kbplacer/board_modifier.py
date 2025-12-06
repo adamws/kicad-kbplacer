@@ -532,6 +532,7 @@ class BoardModifier:
 
         Returns True if routing done, False otherwise
         """
+
         def _pad_str(pad: pcbnew.PAD) -> str:
             return f"{pad.GetParentAsString()}:{pad.GetPadName()}"
 

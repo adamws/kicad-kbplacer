@@ -34,6 +34,11 @@ dynamic = ["readme", "version"]
 [project.scripts]
 kbplacer = "kbplacer.__main__:app"
 
+[project.optional-dependencies]
+schematic = [
+  "kicad-skip==0.2.5",
+]
+
 [tool.hatch]
 build.targets.sdist.include = [
   "kbplacer/*.py"
@@ -87,6 +92,9 @@ fragments = [
 ]
 
 [tool.hatch.envs.test]
+features = [
+  "schematic",
+]
 dependencies = [
   "lzstring==1.0.4",
   "Pillow==10.4.0",
@@ -161,7 +169,6 @@ omit = [
 dependencies = [
   "colormath==3.0.0",
   "drawsvg==2.4.0",
-  "kicad-skip==0.2.5",
   "lzstring==1.0.4",
   "pyurlon==0.1.0",
   "PyYAML==6.0.1",
@@ -171,7 +178,6 @@ dependencies = [
 ]
 [tool.hatch.envs.tools.scripts]
 layout2image = "python tools/layout2image.py {args}"
-layout2schematic = "python tools/layout2schematic.py {args}"
 layout2url = "python tools/layout2url.py {args}"
 layout2openscad = "python tools/layout2openscad.py {args}"
 kle2kle = "python tools/kle2kle.py {args}"
