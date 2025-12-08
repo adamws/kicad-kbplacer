@@ -777,7 +777,7 @@ class TestPlacerNoDiodes:
                 "unexpected net names.\n"
                 "When using via-annotated layouts it must be possible to associate "
                 "footprints with following net names:\n"
-                "ROW{}, R{}, COLUMN{}, COL{}, C{}"
+                "ROW{}, R{}, /ROW{}, /R{}, COLUMN{}, COL{}, C{}, /COLUMN{}, /COL{}, /C{}"
             )
         if board_type == TestPlacerNoDiodes.BoardType.REALISTIC_DIRECT_PIN:
             return (
