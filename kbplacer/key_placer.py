@@ -66,8 +66,8 @@ ANNOTATION_GUIDE_URL = (
 
 
 class KeyMatrix:
-    SUPPORTED_ROW_NAMES = ["ROW{}", "R{}"]
-    SUPPORTED_COLUMN_NAMES = ["COLUMN{}", "COL{}", "C{}"]
+    SUPPORTED_ROW_NAMES = ["ROW{}", "R{}", "/ROW{}", "/R{}"]
+    SUPPORTED_COLUMN_NAMES = ["COLUMN{}", "COL{}", "C{}", "/COLUMN{}", "/COL{}", "/C{}"]
 
     def __init__(self, board: pcbnew.BOARD, key_format: str, diode_format: str) -> None:
         self.key_format = key_format
