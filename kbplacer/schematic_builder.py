@@ -592,6 +592,14 @@ def get_or_default(value: Optional[str], default: str) -> str:
     return value if value else default
 
 
+def _is_valid_template(s: str) -> bool:
+    try:
+        s.format(1)
+        return True
+    except (ValueError, IndexError, KeyError):
+        return False
+
+
 def create_schematic(
     keyboard: MatrixAnnotatedKeyboard,
     output_path,
@@ -612,6 +620,7 @@ def create_schematic(
             for k in keyboard.keys_in_matrix_order()
         )
     ]
+    keys = [k for k in keyboard.keys_in_matrix_order()]
 
     logger.debug(f"Matrix: {matrix}")
 
@@ -649,8 +658,10 @@ def create_schematic(
 
     sch = Schematic(output_path)
     base_switch = sch.symbol.reference_startswith("SW")[0]
+    switch_footprint_format = False
     if switch_footprint:
         base_switch.property.Footprint.value = switch_footprint
+        switch_footprint_format = _is_valid_template(switch_footprint)
     base_diode = sch.symbol.reference_startswith("D")[0]
     if diode_footprint:
         base_diode.property.Footprint.value = diode_footprint
@@ -661,7 +672,7 @@ def create_schematic(
     labels = set()
     labels_positions = dict()
 
-    for row, column in matrix:
+    for key, (row, column) in zip(keys, matrix):
         position = (row, column)
         logger.debug(f"row: {row} column: {column}")
         row_label = f"{row_label_prefix}{row}"
@@ -673,6 +684,8 @@ def create_schematic(
         used_slots = min(used_slots, 3)
 
         switch = base_switch.clone()
+        if switch_footprint_format:
+            switch.property.Footprint.value = switch_footprint.format(key.width)
         if used_slots == 0:
             switch_reference = f"SW{current_ref}"
         else:

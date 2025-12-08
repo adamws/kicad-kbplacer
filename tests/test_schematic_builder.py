@@ -91,8 +91,86 @@ class TestSchematicBuilderCli:
             assert errs == ""
             assert p.returncode == 0
 
-            generate_netlist(tmpdir, schematic_file)
             generate_schematic_image(tmpdir, schematic_file)
+            netlist = generate_netlist(tmpdir, schematic_file)
+            assert netlist.exists()
+
+    @pytest.mark.skipif(
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
+    )
+    def test_defined_footprints(
+        self, request, tmpdir, package_path, package_name
+    ) -> None:
+        layout_file = self.example_isolation(
+            request,
+            tmpdir,
+            ("3x2-sizes", "kle-annotated.json"),
+        )
+        schematic_file = Path(layout_file).with_suffix(".kicad_sch")
+
+        p = self._run_subprocess(
+            package_path,
+            package_name,
+            args={
+                "--in": layout_file,
+                "--out": str(schematic_file),
+                # schematic builder does not check if footprints actually exist,
+                # it assigns any provided value
+                "-swf": "Switches:dummy_switch_footprint",
+                "-df": "Diodes:dummy_diode_footprint",
+            },
+        )
+        _, errs = p.communicate()
+
+        assert errs == ""
+        assert p.returncode == 0
+
+        generate_schematic_image(tmpdir, schematic_file)
+        netlist = generate_netlist(tmpdir, schematic_file)
+        assert netlist.exists()
+        with open(netlist, "r") as f:
+            netlist_str = f.read()
+            assert netlist_str.count("dummy_switch_footprint") == 12
+            assert netlist_str.count("dummy_diode_footprint") == 12
+
+    @pytest.mark.skipif(
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
+    )
+    def test_defined_footprints_variable_width(
+        self, request, tmpdir, package_path, package_name
+    ) -> None:
+        layout_file = self.example_isolation(
+            request,
+            tmpdir,
+            ("3x2-sizes", "kle-annotated.json"),
+        )
+        schematic_file = Path(layout_file).with_suffix(".kicad_sch")
+
+        p = self._run_subprocess(
+            package_path,
+            package_name,
+            args={
+                "--in": layout_file,
+                "--out": str(schematic_file),
+                # schematic builder support footprints with variable width
+                "-swf": "Switches:dummy_switch_footprint_{:.2f}u",
+                "-df": "Diodes:dummy_diode_footprint",
+            },
+        )
+        _, errs = p.communicate()
+
+        assert errs == ""
+        assert p.returncode == 0
+
+        generate_schematic_image(tmpdir, schematic_file)
+        netlist = generate_netlist(tmpdir, schematic_file)
+        assert netlist.exists()
+        with open(netlist, "r") as f:
+            netlist_str = f.read()
+            assert netlist_str.count("dummy_switch_footprint_1.00u") == 8
+            assert netlist_str.count("dummy_switch_footprint_1.50u") == 2
+            assert netlist_str.count("dummy_switch_footprint_1.75u") == 2
+            assert netlist_str.count("dummy_diode_footprint") == 12
 
     def test_warn_if_output_already_exist(
         self, request, tmpdir, package_path, package_name

@@ -380,7 +380,7 @@ def generate_drc(tmpdir, board_path: Union[str, os.PathLike]) -> None:
         logger.debug(f.read())
 
 
-def generate_netlist(tmpdir, schematic_path: Union[str, os.PathLike]) -> None:
+def generate_netlist(tmpdir, schematic_path: Union[str, os.PathLike]) -> Path:
     if KICAD_VERSION < (9, 0, 0):
         msg = "Schematic to netlist conversion not supported"
         raise RuntimeError(msg)
@@ -394,7 +394,7 @@ def generate_netlist(tmpdir, schematic_path: Union[str, os.PathLike]) -> None:
         shell=True,
         check=False,
     )
-    assert Path(netlist_path).exists()
+    return netlist_path
 
 
 def generate_schematic_image(tmpdir, schematic_path: Union[str, os.PathLike]) -> None:
