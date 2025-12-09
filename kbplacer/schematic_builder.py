@@ -13,6 +13,7 @@ from typing import Dict, List, Optional, Tuple
 
 from .board_modifier import KICAD_VERSION
 from .kle_serial import (
+    Key,
     MatrixAnnotatedKeyboard,
     get_keyboard_from_file,
 )
@@ -600,6 +601,36 @@ def _is_valid_template(s: str) -> bool:
         return False
 
 
+def _is_width_supported(key: Key) -> bool:
+    # probably should use some searching to see if given footprint exist,
+    # for now just assume that any library supports following widths:
+    supported_widths = [
+        1,
+        1.25,
+        1.5,
+        1.75,
+        2,
+        2.25,
+        2.5,
+        2.75,
+        3,
+        4,
+        4.5,
+        5.5,
+        6,
+        6.25,
+        6.5,
+        7,
+    ]
+    return key.width in supported_widths
+
+
+def _is_iso_enter(key: Key) -> bool:
+    return (
+        key.width == 1.25 and key.height == 2 and key.width2 == 1.5 and key.height2 == 1
+    )
+
+
 def create_schematic(
     keyboard: MatrixAnnotatedKeyboard,
     output_path,
@@ -685,7 +716,11 @@ def create_schematic(
 
         switch = base_switch.clone()
         if switch_footprint_format:
-            switch.property.Footprint.value = switch_footprint.format(key.width)
+            if not _is_width_supported(key) or _is_iso_enter(key):
+                key_width = 1
+            else:
+                key_width = key.width
+            switch.property.Footprint.value = switch_footprint.format(key_width)
         if used_slots == 0:
             switch_reference = f"SW{current_ref}"
         else:
