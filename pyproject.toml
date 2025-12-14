@@ -104,6 +104,7 @@ dependencies = [
   "pytest-html==4.1.1",
   "PyVirtualDisplay==3.0",
   "PyYAML==6.0.1",
+  "sexpdata==1.0.2",
   "svgpathtools==1.6.1",
   "xmldiff==2.7.0",
 ]

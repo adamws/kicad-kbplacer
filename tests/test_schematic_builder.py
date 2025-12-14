@@ -10,11 +10,78 @@ import shutil
 import subprocess
 from pathlib import Path
 
+import pcbnew
 import pytest
+import sexpdata
 
-from .conftest import KICAD_VERSION, generate_netlist, generate_schematic_image
+from kbplacer.board_builder import BoardBuilder
+
+from .conftest import (
+    KICAD_VERSION,
+    generate_netlist,
+    generate_schematic_image,
+    get_footprints_dir,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def is_symbol(x, name):
+    return isinstance(x, sexpdata.Symbol) and x.value() == name
+
+
+def find_child(expr, name):
+    """Return first child list starting with symbol `name`"""
+    for item in expr:
+        if isinstance(item, list) and is_symbol(item[0], name):
+            return item
+    return None
+
+
+def find_children(expr, name):
+    """Return all child lists starting with symbol `name`"""
+    return [
+        item for item in expr if isinstance(item, list) and is_symbol(item[0], name)
+    ]
+
+
+def parse_netlist_file(netlist_path: Path):
+    with open(netlist_path, "r") as f:
+        netlist_sexp = sexpdata.load(f)
+        nets = find_child(netlist_sexp, "nets")
+        nets_parsed = []
+        for net in find_children(nets, "net"):
+            netinfo = {
+                "code": None,
+                "name": None,
+                "class": None,
+                "nodes": [],
+            }
+
+            for item in net[1:]:
+                if is_symbol(item[0], "code"):
+                    netinfo["code"] = item[1]
+                elif is_symbol(item[0], "name"):
+                    netinfo["name"] = item[1]
+                elif is_symbol(item[0], "class"):
+                    netinfo["class"] = item[1]
+                elif is_symbol(item[0], "node"):
+                    node = {}
+                    for field in item[1:]:
+                        node[field[0].value()] = field[1]
+                    netinfo["nodes"].append(node)
+
+            nets_parsed.append(netinfo)
+        return nets_parsed
+
+
+def parse_netinfo_item(netinfo: pcbnew.NETINFO_ITEM):
+    netinfo_parsed = {
+        "code": netinfo.GetNetCode(),
+        "name": netinfo.GetNetname(),
+        "class": netinfo.GetNetClassName(),
+    }
+    return netinfo_parsed
 
 
 class TestSchematicBuilderCli:
@@ -94,6 +161,55 @@ class TestSchematicBuilderCli:
             generate_schematic_image(tmpdir, schematic_file)
             netlist = generate_netlist(tmpdir, schematic_file)
             assert netlist.exists()
+            nets_parsed = parse_netlist_file(netlist)
+            for n in nets_parsed:
+                logger.debug(n)
+                assert "unconnected" not in n["name"]
+            # Test compatibility with board_builder.
+            # The kicad-cli currently does not support converting netlist to kicad_pcb file.
+            # We generate schematic and pcb files independently
+            # and hope that they would match...
+            board_path = f"{tmpdir}/test.kicad_pcb"
+            builder = BoardBuilder(
+                board_path,
+                switch_footprint=str(get_footprints_dir(request))
+                + ":SW_Cherry_MX_PCB_1.00u",
+                diode_footprint=str(get_footprints_dir(request)) + ":D_SOD-323",
+            )
+            board = builder.create_board(layout_file)
+
+            board_nets = board.GetNetsByNetcode()
+            board_nets_parsed = []
+            for netcode, netinfo in board_nets.items():
+                netinfo_parsed = parse_netinfo_item(netinfo)
+                logger.debug(f"{netcode=} {netinfo_parsed=}")
+                board_nets_parsed.append(netinfo_parsed)
+
+            # Compare nets from schematic and board
+            # Filter out netcode=0 and ignore 'nodes' field
+            def _normalize(nets):
+                return [
+                    (int(n["code"]), n["name"], n["class"])
+                    for n in nets
+                    if int(n["code"]) != 0
+                ]
+
+            nets_for_comparison = _normalize(nets_parsed)
+            board_nets_for_comparison = _normalize(board_nets_parsed)
+
+            # Convert to sets for order-independent comparison
+            nets_set = set(nets_for_comparison)
+            board_nets_set = set(board_nets_for_comparison)
+
+            assert len(nets_set) == len(board_nets_set), (
+                f"Different number of nets: schematic has {len(nets_set)}, "
+                f"board has {len(board_nets_set)}"
+            )
+            assert nets_set == board_nets_set, (
+                f"Nets mismatch:\n"
+                f"Only in schematic: {nets_set - board_nets_set}\n"
+                f"Only in board: {board_nets_set - nets_set}"
+            )
 
     @pytest.mark.skipif(
         KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"

@@ -698,6 +698,7 @@ def create_schematic(
         base_diode.property.Footprint.value = diode_footprint
 
     progress: Dict[Tuple[int, int], List[str]] = defaultdict(list)
+    diode_connection_positions = dict()
 
     current_ref = 1
     labels = set()
@@ -733,6 +734,12 @@ def create_schematic(
         if used_slots != 0:
             junc = sch.junction.new()
             junc.move(switch.pin.n2.location.x, switch.pin.n2.location.y)
+            # must add explicit wire from junction to diode connection point
+            # kicad would be able to open and fix the schematic automatically
+            # if we don't do it, but we want to avoid using eeschema in our workflow
+            wire = sch.wire.new()
+            wire.start_at(junc.at)
+            wire.end_at(diode_connection_positions[position])
         wire = sch.wire.new()
         wire.start_at(switch.pin.n1)
         wire.delta_x = -1 * UNIT
@@ -752,7 +759,7 @@ def create_schematic(
             junc = sch.junction.new()
             junc.move(wire.end)
             # must add explicit wire from junction back to label
-            # kicad will be able to open and fix the schematic automatically
+            # kicad would be able to open and fix the schematic automatically
             # if we don't do it, but we want to avoid using eeschema in our workflow
             wire = sch.wire.new()
             wire.start_at(junc.at)
@@ -767,6 +774,8 @@ def create_schematic(
             wire = sch.wire.new()
             wire.start_at(switch.pin.n2)
             wire.end_at(diode.pin.K)
+            # store the diode cathode pin location for alternative keys to connect
+            diode_connection_positions[position] = diode.pin.K.location
             wire = sch.wire.new()
             wire.start_at(diode.pin.A)
             wire.delta_x = 0
