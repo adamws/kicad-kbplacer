@@ -22,7 +22,7 @@ def test_get_builder_invalid_footprint(tmpdir) -> None:
     pcb_path = f"{tmpdir}/test.kicad_pcb"
     invalid_footprint = "SW_Cherry_MX_PCB_1.00u"
     with pytest.raises(
-        RuntimeError, match=f"Unexpected footprint value: `{invalid_footprint}`"
+        ValueError, match=f"Unexpected footprint value: `{invalid_footprint}`"
     ):
         BoardBuilder(
             pcb_path,
@@ -82,3 +82,53 @@ def test_create_board_not_annotated_layout(request, builder) -> None:
         ),
     ):
         _ = builder.create_board(layout)
+
+
+def test_create_board_variable_width(tmpdir, request) -> None:
+    """Test board creation with variable width switch footprints.
+
+    This test verifies that SwitchFootprintLoader automatically discovers
+    and uses the appropriate width variants from the library.
+    """
+    pcb_path = f"{tmpdir}/test.kicad_pcb"
+
+    # Use examples library with multiple switch widths
+    test_dir = request.fspath.dirname
+    examples_lib = Path(test_dir).parent / "examples" / "examples.pretty"
+
+    if not examples_lib.exists():
+        pytest.skip("Examples library not found")
+
+    switch_footprint = f"{examples_lib}:SW_Cherry_MX_PCB_{{:.2f}}u"
+    diode_footprint = str(get_footprints_dir(request)) + ":D_SOD-323"
+
+    builder = BoardBuilder(
+        pcb_path,
+        switch_footprint=switch_footprint,
+        diode_footprint=diode_footprint,
+    )
+
+    # Use layout with various key widths (1.0u, 1.5u, 1.75u)
+    layout = Path(test_dir).parent / "examples" / "3x2-sizes" / "kle-annotated.json"
+
+    if not layout.exists():
+        pytest.skip("Example layout not found")
+
+    board = builder.create_board(layout)
+
+    # Verify switches were created
+    switches = [
+        fp for fp in board.GetFootprints() if fp.GetReference().startswith("SW")
+    ]
+    assert len(switches) == 6  # 3 rows × 2 columns
+
+    # Get switch footprint names
+    footprint_names = [str(fp.GetFPID().GetLibItemName()) for fp in switches]
+
+    # Verify different width footprints were loaded
+    # Layout has: 4x 1.0u (default), 1x 1.5u, 1x 1.75u
+    assert footprint_names.count("SW_Cherry_MX_PCB_1.00u") == 4
+    assert footprint_names.count("SW_Cherry_MX_PCB_1.50u") == 1
+    assert footprint_names.count("SW_Cherry_MX_PCB_1.75u") == 1
+
+    save_and_render(board, tmpdir, request)

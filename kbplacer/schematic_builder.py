@@ -9,8 +9,8 @@ from collections import defaultdict
 from typing import Dict, List, Optional, Tuple, Union
 
 from .board_modifier import KICAD_VERSION
+from .footprint_loader import SwitchFootprintLoader, is_valid_template
 from .kle_serial import (
-    Key,
     MatrixAnnotatedKeyboard,
     get_keyboard_from_file,
 )
@@ -590,44 +590,6 @@ def get_or_default(value: Optional[str], default: str) -> str:
     return value if value else default
 
 
-def _is_valid_template(s: str) -> bool:
-    try:
-        s.format(1)
-        return True
-    except (ValueError, IndexError, KeyError):
-        return False
-
-
-def _is_width_supported(key: Key) -> bool:
-    # probably should use some searching to see if given footprint exist,
-    # for now just assume that any library supports following widths:
-    supported_widths = [
-        1,
-        1.25,
-        1.5,
-        1.75,
-        2,
-        2.25,
-        2.5,
-        2.75,
-        3,
-        4,
-        4.5,
-        5.5,
-        6,
-        6.25,
-        6.5,
-        7,
-    ]
-    return key.width in supported_widths
-
-
-def _is_iso_enter(key: Key) -> bool:
-    return (
-        key.width == 1.25 and key.height == 2 and key.width2 == 1.5 and key.height2 == 1
-    )
-
-
 def can_create_schematic() -> bool:
     return _has_schematic
 
@@ -696,9 +658,13 @@ def create_schematic(
     sch = Schematic(output_path)
     base_switch = sch.symbol.reference_startswith("SW")[0]
     switch_footprint_format = False
+    switch_loader = None
     if switch_footprint:
         base_switch.property.Footprint.value = switch_footprint
-        switch_footprint_format = _is_valid_template(switch_footprint)
+        switch_footprint_format = is_valid_template(switch_footprint)
+        if switch_footprint_format:
+            # Create loader for switch template footprints
+            switch_loader = SwitchFootprintLoader(switch_footprint)
     base_diode = sch.symbol.reference_startswith("D")[0]
     if diode_footprint:
         base_diode.property.Footprint.value = diode_footprint
@@ -722,12 +688,10 @@ def create_schematic(
         used_slots = min(used_slots, 3)
 
         switch = base_switch.clone()
-        if switch_footprint_format:
-            if not _is_width_supported(key) or _is_iso_enter(key):
-                key_width = 1
-            else:
-                key_width = key.width
-            switch.property.Footprint.value = switch_footprint.format(key_width)
+        if switch_footprint_format and switch_loader:
+            # Use SwitchFootprintLoader for automatic width discovery and fallback
+            footprint_name = switch_loader.get_footprint_name(key=key)
+            switch.property.Footprint.value = footprint_name
         if used_slots == 0:
             switch_reference = f"SW{current_ref}"
         else:

@@ -118,6 +118,12 @@ class Key:
         self.labels[index] = value
 
 
+def is_iso_enter(key: Key) -> bool:
+    if key.width == 1.25 and key.height == 2 and key.width2 == 1.5 and key.height2 == 1:
+        return True
+    return False
+
+
 @dataclass
 class Background:
     name: str = ""
@@ -980,16 +986,6 @@ def layout_classification(keyboard: Keyboard) -> List[KeyboardTag]:
 
     def is_standard_shape(key: Key) -> bool:
         if key.width2 == key.width and key.height2 == key.height:
-            return True
-        return False
-
-    def is_iso_enter(key: Key) -> bool:
-        if (
-            key.width == 1.25
-            and key.height == 2
-            and key.width2 == 1.5
-            and key.height2 == 1
-        ):
             return True
         return False
 

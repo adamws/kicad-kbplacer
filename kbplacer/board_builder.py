@@ -9,37 +9,16 @@ import logging
 import os
 import re
 from collections import defaultdict
-from dataclasses import dataclass
 from string import ascii_lowercase
-from typing import Dict, List, Tuple, Type, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import pcbnew
 
 from .board_modifier import KICAD_VERSION
-from .kle_serial import Keyboard, MatrixAnnotatedKeyboard, get_keyboard
+from .footprint_loader import FootprintIdentifier, SwitchFootprintLoader
+from .kle_serial import Key, Keyboard, MatrixAnnotatedKeyboard, get_keyboard
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class Footprint:
-    libname: str
-    name: str
-
-    @classmethod
-    def from_str(cls: Type[Footprint], arg: str) -> Footprint:
-        parts = arg.rsplit(":", 1)
-        if len(parts) != 2:
-            msg = f"Unexpected footprint value: `{arg}`"
-            raise RuntimeError(msg)
-        return Footprint(libname="".join(parts[0]), name=parts[1])
-
-    def load(self) -> pcbnew.FOOTPRINT:
-        fp = pcbnew.FootprintLoad(self.libname, self.name)
-        if fp is None:
-            msg = f"Unable to load footprint: {self.libname}:{self.name}"
-            raise RuntimeError(msg)
-        return fp
 
 
 class BoardBuilder:
@@ -50,8 +29,10 @@ class BoardBuilder:
         switch_footprint: str,
         diode_footprint: str,
     ) -> None:
-        self.switch_footprint = Footprint.from_str(switch_footprint)
-        self.diode_footprint = Footprint.from_str(diode_footprint)
+        # Switches support variable width with template footprints
+        self.switch_footprint = SwitchFootprintLoader(switch_footprint)
+        # Diodes are simple - just parse the identifier
+        self.diode_footprint = FootprintIdentifier.from_str(diode_footprint)
 
         # use `NewBoard` over `CreateNewBoard` because it respects netclass
         # settings from .kicad_pro file if it already exist
@@ -64,15 +45,28 @@ class BoardBuilder:
         self.board.Add(footprint)
         return footprint
 
-    def _add_switch_footprint(self, ref: str) -> pcbnew.FOOTPRINT:
-        f = self.switch_footprint.load()
+    def _add_switch_footprint(
+        self, ref: str, key: Optional[Key] = None
+    ) -> pcbnew.FOOTPRINT:
+        f = self.switch_footprint.load(key=key)
         f.SetReference(ref)
         return self._add_footprint(f)
 
     def _add_diode_footprint(self, ref: str) -> pcbnew.FOOTPRINT:
-        f = self.diode_footprint.load()
-        f.SetReference(ref)
-        return self._add_footprint(f)
+        # Diodes don't need variable width - load directly
+        fp = pcbnew.FootprintLoad(
+            self.diode_footprint.library_path,
+            self.diode_footprint.footprint_name,
+        )
+        if fp is None:
+            msg = (
+                f"Unable to load footprint: "
+                f"{self.diode_footprint.library_path}:"
+                f"{self.diode_footprint.footprint_name}"
+            )
+            raise RuntimeError(msg)
+        fp.SetReference(ref)
+        return self._add_footprint(fp)
 
     def _add_or_get_net(self, netname: str) -> pcbnew.NETINFO_ITEM:
         """Add new net with netname if it does not exist already
@@ -119,12 +113,16 @@ class BoardBuilder:
         _keyboard.collapse()
 
         items: List[Tuple[str, str]] = []
+        key_map: Dict[Tuple[str, str], List[Key]] = defaultdict(list)
         key_iterator = _keyboard.key_iterator(ignore_alternative=False)
 
         for key in key_iterator:
             if key.decal:
                 continue
-            items.append(MatrixAnnotatedKeyboard.get_matrix_position(key))
+            matrix_pos = MatrixAnnotatedKeyboard.get_matrix_position(key)
+            items.append(matrix_pos)
+            # Store key for later use (for width extraction)
+            key_map[matrix_pos].append(key)
 
         def _sort_matrix(item: Tuple[str, str]) -> Tuple[int, int]:
             row_match = re.search(r"\d+", item[0])
@@ -163,7 +161,11 @@ class BoardBuilder:
         for row, column in sorted(items, key=_sort_matrix):
             position = (row, column)
             if position not in progress:
-                switch = self._add_switch_footprint(f"SW{current_ref}")
+                # Get first key at this position (for width and ISO Enter detection)
+                keys_at_position = key_map[position]
+                first_key = keys_at_position[0] if keys_at_position else None
+
+                switch = self._add_switch_footprint(f"SW{current_ref}", key=first_key)
                 diode = self._add_diode_footprint(f"D{current_ref}")
 
                 switch_pad1 = switch.FindPadByNumber("1")

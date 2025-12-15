@@ -14,6 +14,7 @@ import pcbnew
 from . import __version__
 from .defaults import DEFAULT_DIODE_POSITION, ZERO_POSITION
 from .element_position import ElementInfo, ElementPosition, PositionOption, Side
+from .footprint_loader import FootprintIdentifier
 from .kbplacer_plugin import PluginSettings, run_board, run_schematic
 
 logger = logging.getLogger(__name__)
@@ -45,6 +46,7 @@ class FootprintIdentifierAction(argparse.Action):
         if not value:  # Allow empty string (default value)
             return value
 
+        # Pre-validate to provide better error messages
         if value.count(":") < 1:
             err = (
                 f"'{value}' invalid footprint identifier, "
@@ -52,11 +54,8 @@ class FootprintIdentifierAction(argparse.Action):
             )
             raise ValueError(err)
 
-        # Handle Windows-style paths (e.g., C:\path\to\library.pretty:FootprintName)
-        # Check if the path starts with a drive letter (single letter followed by :\)
+        # Check for Windows path that's missing second colon
         if len(value) >= 3 and value[1:3] == ":\\":
-            # Windows path detected, split on the second colon
-            # Find the position of the second colon
             second_colon_pos = value.find(":", 2)
             if second_colon_pos == -1:
                 err = (
@@ -64,20 +63,23 @@ class FootprintIdentifierAction(argparse.Action):
                     "Windows path must contain ':' separator after library path."
                 )
                 raise ValueError(err)
-            library_path = value[:second_colon_pos]
-            footprint_name = value[second_colon_pos + 1 :]
-        else:
-            # Unix-style path, split on the first colon
-            library_path, footprint_name = value.split(":", 1)
 
-        if not library_path.endswith(".pretty"):
+        # Use FootprintIdentifier to parse and validate format
+        try:
+            identifier = FootprintIdentifier.from_str(value)
+        except ValueError as e:
+            # Re-raise with original error message from FootprintIdentifier
+            raise ValueError(str(e))
+
+        # CLI-specific validations
+        if not identifier.library_path.endswith(".pretty"):
             err = (
                 f"'{value}' invalid footprint identifier, "
                 "library path must end with '.pretty'."
             )
             raise ValueError(err)
 
-        if not footprint_name:
+        if not identifier.footprint_name:
             err = (
                 f"'{value}' invalid footprint identifier, "
                 "footprint name cannot be empty."
