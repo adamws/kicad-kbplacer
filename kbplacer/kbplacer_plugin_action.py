@@ -41,14 +41,14 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
             raise RuntimeError(msg)
 
         self.board = pcbnew.GetBoard()
-        board_file = self.board.GetFileName()
-        if not board_file:
+        board_filename = self.board.GetFileName()
+        if not board_filename:
             msg = "Could not locate .kicad_pcb file, open or create it first"
             raise PluginError(msg)
 
-        self.board_path = os.path.abspath(board_file)
+        self.pcb_file_path = os.path.abspath(board_filename)
         # go to the project folder - so that log will be in proper place
-        os.chdir(os.path.dirname(self.board_path))
+        os.chdir(os.path.dirname(self.pcb_file_path))
 
         # Remove all handlers associated with the root logger object.
         for handler in logging.root.handlers[:]:
@@ -78,7 +78,7 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
         if dlg.ShowModal() == wx.ID_OK:
             gui_state = dlg.get_window_state()
             logger.info(f"GUI state: {gui_state}")
-            run_from_gui(self.board_path, gui_state)
+            run_from_gui(self.pcb_file_path, gui_state)
         else:
             # field validators are not executed on cancel so getting window
             # state might raise an exception. Since we are cancelling,

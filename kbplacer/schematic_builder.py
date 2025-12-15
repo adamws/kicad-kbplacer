@@ -2,14 +2,11 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-import argparse
 import logging
+import os
 import re
-import shutil
-import sys
 from collections import defaultdict
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 from .board_modifier import KICAD_VERSION
 from .kle_serial import (
@@ -631,34 +628,43 @@ def _is_iso_enter(key: Key) -> bool:
     )
 
 
+def can_create_schematic() -> bool:
+    return _has_schematic
+
+
 def create_schematic(
-    keyboard: MatrixAnnotatedKeyboard,
+    keyboard: Union[str, os.PathLike, MatrixAnnotatedKeyboard],
     output_path,
     switch_footprint="",
     diode_footprint="",
 ) -> None:
-    if not _has_schematic:
+    if not can_create_schematic():
         msg = "Requires optional schematic dependencies"
         raise ImportError(msg)
     if KICAD_VERSION < (9, 0, 0):
         msg = "Requires KiCad 9.0 or higher"
         raise RuntimeError(msg)
 
+    if isinstance(keyboard, str) or isinstance(keyboard, os.PathLike):
+        _keyboard = load_keyboard(keyboard)
+    else:
+        _keyboard: MatrixAnnotatedKeyboard = keyboard
+
     matrix = [
         (parse_annotation(pos[0])[1], parse_annotation(pos[1])[1])
         for pos in (
             MatrixAnnotatedKeyboard.get_matrix_position(k)
-            for k in keyboard.keys_in_matrix_order()
+            for k in _keyboard.keys_in_matrix_order()
         )
     ]
-    keys = [k for k in keyboard.keys_in_matrix_order()]
+    keys = [k for k in _keyboard.keys_in_matrix_order()]
 
     logger.debug(f"Matrix: {matrix}")
 
     # deduce label names from annotation of first key,
     # if annotations are comma separated numbers then use default 'ROW'/'COL' names,
     # otherwise use same prefix as in annotation
-    first_key = keyboard.keys[0]
+    first_key = _keyboard.keys[0]
     first_key_matrix_position = MatrixAnnotatedKeyboard.get_matrix_position(first_key)
     row_label_prefix = get_or_default(
         parse_annotation(first_key_matrix_position[0])[0], "ROW"
@@ -808,53 +814,3 @@ def create_schematic(
     base_diode.delete()
 
     sch.write(output_path)
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Keyboard layout to KiCad schematic",
-    )
-
-    parser.add_argument("-i", "--in", required=True, help="Layout file")
-    parser.add_argument("-o", "--out", required=True, help="Output path")
-    parser.add_argument(
-        "-f",
-        "--force",
-        action="store_true",
-        help="Override output if already exists",
-    )
-    parser.add_argument(
-        "-swf", "--switch-footprint", required=False, help="Switch footprint"
-    )
-    parser.add_argument(
-        "-df", "--diode-footprint", required=False, help="Diode footprint"
-    )
-    parser.add_argument(
-        "--log-level",
-        required=False,
-        default="WARNING",
-        choices=logging._nameToLevel.keys(),
-        type=str,
-        help="Provide logging level, default=%(default)s",
-    )
-
-    args = parser.parse_args()
-    input_path = getattr(args, "in")
-    output_path = getattr(args, "out")
-    force = args.force
-    switch_footprint = args.switch_footprint
-    diode_footprint = args.diode_footprint
-
-    # set up logger
-    logging.basicConfig(
-        level=args.log_level, format="%(asctime)s: %(message)s", datefmt="%H:%M:%S"
-    )
-
-    if force:
-        shutil.rmtree(output_path, ignore_errors=True)
-    elif Path(output_path).is_file():
-        logger.error(f"Output file '{output_path}' already exists, exiting...")
-        sys.exit(1)
-
-    keyboard = load_keyboard(input_path)
-    sch = create_schematic(keyboard, output_path, switch_footprint, diode_footprint)

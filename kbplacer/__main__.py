@@ -6,6 +6,7 @@ import argparse
 import logging
 import os
 import sys
+from pathlib import Path
 from typing import List
 
 import pcbnew
@@ -13,7 +14,7 @@ import pcbnew
 from . import __version__
 from .defaults import DEFAULT_DIODE_POSITION, ZERO_POSITION
 from .element_position import ElementInfo, ElementPosition, PositionOption, Side
-from .kbplacer_plugin import PluginSettings, run
+from .kbplacer_plugin import PluginSettings, run_board, run_schematic
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,65 @@ def check_annotation(value: str) -> None:
             "it must contain exactly one '{}' placeholder."
         )
         raise ValueError(err)
+
+
+class FootprintIdentifierAction(argparse.Action):
+    """Validates footprint identifier format.
+
+    Expected format: path/to/library.pretty:FootprintName
+    """
+
+    def __call__(self, parser, namespace, values: str, option_string=None) -> None:
+        try:
+            value = self.validate(values, option_string)
+        except ValueError as e:
+            raise argparse.ArgumentTypeError(str(e))
+        setattr(namespace, self.dest, value)
+
+    def validate(self, value: str, option_string) -> str:
+        if not value:  # Allow empty string (default value)
+            return value
+
+        if value.count(":") < 1:
+            err = (
+                f"'{value}' invalid footprint identifier, "
+                "it must contain at least one ':' separator."
+            )
+            raise ValueError(err)
+
+        # Handle Windows-style paths (e.g., C:\path\to\library.pretty:FootprintName)
+        # Check if the path starts with a drive letter (single letter followed by :\)
+        if len(value) >= 3 and value[1:3] == ":\\":
+            # Windows path detected, split on the second colon
+            # Find the position of the second colon
+            second_colon_pos = value.find(":", 2)
+            if second_colon_pos == -1:
+                err = (
+                    f"'{value}' invalid footprint identifier, "
+                    "Windows path must contain ':' separator after library path."
+                )
+                raise ValueError(err)
+            library_path = value[:second_colon_pos]
+            footprint_name = value[second_colon_pos + 1 :]
+        else:
+            # Unix-style path, split on the first colon
+            library_path, footprint_name = value.split(":", 1)
+
+        if not library_path.endswith(".pretty"):
+            err = (
+                f"'{value}' invalid footprint identifier, "
+                "library path must end with '.pretty'."
+            )
+            raise ValueError(err)
+
+        if not footprint_name:
+            err = (
+                f"'{value}' invalid footprint identifier, "
+                "footprint name cannot be empty."
+            )
+            raise ValueError(err)
+
+        return value
 
 
 class SwitchElementInfoAction(argparse.Action):
@@ -171,9 +231,8 @@ def app() -> None:
 
     parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument(
-        "-b",
-        "--board",
-        required=True,
+        "--pcb-file",
+        required=False,
         help=".kicad_pcb file to be processed or created",
     )
     parser.add_argument(
@@ -279,32 +338,56 @@ def app() -> None:
         help="The amount (in millimetres) to inflate/deflate board outline.",
     )
     parser.add_argument(
-        "--create-from-annotated-layout",
+        "--create-pcb-file",
         required=False,
         action="store_true",
         help=(
             "Enables experimental creation mode, where via-annotated kle layout is used\n"
-            "for adding footprints and netlists to the newly created board file.\n"
+            "for adding footprints and netlists to the newly created board file."
+        ),
+    )
+    parser.add_argument(
+        "--create-sch-file",
+        required=False,
+        action="store_true",
+        help=(
+            "Creates schematic out of via-annotated kle layout.\n"
+            "Requires kbplacer installation with optional `schematic` dependencies."
+        ),
+    )
+    parser.add_argument(
+        "--sch-file",
+        required=False,
+        default="",
+        help=(
+            ".kicad_sch file to be created if `--create-sch-file` option used.\n"
+            "Using `--pcb-file` path with extension changed to `.kicad_sch` if not defined."
         ),
     )
     parser.add_argument(
         "--switch-footprint",
         required=False,
         default="",
-        type=str,
+        action=FootprintIdentifierAction,
         help=(
-            "Full path to switch footprint, required when "
-            "`--create-from-annotated-layout` option used."
+            "Switch footprint identifier.\n"
+            "Identifier is constructed by concatenating path to library directory\n"
+            "with ':' and footprint name (without file extension), for example:\n"
+            "/usr/share/kicad/footprints/Button_Switch_Keyboard.pretty:SW_Cherry_MX_1.00u_PCB\n"
+            "Required when `--create-pcb-file` or `--create-sch-file` options used."
         ),
     )
     parser.add_argument(
         "--diode-footprint",
         required=False,
         default="",
-        type=str,
+        action=FootprintIdentifierAction,
         help=(
-            "Full path to diode footprint, required when "
-            "`--create-from-annotated-layout` option used."
+            "Diode footprint identifier.\n"
+            "Identifier is constructed by concatenating path to library directory\n"
+            "with ':' and footprint name (without file extension), for example:\n"
+            "/usr/share/kicad/footprints/Diode_SMD.pretty:D_SOD-123F\n"
+            "Required when `--create-pcb-file` or `--create-sch-file` options used."
         ),
     )
     parser.add_argument(
@@ -327,19 +410,31 @@ def app() -> None:
     args = parser.parse_args()
 
     layout_path = args.layout
-    board_path = args.board
+    pcb_file_path = args.pcb_file
 
     # set up logger
     logging.basicConfig(
         level=args.log_level, format="%(asctime)s: %(message)s", datefmt="%H:%M:%S"
     )
 
-    if args.create_from_annotated_layout and os.path.isfile(board_path):
-        logger.error(f"File {board_path} already exist, aborting")
+    if args.create_pcb_file and os.path.isfile(pcb_file_path):
+        logger.error(f"File {pcb_file_path} already exist, aborting")
         sys.exit(1)
 
+    if args.create_sch_file:
+        sch_path = (
+            str(args.sch_file)
+            if args.sch_file
+            else str(Path(pcb_file_path).with_suffix(".kicad_sch"))
+        )
+        if os.path.isfile(sch_path):
+            logger.error(f"File {sch_path} already exist, aborting")
+            sys.exit(1)
+    else:
+        sch_path = ""
+
     settings = PluginSettings(
-        board_path=board_path,
+        pcb_file_path=pcb_file_path,
         layout_path=layout_path,
         key_info=args.switch,
         key_distance=args.key_distance,
@@ -351,14 +446,21 @@ def app() -> None:
         generate_outline=args.build_board_outline,
         outline_delta=args.outline_delta,
         template_path=args.template,
-        create_from_annotated_layout=args.create_from_annotated_layout,
+        create_pcb_file=args.create_pcb_file,
+        create_sch_file=args.create_sch_file,
+        sch_file_path=sch_path,
         switch_footprint=args.switch_footprint,
         diode_footprint=args.diode_footprint,
     )
-    board = run(settings)
 
-    pcbnew.Refresh()
-    pcbnew.SaveBoard(board_path, board)
+    if args.create_sch_file:
+        run_schematic(settings)
+
+    if pcb_file_path:
+        board = run_board(settings)
+
+        pcbnew.Refresh()
+        pcbnew.SaveBoard(pcb_file_path, board)
 
     logging.shutdown()
 

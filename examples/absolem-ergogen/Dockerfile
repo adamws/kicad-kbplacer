@@ -51,23 +51,15 @@ RUN python3 -m kbplacer.kle_serial \
   --in points.yaml --inform ERGOGEN_INTERNAL \
   --outform KLE_RAW --out $PROJECT_NAME-kle.json
 
-RUN python3 -m kbplacer.schematic_builder --in $WORK_PATH/$PROJECT_NAME-kle.json \
-  --out $WORK_PATH/$PROJECT_NAME.kicad_sch -f \
-  -swf "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.00u" \
-  -df "Diode_SMD:D_SOD-123F"
-
-RUN kicad-cli sch export netlist --output $PROJECT_NAME.net $PROJECT_NAME.kicad_sch
-RUN python3 -m pip install kinet2pcb==1.1.2
-RUN kinet2pcb -i $PROJECT_NAME.net \
-  --libraries /usr/share/kicad/footprints \
-              $KICAD_3RDPARTY_PATH/footprints/$SWITCH_LIBRARY/Switch_Keyboard_Cherry_MX.pretty \
-  --output $PROJECT_NAME.kicad_pcb
-
-RUN python3 -m kbplacer --board $PROJECT_NAME.kicad_pcb \
+RUN python3 -m kbplacer \
+  --pcb-file $PROJECT_NAME.kicad_pcb \
+  --create-pcb-file --create-sch-file \
   --layout $PROJECT_NAME-kle.json \
   --diode "D{} CUSTOM 5.08 4 90 BACK" \
   --route-switches-with-diodes \
-  --route-rows-and-columns
+  --route-rows-and-columns \
+  --switch-footprint "$KICAD_3RDPARTY_PATH/footprints/$SWITCH_LIBRARY/Switch_Keyboard_Cherry_MX.pretty:SW_Cherry_MX_PCB_1.00u" \
+  --diode-footprint "/usr/share/kicad/footprints/Diode_SMD.pretty:D_SOD-123F"
 
 RUN kicad-cli pcb export svg --exclude-drawing-sheet \
   -l F.Cu,B.Cu,F.Silkscreen -o $PROJECT_NAME.svg $PROJECT_NAME.kicad_pcb
@@ -77,7 +69,6 @@ RUN zip -r $PROJECT_NAME.zip \
   $PROJECT_NAME.kicad_pro \
   $PROJECT_NAME.kicad_sch \
   $PROJECT_NAME.kicad_pcb \
-  $PROJECT_NAME.net \
   $PROJECT_NAME.svg
 
 # sanity check for plate generation tool

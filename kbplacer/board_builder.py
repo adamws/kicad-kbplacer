@@ -35,13 +35,17 @@ class Footprint:
         return Footprint(libname="".join(parts[0]), name=parts[1])
 
     def load(self) -> pcbnew.FOOTPRINT:
-        return pcbnew.FootprintLoad(self.libname, self.name)
+        fp = pcbnew.FootprintLoad(self.libname, self.name)
+        if fp is None:
+            msg = f"Unable to load footprint: {self.libname}:{self.name}"
+            raise RuntimeError(msg)
+        return fp
 
 
 class BoardBuilder:
     def __init__(
         self,
-        board_path: Union[str, os.PathLike],
+        pcb_file_path: Union[str, os.PathLike],
         *,
         switch_footprint: str,
         diode_footprint: str,
@@ -51,7 +55,7 @@ class BoardBuilder:
 
         # use `NewBoard` over `CreateNewBoard` because it respects netclass
         # settings from .kicad_pro file if it already exist
-        self.board = pcbnew.NewBoard(board_path)
+        self.board = pcbnew.NewBoard(pcb_file_path)
         self.nets: dict[str, pcbnew.NETINFO_ITEM] = {}
         self.net_info = self.board.GetNetInfo()
 

@@ -61,7 +61,7 @@ def kbplacer_process(
         kbplacer_args += [
             "-m",
             package_name,
-            "-b",
+            "--pcb-file",
             pcb_path,
         ]
         if layout_file:
@@ -85,9 +85,12 @@ def kbplacer_process(
             kbplacer_args,
             cwd=package_path,
         )
-        p.communicate()
+        _, stderr = p.communicate()
         if p.returncode != 0:
-            raise Exception("Switch placement failed")
+            msg = "Switch placement failed"
+            if stderr:
+                msg += ": " + str(stderr)
+            raise Exception(msg)
 
     return _process
 
@@ -106,7 +109,7 @@ def kbplacer_gui_process(
             "python3",
             "-m",
             f"{package_name}.kbplacer_dialog",
-            "-b",
+            "--pcb-file",
             pcb_path,
             "--run-without-dialog",
             "--initial-state-file",
@@ -122,9 +125,12 @@ def kbplacer_gui_process(
             stdin=subprocess.PIPE,
             text=True,
         )
-        p.communicate()
+        _, stderr = p.communicate()
         if p.returncode != 0:
-            raise Exception("Switch placement failed")
+            msg = "Switch placement failed"
+            if stderr:
+                msg += ": " + stderr
+            raise Exception(msg)
 
     return _process
 
@@ -496,8 +502,8 @@ def test_empty_run(
 ) -> None:
     test_dir = request.fspath.dirname
     # FIXME: there is no way to define empty 'additional-elements' with CLI
-    # so using example where there are not stabilizer footprints which would
-    # be moved this following 'empty run'
+    # so must use example where there are no stabilizer footprints which would
+    # be moved by this 'empty run'
     example = "2x2"
 
     reference = f"{test_dir}/../examples/{example}/keyboard-before.kicad_pcb"
@@ -693,7 +699,7 @@ def test_board_creation(
             diode_position[1],
             layout_path,
             pcb_path,
-            flags=["--create-from-annotated-layout"],
+            flags=["--create-pcb-file"],
             args={
                 "--switch-footprint": f"{get_footprints_dir(request)}:SW_Cherry_MX_PCB_1.00u",
                 "--diode-footprint": f"{get_footprints_dir(request)}:D_SOD-323F",

@@ -1062,8 +1062,7 @@ if __name__ == "__main__":
         help="Run with loaded state without displaying dialog window",
     )
     parser.add_argument(
-        "-b",
-        "--board",
+        "--pcb-file",
         required=False,
         default="",
         help=".kicad_pcb file to be used with --run-without-dialog option",
@@ -1083,6 +1082,6 @@ if __name__ == "__main__":
     else:
         import pcbnew
 
-        board = run_from_gui(args.board, initial_state)
+        board = run_from_gui(args.pcb_file, initial_state)
         pcbnew.Refresh()
-        pcbnew.SaveBoard(args.board, board)
+        pcbnew.SaveBoard(args.pcb_file, board)

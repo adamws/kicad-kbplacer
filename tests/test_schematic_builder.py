@@ -8,13 +8,12 @@ import logging
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pcbnew
 import pytest
 import sexpdata
-
-from kbplacer.board_builder import BoardBuilder
 
 from .conftest import (
     KICAD_VERSION,
@@ -92,11 +91,7 @@ class TestSchematicBuilderCli:
         flags: list[str] = [],
         args: dict[str, str] = {},
     ) -> subprocess.Popen:
-        kbplacer_args = [
-            "python3",
-            "-m",
-            f"{package_name}.schematic_builder",
-        ]
+        kbplacer_args = ["python3", "-m", f"{package_name}", "--create-sch-file"]
         for v in flags:
             kbplacer_args.append(v)
         for k, v in args.items():
@@ -135,16 +130,24 @@ class TestSchematicBuilderCli:
         self, request, tmpdir, package_path, package_name, example_data
     ) -> None:
         layout_file = self.example_isolation(request, tmpdir, example_data)
+
+        pcb_file = Path(layout_file).with_suffix(".kicad_pcb")
         schematic_file = Path(layout_file).with_suffix(".kicad_sch")
+
+        switch_footprint = str(get_footprints_dir(request)) + ":SW_Cherry_MX_PCB_1.00u"
+        diode_footprint = str(get_footprints_dir(request)) + ":D_SOD-323"
 
         p = self._run_subprocess(
             package_path,
             package_name,
-            flags=["--force"],
             args={
-                "--in": layout_file,
-                "--out": str(schematic_file),
+                "--layout": layout_file,
+                "--pcb-file": str(pcb_file),
+                "--sch-file": str(schematic_file),
+                "--switch-footprint": switch_footprint,
+                "--diode-footprint": diode_footprint,
             },
+            flags=["--create-pcb-file"],
         )
         outs, errs = p.communicate()
 
@@ -154,100 +157,61 @@ class TestSchematicBuilderCli:
         if KICAD_VERSION < (9, 0, 0):
             assert "Requires KiCad 9.0 or higher" in errs
             assert p.returncode == 1
-        else:
+            return
+
+        if sys.platform != "darwin":
+            # getting:
+            # 'assert ""traits"" failed in Get(): create wxApp before calling this'
+            # only on macos (otherwise it works just fine)
             assert errs == ""
-            assert p.returncode == 0
-
-            generate_schematic_image(tmpdir, schematic_file)
-            netlist = generate_netlist(tmpdir, schematic_file)
-            assert netlist.exists()
-            nets_parsed = parse_netlist_file(netlist)
-            for n in nets_parsed:
-                logger.debug(n)
-                assert "unconnected" not in n["name"]
-            # Test compatibility with board_builder.
-            # The kicad-cli currently does not support converting netlist to kicad_pcb file.
-            # We generate schematic and pcb files independently
-            # and hope that they would match...
-            board_path = f"{tmpdir}/test.kicad_pcb"
-            builder = BoardBuilder(
-                board_path,
-                switch_footprint=str(get_footprints_dir(request))
-                + ":SW_Cherry_MX_PCB_1.00u",
-                diode_footprint=str(get_footprints_dir(request)) + ":D_SOD-323",
-            )
-            board = builder.create_board(layout_file)
-
-            board_nets = board.GetNetsByNetcode()
-            board_nets_parsed = []
-            for netcode, netinfo in board_nets.items():
-                netinfo_parsed = parse_netinfo_item(netinfo)
-                logger.debug(f"{netcode=} {netinfo_parsed=}")
-                board_nets_parsed.append(netinfo_parsed)
-
-            # Compare nets from schematic and board
-            # Filter out netcode=0 and ignore 'nodes' field
-            def _normalize(nets):
-                return [
-                    (int(n["code"]), n["name"], n["class"])
-                    for n in nets
-                    if int(n["code"]) != 0
-                ]
-
-            nets_for_comparison = _normalize(nets_parsed)
-            board_nets_for_comparison = _normalize(board_nets_parsed)
-
-            # Convert to sets for order-independent comparison
-            nets_set = set(nets_for_comparison)
-            board_nets_set = set(board_nets_for_comparison)
-
-            assert len(nets_set) == len(board_nets_set), (
-                f"Different number of nets: schematic has {len(nets_set)}, "
-                f"board has {len(board_nets_set)}"
-            )
-            assert nets_set == board_nets_set, (
-                f"Nets mismatch:\n"
-                f"Only in schematic: {nets_set - board_nets_set}\n"
-                f"Only in board: {board_nets_set - nets_set}"
-            )
-
-    @pytest.mark.skipif(
-        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
-    )
-    def test_defined_footprints(
-        self, request, tmpdir, package_path, package_name
-    ) -> None:
-        layout_file = self.example_isolation(
-            request,
-            tmpdir,
-            ("3x2-sizes", "kle-annotated.json"),
-        )
-        schematic_file = Path(layout_file).with_suffix(".kicad_sch")
-
-        p = self._run_subprocess(
-            package_path,
-            package_name,
-            args={
-                "--in": layout_file,
-                "--out": str(schematic_file),
-                # schematic builder does not check if footprints actually exist,
-                # it assigns any provided value
-                "-swf": "Switches:dummy_switch_footprint",
-                "-df": "Diodes:dummy_diode_footprint",
-            },
-        )
-        _, errs = p.communicate()
-
-        assert errs == ""
         assert p.returncode == 0
 
         generate_schematic_image(tmpdir, schematic_file)
         netlist = generate_netlist(tmpdir, schematic_file)
         assert netlist.exists()
-        with open(netlist, "r") as f:
-            netlist_str = f.read()
-            assert netlist_str.count("dummy_switch_footprint") == 12
-            assert netlist_str.count("dummy_diode_footprint") == 12
+        nets_parsed = parse_netlist_file(netlist)
+        for n in nets_parsed:
+            logger.debug(n)
+            assert "unconnected" not in n["name"]
+
+        # Test compatibility with created board.
+        # The kicad-cli currently does not support converting netlist to kicad_pcb file.
+        # We generate schematic and pcb files independently
+        # and hope that they would match...
+
+        board = pcbnew.LoadBoard(str(pcb_file))
+        board_nets = board.GetNetsByNetcode()
+        board_nets_parsed = []
+        for netcode, netinfo in board_nets.items():
+            netinfo_parsed = parse_netinfo_item(netinfo)
+            logger.debug(f"{netcode=} {netinfo_parsed=}")
+            board_nets_parsed.append(netinfo_parsed)
+
+        # Compare nets from schematic and board
+        # Filter out netcode=0 and ignore 'nodes' field
+        def _normalize(nets):
+            return [
+                (int(n["code"]), n["name"], n["class"])
+                for n in nets
+                if int(n["code"]) != 0
+            ]
+
+        nets_for_comparison = _normalize(nets_parsed)
+        board_nets_for_comparison = _normalize(board_nets_parsed)
+
+        # Convert to sets for order-independent comparison
+        nets_set = set(nets_for_comparison)
+        board_nets_set = set(board_nets_for_comparison)
+
+        assert len(nets_set) == len(board_nets_set), (
+            f"Different number of nets: schematic has {len(nets_set)}, "
+            f"board has {len(board_nets_set)}"
+        )
+        assert nets_set == board_nets_set, (
+            f"Nets mismatch:\n"
+            f"Only in schematic: {nets_set - board_nets_set}\n"
+            f"Only in board: {board_nets_set - nets_set}"
+        )
 
     @pytest.mark.skipif(
         KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
@@ -262,20 +226,24 @@ class TestSchematicBuilderCli:
         )
         schematic_file = Path(layout_file).with_suffix(".kicad_sch")
 
+        switch_footprint = str(get_footprints_dir(request)) + ":switch_{:.2f}u"
+        diode_footprint = str(get_footprints_dir(request)) + ":D_SOD-323"
+
         p = self._run_subprocess(
             package_path,
             package_name,
             args={
-                "--in": layout_file,
-                "--out": str(schematic_file),
+                "--layout": layout_file,
+                "--sch-file": str(schematic_file),
                 # schematic builder support footprints with variable width
-                "-swf": "Switches:dummy_switch_footprint_{:.2f}u",
-                "-df": "Diodes:dummy_diode_footprint",
+                "--switch-footprint": switch_footprint,
+                "--diode-footprint": diode_footprint,
             },
         )
         _, errs = p.communicate()
 
-        assert errs == ""
+        if sys.platform != "darwin":
+            assert errs == ""
         assert p.returncode == 0
 
         generate_schematic_image(tmpdir, schematic_file)
@@ -283,10 +251,10 @@ class TestSchematicBuilderCli:
         assert netlist.exists()
         with open(netlist, "r") as f:
             netlist_str = f.read()
-            assert netlist_str.count("dummy_switch_footprint_1.00u") == 8
-            assert netlist_str.count("dummy_switch_footprint_1.50u") == 2
-            assert netlist_str.count("dummy_switch_footprint_1.75u") == 2
-            assert netlist_str.count("dummy_diode_footprint") == 12
+            assert netlist_str.count("switch_1.00u") == 8
+            assert netlist_str.count("switch_1.50u") == 2
+            assert netlist_str.count("switch_1.75u") == 2
+            assert netlist_str.count("D_SOD-323") == 12
 
     def test_warn_if_output_already_exist(
         self, request, tmpdir, package_path, package_name
@@ -303,15 +271,18 @@ class TestSchematicBuilderCli:
             package_path,
             package_name,
             args={
-                "--in": layout_file,
-                "--out": str(schematic_file),
+                "--layout": layout_file,
+                "--sch-file": str(schematic_file),
             },
         )
         _, errs = p.communicate()
 
-        assert f"Output file '{schematic_file}' already exists, exiting..." in errs
+        assert f"File {schematic_file} already exist, aborting" in errs
         assert p.returncode == 1
 
+    @pytest.mark.skipif(
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
+    )
     def test_wrong_annotation(
         self, request, tmpdir, package_path, package_name
     ) -> None:
@@ -322,8 +293,8 @@ class TestSchematicBuilderCli:
             package_path,
             package_name,
             args={
-                "--in": layout_file,
-                "--out": str(schematic_file),
+                "--layout": layout_file,
+                "--sch-file": str(schematic_file),
             },
         )
         _, errs = p.communicate()
