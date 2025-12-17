@@ -9,7 +9,11 @@ from collections import defaultdict
 from typing import Dict, List, Optional, Tuple, Union
 
 from .board_modifier import KICAD_VERSION
-from .footprint_loader import SwitchFootprintLoader, is_valid_template
+from .footprint_loader import (
+    FootprintIdentifier,
+    SwitchFootprintLoader,
+    is_valid_template,
+)
 from .kle_serial import (
     MatrixAnnotatedKeyboard,
     get_keyboard_from_file,
@@ -660,14 +664,23 @@ def create_schematic(
     switch_footprint_format = False
     switch_loader = None
     if switch_footprint:
-        base_switch.property.Footprint.value = switch_footprint
         switch_footprint_format = is_valid_template(switch_footprint)
         if switch_footprint_format:
             # Create loader for switch template footprints
             switch_loader = SwitchFootprintLoader(switch_footprint)
+            # Format for schematic: LibraryName:FootprintName
+            base_switch.property.Footprint.value = (
+                switch_loader.get_footprint_for_schematic()
+            )
+        else:
+            # Non-template footprint, format for schematic
+            identifier = FootprintIdentifier.from_str(switch_footprint)
+            base_switch.property.Footprint.value = identifier.format_for_schematic()
     base_diode = sch.symbol.reference_startswith("D")[0]
     if diode_footprint:
-        base_diode.property.Footprint.value = diode_footprint
+        # Format diode footprint for schematic: LibraryName:FootprintName
+        diode_identifier = FootprintIdentifier.from_str(diode_footprint)
+        base_diode.property.Footprint.value = diode_identifier.format_for_schematic()
 
     progress: Dict[Tuple[int, int], List[str]] = defaultdict(list)
     diode_connection_positions = dict()
@@ -690,8 +703,9 @@ def create_schematic(
         switch = base_switch.clone()
         if switch_footprint_format and switch_loader:
             # Use SwitchFootprintLoader for automatic width discovery and fallback
-            footprint_name = switch_loader.get_footprint_name(key=key)
-            switch.property.Footprint.value = footprint_name
+            # Format for schematic: LibraryName:FootprintName
+            footprint_for_schematic = switch_loader.get_footprint_for_schematic(key=key)
+            switch.property.Footprint.value = footprint_for_schematic
         if used_slots == 0:
             switch_reference = f"SW{current_ref}"
         else:

@@ -63,6 +63,44 @@ class FootprintIdentifier:
 
         return cls(library_path=library_path, footprint_name=footprint_name)
 
+    def get_library_name(self) -> str:
+        """Extract library name from library path for schematic use.
+
+        Extracts the directory name and removes '.pretty' suffix.
+
+        Examples:
+            /usr/share/kicad/footprints/Diode_SMD.pretty -> Diode_SMD
+            C:\\kicad\\footprints\\Button_Switch.pretty -> Button_Switch
+
+        Returns:
+            Library name without path or .pretty suffix
+        """
+        # Get the last path component (directory name)
+        # Handle both Unix (/) and Windows (\\) path separators
+        library_dir = self.library_path.replace("\\", "/").rstrip("/").split("/")[-1]
+
+        # Remove .pretty suffix if present
+        if library_dir.endswith(".pretty"):
+            library_dir = library_dir[:-7]  # len(".pretty") == 7
+
+        return library_dir
+
+    def format_for_schematic(self, footprint_name: Optional[str] = None) -> str:
+        """Format footprint identifier for KiCad schematic symbol.
+
+        KiCad schematics use format: LibraryName:FootprintName
+        (without full path, just library name extracted from .pretty directory)
+
+        Args:
+            footprint_name: Optional footprint name override. If None, uses self.footprint_name
+
+        Returns:
+            Formatted string like "Diode_SMD:D_SOD-123F"
+        """
+        lib_name = self.get_library_name()
+        fp_name = footprint_name if footprint_name is not None else self.footprint_name
+        return f"{lib_name}:{fp_name}"
+
 
 class SwitchFootprintDiscovery:
     """Scans library directory to discover available switch footprints and widths.
@@ -323,6 +361,22 @@ class SwitchFootprintLoader:
 
         # Non-template footprint, return as-is
         return self.identifier.footprint_name
+
+    def get_footprint_for_schematic(self, key: Optional[Key] = None) -> str:
+        """Get footprint identifier formatted for KiCad schematic symbol.
+
+        Combines library name (extracted from path) with footprint name.
+        Format: LibraryName:FootprintName
+
+        Args:
+            key: Optional Key object for width and ISO Enter detection
+                 If None, uses 1.0u width
+
+        Returns:
+            Formatted string like "Button_Switch_Keyboard:SW_Cherry_MX_PCB_1.00u"
+        """
+        footprint_name = self.get_footprint_name(key=key)
+        return self.identifier.format_for_schematic(footprint_name)
 
     def _get_discovery(self) -> SwitchFootprintDiscovery:
         """Get or create FootprintDiscovery instance (lazy initialization).

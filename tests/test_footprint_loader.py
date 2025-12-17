@@ -86,6 +86,42 @@ class TestFootprintIdentifier:
         with pytest.raises(ValueError, match="Unexpected footprint value"):
             FootprintIdentifier.from_str("C:\\path\\library.pretty")
 
+    def test_get_library_name_unix_path(self) -> None:
+        identifier = FootprintIdentifier.from_str(
+            "/usr/share/kicad/footprints/Diode_SMD.pretty:D_SOD-123F"
+        )
+        assert identifier.get_library_name() == "Diode_SMD"
+
+    def test_get_library_name_windows_path(self) -> None:
+        identifier = FootprintIdentifier.from_str(
+            "C:\\kicad\\footprints\\Button_Switch_Keyboard.pretty:SW_Cherry_MX_1.00u"
+        )
+        assert identifier.get_library_name() == "Button_Switch_Keyboard"
+
+    def test_get_library_name_no_pretty_suffix(self) -> None:
+        # Even without .pretty, should return the directory name
+        identifier = FootprintIdentifier.from_str("/path/to/MyLibrary:Footprint")
+        assert identifier.get_library_name() == "MyLibrary"
+
+    def test_format_for_schematic_unix_path(self) -> None:
+        identifier = FootprintIdentifier.from_str(
+            "/usr/share/kicad/footprints/Diode_SMD.pretty:D_SOD-123F"
+        )
+        assert identifier.format_for_schematic() == "Diode_SMD:D_SOD-123F"
+
+    def test_format_for_schematic_windows_path(self) -> None:
+        identifier = FootprintIdentifier.from_str(
+            "C:\\kicad\\footprints\\Button_Switch_Keyboard.pretty:SW_Cherry_MX_1.00u"
+        )
+        assert (
+            identifier.format_for_schematic()
+            == "Button_Switch_Keyboard:SW_Cherry_MX_1.00u"
+        )
+
+    def test_format_for_schematic_with_override(self) -> None:
+        identifier = FootprintIdentifier.from_str("/path/to/MyLib.pretty:OriginalName")
+        assert identifier.format_for_schematic("NewName") == "MyLib:NewName"
+
 
 class TestFootprintDiscovery:
     """Tests for FootprintDiscovery class."""
@@ -370,3 +406,30 @@ class TestSwitchFootprintLoader:
         # Discovery should be created when needed for template
         name = loader.get_footprint_name(key=Key(width=1.0))
         assert loader._discovery is not None
+
+    def test_get_footprint_for_schematic_simple(self) -> None:
+        loader = SwitchFootprintLoader(
+            "/usr/share/kicad/Button_Switch.pretty:SW_Cherry_MX_1.00u"
+        )
+        footprint = loader.get_footprint_for_schematic()
+        assert footprint == "Button_Switch:SW_Cherry_MX_1.00u"
+
+    def test_get_footprint_for_schematic_template(self, examples_library) -> None:
+        loader = SwitchFootprintLoader(f"{examples_library}:SW_Cherry_MX_PCB_{{:.2f}}u")
+
+        # 1.0u exists
+        footprint = loader.get_footprint_for_schematic(key=Key(width=1.0))
+        assert footprint == "examples:SW_Cherry_MX_PCB_1.00u"
+
+        # 1.5u exists
+        footprint = loader.get_footprint_for_schematic(key=Key(width=1.5))
+        assert footprint == "examples:SW_Cherry_MX_PCB_1.50u"
+
+    def test_get_footprint_for_schematic_template_with_fallback(
+        self, examples_library
+    ) -> None:
+        loader = SwitchFootprintLoader(f"{examples_library}:SW_Cherry_MX_PCB_{{:.2f}}u")
+
+        # 1.25u doesn't exist, should fallback to 1.0u
+        footprint = loader.get_footprint_for_schematic(key=Key(width=1.25))
+        assert footprint == "examples:SW_Cherry_MX_PCB_1.00u"
