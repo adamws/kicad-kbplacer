@@ -31,7 +31,7 @@ def get_default(board_path: str) -> PluginSettings:
         pcb_file_path=board_path,
         layout_path="",
         key_info=ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, ""),
-        key_distance=(19.05, 19.05),
+        key_distance=None,  # None when not specified, will use metadata or default (19.05, 19.05)
         diode_info=ElementInfo(
             "D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, ""
         ),

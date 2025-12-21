@@ -28,6 +28,7 @@ from kbplacer.kle_serial import (
     Keyboard,
     KeyboardTag,
     MatrixAnnotatedKeyboard,
+    get_explicit_spacing_from_file,
     get_keyboard,
     get_keyboard_from_file,
     layout_classification,
@@ -209,7 +210,8 @@ def test_if_produces_valid_json() -> None:
     assert (
         result.to_json() == '{"meta": '
         '{"author": "", "backcolor": "#eeeeee", "background": null, "name": "", '
-        '"notes": "", "radii": "", "switchBrand": "", "switchMount": "", "switchType": ""}, '
+        '"notes": "", "radii": "", "switchBrand": "", "switchMount": "", "switchType": "", '
+        '"spacing_x": 19.05, "spacing_y": 19.05}, '
         '"keys": [{"color": "#cccccc", "labels": ["x"], "textColor": [], "textSize": [], '
         '"default": {"textColor": "#000000", "textSize": 3}, "x": 0, "y": 0, "width": 1, '
         '"height": 1, "x2": 0, "y2": 0, "width2": 1, "height2": 1, "rotation_x": 0, '
@@ -950,3 +952,22 @@ def test_layout_classification(layout_file, expected_tags, request) -> None:
         result = get_keyboard(layout)
         tags = layout_classification(result)
         assert tags == expected_tags
+
+
+@pytest.mark.parametrize(
+    "layout_file,expected_spacing",
+    [
+        # Layout with custom explicit spacing
+        ("./data/kle-layouts/test-custom-spacing-internal.json", (20.5, 21.0)),
+        # Layout without spacing fields (should return None)
+        ("./data/kle-layouts/test-no-spacing-internal.json", None),
+        # Layout with default spacing (19.05, 19.05) - should return it since it's explicit
+        ("./data/kle-layouts/ansi-104-internal.json", (19.05, 19.05)),
+    ],
+)
+def test_get_explicit_spacing_from_file(layout_file, expected_spacing, request) -> None:
+    test_dir = request.fspath.dirname
+    layout_path = Path(test_dir) / layout_file
+
+    result = get_explicit_spacing_from_file(layout_path)
+    assert result == expected_spacing

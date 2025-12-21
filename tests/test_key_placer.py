@@ -365,13 +365,14 @@ def assert_2x2_layout_switches(
 )
 def test_switch_distance(key_distance, tmpdir, request) -> None:
     board = get_board_for_2x2_example(request)
-    key_placer = KeyPlacer(board, key_distance)
+    key_placer = KeyPlacer(board)
     diode_position = DEFAULT_DIODE_POSITION
     key_placer.run(
         get_2x2_layout_path(request),
         ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, ""),
         ElementInfo("D{}", PositionOption.DEFAULT, diode_position, ""),
         True,
+        key_distance=key_distance,
     )
 
     save_and_render(board, tmpdir, request)

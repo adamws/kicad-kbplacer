@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import pcbnew
 
@@ -23,7 +23,7 @@ class PluginSettings:
     pcb_file_path: str
     layout_path: str
     key_info: ElementInfo
-    key_distance: Tuple[float, float]
+    key_distance: Optional[Tuple[float, float]]
     diode_info: ElementInfo
     route_switches_with_diodes: bool
     optimize_diodes_orientation: bool
@@ -63,7 +63,7 @@ def run_board(settings: PluginSettings) -> pcbnew.BOARD:
     else:
         board = pcbnew.LoadBoard(settings.pcb_file_path)
 
-    placer = KeyPlacer(board, settings.key_distance)
+    placer = KeyPlacer(board)
     placer.run(
         settings.layout_path,
         settings.key_info,
@@ -72,6 +72,7 @@ def run_board(settings: PluginSettings) -> pcbnew.BOARD:
         settings.route_rows_and_columns,
         additional_elements=settings.additional_elements,
         optimize_diodes_orientation=settings.optimize_diodes_orientation,
+        key_distance=settings.key_distance,
     )
 
     if settings.generate_outline:

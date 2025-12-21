@@ -132,6 +132,7 @@ class Background:
 
 @dataclass
 class KeyboardMetadata:
+    # metadata fields defined by original keyboard-layout-editor:
     author: str = ""
     backcolor: str = "#eeeeee"
     background: Optional[Background] = None
@@ -141,6 +142,9 @@ class KeyboardMetadata:
     switchBrand: str = ""  # noqa: N815
     switchMount: str = ""  # noqa: N815
     switchType: str = ""  # noqa: N815
+    # metadata fields added by kle-ng:
+    spacing_x: float = 19.05
+    spacing_y: float = 19.05
 
     def __post_init__(self: KeyboardMetadata) -> None:
         if isinstance(self.background, dict):
@@ -969,6 +973,44 @@ def get_keyboard_from_file(layout_path: Union[str, os.PathLike]) -> Keyboard:
     layout = _load_layout_from_file_or_stream(layout_path)
     logger.info(f"User layout: {layout}")
     return get_keyboard(layout)
+
+
+def get_explicit_spacing_from_file(
+    layout_path: Union[str, os.PathLike],
+) -> Optional[Tuple[float, float]]:
+    """Get spacing_x and spacing_y from layout file if explicitly defined.
+
+    Returns None if spacing is not explicitly set in the file.
+    This avoids using default values that would overwrite user settings.
+
+    Args:
+        layout_path: Path to the layout file
+
+    Returns:
+        Tuple of (spacing_x, spacing_y) if explicitly defined, None otherwise
+    """
+    try:
+        layout = _load_layout_from_file_or_stream(layout_path)
+
+        # Check if it's a list (KLE_RAW format)
+        if isinstance(layout, list) and len(layout) > 0:
+            # First element should be metadata dict
+            meta = layout[0]
+            if isinstance(meta, dict):
+                if "spacing_x" in meta and "spacing_y" in meta:
+                    return (float(meta["spacing_x"]), float(meta["spacing_y"]))
+
+        # Check if it's a dict with "meta" key (KLE_INTERNAL format)
+        elif isinstance(layout, dict) and "meta" in layout:
+            meta = layout["meta"]
+            if isinstance(meta, dict):
+                if "spacing_x" in meta and "spacing_y" in meta:
+                    return (float(meta["spacing_x"]), float(meta["spacing_y"]))
+
+        return None
+    except Exception as e:
+        logger.debug(f"Could not load explicit spacing from layout: {e}")
+        return None
 
 
 class KeyboardTag(Enum):

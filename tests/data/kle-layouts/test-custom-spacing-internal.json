@@ -3,25 +3,22 @@
     "author": "",
     "backcolor": "#eeeeee",
     "background": null,
-    "name": "",
+    "name": "Test Custom Spacing",
     "notes": "",
     "radii": "",
     "switchBrand": "",
     "switchMount": "",
     "switchType": "",
-    "spacing_x": 19.05,
-    "spacing_y": 19.05
+    "spacing_x": 20.5,
+    "spacing_y": 21.0
   },
   "keys": [
     {
       "color": "#cccccc",
-      "labels": [],
+      "labels": ["A"],
       "textColor": [],
       "textSize": [],
-      "default": {
-        "textColor": "#000000",
-        "textSize": 3
-      },
+      "default": {"textColor": "#000000", "textSize": 3},
       "x": 0,
       "y": 0,
       "width": 1,
@@ -30,9 +27,9 @@
       "y2": 0,
       "width2": 1,
       "height2": 1,
-      "rotation_x": 0.5,
-      "rotation_y": 0.5,
-      "rotation_angle": -15,
+      "rotation_x": 0,
+      "rotation_y": 0,
+      "rotation_angle": 0,
       "decal": false,
       "ghost": false,
       "stepped": false,

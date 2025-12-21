@@ -312,11 +312,11 @@ def app() -> None:
     )
     parser.add_argument(
         "--key-distance",
-        default=(19.05, 19.05),
+        default=None,
         action=XYAction,
         help=(
-            "X and Y key 1U distance in mm, as two space separated numeric values, "
-            "19.05 19.05 by default"
+            "X and Y key 1U distance in mm, as two space separated numeric values. "
+            "If not specified, uses spacing from keyboard metadata or defaults to 19.05 19.05"
         ),
     )
     parser.add_argument(

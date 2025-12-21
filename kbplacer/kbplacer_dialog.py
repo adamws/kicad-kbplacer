@@ -21,6 +21,7 @@ from wx.lib.embeddedimage import PyEmbeddedImage
 from .defaults import DEFAULT_DIODE_POSITION, ZERO_POSITION
 from .element_position import ElementInfo, ElementPosition, PositionOption, Side
 from .help_dialog import HelpDialog
+from .kle_serial import get_explicit_spacing_from_file
 
 logger = logging.getLogger(__name__)
 TEXT_CTRL_EXTRA_SPACE = 25
@@ -710,6 +711,27 @@ class KbplacerDialog(wx.Dialog):
             validator=FloatValidator(),
             tooltip=self._("How many millimeters 1U spans between switches vertically"),
         )
+
+        def on_layout_file_changed(event) -> None:
+            """Update key_distance fields from layout metadata when file is selected."""
+            layout_file = layout_picker.GetPath()
+            if not layout_file:
+                return
+
+            try:
+                # Only update if spacing is explicitly defined in the file
+                # to avoid overwriting user-set values with defaults
+                spacing = get_explicit_spacing_from_file(layout_file)
+                if spacing is not None:
+                    key_distance_x.text.SetValue(str(spacing[0]))
+                    key_distance_y.text.SetValue(str(spacing[1]))
+                    logger.info(
+                        f"Loaded explicit spacing from layout: {spacing[0]} x {spacing[1]} mm"
+                    )
+            except Exception as e:
+                logger.debug(f"Could not load layout metadata: {e}")
+
+        layout_picker.Bind(wx.EVT_FILEPICKER_CHANGED, on_layout_file_changed)
 
         key_annotation = LabeledTextCtrl(
             self,

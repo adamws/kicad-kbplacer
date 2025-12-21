@@ -414,16 +414,8 @@ class KeyPlacer(BoardModifier):
     def __init__(
         self,
         board: pcbnew.BOARD,
-        key_distance: Tuple[float, float] = (19.05, 19.05),
     ) -> None:
         super().__init__(board)
-
-        self.__key_distance_x = cast(int, pcbnew.FromMM(key_distance[0]))
-        self.__key_distance_y = cast(int, pcbnew.FromMM(key_distance[1]))
-
-        logger.debug(
-            f"Set key 1U distance: {self.__key_distance_x}/{self.__key_distance_y}"
-        )
 
     def apply_switch_connection_template(
         self,
@@ -687,6 +679,8 @@ class KeyPlacer(BoardModifier):
         self,
         keyboard: Keyboard,
         key_matrix: KeyMatrix,
+        key_distance_x: int,
+        key_distance_y: int,
     ) -> pcbnew.VECTOR2I:
         """Calculates value of offset vector to be applied to key coordinates
         in order to align first key center with defined x/y grid
@@ -710,17 +704,43 @@ class KeyPlacer(BoardModifier):
         key_iterator: Iterator = get_key_iterator(keyboard, key_matrix)
         first_key, _ = next(key_iterator)
         if first_key:
-            offset_x = _offset(self.__key_distance_x, first_key.x, first_key.width)
-            offset_y = _offset(self.__key_distance_y, first_key.y, first_key.height)
+            offset_x = _offset(key_distance_x, first_key.x, first_key.width)
+            offset_y = _offset(key_distance_y, first_key.y, first_key.height)
         return pcbnew.VECTOR2I(offset_x, offset_y)
+
+    def _resolve_key_distance(
+        self,
+        keyboard: Keyboard,
+        key_distance: Optional[Tuple[float, float]] = None,
+    ) -> Tuple[float, float]:
+        """Determine key distance based on priority: argument > metadata > default.
+
+        If key_distance was provided as argument, use it (higher priority),
+        otherwise use metadata spacing
+
+        :param keyboard: Keyboard object with metadata
+        :param key_distance: Optional key distance override in millimeters
+        :return: Tuple of (spacing_x, spacing_y) in millimeters
+        """
+        if key_distance is not None:
+            return key_distance
+        return (keyboard.meta.spacing_x, keyboard.meta.spacing_y)
 
     def place_switches(
         self,
         keyboard: Keyboard,
         key_matrix: KeyMatrix,
         key_position: Optional[ElementPosition],
+        key_distance: Optional[Tuple[float, float]] = None,
     ) -> None:
-        offset = self._calculate_reference_coordinate(keyboard, key_matrix)
+        # Determine final key_distance and update internal values
+        final_key_distance = self._resolve_key_distance(keyboard, key_distance)
+        logger.debug(f"Using key 1U distance: {final_key_distance} mm")
+        key_distance_x = cast(int, pcbnew.FromMM(final_key_distance[0]))
+        key_distance_y = cast(int, pcbnew.FromMM(final_key_distance[1]))
+        offset = self._calculate_reference_coordinate(
+            keyboard, key_matrix, key_distance_x, key_distance_y
+        )
         logger.debug(f"Layout offset: {offset}")
         key_iterator: Iterator = get_key_iterator(keyboard, key_matrix)
 
@@ -748,8 +768,8 @@ class KeyPlacer(BoardModifier):
 
             position = (
                 pcbnew.VECTOR2I(
-                    int(self.__key_distance_x * (key.x + key.width / 2)),
-                    int(self.__key_distance_y * (key.y + key.height / 2)),
+                    int(key_distance_x * (key.x + key.width / 2)),
+                    int(key_distance_y * (key.y + key.height / 2)),
                 )
                 + offset
             )
@@ -759,8 +779,8 @@ class KeyPlacer(BoardModifier):
             if angle != 0:
                 rotation_reference = (
                     pcbnew.VECTOR2I(
-                        int(self.__key_distance_x * key.rotation_x),
-                        int(self.__key_distance_y * key.rotation_y),
+                        int(key_distance_x * key.rotation_x),
+                        int(key_distance_y * key.rotation_y),
                     )
                     + offset
                 )
@@ -1016,6 +1036,7 @@ class KeyPlacer(BoardModifier):
         route_rows_and_columns: bool = False,
         additional_elements: List[ElementInfo] = [],
         optimize_diodes_orientation: bool = False,
+        key_distance: Optional[Tuple[float, float]] = None,
     ) -> None:
         # stage 1 - prepare
         key_matrix = KeyMatrix(
@@ -1060,6 +1081,7 @@ class KeyPlacer(BoardModifier):
         # stage 2 - place elements
         if layout_path:
             keyboard = get_keyboard_from_file(layout_path)
+
             if not isinstance(keyboard, MatrixAnnotatedKeyboard):
                 # if not MatrixAnnotatedKeyboard already,
                 # check if it is possible to convert
@@ -1073,7 +1095,7 @@ class KeyPlacer(BoardModifier):
             if isinstance(keyboard, MatrixAnnotatedKeyboard):
                 # can be called only once:
                 keyboard.collapse()
-            self.place_switches(keyboard, key_matrix, key_info.position)
+            self.place_switches(keyboard, key_matrix, key_info.position, key_distance)
 
         logger.info(f"Diode info: {diode_infos}")
         if diode_info.position_option != PositionOption.UNCHANGED:
