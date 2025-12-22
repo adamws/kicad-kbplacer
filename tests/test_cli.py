@@ -432,3 +432,41 @@ def test_schematic_creation_when_exist(
 
     run_mock.assert_not_called()
     assert caplog.records[0].message == f"File {fake_schematic} already exist, aborting"
+
+
+def test_max_keys_validation_passes(monkeypatch, cli_isolation, fake_board) -> None:
+    """Test that max-keys validation passes when key count is within limit"""
+    run_mock = Mock()
+    monkeypatch.setattr("kbplacer.__main__.run_board", run_mock)
+
+    # Use 2x2 layout which has 4 keys
+    layout_path = "tests/data/ergogen-layouts/2x2.json"
+    args = ["--pcb-file", fake_board, "--layout", layout_path, "--max-keys", "4"]
+    with cli_isolation(args):
+        app()
+
+    # Should succeed and call run_board
+    run_mock.assert_called_once()
+
+
+def test_max_keys_validation_fails(
+    caplog, monkeypatch, cli_isolation, fake_board
+) -> None:
+    """Test that max-keys validation fails when key count exceeds limit"""
+    run_mock = Mock()
+    monkeypatch.setattr("kbplacer.__main__.run_board", run_mock)
+
+    # Use 2x2 layout which has 4 keys
+    layout_path = "tests/data/ergogen-layouts/2x2.json"
+    args = ["--pcb-file", fake_board, "--layout", layout_path, "--max-keys", "3"]
+    with cli_isolation(args):
+        with pytest.raises(ExitTest):
+            app()
+
+    run_mock.assert_not_called()
+    # Find the error record
+    error_records = [r for r in caplog.records if r.levelname == "ERROR"]
+    assert len(error_records) > 0
+    assert (
+        "Layout has 4 keys, which exceeds the maximum of 3" in error_records[0].message
+    )
