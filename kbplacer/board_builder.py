@@ -48,9 +48,10 @@ class BoardBuilder:
     def _add_switch_footprint(
         self, ref: str, key: Optional[Key] = None
     ) -> pcbnew.FOOTPRINT:
-        f = self.switch_footprint.load(key=key)
-        f.SetReference(ref)
-        return self._add_footprint(f)
+        fp = self.switch_footprint.load(key=key)
+        fp.SetReference(ref)
+        fp.SetValue("SW_Push")
+        return self._add_footprint(fp)
 
     def _add_diode_footprint(self, ref: str) -> pcbnew.FOOTPRINT:
         # Diodes don't need variable width - load directly
@@ -66,6 +67,7 @@ class BoardBuilder:
             )
             raise RuntimeError(msg)
         fp.SetReference(ref)
+        fp.SetValue("D")
         return self._add_footprint(fp)
 
     def _add_or_get_net(self, netname: str) -> pcbnew.NETINFO_ITEM:
