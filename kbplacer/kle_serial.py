@@ -414,19 +414,18 @@ class MatrixAnnotatedKeyboard(Keyboard):
                 keys[option[0]][option[1]].append(key)
         return keys
 
-    @staticmethod
-    def _key_matrix_position(key: Key) -> Tuple[int, int, int]:
+    def _key_matrix_position(self, key: Key) -> Tuple[int, int, int]:
         matrix_position = MatrixAnnotatedKeyboard.get_matrix_position(key)
-        row_match = re.search(r"\d+", matrix_position[0])
-        column_match = re.search(r"\d+", matrix_position[1])
 
-        if row_match is None or column_match is None:
-            msg = f"No numeric part for row or column found in '{matrix_position}'"
-            raise ValueError(msg)
+        row_prefix = self.row_prefix or ""
+        column_prefix = self.column_prefix or ""
+
+        row = int(matrix_position[0][len(row_prefix) :])
+        column = int(matrix_position[1][len(column_prefix) :])
 
         return (
-            int(row_match.group()),
-            int(column_match.group()),
+            row,
+            column,
             MatrixAnnotatedKeyboard.get_layout_option(key),
         )
 
@@ -487,7 +486,7 @@ class MatrixAnnotatedKeyboard(Keyboard):
 
     def sort_keys(self) -> None:
         for l in [self.keys, self.alternative_keys]:
-            l.sort(key=lambda k: MatrixAnnotatedKeyboard._key_matrix_position(k))
+            l.sort(key=lambda k: self._key_matrix_position(k))
 
     def keys_in_matrix_order(self) -> List[Key]:
         """Returns keys in matrix row/column order. If multiple keys occupy same
@@ -499,9 +498,7 @@ class MatrixAnnotatedKeyboard(Keyboard):
                 continue
             items.append(key)
 
-        return sorted(
-            items, key=lambda k: MatrixAnnotatedKeyboard._key_matrix_position(k)
-        )
+        return sorted(items, key=lambda k: self._key_matrix_position(k))
 
     @staticmethod
     def get_matrix_position(key: Key) -> Tuple[str, str]:
