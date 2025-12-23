@@ -957,12 +957,15 @@ def test_layout_classification(layout_file, expected_tags, request) -> None:
 @pytest.mark.parametrize(
     "layout_file,expected_spacing",
     [
-        # Layout with custom explicit spacing
+        # Layouts with custom explicit spacing
+        ("./data/kle-layouts/test-custom-spacing.json", (20.5, 21.0)),
         ("./data/kle-layouts/test-custom-spacing-internal.json", (20.5, 21.0)),
         # Layout without spacing fields (should return None)
         ("./data/kle-layouts/test-no-spacing-internal.json", None),
         # Layout with default spacing (19.05, 19.05) - should return it since it's explicit
         ("./data/kle-layouts/ansi-104-internal.json", (19.05, 19.05)),
+        # Layout with invalid spacing definition (should fallback to None)
+        ("./data/kle-layouts/test-no-spacing-illegal.json", None),
     ],
 )
 def test_get_explicit_spacing_from_file(layout_file, expected_spacing, request) -> None:
