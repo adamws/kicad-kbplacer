@@ -335,24 +335,53 @@ class MatrixAnnotatedKeyboard(Keyboard):
     alternative_keys: List[Key] = field(default_factory=list)
     collapsed: bool = field(init=False)
 
+    # MatrixAnnotatedKeyboard is derived from via [1] specification
+    # but with the addition of optional non-numeric row/column prefixes.
+    # Prefixes in labels are allowed but must be common for all labels
+    # (which is checked in __post_init__ method).
+    # For example, both of these are allowed:
+    # [["0,0","0,1"]]  - via style annotations
+    # [["R0,C0","R0,C1"]]  - custom annotatations with common prefixes
+    # but this is not:
+    # [["R0,C0","Row0,Col1"]]
+    #
+    # [1] https://www.caniusevia.com/docs/layouts#switch-matrix-co-ordinates
+    row_prefix: Optional[str] = field(init=False)
+    column_prefix: Optional[str] = field(init=False)
+
     def __post_init__(self: MatrixAnnotatedKeyboard) -> None:
         positions = []
+        row_prefixes = []
+        column_prefixes = []
         for key in list(self.keys):
             if not key.decal:
                 # check if required labels defined correctly
-                position = MatrixAnnotatedKeyboard.get_matrix_position(key)
-                option = MatrixAnnotatedKeyboard.get_layout_option(key)
+                position = self.get_matrix_position(key)
+
+                row_prefix, _ = self._parse_matrix_position_part(position[0])
+                column_prefix, _ = self._parse_matrix_position_part(position[1])
+                row_prefixes.append(row_prefix)
+                column_prefixes.append(column_prefix)
+
+                option = self.get_layout_option(key)
                 if option == 0:
                     positions.append(position)
             if self.__is_alternative(key):
                 self.alternative_keys.append(copy.deepcopy(key))
                 self.keys.remove(key)
+        # check if all row & column prefixes are equal
+        for lst in [row_prefixes, column_prefixes]:
+            if not all(x == lst[0] for x in lst):
+                msg = "Matrix position prefix must be common across rows and columns"
+                raise ValueError(msg)
         # check if there are no duplicated matrix position in default key group
         if len(positions) != len(set(positions)):
             msg = "Duplicate matrix position for default layout keys not allowed"
             raise ValueError(msg)
 
         self.collapsed = False
+        self.row_prefix = row_prefixes[0]
+        self.column_prefix = column_prefixes[0]
 
     def __is_alternative(self, key: Key) -> bool:
         if label := key.get_label(self.LAYOUT_OPTION_LABEL):
@@ -485,6 +514,17 @@ class MatrixAnnotatedKeyboard(Keyboard):
         except Exception as e:
             msg = "Matrix coordinates label missing or invalid"
             raise RuntimeError(msg) from e
+
+    @staticmethod
+    def _parse_matrix_position_part(annotation: str) -> Tuple[Optional[str], int]:
+        pattern = r"^([A-Za-z]*)(\d+)$"
+
+        match = re.match(pattern, annotation)
+        if match:
+            prefix, digits = match.groups()
+            return prefix if prefix else None, int(digits)
+        msg = "Unexpected format of matrix coordinates label part"
+        raise ValueError(msg)
 
     @staticmethod
     def get_layout_option(key: Key) -> int:
@@ -973,6 +1013,13 @@ def get_keyboard_from_file(layout_path: Union[str, os.PathLike]) -> Keyboard:
     layout = _load_layout_from_file_or_stream(layout_path)
     logger.info(f"User layout: {layout}")
     return get_keyboard(layout)
+
+
+def get_annotated_keyboard_from_file(
+    layout_path: Union[str, os.PathLike],
+) -> MatrixAnnotatedKeyboard:
+    keyboard = get_keyboard_from_file(layout_path)
+    return MatrixAnnotatedKeyboard.from_keyboard(keyboard)
 
 
 def get_explicit_spacing_from_file(

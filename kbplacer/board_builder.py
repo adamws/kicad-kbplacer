@@ -4,10 +4,8 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import os
-import re
 from collections import defaultdict
 from string import ascii_lowercase
 from typing import Dict, List, Optional, Tuple, Union
@@ -16,7 +14,7 @@ import pcbnew
 
 from .board_modifier import KICAD_VERSION
 from .footprint_loader import FootprintIdentifier, SwitchFootprintLoader
-from .kle_serial import Key, Keyboard, MatrixAnnotatedKeyboard, get_keyboard
+from .kle_serial import Key, MatrixAnnotatedKeyboard, get_annotated_keyboard_from_file
 
 logger = logging.getLogger(__name__)
 
@@ -94,54 +92,21 @@ class BoardBuilder:
         keyboard: Union[str, os.PathLike, MatrixAnnotatedKeyboard],
     ) -> pcbnew.BOARD:
         if isinstance(keyboard, str) or isinstance(keyboard, os.PathLike):
-            with open(keyboard, "r", encoding="utf-8") as f:
-                layout = json.load(f)
-                tmp: Keyboard = get_keyboard(layout)
-                if not isinstance(tmp, MatrixAnnotatedKeyboard):
-                    try:
-                        _keyboard = MatrixAnnotatedKeyboard(tmp.meta, tmp.keys)
-                    except Exception as e:
-                        msg = (
-                            f"Layout from {keyboard} is not convertible to "
-                            "matrix annotated keyboard which is required "
-                            "for board create"
-                        )
-                        raise RuntimeError(msg) from e
-                else:
-                    _keyboard = tmp
+            _keyboard = get_annotated_keyboard_from_file(keyboard)
         else:
             _keyboard: MatrixAnnotatedKeyboard = keyboard
 
         _keyboard.collapse()
 
-        items: List[Tuple[str, str]] = []
-        key_map: Dict[Tuple[str, str], List[Key]] = defaultdict(list)
-        key_iterator = _keyboard.key_iterator(ignore_alternative=False)
-
-        for key in key_iterator:
-            if key.decal:
-                continue
-            matrix_pos = MatrixAnnotatedKeyboard.get_matrix_position(key)
-            items.append(matrix_pos)
-            # Store key for later use (for width extraction)
-            key_map[matrix_pos].append(key)
-
-        def _sort_matrix(item: Tuple[str, str]) -> Tuple[int, int]:
-            row_match = re.search(r"\d+", item[0])
-            column_match = re.search(r"\d+", item[1])
-
-            if row_match is None or column_match is None:
-                msg = f"No numeric part for row or column found in '{item}'"
-                raise ValueError(msg)
-
-            return int(row_match.group()), int(column_match.group())
+        keys = _keyboard.keys_in_matrix_order()
+        positions = [MatrixAnnotatedKeyboard.get_matrix_position(k) for k in keys]
 
         # First pass: collect all unique net names
         net_names = set()
         current_ref = 1
         position_tracker: Dict[Tuple[str, str], bool] = {}
-        for row, column in sorted(items, key=_sort_matrix):
-            position = (row, column)
+        for k, position in zip(keys, positions):
+            (row, column) = position
             if position not in position_tracker:
                 column_name = f"COL{column}" if column.isdigit() else column
                 row_name = f"ROW{row}" if row.isdigit() else row
@@ -160,14 +125,10 @@ class BoardBuilder:
         # Second pass: create footprints and assign nets
         current_ref = 1
         progress: Dict[Tuple[str, str], List[pcbnew.FOOTPRINT]] = defaultdict(list)
-        for row, column in sorted(items, key=_sort_matrix):
-            position = (row, column)
+        for k, position in zip(keys, positions):
+            (row, column) = position
             if position not in progress:
-                # Get first key at this position (for width and ISO Enter detection)
-                keys_at_position = key_map[position]
-                first_key = keys_at_position[0] if keys_at_position else None
-
-                switch = self._add_switch_footprint(f"SW{current_ref}", key=first_key)
+                switch = self._add_switch_footprint(f"SW{current_ref}", key=k)
                 diode = self._add_diode_footprint(f"D{current_ref}")
 
                 switch_pad1 = switch.FindPadByNumber("1")
@@ -200,6 +161,9 @@ class BoardBuilder:
                 default_switch = switches[0]
 
                 suffix = ascii_lowercase[len(switches) - 1]
+                # TODO: alternative switch might be using different footprint
+                # so we should load new (with _add_switch_footprint)
+                # and copy all pad net assignments instead
                 switch = pcbnew.Cast_to_FOOTPRINT(default_switch.Duplicate())
                 switch.SetReference(default_switch.GetReference() + suffix)
                 self._add_footprint(switch)

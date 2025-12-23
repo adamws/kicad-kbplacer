@@ -4,9 +4,8 @@
 
 import logging
 import os
-import re
 from collections import defaultdict
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 from .board_modifier import KICAD_VERSION
 from .footprint_loader import (
@@ -16,7 +15,7 @@ from .footprint_loader import (
 )
 from .kle_serial import (
     MatrixAnnotatedKeyboard,
-    get_keyboard_from_file,
+    get_annotated_keyboard_from_file,
 )
 
 try:
@@ -560,13 +559,6 @@ def _y(y: int) -> float:
     return (ORIGIN[1] * UNIT) + (y * UNIT)
 
 
-def load_keyboard(layout_path) -> MatrixAnnotatedKeyboard:
-    _keyboard = get_keyboard_from_file(layout_path)
-    _keyboard = MatrixAnnotatedKeyboard.from_keyboard(_keyboard)
-    _keyboard.collapse()
-    return _keyboard
-
-
 def get_lowest_paper_size(size):
     matrix_size_to_paper = {(8, 19): "A4", (11, 30): "A3", (17, 44): "A2"}
     smallest_size = None
@@ -577,21 +569,6 @@ def get_lowest_paper_size(size):
     if smallest_size is None:
         smallest_size = "A1"
     return smallest_size
-
-
-def parse_annotation(annotation: str) -> Tuple[Optional[str], int]:
-    pattern = r"^([A-Za-z]*)(\d+)$"
-
-    match = re.match(pattern, annotation)
-    if match:
-        prefix, digits = match.groups()
-        return prefix if prefix else None, int(digits)
-    msg = "Unexpected annotation format"
-    raise RuntimeError(msg)
-
-
-def get_or_default(value: Optional[str], default: str) -> str:
-    return value if value else default
 
 
 def can_create_schematic() -> bool:
@@ -612,37 +589,28 @@ def create_schematic(
         raise RuntimeError(msg)
 
     if isinstance(keyboard, str) or isinstance(keyboard, os.PathLike):
-        _keyboard = load_keyboard(keyboard)
+        _keyboard = get_annotated_keyboard_from_file(keyboard)
     else:
         _keyboard: MatrixAnnotatedKeyboard = keyboard
 
-    matrix = [
-        (parse_annotation(pos[0])[1], parse_annotation(pos[1])[1])
-        for pos in (
-            MatrixAnnotatedKeyboard.get_matrix_position(k)
-            for k in _keyboard.keys_in_matrix_order()
-        )
-    ]
-    keys = [k for k in _keyboard.keys_in_matrix_order()]
+    _keyboard.collapse()
 
-    logger.debug(f"Matrix: {matrix}")
-
-    # deduce label names from annotation of first key,
-    # if annotations are comma separated numbers then use default 'ROW'/'COL' names,
-    # otherwise use same prefix as in annotation
-    first_key = _keyboard.keys[0]
-    first_key_matrix_position = MatrixAnnotatedKeyboard.get_matrix_position(first_key)
-    row_label_prefix = get_or_default(
-        parse_annotation(first_key_matrix_position[0])[0], "ROW"
-    )
-    column_label_prefix = get_or_default(
-        parse_annotation(first_key_matrix_position[1])[0], "COL"
-    )
+    row_prefix = _keyboard.row_prefix or ""
+    column_prefix = _keyboard.column_prefix or ""
+    row_label_prefix = row_prefix if row_prefix != "" else "ROW"
+    column_label_prefix = column_prefix if column_prefix != "" else "COL"
 
     logger.debug(
         f"Labels prefixes: for rows: '{row_label_prefix}', "
         f"for columns: '{column_label_prefix}'"
     )
+
+    keys = [k for k in _keyboard.keys_in_matrix_order()]
+    matrix = [
+        (int(pos[0][len(row_prefix) :]), int(pos[1][len(column_prefix) :]))
+        for pos in (MatrixAnnotatedKeyboard.get_matrix_position(k) for k in keys)
+    ]
+    logger.debug(f"Matrix: {matrix}")
 
     # rows and columns does not necessarily contain each value from min to max,
     # i.e. matrix can have columns numbers: 1, 2, 4, 5. Because whole

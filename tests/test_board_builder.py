@@ -4,7 +4,6 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 import pcbnew
@@ -76,9 +75,9 @@ def test_create_board_not_annotated_layout(request, builder) -> None:
 
     with pytest.raises(
         RuntimeError,
-        match=re.escape(
-            f"Layout from {layout} is not convertible to matrix annotated "
-            "keyboard which is required for board create"
+        match=(
+            "Keyboard object not convertible to matrix annotated keyboard: "
+            "Matrix coordinates label missing or invalid"
         ),
     ):
         _ = builder.create_board(layout)
@@ -132,3 +131,20 @@ def test_create_board_variable_width(tmpdir, request) -> None:
     assert footprint_names.count("SW_Cherry_MX_PCB_1.75u") == 1
 
     save_and_render(board, tmpdir, request)
+
+
+def test_create_board_diode_footprint_not_found(tmpdir, request) -> None:
+    test_dir = request.fspath.dirname
+    layout = Path(test_dir) / "data/via-layouts/crkbd.json"
+
+    pcb_path = f"{tmpdir}/test.kicad_pcb"
+    switch_footprint = str(get_footprints_dir(request)) + ":SW_Cherry_MX_PCB_1.00u"
+    diode_footprint = str(get_footprints_dir(request)) + ":D_SOD-323-NoSuchDiode"
+    builder = BoardBuilder(
+        pcb_path, switch_footprint=switch_footprint, diode_footprint=diode_footprint
+    )
+    with pytest.raises(
+        RuntimeError,
+        match=r"Unable to load footprint: .*tests.pretty:D_SOD-323-NoSuchDiode",
+    ):
+        _ = builder.create_board(layout)

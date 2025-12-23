@@ -640,19 +640,19 @@ def test_keys_in_matrix_order(layout, expected_order) -> None:
 
 
 @pytest.mark.parametrize(
-    "layout",
+    "layout,reason",
     [
         # fmt: off
-        [["R4,C"]],
-        [["4,0","R,C0","4,2"]],
+        ([["R4,C"]], "Unexpected format of matrix coordinates label part"),
+        ([["0,0","R0,1"]], "Matrix position prefix must be common across rows and columns"),
         # fmt: on
     ],
 )
-def test_keys_in_matrix_order_illegal_labels(layout) -> None:
+def test_keys_in_matrix_order_illegal_labels(layout, reason) -> None:
     tmp = parse_kle(layout)
-    keyboard = MatrixAnnotatedKeyboard.from_keyboard(tmp)
-    with pytest.raises(ValueError, match=r"No numeric part for row or column found in"):
-        keyboard.keys_in_matrix_order()
+    error = "Keyboard object not convertible to matrix annotated keyboard: "
+    with pytest.raises(RuntimeError, match=error + reason):
+        _ = MatrixAnnotatedKeyboard.from_keyboard(tmp)
 
 
 class TestKleSerialCli:
