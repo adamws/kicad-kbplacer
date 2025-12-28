@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import inspect
 import json
 import logging
 import os
@@ -13,7 +14,7 @@ import pprint
 import re
 import sys
 from collections import defaultdict
-from dataclasses import asdict, dataclass, field, fields
+from dataclasses import asdict, dataclass, field
 from enum import Enum, auto
 from itertools import chain
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
@@ -150,6 +151,12 @@ class KeyboardMetadata:
         if isinstance(self.background, dict):
             self.background = Background(**self.background)
 
+    @classmethod
+    def from_json(cls: Type[KeyboardMetadata], data: dict) -> KeyboardMetadata:
+        return cls(
+            **{k: v for k, v in data.items() if k in inspect.signature(cls).parameters}
+        )
+
 
 @dataclass
 class Keyboard:
@@ -159,7 +166,7 @@ class Keyboard:
     @classmethod
     def from_json(cls: Type[Keyboard], data: dict) -> Keyboard:
         if isinstance(data["meta"], dict):
-            data["meta"] = KeyboardMetadata(**data["meta"])
+            data["meta"] = KeyboardMetadata.from_json(data["meta"])
         if isinstance(data["keys"], list):
             keys: List[Key] = [Key(**key) for key in data["keys"]]
             data["keys"] = keys
@@ -832,9 +839,7 @@ def parse_kle(layout) -> Keyboard:
             current.y = round(current.y + 1, 6)
             current.x = current.rotation_x
         elif isinstance(row, dict) and r == 0:
-            field_set = {f.name for f in fields(KeyboardMetadata) if f.init}
-            row_filtered = {k: v for k, v in row.items() if k in field_set}
-            metadata = KeyboardMetadata(**row_filtered)
+            metadata = KeyboardMetadata.from_json(row)
         else:
             msg = "Unexpected"
             raise RuntimeError(msg)

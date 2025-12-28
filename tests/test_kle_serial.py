@@ -85,6 +85,36 @@ def test_labels(layout, expected) -> None:
     assert [json.loads(result.to_kle())] == layout
 
 
+@pytest.mark.parametrize("metadata", [None, {}, {"unexpected_field": "should_ignore"}])
+def test_default_metadata(metadata) -> None:
+    if metadata:
+        result = parse_kle([metadata, ["x"]])
+    else:
+        result = parse_kle([["x"]])
+    assert result.meta.author == ""
+    assert result.meta.backcolor == "#eeeeee"
+    assert result.meta.background == None
+    assert result.meta.name == ""
+    assert result.meta.notes == ""
+    assert result.meta.radii == ""
+    assert result.meta.switchBrand == ""
+    assert result.meta.switchMount == ""
+    assert result.meta.switchType == ""
+    assert result.meta.spacing_x == 19.05
+    assert result.meta.spacing_y == 19.05
+    assert [json.loads(result.to_kle())] == [["x"]]
+    result2 = Keyboard.from_json(json.loads(result.to_json()))
+    assert result == result2
+
+
+def test_unexpectd_from_json_metadata() -> None:
+    result = parse_kle([["x"]])
+    keyboard_dict = json.loads(result.to_json())
+    keyboard_dict["meta"]["unexpected_field"] = "should_ignore"
+    result2 = Keyboard.from_json(keyboard_dict)
+    assert result == result2
+
+
 @pytest.mark.parametrize(
     # fmt: off
     "layout,expected",
