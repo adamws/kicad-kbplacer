@@ -268,7 +268,7 @@ def test_multi_diode_illegal_position_setting(request) -> None:
     ):
         key_placer.run(
             "",  # not important, should raise even when layout not provided
-            ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, ""),
+            ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1),
             ElementInfo("D{}", PositionOption.CUSTOM, ZERO_POSITION, ""),
         )
 
@@ -369,7 +369,7 @@ def test_switch_distance(key_distance, tmpdir, request) -> None:
     diode_position = DEFAULT_DIODE_POSITION
     key_placer.run(
         get_2x2_layout_path(request),
-        ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, ""),
+        ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1),
         ElementInfo("D{}", PositionOption.DEFAULT, diode_position, ""),
         True,
         key_distance=key_distance,
@@ -388,7 +388,7 @@ def test_switch_distance(key_distance, tmpdir, request) -> None:
 def test_diode_placement_ignore(tmpdir, request) -> None:
     board = get_board_for_2x2_example(request)
     key_placer = KeyPlacer(board)
-    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
     diode_info = ElementInfo(
         "D{}", PositionOption.UNCHANGED, DEFAULT_DIODE_POSITION, ""
     )
@@ -409,7 +409,7 @@ def test_diode_placement_ignore(tmpdir, request) -> None:
 def test_placer_invalid_layout(tmpdir, request) -> None:
     board = get_board_for_2x2_example(request)
     key_placer = KeyPlacer(board)
-    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
     diode_info = ElementInfo("D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, "")
 
     layout_path = f"{tmpdir}/kle.json"
@@ -595,7 +595,7 @@ def test_placing_additional_elements(tmpdir, request) -> None:
     """
     board = get_board_for_2x2_example(request)
     key_placer = KeyPlacer(board)
-    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
     diode_info = ElementInfo("D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, "")
     additional_elements = [ElementInfo("LED{}", PositionOption.RELATIVE, None, "")]
     layout_path = get_2x2_layout_path(request)
@@ -649,7 +649,7 @@ def test_placing_additional_elements_for_alternative_keys(tmpdir, request) -> No
     stab = add_led_footprint(board, request, destination)
 
     key_placer = KeyPlacer(board)
-    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
     diode_info = ElementInfo("", PositionOption.DEFAULT, ZERO_POSITION, "")
     additional_elements = [
         ElementInfo("LED{}", PositionOption.CUSTOM, ZERO_POSITION, "")
@@ -667,7 +667,7 @@ def test_placing_additional_elements_for_alternative_keys(tmpdir, request) -> No
 def test_placer_diode_from_preset_missing_path(request) -> None:
     board = get_board_for_2x2_example(request)
     key_placer = KeyPlacer(board)
-    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
     diode_info = ElementInfo("D{}", PositionOption.PRESET, None, "")
     layout_path = get_2x2_layout_path(request)
 
@@ -679,7 +679,7 @@ def test_placer_diode_from_illegal_preset(tmpdir, request) -> None:
     template_path = f"{tmpdir}/template.kicad_pcb"
     board = get_board_for_2x2_example(request)
     key_placer = KeyPlacer(board)
-    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
     diode_info = ElementInfo("D{}", PositionOption.PRESET, None, template_path)
     layout_path = get_2x2_layout_path(request)
 
@@ -741,7 +741,7 @@ class TestPlacerNoDiodes:
         QMK solves that by creating virtual key matrix, but for that we
         would need to define switch mcu nets to virtual row/key mapping.
         """
-        key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
+        key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
         diode_info = ElementInfo("", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, "")
         layout_path = f"{request.fspath.dirname}/../examples/2x2/kle.json"
         with board(board_type) as board:
@@ -799,7 +799,7 @@ class TestPlacerNoDiodes:
         The error message details will be different depending on which 'diodeless'
         key matrix is used.
         """
-        key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
+        key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
         diode_info = ElementInfo("", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, "")
         layout_path = f"{request.fspath.dirname}/../examples/2x2/kle-annotated.json"
 

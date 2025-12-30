@@ -43,6 +43,7 @@ CUSTOM_WINDOW_STATE_EXAMPLE1 = WindowState(
             side=Side.BACK,
         ),
         template_path="",
+        start_index=1,
     ),
     enable_diode_placement=False,
     route_switches_with_diodes=False,
@@ -56,6 +57,7 @@ CUSTOM_WINDOW_STATE_EXAMPLE1 = WindowState(
             side=Side.FRONT,
         ),
         template_path="",
+        start_index=-1,
     ),
     additional_elements=[
         ElementInfo(
@@ -68,12 +70,14 @@ CUSTOM_WINDOW_STATE_EXAMPLE1 = WindowState(
                 side=Side.FRONT,
             ),
             template_path="",
+            start_index=-1,
         ),
         ElementInfo(
             annotation_format="LED{}",
             position_option=PositionOption.RELATIVE,
             position=None,
             template_path="/home/user/led_template.kicad_pcb",
+            start_index=-1,
         ),
     ],
     route_rows_and_columns=False,
@@ -235,13 +239,15 @@ def get_state_data(state: dict, name: str):
                     "orientation": 90,
                     "side": "Back"
                 },
-                "template_path": ""
+                "template_path": "",
+                "start_index": 1
             }
         }, "non-default-key-annotation-and-position"),
         get_state_data({"diode_info": {
                 "position_option": "Preset",
                 "position": None,
-                "template_path": "/example/preset/path.kicad_pcb"
+                "template_path": "/example/preset/path.kicad_pcb",
+                "start_index": -1
             }
         }, "diode-position-preset"),
         get_state_data({"key_distance": (18, 18.01)}, "non-default-key-distance"),

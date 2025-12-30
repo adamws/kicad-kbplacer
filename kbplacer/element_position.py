@@ -61,9 +61,11 @@ class ElementInfo:
     position_option: PositionOption
     position: Optional[ElementPosition]
     template_path: str
+    start_index: int = -1
 
     @classmethod
     def from_dict(cls, data: dict) -> ElementInfo:
         position_data = data.pop("position", None)
         position = ElementPosition(**position_data) if position_data else None
-        return cls(position=position, **data)
+        start_index = data.pop("start_index", -1)
+        return cls(position=position, start_index=start_index, **data)

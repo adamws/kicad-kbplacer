@@ -410,6 +410,17 @@ def app() -> None:
         ),
     )
     parser.add_argument(
+        "--start-index",
+        required=False,
+        default=1,
+        type=int,
+        help=(
+            "Starting index for footprint numbering (default: %(default)s).\n"
+            "Controls which number to use when matching the first switch footprint.\n"
+            "Example: --start-index 0 starts from SW0 instead of SW1."
+        ),
+    )
+    parser.add_argument(
         "--max-keys",
         required=False,
         default=None,
@@ -457,6 +468,8 @@ def app() -> None:
                 f"Layout has {num_keys} keys, which exceeds the maximum of {args.max_keys}"
             )
             sys.exit(1)
+
+    args.switch.start_index = args.start_index
 
     settings = PluginSettings(
         pcb_file_path=pcb_file_path,

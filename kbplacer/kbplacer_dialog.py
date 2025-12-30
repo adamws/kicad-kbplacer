@@ -61,7 +61,7 @@ class WindowState:
     key_distance: Tuple[float, float] = (19.05, 19.05)
     key_info: ElementInfo = field(
         default_factory=lambda: ElementInfo(
-            "SW{}", PositionOption.DEFAULT, ZERO_POSITION, ""
+            "SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", start_index=1
         )
     )
     enable_diode_placement: bool = True
@@ -69,12 +69,12 @@ class WindowState:
     optimize_diodes_orientation: bool = False
     diode_info: ElementInfo = field(
         default_factory=lambda: ElementInfo(
-            "D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, ""
+            "D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, "", start_index=-1
         )
     )
     additional_elements: List[ElementInfo] = field(
         default_factory=lambda: [
-            ElementInfo("ST{}", PositionOption.CUSTOM, ZERO_POSITION, "")
+            ElementInfo("ST{}", PositionOption.CUSTOM, ZERO_POSITION, "", start_index=-1)
         ]
     )
     route_rows_and_columns: bool = True
@@ -197,6 +197,57 @@ class FloatValidator(wx.Validator):
                 or (key == "-" and "-" not in text and current_position == 0)
                 or (key == "." and "." not in text)
             ):
+                event.Skip()
+
+
+class IntValidator(wx.Validator):
+    def __init__(self) -> None:
+        wx.Validator.__init__(self)
+        self.Bind(wx.EVT_CHAR, self.OnChar)
+
+    def Clone(self) -> IntValidator:
+        return IntValidator()
+
+    def Validate(self, _) -> bool:
+        text_ctrl = self.GetWindow()
+        if not text_ctrl.IsEnabled():
+            return True
+
+        text = text_ctrl.GetValue()
+        try:
+            int(text)
+            return True
+        except ValueError:
+            name = text_ctrl.GetName()
+            wx.MessageBox(f"Invalid '{name}' value: '{text}' is not an integer!", "Error")
+            text_ctrl.SetFocus()
+            return False
+
+    def TransferToWindow(self) -> bool:
+        return True
+
+    def TransferFromWindow(self) -> bool:
+        return True
+
+    def OnChar(self, event: wx.KeyEvent) -> None:
+        keycode = int(event.GetKeyCode())
+        if keycode in [
+            wx.WXK_BACK,
+            wx.WXK_DELETE,
+            wx.WXK_LEFT,
+            wx.WXK_RIGHT,
+            wx.WXK_NUMPAD_LEFT,
+            wx.WXK_NUMPAD_RIGHT,
+            wx.WXK_TAB,
+        ]:
+            event.Skip()
+        else:
+            key = chr(keycode)
+            # allow only digits and optional leading '-'
+            text_ctrl = self.GetWindow()
+            text = text_ctrl.GetValue()
+            current_position = text_ctrl.GetInsertionPoint()
+            if key in string.digits or (key == "-" and "-" not in text and current_position == 0):
                 event.Skip()
 
 
@@ -636,6 +687,7 @@ class KbplacerDialog(wx.Dialog):
             layout_path=initial_state.layout_path,
             key_distance=initial_state.key_distance,
             element_info=initial_state.key_info,
+            start_index=initial_state.key_info.start_index,
         )
 
         switch_diodes_section = self.get_switch_diodes_section(
@@ -679,6 +731,7 @@ class KbplacerDialog(wx.Dialog):
         element_info: ElementInfo = ElementInfo(
             "SW{}", PositionOption.DEFAULT, ZERO_POSITION, ""
         ),
+        start_index: int = 1,
     ) -> wx.Sizer:
         layout_label = wx.StaticText(self, -1, self._("Keyboard layout file:"))
         layout_picker = get_file_picker(
@@ -740,6 +793,15 @@ class KbplacerDialog(wx.Dialog):
             validator=AnnotationValidator(),
         )
 
+        key_start_index = LabeledTextCtrl(
+            self,
+            wx_("Start index") + ":",
+            value=str(start_index),
+            width=3,
+            validator=IntValidator(),
+            tooltip=self._("Starting index used to match footprint annotations"),
+        )
+
         key_position = ElementPositionWidget(self, ZERO_POSITION, disable_offsets=True)
         if element_info.position:
             key_position.set_position(element_info.position)
@@ -756,6 +818,7 @@ class KbplacerDialog(wx.Dialog):
 
         row2 = wx.BoxSizer(wx.HORIZONTAL)
         row2.Add(key_annotation, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        row2.Add(key_start_index, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         row2.Add(key_position, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer.Add(row2, 0, wx.EXPAND | wx.ALL, 5)
 
@@ -764,6 +827,7 @@ class KbplacerDialog(wx.Dialog):
         self.__key_distance_y = key_distance_y.text
         self.__key_annotation_format = key_annotation.text
         self.__key_position = key_position
+        self.__key_start_index = key_start_index.text
 
         return sizer
 
@@ -1008,12 +1072,19 @@ class KbplacerDialog(wx.Dialog):
     def get_template_path(self) -> str:
         return self.__template_picker.GetPath()
 
+    def __get_start_index(self) -> int:
+        try:
+            return int(self.__key_start_index.GetValue())
+        except Exception:
+            return 1
+
     def get_key_info(self) -> ElementInfo:
         return ElementInfo(
             self.get_key_annotation_format(),
             PositionOption.DEFAULT,
             self.__key_position.GetValue(),
             "",
+            start_index=self.__get_start_index(),
         )
 
     def enable_diode_placement(self) -> bool:

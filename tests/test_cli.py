@@ -30,7 +30,7 @@ def get_default(board_path: str) -> PluginSettings:
     return PluginSettings(
         pcb_file_path=board_path,
         layout_path="",
-        key_info=ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, ""),
+        key_info=ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", start_index=1),
         key_distance=None,  # None when not specified, will use metadata or default (19.05, 19.05)
         diode_info=ElementInfo(
             "D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, ""
@@ -103,13 +103,13 @@ def expects_settings(default_difference: Dict):
         #   - valid when only annotation specified
         (
             ["--switch", "S{}"],
-            expects_settings({"key_info": ElementInfo("S{}", PositionOption.DEFAULT, ZERO_POSITION, "")}),
+            expects_settings({"key_info": ElementInfo("S{}", PositionOption.DEFAULT, ZERO_POSITION, "", start_index=1)}),
         ),
         #   - valid with orientation and side
         (
             ["--switch", "S{} 90 BACK"],
             expects_settings({"key_info": ElementInfo("S{}", PositionOption.DEFAULT,
-                                          ElementPosition(0, 0, 90, Side.BACK), "")}),
+                                          ElementPosition(0, 0, 90, Side.BACK), "", start_index=1)}),
         ),
         # invalid switch option values
         #   - too many tokens
@@ -380,6 +380,28 @@ def expects_settings(default_difference: Dict):
             pytest.raises(ArgumentTypeError,
                 match=r"invalid footprint identifier, library path must end with '.pretty'"
             ),
+        ),
+        # valid --start-index option values
+        (
+            ["--start-index", "0"],
+            expects_settings({"key_info": ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", start_index=0)}),
+        ),
+        (
+            ["--start-index", "10"],
+            expects_settings({"key_info": ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", start_index=10)}),
+        ),
+        # --start-index combined with custom switch annotation
+        (
+            ["--switch", "K{} 90 BACK", "--start-index", "5"],
+            expects_settings({
+                "key_info": ElementInfo(
+                    "K{}",
+                    PositionOption.DEFAULT,
+                    ElementPosition(0, 0, 90, Side.BACK),
+                    "",
+                    start_index=5
+                ),
+            }),
         ),
         # fmt: on
     ],

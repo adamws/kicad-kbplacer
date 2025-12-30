@@ -217,7 +217,7 @@ python -m com_github_adamws_kicad-kbplacer --help
     <th align="center"><b>Description</b></th>
   </tr>
   <tr>
-    <td rowspan="5" align="center" style="vertical-align: middle;">Switch settings</td>
+    <td rowspan="6" align="center" style="vertical-align: middle;">Switch settings</td>
     <td align="center" style="vertical-align: middle;">Keyboard layout file</td>
     <td>
       Layout file path. Supports <a href="https://editor.keyboard-tools.xyz/">Keyboard Layout Editor NG</a>
@@ -239,6 +239,15 @@ python -m com_github_adamws_kicad-kbplacer --help
       The switch footprint annotation format with single replacement field <code>{}</code>
       which will get replaced with incremented footprint number.
       This string is internally used by python's <code>str.format</code> function.
+    </td>
+  </tr>
+  <tr>
+    <td align="center" style="vertical-align: middle;">Start index</td>
+    <td>
+      Starting index used to match footprint annotations (default: 1).
+      Controls which number to use when matching the first switch footprint.
+      For example, with annotation format <code>SW{}</code> and start index <code>0</code>,
+      the first switch will be <code>SW0</code> instead of <code>SW1</code>.
     </td>
   </tr>
   <tr>

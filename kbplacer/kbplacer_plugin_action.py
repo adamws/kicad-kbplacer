@@ -60,6 +60,9 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
         # try to get window state from it, must be done before setting up new logger
         self.window_state = load_window_state_from_log(self.log_file)
 
+        if self.window_state.key_info.start_index < 0:
+            self.window_state.key_info.start_index = 1
+
         # set up logger
         logging.basicConfig(
             level=logging.DEBUG,
