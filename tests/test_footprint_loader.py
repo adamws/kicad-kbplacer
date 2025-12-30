@@ -179,6 +179,13 @@ class TestFootprintDiscovery:
             discovery._parse_filename("SW_Cherry_MX_PCB_invalidwidth.kicad_mod") is None
         )
 
+    def test_parse_filename_malformed_float(self) -> None:
+        """Test parsing filename with invalid float (multiple dots)."""
+        discovery = SwitchFootprintDiscovery("/dummy")
+        # Double dots make invalid float
+        result = discovery._parse_filename("SW_Cherry_MX_PCB_1..50u.kicad_mod")
+        assert result is None
+
     def test_scan_library(self, temp_library) -> None:
         discovery = SwitchFootprintDiscovery(str(temp_library))
         discovery._scan_library()
@@ -354,6 +361,15 @@ class TestSwitchFootprintLoader:
         loader = SwitchFootprintLoader("/lib.pretty:switch_{}u")
         base_name = loader._extract_base_name_from_template()
         assert base_name == "switch"
+
+    def test_get_footprint_name_template_extraction_fails(self, caplog) -> None:
+        """Test template handling when base name extraction fails."""
+        # Template with unusual format (width suffix at end doesn't match pattern)
+        loader = SwitchFootprintLoader("/lib.pretty:{:.2f}u_SW")
+        name = loader.get_footprint_name(key=Key(width=1.5))
+        assert name == "1.50u_SW"
+        # Should log warning about extraction failure
+        assert "Could not extract base name from template" in caplog.text
 
     def test_load_simple_footprint(self) -> None:
         # This test requires actual KiCad installation

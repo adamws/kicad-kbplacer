@@ -306,9 +306,7 @@ class SwitchFootprintLoader:
         return fp
 
     def _format(self, width: float) -> str:
-        if is_valid_template(self.identifier.footprint_name):
-            return self.identifier.footprint_name.format(width)
-        return self.identifier.footprint_name
+        return self.identifier.footprint_name.format(width)
 
     def get_footprint_name(self, key: Optional[Key] = None) -> str:
         """Get footprint name that will be loaded (without actually loading it).
@@ -399,26 +397,14 @@ class SwitchFootprintLoader:
         """
         template = self.identifier.footprint_name
 
-        # Try to extract base name by removing format placeholder
+        # Match patterns like: base_{format}u
         # Common patterns:
         # - "base_{:.2f}u" -> "base"
         # - "base_{}u" -> "base"
         # - "base_{:f}u" -> "base"
-
-        # Match patterns like: base_{format}u
         match = re.match(r"^(.+?)_\{[^}]*\}u$", template)
         if match:
             return match.group(1)
-
-        # Couldn't extract, try formatting with 1.0 and removing suffix
-        try:
-            formatted = template.format(1.0)
-            # Remove _1.00u or similar suffix
-            match = re.match(r"^(.+?)_[\d.]+u$", formatted)
-            if match:
-                return match.group(1)
-        except (ValueError, IndexError, KeyError):
-            pass
 
         logger.warning(f"Could not extract base name from template: {template}")
         return None
