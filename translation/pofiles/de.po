@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2025-06-18 20:51+0200\n"
+"POT-Creation-Date: 2025-12-30 18:10+0100\n"
 "PO-Revision-Date: 2024-07-28 22:09+0000\n"
 "Last-Translator: Ettore Atalan <atalanttore@googlemail.com>\n"
 "Language-Team: German <https://hosted.weblate.org/projects/kicad-kbplacer/"
@@ -16,11 +16,11 @@ msgstr ""
 
 msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
-"based on popular layout description from "
+"based on layout description from "
 msgstr ""
 "Plugin für die mechanische Tastatur-Design. Es bietet automatische "
 "Tastenplatzierung \n"
-"basierend auf der populären Layout-Beschreibung von "
+"basierend auf der Layout-Beschreibung von "
 
 msgid "Project website - "
 msgstr "Projektwebsite - "
@@ -41,6 +41,12 @@ msgid "How many millimeters 1U spans between switches horizontally"
 msgstr ""
 
 msgid "How many millimeters 1U spans between switches vertically"
+msgstr ""
+
+msgid "Start index"
+msgstr ""
+
+msgid "Starting index used to match footprint annotations"
 msgstr ""
 
 msgid "Switch settings"

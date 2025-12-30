@@ -795,7 +795,7 @@ class KbplacerDialog(wx.Dialog):
 
         key_start_index = LabeledTextCtrl(
             self,
-            wx_("Start index") + ":",
+            self._("Start index") + ":",
             value=str(start_index),
             width=3,
             validator=IntValidator(),

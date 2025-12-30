@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2024-07-20 12:36+0200\n"
+"POT-Creation-Date: 2025-12-30 18:10+0100\n"
 "PO-Revision-Date: 2025-12-07 09:00+0000\n"
 "Last-Translator: Stefan Bjornelund the Gnome "
 "<stefan.bjornelund.gnome@gmail.com>\n"
@@ -17,11 +17,11 @@ msgstr ""
 
 msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
-"based on popular layout description from "
+"based on layout description from "
 msgstr ""
 "Plugin för design av mekaniska tangentbord. Den har automatisk "
 "tangentplacering \n"
-"baserat på populär layoutbeskrivning från "
+"baserat på layoutbeskrivning från "
 
 msgid "Project website - "
 msgstr "Projektets webbplats - "
@@ -44,6 +44,12 @@ msgstr ""
 msgid "How many millimeters 1U spans between switches vertically"
 msgstr ""
 
+msgid "Start index"
+msgstr ""
+
+msgid "Starting index used to match footprint annotations"
+msgstr ""
+
 msgid "Switch settings"
 msgstr "Strömbrytarinställningar"
 
@@ -61,22 +67,18 @@ msgstr ""
 msgid "Switch diodes settings"
 msgstr "Brytardiods inställningar"
 
-#, fuzzy
 msgid "Additional elements settings"
 msgstr "Inställningar för ytterligare element"
 
-#, fuzzy
 msgid "Route rows and columns"
 msgstr "Layout i rader och kolumner"
 
 msgid "Controller circuit template file:"
 msgstr "Mallfil för styrkrets:"
 
-#, fuzzy
 msgid "Build board outline"
 msgstr "Konstruktionsskiss"
 
-#, fuzzy
 msgid "Outline delta:"
 msgstr "Konturdelta:"
 

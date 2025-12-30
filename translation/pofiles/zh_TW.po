@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2025-06-18 20:51+0200\n"
+"POT-Creation-Date: 2025-12-30 18:10+0100\n"
 "PO-Revision-Date: 2024-06-11 10:09+0000\n"
 "Last-Translator: hugoalh <hugoalh@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Chinese (Traditional) <https://hosted.weblate.org/projects/"
@@ -16,7 +16,7 @@ msgstr ""
 
 msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
-"based on popular layout description from "
+"based on layout description from "
 msgstr ""
 
 msgid "Project website - "
@@ -38,6 +38,12 @@ msgid "How many millimeters 1U spans between switches horizontally"
 msgstr ""
 
 msgid "How many millimeters 1U spans between switches vertically"
+msgstr ""
+
+msgid "Start index"
+msgstr ""
+
+msgid "Starting index used to match footprint annotations"
 msgstr ""
 
 msgid "Switch settings"

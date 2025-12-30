@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2025-06-18 20:51+0200\n"
+"POT-Creation-Date: 2025-12-30 18:10+0100\n"
 "PO-Revision-Date: 2023-07-14 20:04+0200\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -14,10 +14,10 @@ msgstr ""
 
 msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
-"based on popular layout description from "
+"based on layout description from "
 msgstr ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
-"based on popular layout description from "
+"based on layout description from "
 
 msgid "Project website - "
 msgstr "Project website - "
@@ -39,6 +39,12 @@ msgstr "How many millimeters 1U spans between switches horizontally"
 
 msgid "How many millimeters 1U spans between switches vertically"
 msgstr "How many millimeters 1U spans between switches vertically"
+
+msgid "Start index"
+msgstr "Start index"
+
+msgid "Starting index used to match footprint annotations"
+msgstr "Starting index used to match footprint annotations"
 
 msgid "Switch settings"
 msgstr "Switch settings"
