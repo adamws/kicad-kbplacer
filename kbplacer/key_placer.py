@@ -600,7 +600,11 @@ class KeyPlacer(BoardModifier):
         pcbnew.SaveBoard(destination_path, board, aSkipSettings=True)
 
     def get_connection_template(
-        self, key_info: ElementInfo, diode_format: str, destination_path: str, route: bool
+        self,
+        key_info: ElementInfo,
+        diode_format: str,
+        destination_path: str,
+        route: bool,
     ) -> List[pcbnew.PCB_TRACK]:
         """Returns list of tracks (including vias) connecting first element
         with reference `key_info.annotation_format` to itself or any other element
@@ -1053,7 +1057,9 @@ class KeyPlacer(BoardModifier):
         key_distance: Optional[Tuple[float, float]] = None,
     ) -> None:
         if key_info.start_index < 0:
-            logger.warning(f"Invalid switch start index: {key_info.start_index}, defaults to 1")
+            logger.warning(
+                f"Invalid switch start index: {key_info.start_index}, defaults to 1"
+            )
             key_info.start_index = 1
         # stage 1 - prepare
         key_matrix = KeyMatrix(

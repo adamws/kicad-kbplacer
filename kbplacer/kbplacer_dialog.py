@@ -74,7 +74,9 @@ class WindowState:
     )
     additional_elements: List[ElementInfo] = field(
         default_factory=lambda: [
-            ElementInfo("ST{}", PositionOption.CUSTOM, ZERO_POSITION, "", start_index=-1)
+            ElementInfo(
+                "ST{}", PositionOption.CUSTOM, ZERO_POSITION, "", start_index=-1
+            )
         ]
     )
     route_rows_and_columns: bool = True
@@ -219,7 +221,9 @@ class IntValidator(wx.Validator):
             return True
         except ValueError:
             name = text_ctrl.GetName()
-            wx.MessageBox(f"Invalid '{name}' value: '{text}' is not an integer!", "Error")
+            wx.MessageBox(
+                f"Invalid '{name}' value: '{text}' is not an integer!", "Error"
+            )
             text_ctrl.SetFocus()
             return False
 
@@ -247,7 +251,9 @@ class IntValidator(wx.Validator):
             text_ctrl = self.GetWindow()
             text = text_ctrl.GetValue()
             current_position = text_ctrl.GetInsertionPoint()
-            if key in string.digits or (key == "-" and "-" not in text and current_position == 0):
+            if key in string.digits or (
+                key == "-" and "-" not in text and current_position == 0
+            ):
                 event.Skip()
 
 

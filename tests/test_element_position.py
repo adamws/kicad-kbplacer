@@ -85,7 +85,9 @@ def test_position_option_get_invalid_type() -> None:
             },
         ),
         (
-            ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", start_index=5),
+            ElementInfo(
+                "SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", start_index=5
+            ),
             {
                 "annotation_format": "SW{}",
                 "position_option": PositionOption.DEFAULT,
@@ -129,7 +131,9 @@ def test_element_info_from_dict_backward_compatibility() -> None:
 
 def test_element_info_start_index_custom() -> None:
     """Test that custom start_index values are preserved"""
-    info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", start_index=10)
+    info = ElementInfo(
+        "SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", start_index=10
+    )
     assert info.start_index == 10
 
     # Test serialization round-trip
