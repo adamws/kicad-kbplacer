@@ -268,7 +268,21 @@ jobs:
           path: report.html
       - store_test_results:
           path: test-results
-
+  check-github-cli:
+    docker:
+      - image: cimg/base:2023.12
+    steps:
+      - attach_workspace:
+          at: /tmp
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            ./release/install_gh.sh
+      - run:
+          name: Check auth
+          command: |
+            gh auth status && gh api user --silent
   create-pcm-package:
     docker:
       - image: cimg/python:3.11
@@ -435,6 +449,7 @@ workflows:
     # https://circleci.com/docs/guides/orchestrate/automatic-reruns/
     max_auto_reruns: 3
     jobs:
+      - check-github-cli
       - test-linux:
           matrix:
             parameters:
