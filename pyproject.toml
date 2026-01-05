@@ -82,7 +82,6 @@ download_url = "{env:KBPLACER_KICAD_RELEASE_URL:https://adamws.github.io/kicad-k
 path = "release/hatch_translate.py"
 
 [tool.hatch.build.targets.kicad-package.hooks.kicad-repository]
-enable-by-default = false
 
 [tool.hatch.metadata.hooks.fancy-pypi-readme]
 content-type = "text/markdown"

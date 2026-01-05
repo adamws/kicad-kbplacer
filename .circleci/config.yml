@@ -305,12 +305,7 @@ jobs:
             python -m pip install --upgrade hatch
       - run:
           name: Create zip package and repository
-          environment:
-            HATCH_BUILD_HOOK_ENABLE_KICAD-REPOSITORY: true
           command: |
-            # setting env variable stopped working
-            # workaround:
-            sed -i 's/^enable-by-default = false$/enable-by-default = true/' pyproject.toml
             python -m hatch build --target kicad-package
       - store_artifacts:
           path: dist/repository
