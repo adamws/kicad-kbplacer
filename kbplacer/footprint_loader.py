@@ -11,6 +11,7 @@ from typing import Dict, List, Optional, Set, Tuple
 
 import pcbnew
 
+from .board_modifier import KICAD_VERSION
 from .kle_serial import Key, is_iso_enter
 
 logger = logging.getLogger(__name__)
@@ -28,6 +29,23 @@ def is_valid_template(s: str) -> bool:
         return formatted != s
     except (ValueError, IndexError, KeyError):
         return False
+
+
+def load_footprint(lib_name: str, fp_name: str) -> pcbnew.FOOTPRINT:
+    # The pcbnew.FootprintLoad leaks memory [1].
+    # Treating all versions before 9.0.8 but after introduction
+    # of PCB_IO_KICAD_SEXPR as potentially broken
+    # [1] https://gitlab.com/kicad/code/kicad/-/issues/22526
+    if KICAD_VERSION >= (8, 0, 0) and KICAD_VERSION < (9, 0, 8):
+        sexpr = pcbnew.PCB_IO_KICAD_SEXPR()
+        fp = sexpr.FootprintLoad(lib_name, fp_name)
+    else:
+        fp = pcbnew.FootprintLoad(lib_name, fp_name)
+
+    if fp is None:
+        msg = f"Unable to load footprint: {lib_name}:{fp_name}"
+        raise RuntimeError(msg)
+    return fp
 
 
 @dataclass
@@ -257,9 +275,6 @@ class SwitchFootprintLoader:
     - Fallback to 1.0u when requested width unavailable
     - ISO Enter special case handling
     - Loading footprints via pcbnew API
-
-    Note: For diodes and other non-switch footprints, use FootprintIdentifier
-    directly with pcbnew.FootprintLoad().
     """
 
     def __init__(self, identifier_str: str) -> None:
@@ -294,27 +309,13 @@ class SwitchFootprintLoader:
             RuntimeError: If footprint cannot be loaded
         """
         footprint_name = self.get_footprint_name(key=key)
-        fp = pcbnew.FootprintLoad(self.identifier.library_path, footprint_name)
-
-        if fp is None:
-            msg = (
-                f"Unable to load footprint: "
-                f"{self.identifier.library_path}:{footprint_name}"
-            )
-            raise RuntimeError(msg)
-
-        return fp
+        return load_footprint(self.identifier.library_path, footprint_name)
 
     def _format(self, width: float) -> str:
         return self.identifier.footprint_name.format(width)
 
     def get_footprint_name(self, key: Optional[Key] = None) -> str:
         """Get footprint name that will be loaded (without actually loading it).
-
-        Useful for:
-        - Validation
-        - Setting footprint property in schematics
-        - Testing
 
         Args:
             key: Optional Key object for width and ISO Enter detection

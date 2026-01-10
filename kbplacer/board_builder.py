@@ -13,7 +13,7 @@ from typing import Dict, List, Optional, Tuple, Union
 import pcbnew
 
 from .board_modifier import KICAD_VERSION
-from .footprint_loader import FootprintIdentifier, SwitchFootprintLoader
+from .footprint_loader import FootprintIdentifier, SwitchFootprintLoader, load_footprint
 from .kle_serial import Key, MatrixAnnotatedKeyboard, get_annotated_keyboard_from_file
 
 logger = logging.getLogger(__name__)
@@ -53,17 +53,10 @@ class BoardBuilder:
 
     def _add_diode_footprint(self, ref: str) -> pcbnew.FOOTPRINT:
         # Diodes don't need variable width - load directly
-        fp = pcbnew.FootprintLoad(
+        fp = load_footprint(
             self.diode_footprint.library_path,
             self.diode_footprint.footprint_name,
         )
-        if fp is None:
-            msg = (
-                f"Unable to load footprint: "
-                f"{self.diode_footprint.library_path}:"
-                f"{self.diode_footprint.footprint_name}"
-            )
-            raise RuntimeError(msg)
         fp.SetReference(ref)
         fp.SetValue("D")
         return self._add_footprint(fp)
