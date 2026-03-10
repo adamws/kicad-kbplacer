@@ -136,6 +136,9 @@ class TestSchematicBuilderCli:
 
         switch_footprint = str(get_footprints_dir(request)) + ":SW_Cherry_MX_PCB_1.00u"
         diode_footprint = str(get_footprints_dir(request)) + ":D_SOD-323"
+        stabilizer_footprint = (
+            str(get_footprints_dir(request)) + ":Stabilizer_Cherry_MX_{:.2f}u"
+        )
 
         p = self._run_subprocess(
             package_path,
@@ -146,6 +149,7 @@ class TestSchematicBuilderCli:
                 "--sch-file": str(schematic_file),
                 "--switch-footprint": switch_footprint,
                 "--diode-footprint": diode_footprint,
+                "--stabilizer-footprint": stabilizer_footprint,
             },
             flags=["--create-pcb-file"],
         )

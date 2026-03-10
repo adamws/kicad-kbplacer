@@ -37,6 +37,7 @@ class PluginSettings:
     sch_file_path: str
     switch_footprint: str
     diode_footprint: str
+    stabilizer_footprint: str
 
 
 def run_schematic(settings: PluginSettings):
@@ -49,6 +50,7 @@ def run_schematic(settings: PluginSettings):
             settings.sch_file_path,
             switch_footprint=settings.switch_footprint,
             diode_footprint=settings.diode_footprint,
+            stabilizer_footprint=settings.stabilizer_footprint,
         )
 
 
@@ -58,6 +60,7 @@ def run_board(settings: PluginSettings) -> pcbnew.BOARD:
             settings.pcb_file_path,
             switch_footprint=settings.switch_footprint,
             diode_footprint=settings.diode_footprint,
+            stabilizer_footprint=settings.stabilizer_footprint,
         )
         board = builder.create_board(settings.layout_path)
     else:
@@ -112,5 +115,6 @@ def run_from_gui(pcb_file_path: str, state: WindowState) -> pcbnew.BOARD:
         sch_file_path="",
         switch_footprint="",
         diode_footprint="",
+        stabilizer_footprint="",
     )
     return run_board(settings)

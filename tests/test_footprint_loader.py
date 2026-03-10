@@ -9,6 +9,7 @@ import pytest
 
 from kbplacer.footprint_loader import (
     FootprintIdentifier,
+    StabilizerFootprintLoader,
     SwitchFootprintDiscovery,
     SwitchFootprintLoader,
     is_iso_enter,
@@ -449,3 +450,128 @@ class TestSwitchFootprintLoader:
         # 1.25u doesn't exist, should fallback to 1.0u
         footprint = loader.get_footprint_for_schematic(key=Key(width=1.25))
         assert footprint == "examples:SW_Cherry_MX_PCB_1.00u"
+
+
+class TestStabilizerFootprintLoader:
+    """Tests for StabilizerFootprintLoader class."""
+
+    TEMPLATE = "Stabilizer_Cherry_MX_{:.2f}u"
+
+    @pytest.fixture
+    def stab_library(self, tmpdir) -> Path:
+        """Create temporary library with a subset of stabilizer footprints."""
+        lib_path = Path(tmpdir) / "Stabilizers.pretty"
+        lib_path.mkdir()
+        for name in [
+            "Stabilizer_Cherry_MX_2.00u.kicad_mod",
+            "Stabilizer_Cherry_MX_3.00u.kicad_mod",
+            "Stabilizer_Cherry_MX_6.25u.kicad_mod",
+        ]:
+            (lib_path / name).touch()
+        return lib_path
+
+    def _loader(self, stab_library: Path) -> StabilizerFootprintLoader:
+        return StabilizerFootprintLoader(f"{stab_library}:{self.TEMPLATE}")
+
+    def test_no_key_returns_none(self, stab_library) -> None:
+        assert self._loader(stab_library).get_footprint_name() is None
+        assert self._loader(stab_library).get_footprint_for_schematic() is None
+
+    def test_wide_key_uses_width(self, stab_library) -> None:
+        name = self._loader(stab_library).get_footprint_name(
+            key=Key(width=3.0, height=1.0)
+        )
+        assert name == "Stabilizer_Cherry_MX_3.00u"
+
+    def test_tall_key_uses_height(self, stab_library) -> None:
+        # height > width → use height
+        name = self._loader(stab_library).get_footprint_name(
+            key=Key(width=1.0, height=2.0)
+        )
+        assert name == "Stabilizer_Cherry_MX_2.00u"
+
+    def test_iso_enter_uses_height(self, stab_library) -> None:
+        # ISO Enter: width=1.25, height=2, width2=1.5, height2=1
+        key = Key(width=1.25, height=2, width2=1.5, height2=1)
+        name = self._loader(stab_library).get_footprint_name(key=key)
+        assert name == "Stabilizer_Cherry_MX_2.00u"
+
+    def test_exact_match_returns_footprint(self, stab_library) -> None:
+        name = self._loader(stab_library).get_footprint_name(key=Key(width=2.0))
+        assert name == "Stabilizer_Cherry_MX_2.00u"
+
+    def test_exact_match_6_25u(self, stab_library) -> None:
+        name = self._loader(stab_library).get_footprint_name(key=Key(width=6.25))
+        assert name == "Stabilizer_Cherry_MX_6.25u"
+
+    def test_fallback_one_step(self, stab_library, caplog) -> None:
+        # 2.25u not in library → falls back to 2.0u
+        name = self._loader(stab_library).get_footprint_name(key=Key(width=2.25))
+        assert name == "Stabilizer_Cherry_MX_2.00u"
+        assert "using 2u as fallback" in caplog.text
+
+    def test_fallback_skips_intermediate_unavailable_sizes(
+        self, stab_library, caplog
+    ) -> None:
+        # 2.75u not in library; 2.5u and 2.25u also missing → falls back to 2.0u
+        name = self._loader(stab_library).get_footprint_name(key=Key(width=2.75))
+        assert name == "Stabilizer_Cherry_MX_2.00u"
+        assert "using 2u as fallback" in caplog.text
+
+    def test_fallback_6u_to_preceding_available(self, stab_library, caplog) -> None:
+        # 6.0u not in library → preceding STABILIZER_SIZES entries are 3, 2.75, ..., 2
+        # 3.0u IS in library → should use it
+        name = self._loader(stab_library).get_footprint_name(key=Key(width=6.0))
+        assert name == "Stabilizer_Cherry_MX_3.00u"
+        assert "using 3u as fallback" in caplog.text
+
+    def test_known_size_no_smaller_available_returns_none(self, caplog, tmpdir) -> None:
+        # Library only has large sizes; 2.0u is the smallest STABILIZER_SIZE so no fallback
+        lib_path = Path(tmpdir) / "Stabilizers.pretty"
+        lib_path.mkdir()
+        (lib_path / "Stabilizer_Cherry_MX_6.25u.kicad_mod").touch()
+
+        loader = StabilizerFootprintLoader(f"{lib_path}:{self.TEMPLATE}")
+        name = loader.get_footprint_name(key=Key(width=2.0))
+        assert name is None
+        assert "No stabilizer footprint found for width 2.0u" in caplog.text
+
+    def test_unexpected_size_warns_and_returns_none(self, stab_library, caplog) -> None:
+        # 1.5u is not in STABILIZER_SIZES
+        name = self._loader(stab_library).get_footprint_name(key=Key(width=1.5))
+        assert name is None
+        assert "Unexpected stabilizer width 1.5u" in caplog.text
+
+    def test_unexpected_size_1u_warns(self, stab_library, caplog) -> None:
+        name = self._loader(stab_library).get_footprint_name(key=Key(width=1.0))
+        assert name is None
+        assert "Unexpected stabilizer width 1.0u" in caplog.text
+
+    def test_non_template_raises(self) -> None:
+        with pytest.raises(
+            ValueError, match="Stabilizer footprint must use variable width template"
+        ):
+            _ = StabilizerFootprintLoader("/lib.pretty:Stabilizer_Cherry_MX_2.00u")
+
+    def test_schematic_exact_match(self, stab_library) -> None:
+        result = self._loader(stab_library).get_footprint_for_schematic(
+            key=Key(width=2.0)
+        )
+        assert result == "Stabilizers:Stabilizer_Cherry_MX_2.00u"
+
+    def test_schematic_with_fallback(self, stab_library, caplog) -> None:
+        result = self._loader(stab_library).get_footprint_for_schematic(
+            key=Key(width=2.25)
+        )
+        assert result == "Stabilizers:Stabilizer_Cherry_MX_2.00u"
+        assert "using 2u as fallback" in caplog.text
+
+    def test_schematic_unexpected_size_returns_none(self, stab_library) -> None:
+        result = self._loader(stab_library).get_footprint_for_schematic(
+            key=Key(width=1.5)
+        )
+        assert result is None
+
+    def test_schematic_no_key_returns_none(self, stab_library) -> None:
+        result = self._loader(stab_library).get_footprint_for_schematic()
+        assert result is None

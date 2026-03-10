@@ -13,7 +13,13 @@ from typing import Dict, List, Optional, Tuple, Union
 import pcbnew
 
 from .board_modifier import KICAD_VERSION
-from .footprint_loader import FootprintIdentifier, SwitchFootprintLoader, load_footprint
+from .builders_commons import uses_stabilizer
+from .footprint_loader import (
+    FootprintIdentifier,
+    StabilizerFootprintLoader,
+    SwitchFootprintLoader,
+    load_footprint,
+)
 from .kle_serial import Key, MatrixAnnotatedKeyboard, get_annotated_keyboard_from_file
 
 logger = logging.getLogger(__name__)
@@ -26,11 +32,17 @@ class BoardBuilder:
         *,
         switch_footprint: str,
         diode_footprint: str,
+        stabilizer_footprint: Optional[str] = None,
     ) -> None:
         # Switches support variable width with template footprints
         self.switch_footprint = SwitchFootprintLoader(switch_footprint)
         # Diodes are simple - just parse the identifier
         self.diode_footprint = FootprintIdentifier.from_str(diode_footprint)
+        self.stabilizer_footprint = (
+            StabilizerFootprintLoader(stabilizer_footprint)
+            if stabilizer_footprint
+            else None
+        )
 
         # use `NewBoard` over `CreateNewBoard` because it respects netclass
         # settings from .kicad_pro file if it already exist
@@ -60,6 +72,16 @@ class BoardBuilder:
         fp.SetReference(ref)
         fp.SetValue("D")
         return self._add_footprint(fp)
+
+    def _add_stabilizer_footprint(
+        self, ref: str, key: Optional[Key] = None
+    ) -> Optional[pcbnew.FOOTPRINT]:
+        if self.stabilizer_footprint:
+            fp = self.stabilizer_footprint.load(key=key)
+            fp.SetReference(ref)
+            fp.SetValue("SW_stab")
+            return self._add_footprint(fp)
+        return None
 
     def _add_or_get_net(self, netname: str) -> pcbnew.NETINFO_ITEM:
         """Add new net with netname if it does not exist already
@@ -124,6 +146,9 @@ class BoardBuilder:
                 switch = self._add_switch_footprint(f"SW{current_ref}", key=k)
                 diode = self._add_diode_footprint(f"D{current_ref}")
 
+                if uses_stabilizer(k):
+                    self._add_stabilizer_footprint(f"ST{current_ref}", key=k)
+
                 switch_pad1 = switch.FindPadByNumber("1")
                 switch_pad2 = switch.FindPadByNumber("2")
                 switch_pad1.SetPinFunction("1")
@@ -163,6 +188,10 @@ class BoardBuilder:
                     if default_pad and new_pad:
                         new_pad.SetNet(default_pad.GetNet())
                         new_pad.SetPinFunction(pad_number)
+
+                if uses_stabilizer(k):
+                    stabilizer_reference = switch_reference.replace("SW", "ST")
+                    self._add_stabilizer_footprint(stabilizer_reference, key=k)
 
                 progress[position].append(switch)
 

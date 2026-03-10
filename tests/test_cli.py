@@ -51,6 +51,7 @@ def get_default(board_path: str) -> PluginSettings:
         sch_file_path="",
         switch_footprint="",
         diode_footprint="",
+        stabilizer_footprint="",
     )
 
 

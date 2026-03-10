@@ -394,6 +394,16 @@ def app() -> None:
         ),
     )
     parser.add_argument(
+        "--stabilizer-footprint",
+        required=False,
+        default="",
+        action=FootprintIdentifierAction,
+        help=(
+            "Switch stabilizer footprint identifier.\n"
+            "Follows same semantic as --switch-footprint option.\n"
+        ),
+    )
+    parser.add_argument(
         "--log-level",
         required=False,
         default="WARNING",
@@ -489,6 +499,7 @@ def app() -> None:
         sch_file_path=sch_path,
         switch_footprint=args.switch_footprint,
         diode_footprint=args.diode_footprint,
+        stabilizer_footprint=args.stabilizer_footprint,
     )
 
     if args.create_sch_file:

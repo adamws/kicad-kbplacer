@@ -8,12 +8,15 @@ from collections import defaultdict
 from typing import Dict, List, Tuple, Union
 
 from .board_modifier import KICAD_VERSION
+from .builders_commons import uses_stabilizer
 from .footprint_loader import (
     FootprintIdentifier,
+    StabilizerFootprintLoader,
     SwitchFootprintLoader,
     is_valid_template,
 )
 from .kle_serial import (
+    Key,
     MatrixAnnotatedKeyboard,
     get_annotated_keyboard_from_file,
 )
@@ -207,6 +210,192 @@ TEMPLATE = """\
                                 (size 1.27 1.27)
                             )
                         )
+                    )
+                )
+            )
+            (embedded_fonts no)
+        )
+        (symbol "Mechanical:SW_stab"
+            (pin_names
+                (offset 1.016)
+            )
+            (exclude_from_sim no)
+            (in_bom yes)
+            (on_board yes)
+            (property "Reference" "S"
+                (at -5.08 6.35 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (justify left)
+                )
+            )
+            (property "Value" "SW_stab"
+                (at -5.08 3.81 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (justify left)
+                )
+            )
+            (property "Footprint" ""
+                (at 0 0 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (hide yes)
+                )
+            )
+            (property "Datasheet" ""
+                (at 0 0 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (hide yes)
+                )
+            )
+            (property "Description" "Switch stabilizer"
+                (at 0 0 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (hide yes)
+                )
+            )
+            (property "ki_keywords" "stabilizer stab"
+                (at 0 0 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (hide yes)
+                )
+            )
+            (symbol "SW_stab_0_1"
+                (rectangle
+                    (start -5.08 1.27)
+                    (end -2.54 -2.54)
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (rectangle
+                    (start -5.08 -1.524)
+                    (end -2.54 -2.54)
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (rectangle
+                    (start -4.826 2.794)
+                    (end -2.794 1.27)
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (rectangle
+                    (start -4.064 1.27)
+                    (end -3.556 2.794)
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (rectangle
+                    (start -4.064 -1.778)
+                    (end 4.064 -2.286)
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (rectangle
+                    (start -4.064 -2.286)
+                    (end -3.556 -1.016)
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (rectangle
+                    (start 2.54 1.27)
+                    (end 5.08 -2.54)
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (rectangle
+                    (start 2.54 -1.524)
+                    (end 5.08 -2.54)
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (rectangle
+                    (start 2.794 2.794)
+                    (end 4.826 1.27)
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (rectangle
+                    (start 3.556 1.27)
+                    (end 4.064 2.794)
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (rectangle
+                    (start 4.064 -2.286)
+                    (end 3.556 -1.016)
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
                     )
                 )
             )
@@ -455,6 +644,70 @@ TEMPLATE = """\
         )
     )
     (symbol
+        (lib_id "Mechanical:SW_stab")
+        (at 0 15.24 0)
+        (unit 1)
+        (exclude_from_sim no)
+        (in_bom yes)
+        (on_board yes)
+        (dnp no)
+        (fields_autoplaced yes)
+        (uuid "ef7e7ccd-5c7e-41a7-b1a3-1dcfd5e468ef")
+        (property "Reference" "ST1"
+            (at 6.35 13.8429 0)
+            (effects
+                (font
+                    (size 1.27 1.27)
+                )
+                (justify left)
+            )
+        )
+        (property "Value" "SW_stab"
+            (at 6.35 16.3829 0)
+            (effects
+                (font
+                    (size 1.27 1.27)
+                )
+                (justify left)
+            )
+        )
+        (property "Footprint" ""
+            (at 0 15.24 0)
+            (effects
+                (font
+                    (size 1.27 1.27)
+                )
+                (hide yes)
+            )
+        )
+        (property "Datasheet" ""
+            (at 0 15.24 0)
+            (effects
+                (font
+                    (size 1.27 1.27)
+                )
+                (hide yes)
+            )
+        )
+        (property "Description" "Switch stabilizer"
+            (at 0 15.24 0)
+            (effects
+                (font
+                    (size 1.27 1.27)
+                )
+                (hide yes)
+            )
+        )
+        (instances
+            (project ""
+                (path "/9e45a776-7007-48ff-b543-dc98423173b7"
+                    (reference "ST1")
+                    (unit 1)
+                )
+            )
+        )
+    )
+    (symbol
         (lib_id "Device:D_Small")
         (at 2.54 6.35 90)
         (unit 1)
@@ -578,8 +831,10 @@ def can_create_schematic() -> bool:
 def create_schematic(
     keyboard: Union[str, os.PathLike, MatrixAnnotatedKeyboard],
     output_path,
+    *,
     switch_footprint="",
     diode_footprint="",
+    stabilizer_footprint="",
 ) -> None:
     if not can_create_schematic():
         msg = "Requires optional schematic dependencies"
@@ -644,6 +899,15 @@ def create_schematic(
             # Non-template footprint, format for schematic
             identifier = FootprintIdentifier.from_str(switch_footprint)
             base_switch.property.Footprint.value = identifier.format_for_schematic()
+
+    base_stabilizer = sch.symbol.reference_startswith("ST")[0]
+    stabilizer_loader = None
+    if stabilizer_footprint:
+        if not is_valid_template(stabilizer_footprint):
+            msg = "Stabilizer footprint, if defined, must use size-templated definition"
+            raise RuntimeError(msg)
+        stabilizer_loader = StabilizerFootprintLoader(stabilizer_footprint)
+
     base_diode = sch.symbol.reference_startswith("D")[0]
     if diode_footprint:
         # Format diode footprint for schematic: LibraryName:FootprintName
@@ -656,6 +920,8 @@ def create_schematic(
     current_ref = 1
     labels = set()
     labels_positions = dict()
+
+    switches_with_stabs: List[Tuple[str, Key]] = []
 
     for key, (row, column) in zip(keys, matrix):
         position = (row, column)
@@ -680,6 +946,10 @@ def create_schematic(
             default_switch = progress[position][0]
             switch_reference = f"{default_switch}_{used_slots}"
         switch.setAllReferences(switch_reference)
+
+        if uses_stabilizer(key):
+            switches_with_stabs.append((switch_reference, key))
+
         switch_x = _x(COLUMN_DISTANCE * int(column) + 5)
         switch_y = _y(ROW_DISTANCE * int(row) + used_slots)
         switch.move(switch_x, switch_y)
@@ -756,7 +1026,30 @@ def create_schematic(
 
         progress[position].append(switch_reference)
 
+    # Placing stabilizers after we are done with key matrix because it makes it easier to position.
+    # Stabilizers symbols requires defining footprint because that's how we tell if
+    # stab is required for given key size. For switches/diodes we can create symbols without footprints
+    # but stabilizers are not like that.
+    if stabilizer_loader:
+        # place below labels
+        stabilizer_position = labels_positions["COL0"].value
+        stabilizer_x = stabilizer_position[0]
+        stabilizer_y = stabilizer_position[1] + 20
+        for reference, key in switches_with_stabs:
+            logger.debug(
+                f"Processing stabilizer for {reference} (size {key.width}x{key.height})"
+            )
+            stabilizer_reference = reference.replace("SW", "ST")
+            stabilizer = base_stabilizer.clone()
+            stabilizer.setAllReferences(stabilizer_reference)
+            footprint = stabilizer_loader.get_footprint_for_schematic(key=key)
+            if footprint:
+                stabilizer.property.Footprint.value = footprint
+            stabilizer.move(stabilizer_x, stabilizer_y)
+            stabilizer_x += 20
+
     base_switch.delete()
+    base_stabilizer.delete()
     base_diode.delete()
 
     sch.write(output_path)

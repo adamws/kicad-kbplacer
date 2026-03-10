@@ -409,3 +409,65 @@ class SwitchFootprintLoader:
 
         logger.warning(f"Could not extract base name from template: {template}")
         return None
+
+
+class StabilizerFootprintLoader(SwitchFootprintLoader):
+
+    STABILIZER_SIZES = [2, 2.25, 2.5, 2.75, 3, 6, 6.25, 7, 8, 9, 10]
+
+    def __init__(self, identifier_str: str) -> None:
+        SwitchFootprintLoader.__init__(self, identifier_str)
+        if not is_valid_template(self.identifier.footprint_name):
+            msg = (
+                f"Stabilizer footprint must use variable width template "
+                f"(e.g. 'Stabilizer_{{:.2f}}u'), got: '{self.identifier.footprint_name}'"
+            )
+            raise ValueError(msg)
+
+    def get_footprint_name(self, key: Optional[Key] = None) -> Optional[str]:  # type: ignore[override]
+        """Get stabilizer footprint name for the given key size.
+
+        For known stabilizer sizes (STABILIZER_SIZES), falls back to the
+        nearest smaller standard width if exact match is unavailable.
+        For unexpected widths, issues a warning and returns None.
+        """
+        if key:
+            # ISO Enter and tall keys (height > width) use height for stabilizer size
+            size = (
+                key.height
+                if (is_iso_enter(key) or key.height > key.width)
+                else key.width
+            )
+        else:
+            return None
+
+        base_name = self._extract_base_name_from_template()
+        if base_name:
+            available = self._get_discovery().get_available_widths(base_name)
+            if size in available:
+                return self._format(size)
+            if size in self.STABILIZER_SIZES:
+                idx = self.STABILIZER_SIZES.index(size)
+                for i in range(idx - 1, -1, -1):
+                    fallback = self.STABILIZER_SIZES[i]
+                    if fallback in available:
+                        logger.warning(
+                            f"No stabilizer footprint for width {size}u, "
+                            f"using {fallback}u as fallback"
+                        )
+                        return self._format(fallback)
+                logger.warning(
+                    f"No stabilizer footprint found for width {size}u "
+                    f"(base: {base_name}, available: {available})"
+                )
+            else:
+                logger.warning(
+                    f"Unexpected stabilizer width {size}u, no footprint will be set"
+                )
+        return None
+
+    def get_footprint_for_schematic(self, key: Optional[Key] = None) -> Optional[str]:  # type: ignore[override]
+        footprint_name = self.get_footprint_name(key=key)
+        if footprint_name is None:
+            return None
+        return self.identifier.format_for_schematic(footprint_name)

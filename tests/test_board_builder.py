@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import itertools
 from pathlib import Path
 
 import pcbnew
@@ -194,3 +195,52 @@ def test_create_board_diode_footprint_not_found(tmpdir, request) -> None:
         match=r"Unable to load footprint: .*tests.pretty:D_SOD-323-NoSuchDiode",
     ):
         _ = builder.create_board(layout)
+
+
+def test_create_board_with_stabilizers(tmpdir, request) -> None:
+
+    pcb_path = f"{tmpdir}/test.kicad_pcb"
+
+    # Use examples library with multiple switch widths
+    test_dir = request.fspath.dirname
+
+    layout = Path(test_dir) / "data/via-layouts/wt60_d.json"
+    assert layout.exists()
+
+    footprints_dir = get_footprints_dir(request)
+    switch_footprint = f"{footprints_dir}:SW_Cherry_MX_PCB_1.00u"
+    diode_footprint = f"{footprints_dir}:D_SOD-323"
+    stabilizer_footprint = f"{footprints_dir}:Stabilizer_Cherry_MX_{{:.2f}}u"
+
+    builder = BoardBuilder(
+        pcb_path,
+        switch_footprint=switch_footprint,
+        diode_footprint=diode_footprint,
+        stabilizer_footprint=stabilizer_footprint,
+    )
+    board = builder.create_board(layout)
+
+    # Verify switches and stabilizers were created
+    switches = []
+    stabilizers = []
+    for fp in board.GetFootprints():
+        if fp.GetReference().startswith("SW"):
+            switches.append(fp)
+        elif fp.GetReference().startswith("ST"):
+            stabilizers.append(fp)
+
+    assert len(switches) == 76
+    assert len(stabilizers) == 7
+
+    # Get switch footprint names
+    footprint_names = [
+        str(fp.GetFPID().GetLibItemName())
+        for fp in itertools.chain(switches, stabilizers)
+    ]
+
+    assert footprint_names.count("SW_Cherry_MX_PCB_1.00u") == 76
+    assert footprint_names.count("Stabilizer_Cherry_MX_2.00u") == 5
+    assert footprint_names.count("Stabilizer_Cherry_MX_6.25u") == 1
+    assert footprint_names.count("Stabilizer_Cherry_MX_7.00u") == 1
+
+    save_and_render(board, tmpdir, request)
