@@ -95,9 +95,6 @@ def test_create_board_variable_width(tmpdir, request) -> None:
     test_dir = request.fspath.dirname
     examples_lib = Path(test_dir).parent / "examples" / "examples.pretty"
 
-    if not examples_lib.exists():
-        pytest.skip("Examples library not found")
-
     switch_footprint = f"{examples_lib}:SW_Cherry_MX_PCB_{{:.2f}}u"
     diode_footprint = str(get_footprints_dir(request)) + ":D_SOD-323"
 
@@ -109,9 +106,7 @@ def test_create_board_variable_width(tmpdir, request) -> None:
 
     # Use layout with various key widths (1.0u, 1.5u, 1.75u)
     layout = Path(test_dir).parent / "examples" / "3x2-sizes" / "kle-annotated.json"
-
-    if not layout.exists():
-        pytest.skip("Example layout not found")
+    assert layout.exists()
 
     board = builder.create_board(layout)
 
@@ -119,7 +114,7 @@ def test_create_board_variable_width(tmpdir, request) -> None:
     switches = [
         fp for fp in board.GetFootprints() if fp.GetReference().startswith("SW")
     ]
-    assert len(switches) == 6  # 3 rows × 2 columns
+    assert len(switches) == 6  # 3 rows x 2 columns
 
     # Get switch footprint names
     footprint_names = [str(fp.GetFPID().GetLibItemName()) for fp in switches]
@@ -129,6 +124,57 @@ def test_create_board_variable_width(tmpdir, request) -> None:
     assert footprint_names.count("SW_Cherry_MX_PCB_1.00u") == 4
     assert footprint_names.count("SW_Cherry_MX_PCB_1.50u") == 1
     assert footprint_names.count("SW_Cherry_MX_PCB_1.75u") == 1
+
+    save_and_render(board, tmpdir, request)
+
+
+def test_create_board_alternative_layout_loads_correct_footprint(
+    tmpdir, request
+) -> None:
+    """Test that alternative layout keys load their own footprint, not a duplicate.
+
+    Position (1,0) has a 1.0u default and a 2.0u alternative. The alternative
+    switch must get the 2.0u footprint loaded and inherit net assignments from
+    the default switch.
+    """
+    pcb_path = f"{tmpdir}/test.kicad_pcb"
+
+    test_dir = request.fspath.dirname
+    examples_lib = Path(test_dir).parent / "examples" / "examples.pretty"
+
+    switch_footprint = f"{examples_lib}:SW_Cherry_MX_PCB_{{:.2f}}u"
+    diode_footprint = str(get_footprints_dir(request)) + ":D_SOD-323"
+
+    builder = BoardBuilder(
+        pcb_path, switch_footprint=switch_footprint, diode_footprint=diode_footprint
+    )
+
+    layout = (
+        Path(test_dir).parent / "examples" / "2x2-with-alternative-layout" / "via.json"
+    )
+    assert layout.exists()
+
+    board = builder.create_board(layout)
+
+    switches = {
+        fp.GetReference(): fp
+        for fp in board.GetFootprints()
+        if fp.GetReference().startswith("SW")
+    }
+
+    # SW3 is the default 1.0u key at (1,0); SW3a is the 2.0u alternative
+    assert "SW3" in switches
+    assert "SW3a" in switches
+    assert str(switches["SW3"].GetFPID().GetLibItemName()) == "SW_Cherry_MX_PCB_1.00u"
+    assert str(switches["SW3a"].GetFPID().GetLibItemName()) == "SW_Cherry_MX_PCB_2.00u"
+
+    # Alternative switch must share the same nets as the default
+    for pad_number in ("1", "2"):
+        default_net = switches["SW3"].FindPadByNumber(pad_number).GetNet().GetNetname()
+        alt_net = switches["SW3a"].FindPadByNumber(pad_number).GetNet().GetNetname()
+        assert (
+            default_net == alt_net
+        ), f"Pad {pad_number}: default net '{default_net}' != alternative net '{alt_net}'"
 
     save_and_render(board, tmpdir, request)
 

@@ -99,7 +99,7 @@ class BoardBuilder:
         current_ref = 1
         position_tracker: Dict[Tuple[str, str], bool] = {}
         for k, position in zip(keys, positions):
-            (row, column) = position
+            row, column = position
             if position not in position_tracker:
                 column_name = f"COL{column}" if column.isdigit() else column
                 row_name = f"ROW{row}" if row.isdigit() else row
@@ -119,7 +119,7 @@ class BoardBuilder:
         current_ref = 1
         progress: Dict[Tuple[str, str], List[pcbnew.FOOTPRINT]] = defaultdict(list)
         for k, position in zip(keys, positions):
-            (row, column) = position
+            row, column = position
             if position not in progress:
                 switch = self._add_switch_footprint(f"SW{current_ref}", key=k)
                 diode = self._add_diode_footprint(f"D{current_ref}")
@@ -149,17 +149,20 @@ class BoardBuilder:
                 progress[position].append(switch)
             else:
                 # this must be alternative layout key, do not need to create nets
-                # or add diode for it. Just add duplicate and add suffix to reference
+                # or add diode for it. Load the appropriate footprint for this key
+                # and copy net assignments from the default switch.
                 switches = progress[position]
                 default_switch = switches[0]
 
                 suffix = ascii_lowercase[len(switches) - 1]
-                # TODO: alternative switch might be using different footprint
-                # so we should load new (with _add_switch_footprint)
-                # and copy all pad net assignments instead
-                switch = pcbnew.Cast_to_FOOTPRINT(default_switch.Duplicate())
-                switch.SetReference(default_switch.GetReference() + suffix)
-                self._add_footprint(switch)
+                switch_reference = default_switch.GetReference() + suffix
+                switch = self._add_switch_footprint(switch_reference, key=k)
+                for pad_number in ("1", "2"):
+                    default_pad = default_switch.FindPadByNumber(pad_number)
+                    new_pad = switch.FindPadByNumber(pad_number)
+                    if default_pad and new_pad:
+                        new_pad.SetNet(default_pad.GetNet())
+                        new_pad.SetPinFunction(pad_number)
 
                 progress[position].append(switch)
 
