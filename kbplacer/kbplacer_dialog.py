@@ -83,6 +83,7 @@ class WindowState:
     template_path: str = ""
     generate_outline: bool = False
     outline_delta: float = 0.0
+    layout_offset: Optional[Tuple[float, float]] = None
 
     def __str__(self) -> str:
         return json.dumps(asdict(self), indent=None)
@@ -97,11 +98,16 @@ class WindowState:
         additional_elements = [
             ElementInfo.from_dict(i) for i in data.pop("additional_elements")
         ]
+        layout_offset_raw = data.pop("layout_offset", None)
+        layout_offset = (
+            tuple(layout_offset_raw) if layout_offset_raw is not None else None
+        )
         return cls(
             key_distance=key_distance,
             key_info=key_info,
             diode_info=diode_info,
             additional_elements=additional_elements,
+            layout_offset=layout_offset,
             **data,
         )
 
@@ -712,6 +718,7 @@ class KbplacerDialog(wx.Dialog):
             template_path=initial_state.template_path,
             generate_outline=initial_state.generate_outline,
             outline_delta=initial_state.outline_delta,
+            layout_offset=initial_state.layout_offset,
         )
 
         box = wx.BoxSizer(wx.VERTICAL)
@@ -980,6 +987,7 @@ class KbplacerDialog(wx.Dialog):
         template_path: str = "",
         generate_outline: bool = False,
         outline_delta: float = 0.0,
+        layout_offset: Optional[Tuple[float, float]] = None,
     ) -> wx.Sizer:
         row_and_columns_tracks_checkbox = wx.CheckBox(
             self, label=self._("Route rows and columns")
@@ -1020,10 +1028,56 @@ class KbplacerDialog(wx.Dialog):
             validator=FloatValidator(),
         )
 
+        offset_enabled = layout_offset is not None
+        layout_offset_checkbox = wx.CheckBox(self, label=self._("Layout offset"))
+        layout_offset_checkbox.SetValue(offset_enabled)
+
+        offset_x_value = str(layout_offset[0]) if layout_offset is not None else "0"
+        offset_y_value = str(layout_offset[1]) if layout_offset is not None else "0"
+        layout_offset_x = LabeledTextCtrl(
+            self,
+            "X:",
+            value=offset_x_value,
+            width=5,
+            validator=FloatValidator(),
+            tooltip=self._("X placement offset for the keyboard layout in mm"),
+        )
+        layout_offset_y = LabeledTextCtrl(
+            self,
+            "Y:",
+            value=offset_y_value,
+            width=5,
+            validator=FloatValidator(),
+            tooltip=self._("Y placement offset for the keyboard layout in mm"),
+        )
+        if offset_enabled:
+            layout_offset_x.Enable()
+            layout_offset_y.Enable()
+        else:
+            layout_offset_x.Disable()
+            layout_offset_y.Disable()
+
+        def on_layout_offset_checkbox(event) -> None:
+            enabled = layout_offset_checkbox.GetValue()
+            if enabled:
+                layout_offset_x.Enable()
+                layout_offset_y.Enable()
+            else:
+                layout_offset_x.Disable()
+                layout_offset_y.Disable()
+
+        layout_offset_checkbox.Bind(wx.EVT_CHECKBOX, on_layout_offset_checkbox)
+
         row2 = wx.BoxSizer(wx.HORIZONTAL)
         row2.Add(generate_outline_checkbox, 0, wx.EXPAND | wx.ALL, 5)
         row2.Add(wx.StaticLine(self, style=wx.LI_VERTICAL), 0, wx.EXPAND | wx.ALL, 5)
         row2.Add(outline_delta_ctrl, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        row2.Add(wx.StaticLine(self, style=wx.LI_VERTICAL), 0, wx.EXPAND | wx.ALL, 5)
+        row2.Add(
+            layout_offset_checkbox, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5
+        )
+        row2.Add(layout_offset_x, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        row2.Add(layout_offset_y, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
 
         box = wx.StaticBox(self, label=self._("Other settings"))
         sizer = wx.StaticBoxSizer(box, wx.VERTICAL)
@@ -1034,6 +1088,9 @@ class KbplacerDialog(wx.Dialog):
         self.__template_picker = template_picker
         self.__generate_outline_checkbox = generate_outline_checkbox
         self.__outline_delta_ctrl = outline_delta_ctrl
+        self.__layout_offset_enabled = layout_offset_checkbox
+        self.__layout_offset_x = layout_offset_x.text
+        self.__layout_offset_y = layout_offset_y.text
 
         self.__enable_outline_delta(generate_outline)
 
@@ -1108,6 +1165,13 @@ class KbplacerDialog(wx.Dialog):
     def get_outline_delta(self) -> float:
         return float(self.__outline_delta_ctrl.text.GetValue())
 
+    def get_layout_offset(self) -> Optional[Tuple[float, float]]:
+        if not self.__layout_offset_enabled.GetValue():
+            return None
+        x = float(self.__layout_offset_x.GetValue())
+        y = float(self.__layout_offset_y.GetValue())
+        return (x, y)
+
     def get_window_state(self) -> WindowState:
         return WindowState(
             layout_path=self.get_layout_path(),
@@ -1122,6 +1186,7 @@ class KbplacerDialog(wx.Dialog):
             template_path=self.get_template_path(),
             generate_outline=self.generate_outline(),
             outline_delta=self.get_outline_delta(),
+            layout_offset=self.get_layout_offset(),
         )
 
 

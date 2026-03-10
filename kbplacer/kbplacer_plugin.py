@@ -38,6 +38,7 @@ class PluginSettings:
     switch_footprint: str
     diode_footprint: str
     stabilizer_footprint: str
+    layout_offset: Optional[Tuple[float, float]] = None
 
 
 def run_schematic(settings: PluginSettings):
@@ -76,6 +77,7 @@ def run_board(settings: PluginSettings) -> pcbnew.BOARD:
         additional_elements=settings.additional_elements,
         optimize_diodes_orientation=settings.optimize_diodes_orientation,
         key_distance=settings.key_distance,
+        layout_offset=settings.layout_offset,
     )
 
     if settings.generate_outline:
@@ -102,6 +104,7 @@ def run_from_gui(pcb_file_path: str, state: WindowState) -> pcbnew.BOARD:
         layout_path=state.layout_path,
         key_info=state.key_info,
         key_distance=state.key_distance,
+        layout_offset=state.layout_offset,
         diode_info=state.diode_info,
         route_switches_with_diodes=state.route_switches_with_diodes,
         optimize_diodes_orientation=state.optimize_diodes_orientation,

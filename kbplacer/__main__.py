@@ -321,6 +321,17 @@ def app() -> None:
         ),
     )
     parser.add_argument(
+        "--layout-offset",
+        default=None,
+        action=XYAction,
+        help=(
+            "X and Y placement offset for the keyboard layout in mm, "
+            "as two space separated numeric values. "
+            "If not specified, offset is auto-calculated to align the first key to a grid"
+            "with an offset to avoid pcbnew's Drawing Sheet borders."
+        ),
+    )
+    parser.add_argument(
         "-t",
         "--template",
         required=False,
@@ -486,6 +497,7 @@ def app() -> None:
         layout_path=layout_path,
         key_info=args.switch,
         key_distance=args.key_distance,
+        layout_offset=args.layout_offset,
         diode_info=args.diode,
         route_switches_with_diodes=args.route_switches_with_diodes,
         optimize_diodes_orientation=args.optimize_diodes_orientation,

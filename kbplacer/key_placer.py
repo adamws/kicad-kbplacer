@@ -742,6 +742,7 @@ class KeyPlacer(BoardModifier):
         key_matrix: KeyMatrix,
         key_info: ElementInfo,
         key_distance: Optional[Tuple[float, float]] = None,
+        layout_offset: Optional[Tuple[float, float]] = None,
     ) -> None:
         key_position = key_info.position
         start_index = key_info.start_index
@@ -751,9 +752,21 @@ class KeyPlacer(BoardModifier):
         logger.debug(f"Using key 1U distance: {final_key_distance} mm")
         key_distance_x = cast(int, pcbnew.FromMM(final_key_distance[0]))
         key_distance_y = cast(int, pcbnew.FromMM(final_key_distance[1]))
-        offset = self._calculate_reference_coordinate(
-            keyboard, key_matrix, key_distance_x, key_distance_y, start_index
-        )
+        if layout_offset is not None:
+            # Use the topmost/leftmost key (by KLE coordinates) as the reference,
+            # consistent with other KLE tooling. This is independent of matrix
+            # annotation order which may differ for annotated layouts.
+            ref_key = min(keyboard.keys, key=lambda k: (k.y, k.x))
+            ref_center_x = int(key_distance_x * (ref_key.x + ref_key.width / 2))
+            ref_center_y = int(key_distance_y * (ref_key.y + ref_key.height / 2))
+            offset = pcbnew.VECTOR2I(
+                int(pcbnew.FromMM(layout_offset[0])) - ref_center_x,
+                int(pcbnew.FromMM(layout_offset[1])) - ref_center_y,
+            )
+        else:
+            offset = self._calculate_reference_coordinate(
+                keyboard, key_matrix, key_distance_x, key_distance_y, start_index
+            )
         logger.debug(f"Layout offset: {offset}")
         key_iterator: Iterator = get_key_iterator(keyboard, key_matrix, start_index)
 
@@ -1055,6 +1068,7 @@ class KeyPlacer(BoardModifier):
         additional_elements: List[ElementInfo] = [],
         optimize_diodes_orientation: bool = False,
         key_distance: Optional[Tuple[float, float]] = None,
+        layout_offset: Optional[Tuple[float, float]] = None,
     ) -> None:
         if key_info.start_index < 0:
             logger.warning(
@@ -1118,7 +1132,9 @@ class KeyPlacer(BoardModifier):
             if isinstance(keyboard, MatrixAnnotatedKeyboard):
                 # can be called only once:
                 keyboard.collapse()
-            self.place_switches(keyboard, key_matrix, key_info, key_distance)
+            self.place_switches(
+                keyboard, key_matrix, key_info, key_distance, layout_offset
+            )
 
         logger.info(f"Diode info: {diode_infos}")
         if diode_info.position_option != PositionOption.UNCHANGED:

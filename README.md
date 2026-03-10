@@ -352,7 +352,7 @@ python -m com_github_adamws_kicad-kbplacer --help
     </td>
   </tr>
   <tr>
-    <td rowspan="4" align="center" style="vertical-align: middle;">Other settings</td>
+    <td rowspan="5" align="center" style="vertical-align: middle;">Other settings</td>
     <td align="center" style="vertical-align: middle;">Route rows and columns</td>
     <td>
       Enables/disables automatic routing of keyboard switch matrix.
@@ -383,6 +383,15 @@ python -m com_github_adamws_kicad-kbplacer --help
     <td align="center" style="vertical-align: middle;">Outline delta</td>
     <td>
       The amount (in millimeters) to inflate/deflate generated outline shape.
+    </td>
+  </tr>
+  <tr>
+    <td align="center" style="vertical-align: middle;">Layout offset</td>
+    <td>
+      The X and Y placement offset for the keyboard layout in millimeters.
+      If not specified, offset is auto-calculated to align the first key to a grid
+      with an offset to avoid pcbnew's Drawing Sheet borders.
+      Uses topmost-leftmost key as the reference.
     </td>
   </tr>
 </table>

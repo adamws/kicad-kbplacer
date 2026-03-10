@@ -52,6 +52,7 @@ def get_default(board_path: str) -> PluginSettings:
         switch_footprint="",
         diode_footprint="",
         stabilizer_footprint="",
+        layout_offset=None,
     )
 
 
@@ -271,6 +272,25 @@ def expects_settings(default_difference: Dict):
             ["--key-distance", "18 18 18"],
             pytest.raises(ArgumentTypeError,
                 match=r"--key-distance must be exactly two numeric values separated by a space."
+            ),
+        ),
+        # valid layout-offset option values
+        #   - integers
+        (
+            ["--layout-offset", "10 20"],
+            expects_settings({"layout_offset": (10, 20)}),
+        ),
+        #   - floats
+        (
+            ["--layout-offset", "10.5 20.0"],
+            expects_settings({"layout_offset": (10.5, 20.0)}),
+        ),
+        # invalid layout-offset option values
+        #   - too many tokens
+        (
+            ["--layout-offset", "10 20 30"],
+            pytest.raises(ArgumentTypeError,
+                match=r"--layout-offset must be exactly two numeric values separated by a space."
             ),
         ),
         # some more complex scenarios combining multiple options:

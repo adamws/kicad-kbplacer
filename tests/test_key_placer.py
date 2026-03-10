@@ -385,6 +385,39 @@ def test_switch_distance(key_distance, tmpdir, request) -> None:
         assert get_position(diode) == get_position(switch) + pcbnew.VECTOR2I_MM(x, y)
 
 
+@pytest.mark.parametrize(
+    "layout_offset,key_distance",
+    [
+        # explicit offsets
+        ((0.0, 0.0), (19.05, 19.05)),
+        ((10.0, 20.0), (19.05, 19.05)),
+        ((40.0, 30.0), (19.05, 19.05)),
+        # None uses auto-calculation (2U margin)
+        (None, (19.05, 19.05)),
+    ],
+)
+def test_layout_offset(layout_offset, key_distance, tmpdir, request) -> None:
+    board = get_board_for_2x2_example(request)
+    key_placer = KeyPlacer(board)
+    key_placer.run(
+        get_2x2_layout_path(request),
+        ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1),
+        ElementInfo("D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, ""),
+        key_distance=key_distance,
+        layout_offset=layout_offset,
+    )
+
+    sw1 = get_footprint(board, "SW1")
+    sw1_pos = get_position(sw1)
+
+    if layout_offset is not None:
+        ox, oy = layout_offset
+        assert sw1_pos == pcbnew.VECTOR2I_MM(ox, oy)
+    else:
+        # auto-calculated: 2U margin
+        assert sw1_pos == pcbnew.VECTOR2I_MM(key_distance[0] * 2, key_distance[1] * 2)
+
+
 def test_diode_placement_ignore(tmpdir, request) -> None:
     board = get_board_for_2x2_example(request)
     key_placer = KeyPlacer(board)
