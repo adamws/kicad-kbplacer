@@ -95,6 +95,8 @@ class Key:
     sm: str = ""  # switch mount
     sb: str = ""  # switch brand
     st: str = ""  # switch type
+    switchRotation: float = 0  # noqa: N815
+    stabRotation: float = 0  # noqa: N815
 
     def __post_init__(self: Key) -> None:
         if isinstance(self.default, dict):
@@ -270,6 +272,12 @@ class Keyboard:
             current.sm = add_prop("sm", key.sm, current.sm)
             current.sb = add_prop("sb", key.sb, current.sb)
             current.st = add_prop("st", key.st, current.st)
+            current.switchRotation = add_prop(
+                "_r", key.switchRotation, current.switchRotation
+            )
+            current.stabRotation = add_prop(
+                "_rs", key.stabRotation, current.stabRotation
+            )
 
             current_alignment = add_prop("a", alignment, current_alignment)
             current.default.textSize = add_prop(
@@ -831,6 +839,10 @@ def parse_kle(layout) -> Keyboard:
                         current.sb = item["sb"]
                     if "st" in item:
                         current.st = item["st"]
+                    if "_r" in item:
+                        current.switchRotation = item["_r"]
+                    if "_rs" in item:
+                        current.stabRotation = item["_rs"]
                 else:
                     msg = "Unexpected item type"
                     raise RuntimeError(msg)

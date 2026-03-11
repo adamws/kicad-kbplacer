@@ -42,7 +42,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -73,7 +75,9 @@
       "profile": "",
       "sm": "cherry",
       "sb": "hua-jie",
-      "st": "AX01-R"
+      "st": "AX01-R",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -104,7 +108,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     }
   ]
 }

@@ -15,10 +15,15 @@
   "keys": [
     {
       "color": "#cccccc",
-      "labels": ["A"],
+      "labels": [
+        "A"
+      ],
       "textColor": [],
       "textSize": [],
-      "default": {"textColor": "#000000", "textSize": 3},
+      "default": {
+        "textColor": "#000000",
+        "textSize": 3
+      },
       "x": 0,
       "y": 0,
       "width": 1,
@@ -37,7 +42,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     }
   ]
 }

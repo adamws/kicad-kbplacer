@@ -246,8 +246,101 @@ def test_if_produces_valid_json() -> None:
         '"default": {"textColor": "#000000", "textSize": 3}, "x": 0, "y": 0, "width": 1, '
         '"height": 1, "x2": 0, "y2": 0, "width2": 1, "height2": 1, "rotation_x": 0, '
         '"rotation_y": 0, "rotation_angle": 0, "decal": false, "ghost": false, "stepped": false, '
-        '"nub": false, "profile": "", "sm": "", "sb": "", "st": ""}]}'
+        '"nub": false, "profile": "", "sm": "", "sb": "", "st": "", '
+        '"switchRotation": 0, "stabRotation": 0}]}'
     )
+
+
+def test_internal_kle_without_new_rotation_fields_uses_defaults() -> None:
+    """Internal KLE JSON that predates switchRotation/stabRotation should load
+    with both fields defaulting to 0."""
+    data = {
+        "meta": {},
+        "keys": [
+            {
+                "color": "#cccccc",
+                "labels": ["A"],
+                "textColor": [],
+                "textSize": [],
+                "default": {"textColor": "#000000", "textSize": 3},
+                "x": 0,
+                "y": 0,
+                "width": 1,
+                "height": 1,
+                "x2": 0,
+                "y2": 0,
+                "width2": 1,
+                "height2": 1,
+                "rotation_x": 0,
+                "rotation_y": 0,
+                "rotation_angle": 0,
+                "decal": False,
+                "ghost": False,
+                "stepped": False,
+                "nub": False,
+                "profile": "",
+                "sm": "",
+                "sb": "",
+                "st": "",
+                # switchRotation and stabRotation intentionally absent
+            }
+        ],
+    }
+    keyboard = Keyboard.from_json(data)
+    assert len(keyboard.keys) == 1
+    assert keyboard.keys[0].switchRotation == 0
+    assert keyboard.keys[0].stabRotation == 0
+
+
+@pytest.mark.parametrize(
+    "layout,expected_switch_rotations,expected_stab_rotations",
+    [
+        # default values
+        ([[" A"]], [0], [0]),
+        # single key with _r
+        ([[{"_r": 90}, "A"]], [90], [0]),
+        # single key with _rs
+        ([[{"_rs": 180}, "A"]], [0], [180]),
+        # _r propagates across keys, reset with _r: 0
+        ([[{"_r": 90}, "A", "B", {"_r": 0}, "C"]], [90, 90, 0], [0, 0, 0]),
+        # _rs propagates across keys
+        ([[{"_rs": 45}, "A", "B"]], [0, 0], [45, 45]),
+        # combined _r and _rs with propagation
+        (
+            [[{"_r": 90, "_rs": -180}, "A", {"_r": 270}, "B"]],
+            [90, 270],
+            [-180, -180],
+        ),
+    ],
+)
+def test_switch_and_stab_rotation(
+    layout, expected_switch_rotations, expected_stab_rotations
+) -> None:
+    keyboard = parse_kle(layout)
+    assert len(keyboard.keys) == len(expected_switch_rotations)
+    for key, exp_sw, exp_st in zip(
+        keyboard.keys, expected_switch_rotations, expected_stab_rotations
+    ):
+        assert key.switchRotation == exp_sw
+        assert key.stabRotation == exp_st
+
+
+@pytest.mark.parametrize(
+    "layout",
+    [
+        [[{"_r": 90}, "A"]],
+        [[{"_rs": 45}, "A"]],
+        [[{"_r": 30, "_rs": -90}, "A", "B"]],
+    ],
+)
+def test_switch_and_stab_rotation_roundtrip(layout) -> None:
+    """Verify that _r/_rs survive a to_kle() -> parse_kle() roundtrip."""
+    original = parse_kle(layout)
+    kle_str = "[" + original.to_kle() + "]"
+    restored = parse_kle(json.loads(kle_str))
+    for orig_key, rest_key in zip(original.keys, restored.keys):
+        assert orig_key.switchRotation == rest_key.switchRotation
+        assert orig_key.stabRotation == rest_key.stabRotation
 
 
 def __get_invalid_parse_parameters():

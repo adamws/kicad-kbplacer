@@ -40,7 +40,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     }
   ]
 }
