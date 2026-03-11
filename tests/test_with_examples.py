@@ -208,6 +208,7 @@ def assert_kicad_svg(expected: Path, actual: Path) -> None:
 
 def assert_example(tmpdir, references_dir: Path) -> None:
     reference_files = get_reference_files(references_dir)
+    logger.debug(f"references: {reference_files}")
     assert len(reference_files) == 4, "Reference files not found"
     for path in reference_files:
         assert_kicad_svg(path, Path(f"{tmpdir}/{PROJECT_NAME}-layers/{path.name}"))
@@ -448,11 +449,29 @@ def test_with_examples_annotated_layout_shuffled_references(
         kbplacer_process(True, None, layout_path, pcb_path)
 
 
-@pytest.mark.parametrize("example", ["2x2-japanese-duplex-matrix", "2x2"])
+def __get_optimize_diodes_orientation_parameters():
+    examples = ["2x2-japanese-duplex-matrix", "2x2"]
+    test_params = []
+    for example in examples:
+        param = pytest.param(
+            example,
+            ("Tracks", True),
+            ("DefaultDiode", None),
+            "kle.json",
+            id=f"{example};Tracks;DefaultDiode;RAW",
+        )
+        test_params.append(param)
+    return test_params
+
+
+@pytest.mark.parametrize(
+    "example,route,diode_position,layout_option",
+    __get_optimize_diodes_orientation_parameters(),
+)
 def test_with_examples_optimize_diodes_orientation(
-    example, example_isolation, kbplacer_process
+    example, route, diode_position, layout_option, example_isolation, kbplacer_process
 ) -> None:
-    with example_isolation(example, "kle.json", "Tracks", "DefaultDiode") as e:
+    with example_isolation(example, layout_option, route[0], diode_position[0]) as e:
         layout_path, pcb_path = e
         kbplacer_process(
             True,
