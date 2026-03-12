@@ -313,6 +313,15 @@ def __get_parameters():
     )
     test_params.append(param)
 
+    param = pytest.param(
+        "1x4-rotations-90-step",
+        ("Tracks", True),
+        ("DefaultDiode", None),
+        "kle-new.json",
+        id="1x4-rotations-90-step-rotation-property;Tracks;DiodeOption2;RAW",
+    )
+    test_params.append(param)
+
     return test_params
 
 

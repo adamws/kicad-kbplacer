@@ -39,6 +39,7 @@ from kbplacer.kle_serial import (
     MatrixAnnotatedKeyboard,
     get_keyboard,
     get_keyboard_from_file,
+    parse_kle,
 )
 from kbplacer.plugin_error import PluginError
 
@@ -972,3 +973,77 @@ def test_switches_references_by_netname(request) -> None:
         # this API is not used/tested elsewhere:
         result = key_matrix.switches_references_by_netname(k)
         assert sorted(result) == v
+
+
+def _get_single_switch_board_and_matrix(request) -> Tuple[pcbnew.BOARD, KeyMatrix]:
+    board = pcbnew.CreateEmptyBoard()
+    add_switch_footprint(board, request, 1)
+    key_matrix = KeyMatrix(board, "SW{}", "")
+    return board, key_matrix
+
+
+@pytest.mark.parametrize("switch_rotation", [90, -90, 180])
+def test_switch_rotation_changes_orientation(tmpdir, request, switch_rotation) -> None:
+    """A non-zero switch_rotation should rotate the switch around its own center."""
+    board, key_matrix = _get_single_switch_board_and_matrix(request)
+    sw = board.FindFootprintByReference("SW1")
+
+    keyboard = parse_kle([["A"]])
+    keyboard.keys[0].switchRotation = switch_rotation
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
+
+    key_placer = KeyPlacer(board)
+    key_placer.place_switches(keyboard, key_matrix, key_info)
+
+    save_and_render(board, tmpdir, request)
+
+    def _normalize_angle(angle: float) -> float:
+        return ((angle + 180) % 360) - 180
+
+    assert _normalize_angle(get_orientation(sw)) == _normalize_angle(
+        -1 * switch_rotation
+    )
+
+
+@pytest.mark.parametrize("switch_rotation", [0, 45])
+def test_switch_rotation_zero_or_unsupported_leaves_orientation_unchanged(
+    request, switch_rotation
+) -> None:
+    """switch_rotation == 0 should not affect orientation (default behaviour)."""
+    board, key_matrix = _get_single_switch_board_and_matrix(request)
+    sw = board.FindFootprintByReference("SW1")
+
+    keyboard = parse_kle([["A"]])
+    keyboard.keys[0].switchRotation = switch_rotation
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
+
+    key_placer = KeyPlacer(board)
+    key_placer.place_switches(keyboard, key_matrix, key_info)
+
+    assert get_orientation(sw) == 0
+
+
+def test_stab_rotation_applied_to_st_element_only(request) -> None:
+    """stab_rotation rotates ST{} elements but leaves non-ST elements (LED{}) unchanged."""
+    board, key_matrix = _get_single_switch_board_and_matrix(request)
+
+    # Add a stabilizer (ST1) and a non-stabilizer (LED1) to the board.
+    # SW1 -> reference_value "1"-> ST{} looks for "ST1", LED{} looks for "LED1".
+    stab = add_led_footprint(board, request, 1)
+    stab.SetReference("ST1")
+    led = add_led_footprint(board, request, 1)  # reference = "LED1"
+
+    keyboard = parse_kle([["A"]])
+    keyboard.keys[0].stabRotation = 90
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
+    stab_info = ElementInfo("ST{}", PositionOption.CUSTOM, ZERO_POSITION, "")
+    led_info = ElementInfo("LED{}", PositionOption.CUSTOM, ZERO_POSITION, "")
+
+    key_placer = KeyPlacer(board)
+    key_placer.place_switches(keyboard, key_matrix, key_info)
+    key_placer.place_switch_elements([stab_info, led_info], key_matrix)
+
+    # Stabilizer should have been rotated by stab_rotation.
+    assert get_orientation(stab) == -90
+    # Non-stabilizer LED should be unaffected.
+    assert get_orientation(led) == 0

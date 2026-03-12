@@ -418,6 +418,7 @@ class KeyPlacer(BoardModifier):
         board: pcbnew.BOARD,
     ) -> None:
         super().__init__(board)
+        self._stab_rotation_by_switch: dict = {}
 
     def apply_switch_connection_template(
         self,
@@ -786,6 +787,7 @@ class KeyPlacer(BoardModifier):
                 )
                 logger.warning(msg)
 
+        self._stab_rotation_by_switch: dict = {}
         for key, switch_footprint in key_iterator:
             reset_rotation(switch_footprint)
             if key_position:
@@ -811,6 +813,19 @@ class KeyPlacer(BoardModifier):
                     + offset
                 )
                 rotate(switch_footprint, rotation_reference, angle)
+
+            if key.switchRotation != 0 and key.switchRotation % 90 == 0:
+                switch_center = get_position(switch_footprint)
+                rotate(switch_footprint, switch_center, key.switchRotation)
+            elif key.switchRotation != 0:
+                logger.error(
+                    "Not supporting individual switch rotation other than multiple of 90 degrees."
+                    f"Got switch rotation of {key.switchRotation}, ignoring."
+                )
+
+            self._stab_rotation_by_switch[switch_footprint.GetReference()] = (
+                key.stabRotation
+            )
 
     def place_element(
         self,
@@ -891,6 +906,17 @@ class KeyPlacer(BoardModifier):
                         "diode optimization skipped"
                     )
 
+    def rotate_stabilizer(self, switch_reference: str, stabilizer: pcbnew.FOOTPRINT):
+        stab_rotation = self._stab_rotation_by_switch.get(switch_reference, 0)
+        if stab_rotation != 0 and stab_rotation % 90 == 0:
+            stab_center = get_position(stabilizer)
+            rotate(stabilizer, stab_center, stab_rotation)
+        elif stab_rotation != 0:
+            logger.error(
+                "Not supporting individual stabilizer rotation other than multiple of 90 degrees."
+                f"Got stabilizer rotation of {stab_rotation}, ignoring."
+            )
+
     def place_switch_elements(
         self,
         elements: List[ElementInfo],
@@ -916,6 +942,12 @@ class KeyPlacer(BoardModifier):
                         switch_position,
                         switch_orientation,
                     )
+                    # Apply stab_rotation to stabilizer elements only.
+                    # Heuristic: annotation format starting with "ST" identifies
+                    # stabilizer footprints (e.g. ST{}, ST20_1).
+                    is_stabilizer = footprint.GetReference().startswith("ST")
+                    if is_stabilizer:
+                        self.rotate_stabilizer(reference, footprint)
 
     def route_switches_with_diodes(
         self,
