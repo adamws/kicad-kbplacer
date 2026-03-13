@@ -442,6 +442,15 @@ def app() -> None:
         ),
     )
     parser.add_argument(
+        "--no-stabilizers",
+        dest="add_stabilizers",
+        action="store_false",
+        help=(
+            "Disable stabilizer creation when using `--create-pcb-file` or\n"
+            "`--create-sch-file` options."
+        ),
+    )
+    parser.add_argument(
         "--max-keys",
         required=False,
         default=None,
@@ -512,6 +521,7 @@ def app() -> None:
         switch_footprint=args.switch_footprint,
         diode_footprint=args.diode_footprint,
         stabilizer_footprint=args.stabilizer_footprint,
+        add_stabilizers=args.add_stabilizers,
     )
 
     if args.create_sch_file:

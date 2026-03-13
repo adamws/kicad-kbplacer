@@ -105,6 +105,8 @@ class BoardBuilder:
     def create_board(
         self,
         keyboard: Union[str, os.PathLike, MatrixAnnotatedKeyboard],
+        *,
+        add_stabilizers: bool = True,
     ) -> pcbnew.BOARD:
         if isinstance(keyboard, str) or isinstance(keyboard, os.PathLike):
             _keyboard = get_annotated_keyboard_from_file(keyboard)
@@ -146,7 +148,7 @@ class BoardBuilder:
                 switch = self._add_switch_footprint(f"SW{current_ref}", key=k)
                 diode = self._add_diode_footprint(f"D{current_ref}")
 
-                if uses_stabilizer(k):
+                if add_stabilizers and uses_stabilizer(k):
                     self._add_stabilizer_footprint(f"ST{current_ref}", key=k)
 
                 switch_pad1 = switch.FindPadByNumber("1")
@@ -189,7 +191,7 @@ class BoardBuilder:
                         new_pad.SetNet(default_pad.GetNet())
                         new_pad.SetPinFunction(pad_number)
 
-                if uses_stabilizer(k):
+                if add_stabilizers and uses_stabilizer(k):
                     stabilizer_reference = switch_reference.replace("SW", "ST")
                     self._add_stabilizer_footprint(stabilizer_reference, key=k)
 

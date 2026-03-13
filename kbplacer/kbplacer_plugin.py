@@ -39,6 +39,7 @@ class PluginSettings:
     diode_footprint: str
     stabilizer_footprint: str
     layout_offset: Optional[Tuple[float, float]] = None
+    add_stabilizers: bool = True
 
 
 def run_schematic(settings: PluginSettings):
@@ -52,6 +53,7 @@ def run_schematic(settings: PluginSettings):
             switch_footprint=settings.switch_footprint,
             diode_footprint=settings.diode_footprint,
             stabilizer_footprint=settings.stabilizer_footprint,
+            add_stabilizers=settings.add_stabilizers,
         )
 
 
@@ -63,7 +65,9 @@ def run_board(settings: PluginSettings) -> pcbnew.BOARD:
             diode_footprint=settings.diode_footprint,
             stabilizer_footprint=settings.stabilizer_footprint,
         )
-        board = builder.create_board(settings.layout_path)
+        board = builder.create_board(
+            settings.layout_path, add_stabilizers=settings.add_stabilizers
+        )
     else:
         board = pcbnew.LoadBoard(settings.pcb_file_path)
 

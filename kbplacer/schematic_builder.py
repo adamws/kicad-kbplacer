@@ -835,6 +835,7 @@ def create_schematic(
     switch_footprint="",
     diode_footprint="",
     stabilizer_footprint="",
+    add_stabilizers: bool = True,
 ) -> None:
     if not can_create_schematic():
         msg = "Requires optional schematic dependencies"
@@ -947,7 +948,7 @@ def create_schematic(
             switch_reference = f"{default_switch}_{used_slots}"
         switch.setAllReferences(switch_reference)
 
-        if uses_stabilizer(key):
+        if add_stabilizers and uses_stabilizer(key):
             switches_with_stabs.append((switch_reference, key))
 
         switch_x = _x(COLUMN_DISTANCE * int(column) + 5)

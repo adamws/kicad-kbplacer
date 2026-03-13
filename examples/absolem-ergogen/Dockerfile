@@ -54,6 +54,7 @@ RUN python3 -m kbplacer.kle_serial \
 RUN python3 -m kbplacer \
   --pcb-file $PROJECT_NAME.kicad_pcb \
   --create-pcb-file --create-sch-file \
+  --no-stabilizers \
   --layout $PROJECT_NAME-kle.json \
   --diode "D{} CUSTOM 5.08 4 90 BACK" \
   --route-switches-with-diodes \
