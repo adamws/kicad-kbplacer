@@ -1027,26 +1027,23 @@ def create_schematic(
         progress[position].append(switch_reference)
 
     # Placing stabilizers after we are done with key matrix because it makes it easier to position.
-    # Stabilizers symbols requires defining footprint because that's how we tell if
-    # stab is required for given key size. For switches/diodes we can create symbols without footprints
-    # but stabilizers are not like that.
-    if stabilizer_loader:
-        # place below labels
-        stabilizer_position = labels_positions["COL0"].value
-        stabilizer_x = stabilizer_position[0]
-        stabilizer_y = stabilizer_position[1] + 20
-        for reference, key in switches_with_stabs:
-            logger.debug(
-                f"Processing stabilizer for {reference} (size {key.width}x{key.height})"
-            )
-            stabilizer_reference = reference.replace("SW", "ST")
-            stabilizer = base_stabilizer.clone()
-            stabilizer.setAllReferences(stabilizer_reference)
+    # Get leftmost label and start placing stabilizer symbols below it
+    stabilizer_position = min(labels_positions.values(), key=lambda p: p.value[0])
+    stabilizer_x = stabilizer_position.value[0]
+    stabilizer_y = stabilizer_position.value[1] + 20
+    for reference, key in switches_with_stabs:
+        logger.debug(
+            f"Processing stabilizer for {reference} (size {key.width}x{key.height})"
+        )
+        stabilizer_reference = reference.replace("SW", "ST")
+        stabilizer = base_stabilizer.clone()
+        stabilizer.setAllReferences(stabilizer_reference)
+        if stabilizer_loader:
             footprint = stabilizer_loader.get_footprint_for_schematic(key=key)
             if footprint:
                 stabilizer.property.Footprint.value = footprint
-            stabilizer.move(stabilizer_x, stabilizer_y)
-            stabilizer_x += 20
+        stabilizer.move(stabilizer_x, stabilizer_y)
+        stabilizer_x += 20
 
     base_switch.delete()
     base_stabilizer.delete()
