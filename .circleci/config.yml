@@ -248,6 +248,9 @@ jobs:
             elif [ "<<parameters.kicad-version>>" = "9.0.8" ]; then
               revision=61ef15e03fd712bbccab7fd91aa0ef6929cf5651
               filepath=Casks/k/kicad.rb
+            elif [ "<<parameters.kicad-version>>" = "10.0.0" ]; then
+              revision=5c96043fbafb7f6103bd06f88e6ab3347552e53c
+              filepath=Casks/k/kicad.rb
             else
               echo "Unsupported KiCad version!"
             fi
@@ -484,6 +487,7 @@ workflows:
                 - 7.0.11
                 - 8.0.9
                 - 9.0.8
+                - 10.0.0
       - run-tools-sanity-checks:
           matrix:
             parameters:
