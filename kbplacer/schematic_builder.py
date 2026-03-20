@@ -843,6 +843,9 @@ def create_schematic(
     if KICAD_VERSION < (9, 0, 0):
         msg = "Requires KiCad 9.0 or higher"
         raise RuntimeError(msg)
+    if KICAD_VERSION >= (10, 0, 0):
+        msg = "KiCad 10 not supported yet"
+        raise RuntimeError(msg)
 
     if isinstance(keyboard, str) or isinstance(keyboard, os.PathLike):
         _keyboard = get_annotated_keyboard_from_file(keyboard)
