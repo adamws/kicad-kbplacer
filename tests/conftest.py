@@ -414,8 +414,8 @@ def generate_schematic_image(tmpdir, schematic_path: Union[str, os.PathLike]) ->
 def prepare_project_file(request, board_path: Union[str, os.PathLike]) -> None:
     test_dir = Path(request.module.__file__).parent
     major = KICAD_VERSION[0] if KICAD_VERSION else 0
-    if major == 9:
-        # reuse previous project files for kicad 9
+    if major == 9 or major == 10:
+        # reuse previous project files for kicad 9 and 10
         major = 8
     templates_dir = test_dir / f"data/examples-references/kicad{major}/kicad-defaults"
 
@@ -660,3 +660,18 @@ def get_screen_manager():
 @pytest.fixture
 def screen_manager():
     return get_screen_manager()
+
+
+def filter_kiacd10_errs(errs):
+    if KICAD_VERSION < (10, 0, 0):
+        return errs
+    # on KiCad 10.0.0 release there are:
+    # 'assert "m_choices.GetCount() > 0" failed in PROPERTY_ENUM(): No enum choices'
+    # error prints, ignore them
+    if isinstance(errs, bytes):
+        errs = errs.decode("utf-8", errors="ignore")
+    pattern = re.compile(r"No enum choices defined")
+    filtered_errs = "\n".join(
+        line for line in errs.splitlines() if not pattern.search(line)
+    )
+    return filtered_errs

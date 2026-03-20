@@ -14,4 +14,4 @@ build_and_push() {
   docker push admwscki/kicad-kbplacer-primary:$1
 }
 
-build_and_push 9.0.8-noble noble/kicad9.Dockerfile
+build_and_push 10.0.0-noble noble/kicad10.Dockerfile

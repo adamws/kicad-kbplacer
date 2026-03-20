@@ -90,6 +90,18 @@ def get_optional_footprint(
     return footprint
 
 
+def duplicate_footprint(footprint: pcbnew.FOOTPRINT) -> pcbnew.FOOTPRINT:
+    duplicate = None
+    if KICAD_VERSION < (10, 0, 0):
+        duplicate = footprint.Duplicate()
+    else:
+        duplicate = footprint.Duplicate(True)
+    if duplicate is None:
+        msg = f"Failed to duplicate footprint {footprint.GetReference()}"
+        raise RuntimeError(msg)
+    return pcbnew.Cast_to_FOOTPRINT(duplicate)
+
+
 def set_position(footprint: pcbnew.FOOTPRINT, position: pcbnew.VECTOR2I) -> None:
     logger.debug(f"Setting {footprint.GetReference()} footprint position: {position}")
     if KICAD_VERSION < (7, 0, 0):

@@ -31,6 +31,7 @@ from .board_modifier import (
     KICAD_VERSION,
     BoardModifier,
     calculate_distance_matrix,
+    duplicate_footprint,
     get_closest_pads_on_same_net,
     get_common_nets,
     get_distance,
@@ -547,14 +548,14 @@ class KeyPlacer(BoardModifier):
         # and delete project file
         os.remove(Path(destination_path).with_suffix(".kicad_pro"))
 
-        switch_copy = pcbnew.Cast_to_FOOTPRINT(switch.Duplicate())
+        switch_copy = duplicate_footprint(switch)
         reset_rotation(switch_copy)
         set_position(switch_copy, pcbnew.VECTOR2I(0, 0))
 
         origin = get_position(switch)
         diode_copies = []
         for d in diodes:
-            diode_copy = pcbnew.Cast_to_FOOTPRINT(d.Duplicate())
+            diode_copy = duplicate_footprint(d)
             if angle := get_orientation(switch):
                 rotate(diode_copy, origin, angle)
             set_position(

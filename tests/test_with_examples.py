@@ -24,6 +24,7 @@ from xmldiff import actions, main
 from .conftest import (
     KICAD_VERSION,
     add_track,
+    filter_kiacd10_errs,
     generate_drc,
     generate_render,
     get_footprints_dir,
@@ -819,4 +820,5 @@ def test_version(request, package_name, package_path) -> None:
     logger.info(f"Version: {p.stdout}")
     if request.config.getoption("--test-plugin-installation"):
         assert re.match(r"^0\.\d+(\.dev\d+)?(.*)?$", p.stdout)
+    p.stderr = filter_kiacd10_errs(p.stderr)
     assert p.stderr == ""

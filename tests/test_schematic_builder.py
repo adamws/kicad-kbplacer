@@ -83,6 +83,9 @@ def parse_netinfo_item(netinfo: pcbnew.NETINFO_ITEM):
     return netinfo_parsed
 
 
+@pytest.mark.skipif(
+    KICAD_VERSION >= (10, 0, 0), reason="Schematic builder not supported yet"
+)
 class TestSchematicBuilderCli:
     def _run_subprocess(
         self,
