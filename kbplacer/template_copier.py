@@ -7,6 +7,7 @@ import logging
 import pcbnew
 
 from .board_modifier import (
+    duplicate_track,
     get_footprint,
     get_orientation,
     get_position,
@@ -50,7 +51,7 @@ def copy_from_template_to_board(
             # Clone track but remap netinfo because net codes in template
             # might be different. Use net names for remapping
             # (names in template and board under modification must match)
-            clone = track.Duplicate()
+            clone = duplicate_track(track)
             net_name = clone.GetNetname()
             net_code = clone.GetNetCode()
             net_info_in_board = board_nets_by_name[net_name]

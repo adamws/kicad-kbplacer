@@ -95,11 +95,24 @@ def duplicate_footprint(footprint: pcbnew.FOOTPRINT) -> pcbnew.FOOTPRINT:
     if KICAD_VERSION < (10, 0, 0):
         duplicate = footprint.Duplicate()
     else:
-        duplicate = footprint.Duplicate(True)
+        duplicate = footprint.Duplicate(False)
     if duplicate is None:
         msg = f"Failed to duplicate footprint {footprint.GetReference()}"
         raise RuntimeError(msg)
     return pcbnew.Cast_to_FOOTPRINT(duplicate)
+
+
+def duplicate_track(item: pcbnew.PCB_TRACK) -> pcbnew.PCB_TRACK:
+    if KICAD_VERSION >= (10, 0, 0):
+        parent_group = item.GetParentGroup()
+        if parent_group:
+            item.SetParentGroup(None)
+        dup = item.Duplicate()
+        if parent_group:
+            item.SetParentGroup(parent_group)
+    else:
+        dup = item.Duplicate()
+    return dup
 
 
 def set_position(footprint: pcbnew.FOOTPRINT, position: pcbnew.VECTOR2I) -> None:

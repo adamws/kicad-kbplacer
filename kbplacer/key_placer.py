@@ -32,6 +32,7 @@ from .board_modifier import (
     BoardModifier,
     calculate_distance_matrix,
     duplicate_footprint,
+    duplicate_track,
     get_closest_pads_on_same_net,
     get_common_nets,
     get_distance,
@@ -446,7 +447,7 @@ class KeyPlacer(BoardModifier):
             # we should be safe with `Cast_to_PCB_TRACK` (not doing any via
             # specific operations here)
             track = pcbnew.Cast_to_PCB_TRACK(item)
-            new_track = track.Duplicate()
+            new_track = duplicate_track(track)
             if KICAD_VERSION < (7, 0, 0):
                 new_track.Move(pcbnew.wxPoint(switch_position.x, switch_position.y))
             else:
@@ -598,7 +599,7 @@ class KeyPlacer(BoardModifier):
         for item in connections:
             # using `Duplicate` here to not alter net assignments of original tracks
             # (which needs to be empty in order to work as template)
-            board.Add(item.Duplicate())
+            board.Add(duplicate_track(item))
         pcbnew.SaveBoard(destination_path, board, aSkipSettings=True)
 
     def get_connection_template(
@@ -641,7 +642,7 @@ class KeyPlacer(BoardModifier):
             _get_connected_tracks(p)
 
         for item in _tracks.values():
-            item_copy = item.Duplicate()
+            item_copy = duplicate_track(item)
             item_copy.SetNetCode(0)
             if angle := get_orientation(switch):
                 rotate(item_copy, origin, angle)
