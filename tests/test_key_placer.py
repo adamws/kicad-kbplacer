@@ -182,7 +182,7 @@ def test_diode_switch_routing(
     diode_position = switch_pad_position + pcbnew.VECTOR2I_MM(*position)
     set_position(diodes[0], diode_position)
     set_side(diodes[0], side)
-    diodes[0].SetOrientationDegrees(orientation)
+    set_rotation(diodes[0], orientation)
 
     key_placer.route_switch_with_diode(switch, diodes)
     key_placer.remove_dangling_tracks()
@@ -210,7 +210,7 @@ def test_diode_switch_routing_complicated_footprint(
     key_placer = KeyPlacer(board)
 
     set_position(diodes[0], pcbnew.VECTOR2I_MM(*position))
-    diodes[0].SetOrientationDegrees(orientation)
+    set_rotation(diodes[0], orientation)
 
     key_placer.route_switch_with_diode(switch, diodes)
 
@@ -226,7 +226,7 @@ def test_multi_diode_switch_routing(tmpdir, request) -> None:
     diode_positions = [(0, 5), (0, -10)]
     for position, diode in zip(diode_positions, diodes):
         set_position(diode, pcbnew.VECTOR2I_MM(*position))
-        diode.SetOrientationDegrees(0)
+        set_rotation(diode, 0)
     key_placer.route_switch_with_diode(switch, diodes)
 
     save_and_render(board, tmpdir, request)
