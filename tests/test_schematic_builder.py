@@ -17,6 +17,7 @@ import sexpdata
 
 from .conftest import (
     KICAD_VERSION,
+    filter_kiacd10_errs,
     generate_netlist,
     generate_schematic_image,
     get_footprints_dir,
@@ -83,9 +84,6 @@ def parse_netinfo_item(netinfo: pcbnew.NETINFO_ITEM):
     return netinfo_parsed
 
 
-@pytest.mark.skipif(
-    KICAD_VERSION >= (10, 0, 0), reason="Schematic builder not supported yet"
-)
 class TestSchematicBuilderCli:
     def _run_subprocess(
         self,
@@ -170,7 +168,7 @@ class TestSchematicBuilderCli:
             # getting:
             # 'assert ""traits"" failed in Get(): create wxApp before calling this'
             # only on macos (otherwise it works just fine)
-            assert errs == ""
+            assert filter_kiacd10_errs(errs) == ""
         assert p.returncode == 0
 
         generate_schematic_image(tmpdir, schematic_file)
@@ -194,9 +192,15 @@ class TestSchematicBuilderCli:
             logger.debug(f"{netcode=} {netinfo_parsed=}")
             board_nets_parsed.append(netinfo_parsed)
 
-        # Compare nets from schematic and board
-        # Filter out netcode=0 and ignore 'nodes' field
+        # Compare nets from schematic and board.
+        # Filter out netcode=0 and ignore 'nodes' field.
+        # KiCad 10 changed .kicad_pcb to store nets by name only (no numeric
+        # codes in the file), so codes are dynamically assigned on load and
+        # differ between board and schematic. For KiCad < 10, codes are stored
+        # in the file and should match.
         def _normalize(nets):
+            if KICAD_VERSION >= (10, 0, 0):
+                return [(n["name"], n["class"]) for n in nets if int(n["code"]) != 0]
             return [
                 (int(n["code"]), n["name"], n["class"])
                 for n in nets
@@ -250,7 +254,7 @@ class TestSchematicBuilderCli:
         _, errs = p.communicate()
 
         if sys.platform != "darwin":
-            assert errs == ""
+            assert filter_kiacd10_errs(errs) == ""
         assert p.returncode == 0
 
         generate_schematic_image(tmpdir, schematic_file)
