@@ -480,6 +480,7 @@ workflows:
                 - 7.0.11
                 - 8.0.9
                 - 9.0.8
+                - 10.0.0
       - test-macos:
           matrix:
             parameters:
