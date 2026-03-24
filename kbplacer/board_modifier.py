@@ -138,7 +138,10 @@ def get_side(footprint: pcbnew.FOOTPRINT) -> Side:
 
 
 def set_rotation(footprint: pcbnew.FOOTPRINT, angle: float) -> None:
-    footprint.SetOrientationDegrees(angle)
+    current = get_orientation(footprint)
+    diff = current - angle
+    if diff != 0:
+        rotate(footprint, footprint.GetPosition(), diff)
 
 
 def reset_rotation(footprint: pcbnew.FOOTPRINT) -> None:
