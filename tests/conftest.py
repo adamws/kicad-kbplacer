@@ -675,3 +675,37 @@ def filter_kiacd10_errs(errs):
         line for line in errs.splitlines() if not pattern.search(line)
     )
     return filtered_errs
+
+
+def filter_known_errs(errs):
+    """Filter known-harmless assertion prints that vary by platform/version."""
+    if isinstance(errs, bytes):
+        errs = errs.decode("utf-8", errors="ignore")
+    patterns = []
+    if KICAD_VERSION >= (10, 0, 0):
+        # 'assert "m_choices.GetCount() > 0" failed in PROPERTY_ENUM(): No enum choices'
+        patterns.append(re.compile(r"No enum choices defined"))
+    if sys.platform == "darwin":
+        # 'assert ""traits"" failed in Get(): create wxApp before calling this'
+        patterns.append(re.compile(r"create wxApp before calling this"))
+    if not patterns:
+        return errs
+    return "\n".join(
+        line for line in errs.splitlines() if not any(p.search(line) for p in patterns)
+    )
+
+
+def assert_no_kicad_assertion_errors(output: str) -> None:
+    """Assert that the subprocess output contains no KiCad C++ assertion failures.
+
+    KiCad assertion failures have the form:
+      path/to/file.cpp(lineno): assert "condition" failed in Function(): message
+
+    On Linux these are non-fatal (execution continues) but on Windows they
+    raise an error popup, so they must be treated as hard failures.
+    Known-harmless assertions are filtered before checking.
+    """
+    filtered = filter_known_errs(output)
+    pattern = re.compile(r': assert ".*" failed in ')
+    failed = [line for line in filtered.splitlines() if pattern.search(line)]
+    assert not failed, "KiCad assertion failures detected:\n" + "\n".join(failed)

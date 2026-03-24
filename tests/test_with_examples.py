@@ -24,6 +24,7 @@ from xmldiff import actions, main
 from .conftest import (
     KICAD_VERSION,
     add_track,
+    assert_no_kicad_assertion_errors,
     filter_kiacd10_errs,
     generate_drc,
     generate_render,
@@ -85,13 +86,16 @@ def kbplacer_process(
         p = subprocess.Popen(
             kbplacer_args,
             cwd=package_path,
+            stderr=subprocess.PIPE,
+            text=True,
         )
         _, stderr = p.communicate()
         if p.returncode != 0:
             msg = "Switch placement failed"
             if stderr:
-                msg += ": " + str(stderr)
+                msg += ": " + stderr
             raise Exception(msg)
+        assert_no_kicad_assertion_errors(stderr or "")
 
     return _process
 
@@ -132,6 +136,7 @@ def kbplacer_gui_process(
             if stderr:
                 msg += ": " + stderr
             raise Exception(msg)
+        assert_no_kicad_assertion_errors(stderr or "")
 
     return _process
 
