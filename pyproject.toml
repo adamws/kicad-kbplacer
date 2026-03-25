@@ -98,6 +98,7 @@ dependencies = [
   "lzstring==1.0.4",
   "Pillow==10.4.0",
   "pytest==8.3.0",
+  "pytest-benchmark==5.2.3",
   "pytest-cov==7.0.0",
   "pytest-metadata==3.1.1",
   "pytest-html==4.1.1",
@@ -112,6 +113,7 @@ system-packages = true # for `pcbnew` module
 [tool.hatch.envs.test.scripts]
 test = "pytest {args:tests}"
 test-plugin-install = "pytest -c /dev/null --ignore tools --test-plugin-installation --continue-on-collection-errors -k test_with_examples tests"
+benchmark = "pytest tests/test_performance.py --no-cov --benchmark-enable --benchmark-autosave {args}"
 
 [tool.hatch.envs.lint]
 detached = true
