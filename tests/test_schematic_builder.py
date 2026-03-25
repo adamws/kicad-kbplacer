@@ -294,6 +294,35 @@ class TestSchematicBuilderCli:
     @pytest.mark.skipif(
         KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
     )
+    def test_invalid_stabilizer_footprint(
+        self, request, tmpdir, package_path, package_name
+    ) -> None:
+        layout_file = self.example_isolation(
+            request, tmpdir, ("2x2", "kle-annotated.json")
+        )
+        schematic_file = Path(layout_file).with_suffix(".kicad_sch")
+
+        p = self._run_subprocess(
+            package_path,
+            package_name,
+            args={
+                "--layout": layout_file,
+                "--sch-file": str(schematic_file),
+                # valid footprint id but missing the size format placeholder
+                "--stabilizer-footprint": "SomeLib.pretty:Stabilizer_Cherry_MX_2u",
+            },
+        )
+        _, errs = p.communicate()
+
+        assert (
+            "Stabilizer footprint, if defined, must use size-templated definition"
+            in errs
+        )
+        assert p.returncode == 1
+
+    @pytest.mark.skipif(
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
+    )
     def test_wrong_annotation(
         self, request, tmpdir, package_path, package_name
     ) -> None:
