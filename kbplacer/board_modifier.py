@@ -192,18 +192,20 @@ def get_common_layers(p1: pcbnew.PAD, p2: pcbnew.PAD) -> list[int]:
     """Returns list of common layer ids for both of the given pads,
     may be empty if no common layers found
     """
-    set1 = [layer for layer in p1.GetLayerSet().CuStack()]
-    set2 = [layer for layer in p2.GetLayerSet().CuStack()]
-    return list(set(set1).intersection(set2))
+    return list(
+        set(p1.GetLayerSet().CuStack()).intersection(p2.GetLayerSet().CuStack())
+    )
 
 
 def get_common_nets(f1: pcbnew.FOOTPRINT, f2: pcbnew.FOOTPRINT) -> list[int]:
     """Returns list of netcodes which are used by both of the
     given footprints, may be empty if no common nets found
     """
-    codes1 = [p.GetNetCode() for p in f1.Pads()]
-    codes2 = [p.GetNetCode() for p in f2.Pads()]
-    return list(set(codes1).intersection(codes2))
+    return list(
+        set(p.GetNetCode() for p in f1.Pads()).intersection(
+            p.GetNetCode() for p in f2.Pads()
+        )
+    )
 
 
 def get_closest(
