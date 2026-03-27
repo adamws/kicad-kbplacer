@@ -192,7 +192,7 @@ class KeyMatrix:
     def __guess_format(self, guesses: List[str]) -> str:
         for guess in guesses:
             pattern = re.compile(guess.format("(\\d)+"))
-            for net in list(self.matrix_nets()):
+            for net in self.matrix_nets():
                 if re.match(pattern, net):
                     return guess
         # out of luck, getting switches by row,column annotation won't work
