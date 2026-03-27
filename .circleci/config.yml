@@ -42,11 +42,16 @@ jobs:
           command: |
             pip3 install --no-cache-dir hatch
       - run:
-          name: Run tests
+          name: Run representative test case
           command: |
             hatch run test:test --junitxml=test-results/pytest/results.xml \
               -k "2x3-rotations-custom-diode and RAW and PRESET" \
               --no-cov --profile tests/
+      - run:
+          name: Run benchmark
+          command: |
+            # just to check if it works
+            hatch run test:benchmark --benchmark-rounds 3
       - store_artifacts:
           path: report.html
       - store_test_results:

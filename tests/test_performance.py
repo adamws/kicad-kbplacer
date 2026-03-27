@@ -60,9 +60,6 @@ LAYOUT_65: List = [
     # fmt: on
 ]
 
-# Number of benchmark rounds (each round creates a fresh board).
-BENCHMARK_ROUNDS = 50
-
 
 @pytest.mark.performance
 def test_performance_65percent_all_features(
@@ -98,6 +95,8 @@ def test_performance_65percent_all_features(
         add_stabilizers=False,
     )
 
+    rounds = request.config.getoption("--benchmark-rounds")
+
     run_counter = itertools.count()
 
     def setup():
@@ -116,7 +115,7 @@ def test_performance_65percent_all_features(
     benchmark.pedantic(
         run_and_save,
         setup=setup,
-        rounds=BENCHMARK_ROUNDS,
+        rounds=rounds,
         iterations=1,
         warmup_rounds=0,
     )
