@@ -239,11 +239,11 @@ class KeyMatrix:
 
     def matrix_rows(self) -> Set[str]:
         pattern = re.compile(self.row_format.format("(\\d)+"))
-        return set(filter(lambda net: re.match(pattern, net), self.matrix_nets()))
+        return {net for net in self.matrix_nets() if re.match(pattern, net)}
 
     def matrix_columns(self) -> Set[str]:
         pattern = re.compile(self.column_format.format("(\\d)+"))
-        return set(filter(lambda net: re.match(pattern, net), self.matrix_nets()))
+        return {net for net in self.matrix_nets() if re.match(pattern, net)}
 
 
 class KeyboardSwitchIterator:
