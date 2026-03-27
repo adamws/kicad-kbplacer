@@ -9,7 +9,7 @@ import itertools
 import logging
 import os
 import re
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 from typing import (
     Any,
@@ -315,14 +315,14 @@ class MatrixAnnotatedKeyboardSwitchIterator:
         self._keyboard = keyboard
         self._key_matrix = key_matrix
         self._keys = self._keyboard.key_iterator(ignore_alternative=False)
-        self._seen: List[Tuple[str, str]] = []
+        self._seen: Counter[Tuple[str, str]] = Counter()
 
     def __iter__(self):
         return self
 
     def __get_footprint(self, key: Key) -> Optional[pcbnew.FOOTPRINT]:
         matrix_coordinates = MatrixAnnotatedKeyboard.get_matrix_position(key)
-        layout_option = self._seen.count(matrix_coordinates)
+        layout_option = self._seen[matrix_coordinates]
 
         if all(c.isdigit() for c in matrix_coordinates):
             switches = self._key_matrix.switches_references_by_coordinates(
@@ -361,7 +361,7 @@ class MatrixAnnotatedKeyboardSwitchIterator:
             # instead of using choice value use number of already seen switches
             switch = switches[layout_option]
             fp = self._key_matrix.switch_by_reference(switch)
-            self._seen.append(matrix_coordinates)
+            self._seen[matrix_coordinates] += 1
             return fp
         except Exception:
             logger.warning(
