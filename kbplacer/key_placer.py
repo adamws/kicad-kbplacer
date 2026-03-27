@@ -515,23 +515,23 @@ class KeyPlacer(BoardModifier):
 
     def remove_dangling_tracks(self) -> None:
         logger.info("Removing dangling tracks")
-        connectivity = self.get_connectivity()
 
-        any_removed = False
-
-        def _is_dangling(track: pcbnew.PCB_TRACK) -> bool:
+        def _is_dangling(
+            connectivity: pcbnew.CONNECTIVITY_DATA, track: pcbnew.PCB_TRACK
+        ) -> bool:
             if KICAD_VERSION >= (7, 0, 7):
                 return connectivity.TestTrackEndpointDangling(track, False)
             return connectivity.TestTrackEndpointDangling(track)
 
-        for track in self.board.GetTracks():
-            if _is_dangling(track):
-                logger.info(f"Removing {track.m_Uuid.AsString()}")
-                self.board.RemoveNative(track)
-                any_removed = True
-
-        if any_removed:
-            self.remove_dangling_tracks()
+        any_removed = True
+        while any_removed:
+            any_removed = False
+            connectivity = self.get_connectivity()
+            for track in self.board.GetTracks():
+                if _is_dangling(connectivity, track):
+                    logger.info(f"Removing {track.m_Uuid.AsString()}")
+                    self.board.RemoveNative(track)
+                    any_removed = True
 
     def save_connection_template(
         self,
