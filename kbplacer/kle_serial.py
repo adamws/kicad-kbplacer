@@ -368,7 +368,8 @@ class MatrixAnnotatedKeyboard(Keyboard):
         positions = []
         row_prefixes = []
         column_prefixes = []
-        for key in list(self.keys):
+        new_keys = []
+        for key in self.keys:
             if not key.decal:
                 # check if required labels defined correctly
                 position = self.get_matrix_position(key)
@@ -383,7 +384,9 @@ class MatrixAnnotatedKeyboard(Keyboard):
                     positions.append(position)
             if self.__is_alternative(key):
                 self.alternative_keys.append(copy.deepcopy(key))
-                self.keys.remove(key)
+            else:
+                new_keys.append(key)
+        self.keys = new_keys
         # check if all row & column prefixes are equal
         for lst in [row_prefixes, column_prefixes]:
             if not all(x == lst[0] for x in lst):
