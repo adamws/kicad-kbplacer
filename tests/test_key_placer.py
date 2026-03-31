@@ -960,6 +960,76 @@ def test_column_routing(
     assert_board_tracks(expected_tracks, board)
 
 
+@pytest.mark.parametrize(
+    "blocker_position,blocker_rotation",
+    [
+        # The route between SW1 and SW2 is routed SW2.pad1-corner-SW1.pad1.
+        # First segment is the diagonal SW2.pad1(34.29,64.135)-corner(53.34,45.085),
+        # on the line x+y=98.425mm. Rotation 45° aligns pads along that diagonal so
+        # both land on the line: (43.07,55.35) and (44.56,53.87), x+y=98.425mm.
+        ((43.815, 54.61), 45),
+        # Second segment is the vertical corner(53.34,45.085)-SW1.pad1(53.34,35.56).
+        # Rotation 90° puts pads on X=53.34mm within that Y range.
+        # This is the scenario the refactor targeted: first segment would be added
+        # before the collision on the second was detected.
+        ((53.34, 40.3225), 90),
+    ],
+)
+def test_column_routing_blocked_by_collision(
+    tmpdir,
+    request,
+    blocker_position: Tuple[float, float],
+    blocker_rotation: float,
+) -> None:
+    """When a footprint pad collides with either segment of the two-segment route
+    between SW1 and SW2, _route must not add either segment (no partial tracks).
+    All other column connections should be routed normally.
+    """
+    test_dir = request.fspath.dirname
+
+    layout_file = (
+        Path(test_dir) / "data/kle-layouts/typical-column-from-full-layout.json"
+    )
+    keyboard = get_keyboard_from_file(str(layout_file))
+
+    positions = [
+        (57.15, 38.1),
+        (38.1, 66.675),
+        (47.625, 85.725),
+        (52.3875, 112.775),
+        (45.24375, 142.875),
+    ]
+    board = get_board_with_column(request, keyboard, positions)
+
+    blocker = add_diode_footprint(board, request, 99)
+    set_position(blocker, pcbnew.VECTOR2I_MM(*blocker_position))
+    set_rotation(blocker, blocker_rotation)
+    # Note: no Flip needed — routing uses F.Cu, same as D_SOD-323 default side.
+
+    key_matrix = KeyMatrix(board, "SW{}", "")
+    key_placer = KeyPlacer(board)
+    key_placer.route_rows_and_columns(key_matrix)
+
+    save_and_render(board, tmpdir, request)
+
+    added_tracks = board.Tracks()
+    # 8 tracks total in unblocked case; SW1-SW2 needs 2 segments -> 6 remain
+    assert len(added_tracks) == 6
+
+    # SW1.pad1 (53340000, 35560000) and corner (53340000, 45085000) are absent;
+    # all other track endpoints from the unblocked case are still present.
+    expected_remaining_tracks = [
+        (34290000, 64135000),
+        (34290000, 73660000),
+        (43815000, 83185000),
+        (43815000, 105472500),
+        (48577500, 110235000),
+        (48577500, 133191250),
+        (41433750, 140335000),
+    ]
+    assert_board_tracks(expected_remaining_tracks, board)
+
+
 def test_switches_references_by_netname(request) -> None:
     board = get_board_for_2x2_example(request)
     key_matrix = KeyMatrix(board, "SW{}", "D{}")

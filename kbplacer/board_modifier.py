@@ -504,7 +504,7 @@ class BoardModifier:
             logger.debug("Could not add track segment due to detected collision")
             return None
 
-    def add_track_segment_by_points(
+    def _build_track_segment(
         self,
         start: pcbnew.VECTOR2I,
         end: pcbnew.VECTOR2I,
@@ -512,7 +512,7 @@ class BoardModifier:
         layer: int = pcbnew.B_Cu,
         netcode: int = 0,
         width: int = 200000,
-    ) -> Optional[pcbnew.VECTOR2I]:
+    ) -> pcbnew.PCB_TRACK:
         track = pcbnew.PCB_TRACK(self.board)
         track.SetWidth(width)
         track.SetLayer(layer)
@@ -524,6 +524,20 @@ class BoardModifier:
         else:
             track.SetStart(start)
             track.SetEnd(end)
+        return track
+
+    def add_track_segment_by_points(
+        self,
+        start: pcbnew.VECTOR2I,
+        end: pcbnew.VECTOR2I,
+        *,
+        layer: int = pcbnew.B_Cu,
+        netcode: int = 0,
+        width: int = 200000,
+    ) -> Optional[pcbnew.VECTOR2I]:
+        track = self._build_track_segment(
+            start, end, layer=layer, netcode=netcode, width=width
+        )
         return self.add_track_to_board(track)
 
     def route(self, pad1: pcbnew.PAD, pad2: pcbnew.PAD) -> bool:
@@ -619,10 +633,13 @@ class BoardModifier:
         def _route(
             pos1: pcbnew.VECTOR2I, pos2: pcbnew.VECTOR2I, corner: pcbnew.VECTOR2I
         ) -> bool:
-            if end := self.add_track_segment_by_points(pos1, corner, **track_args):
-                end = self.add_track_segment_by_points(end, pos2, **track_args)
-                return end is not None
-            return False
+            track1 = self._build_track_segment(pos1, corner, **track_args)
+            track2 = self._build_track_segment(corner, pos2, **track_args)
+            if self.test_track_collision(track1) or self.test_track_collision(track2):
+                return False
+            self.add_track_to_board(track1)
+            self.add_track_to_board(track2)
+            return True
 
         def _angles_equal(angle1: float, angle2: float) -> bool:
             return abs(angle1 - angle2) <= 0.1
