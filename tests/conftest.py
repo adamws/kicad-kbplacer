@@ -77,6 +77,12 @@ def pytest_addoption(parser) -> None:
         help="Run example tests with cProfile",
         default=False,
     )
+    parser.addoption(
+        "--benchmark-rounds",
+        type=int,
+        default=50,
+        help="Number of rounds for performance benchmark tests (default: 50)",
+    )
 
 
 @pytest.fixture(scope="session")
