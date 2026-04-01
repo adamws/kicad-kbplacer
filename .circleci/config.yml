@@ -482,8 +482,6 @@ workflows:
           matrix:
             parameters:
               kicad-version:
-                - 6.0.11
-                - 7.0.11
                 - 8.0.9
                 - 9.0.8
                 - 10.0.0-1
@@ -491,7 +489,6 @@ workflows:
           matrix:
             parameters:
               kicad-version:
-                - 7.0.11
                 - 8.0.9
                 - 9.0.8
                 - 10.0.0
