@@ -468,7 +468,7 @@ workflows:
                 - 7.0.6-lunar
                 - 7.0.11-mantic
                 - 8.0.9-jammy
-                - 9.0.8-noble
+                - 9.0.9-noble
                 - 10.0.1-noble
       - test-linux-performance:
           matrix:
@@ -500,7 +500,7 @@ workflows:
             parameters:
               version:
                 - 8.0.9-jammy
-                - 9.0.8-noble
+                - 9.0.9-noble
                 - 10.0.1-noble
       - create-pcm-package:
           requires: &required-tests
