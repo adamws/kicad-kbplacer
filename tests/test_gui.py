@@ -17,6 +17,8 @@ from kbplacer.element_position import ElementInfo, ElementPosition, PositionOpti
 from kbplacer.kbplacer_dialog import (
     AnnotationValidator,
     FloatValidator,
+    IntValidator,
+    LayoutPickerValidator,
     WindowState,
     load_window_state_from_log,
 )
@@ -345,6 +347,18 @@ class TestValidators:
         "+42",
         "999999",
     ]
+    INVALID_INT_INPUTS = [
+        "abc",
+        "12a",
+        "1.5",
+        "++1",
+        "--1",
+        "",
+        " ",
+        ".",
+        "-",
+        "+",
+    ]
     VALID_FLOATS = [
         "0.0",
         "123.456",
@@ -419,6 +433,15 @@ class TestValidators:
         assert ctrl.GetValidator().Validate(ctrl.GetParent() or ctrl)
         assert call_count["count"] == 0
 
+    @pytest.mark.parametrize("text", VALID_INTS)
+    def test_valid_int(self, int_ctrl, monkeypatch, text):
+        self.valid(int_ctrl, monkeypatch, text)
+
+    @pytest.mark.parametrize("text", INVALID_INT_INPUTS)
+    def test_invalid_int(self, int_ctrl, monkeypatch, text):
+        expected_err = r"Invalid 'TestInt' value: '.*' is not an integer!"
+        self.invalid(int_ctrl, monkeypatch, text, expected_err)
+
     @pytest.mark.parametrize("text", VALID_FLOATS + VALID_INTS)
     def test_valid_float(self, float_ctrl, monkeypatch, text):
         self.valid(float_ctrl, monkeypatch, text)
@@ -455,3 +478,51 @@ class TestValidators:
             "Received: '.*'"
         )
         self.invalid(annotation_ctrl, monkeypatch, text, expected_err)
+
+    @pytest.fixture
+    def int_ctrl(self, frame):
+        ctrl = wx.TextCtrl(frame, validator=IntValidator(), name="TestInt")
+        frame.Show()
+        return ctrl
+
+    @pytest.fixture
+    def layout_picker_ctrl(self, frame):
+        ctrl = wx.TextCtrl(frame, validator=LayoutPickerValidator())
+        frame.Show()
+        return ctrl
+
+    def test_layout_picker_valid_empty(self, layout_picker_ctrl):
+        layout_picker_ctrl.SetValue("")
+        assert layout_picker_ctrl.GetValidator().Validate(
+            layout_picker_ctrl.GetParent()
+        )
+
+    def test_layout_picker_valid_share_url(self, layout_picker_ctrl):
+        layout_picker_ctrl.SetValue(
+            "https://editor.keyboard-tools.xyz/#share=encoded_data_here"
+        )
+        assert layout_picker_ctrl.GetValidator().Validate(
+            layout_picker_ctrl.GetParent()
+        )
+
+    def test_layout_picker_valid_existing_file(self, layout_picker_ctrl):
+        layout_picker_ctrl.SetValue(__file__)
+        assert layout_picker_ctrl.GetValidator().Validate(
+            layout_picker_ctrl.GetParent()
+        )
+
+    def test_layout_picker_invalid_value(self, layout_picker_ctrl, monkeypatch):
+        captured = {}
+
+        def fake_messagebox(msg, caption, *args, **kwargs):
+            captured["msg"] = msg
+            captured["caption"] = caption
+            return wx.OK
+
+        monkeypatch.setattr(wx, "MessageBox", fake_messagebox)
+
+        layout_picker_ctrl.SetValue("not-a-file-or-url")
+        assert not layout_picker_ctrl.GetValidator().Validate(
+            layout_picker_ctrl.GetParent()
+        )
+        assert captured["caption"] == "Error"

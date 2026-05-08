@@ -20,10 +20,10 @@ from typing import Tuple
 
 import pytest
 import yaml
-from lzstring import LZString
 
 from kbplacer.kle_serial import (
     KEY_MAX_LABELS,
+    KLE_NG_SHARE_PREFIX,
     Key,
     Keyboard,
     KeyboardTag,
@@ -31,6 +31,8 @@ from kbplacer.kle_serial import (
     get_explicit_spacing_from_file,
     get_keyboard,
     get_keyboard_from_file,
+    keyboard_from_url,
+    keyboard_to_url,
     layout_classification,
     parse_ergogen_points,
     parse_kle,
@@ -41,7 +43,6 @@ from kbplacer.kle_serial import (
 from .conftest import add_url_to_report
 
 logger = logging.getLogger(__name__)
-lz = LZString()
 
 
 def __minify(string: str) -> str:
@@ -50,10 +51,8 @@ def __minify(string: str) -> str:
     return string
 
 
-def keyboard_to_url(tmpdir, keyboard: Keyboard) -> None:
-    kle_raw = "[" + keyboard.to_kle() + "]"
-    encoded = lz.compressToEncodedURIComponent(kle_raw)
-    kle_url = "https://editor.keyboard-tools.xyz/#share=" + encoded
+def keyboard_url_to_report(tmpdir, keyboard: Keyboard) -> None:
+    kle_url = keyboard_to_url(keyboard)
     add_url_to_report(tmpdir, kle_url)
 
 
@@ -453,7 +452,7 @@ def test_with_ergogen(tmpdir, example, get_function, request) -> None:
     with open(Path(test_dir) / f"data/ergogen-layouts/{example}.json", "r") as f:
         layout = json.load(f)
         result = get_function(layout)
-        keyboard_to_url(tmpdir, result)
+        keyboard_url_to_report(tmpdir, result)
         assert result == reference
 
 
@@ -611,7 +610,7 @@ def test_with_via_layouts(tmpdir, request, example, get_function, collapses) -> 
         # calling MatrixAnnotatedKeyboard.from_keyboard on
         # MatrixAnnotatedKeyboard must be noop:
         assert MatrixAnnotatedKeyboard.from_keyboard(result) == result
-        keyboard_to_url(tmpdir, result)
+        keyboard_url_to_report(tmpdir, result)
         assert result == _reference_keyboard(f"{example}-internal.json")
         # calling this multiple times should not matter
         for _ in range(0, collapses):
@@ -645,7 +644,7 @@ def test_with_qmk_layouts(tmpdir, request, example, get_function) -> None:
         result = get_function(layout)
         assert isinstance(result, MatrixAnnotatedKeyboard)
         result = result.to_keyboard()
-        keyboard_to_url(tmpdir, result)
+        keyboard_url_to_report(tmpdir, result)
         # qmk layouts are already 'collapsed', i.e. keys are at final positions
         # and there are no duplicates
         reference = get_reference(
@@ -1097,3 +1096,23 @@ def test_get_explicit_spacing_from_file(layout_file, expected_spacing, request) 
 
     result = get_explicit_spacing_from_file(layout_path)
     assert result == expected_spacing
+
+
+def test_keyboard_url_roundtrip_inline() -> None:
+    """Simple inline roundtrip: Keyboard -> URL -> Keyboard."""
+    layout = [["A", "B"]]
+    keyboard = parse_kle(layout)
+    url = keyboard_to_url(keyboard)
+    assert url.startswith(KLE_NG_SHARE_PREFIX)
+    result = keyboard_from_url(url)
+    assert result == keyboard
+
+
+@pytest.mark.parametrize("layout_file,reference_file", __get_parameters())
+def test_keyboard_url_roundtrip(layout_file, reference_file, request) -> None:
+    """Roundtrip known reference layouts through URL encoding."""
+    test_dir = request.fspath.dirname
+    reference = get_reference(Path(test_dir) / reference_file)
+    url = keyboard_to_url(reference)
+    result = keyboard_from_url(url)
+    assert result == reference

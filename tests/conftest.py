@@ -559,7 +559,7 @@ def pytest_runtest_makereport(item, call):
 
 class LinuxVirtualScreenManager:
     def __enter__(self):
-        self.display = SmartDisplay(backend="xvfb", size=(960, 640))
+        self.display = SmartDisplay(backend="xvfb", size=(960, 960))
         self.display.start()
         return self
 

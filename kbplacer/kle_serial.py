@@ -13,11 +13,14 @@ import os
 import pprint
 import re
 import sys
+import webbrowser
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from enum import Enum, auto
 from itertools import chain
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
+
+from .lzstring import LZString
 
 try:
     import yaml
@@ -28,6 +31,9 @@ except ImportError:
     WITH_YAML_SUPPORT = False
 
 logger = logging.getLogger(__name__)
+lz = LZString()
+
+KLE_NG_SHARE_PREFIX = "https://editor.keyboard-tools.xyz/#share="
 
 DEFAULT_KEY_COLOR = "#cccccc"
 DEFAULT_TEXT_COLOR = "#000000"
@@ -1151,6 +1157,19 @@ def layout_classification(keyboard: Keyboard) -> List[KeyboardTag]:
     return tags
 
 
+def keyboard_to_url(keyboard: Keyboard) -> str:
+    kle_raw = "[" + keyboard.to_kle() + "]"
+    encoded = lz.compressToEncodedURIComponent(kle_raw)
+    return KLE_NG_SHARE_PREFIX + encoded
+
+
+def keyboard_from_url(url: str) -> Keyboard:
+    encoded = url.removeprefix(KLE_NG_SHARE_PREFIX)
+    kle_raw = lz.decompressFromEncodedURIComponent(encoded)
+    layout = json.loads(kle_raw)
+    return get_keyboard(layout)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="KLE format converter")
     parser.add_argument("-i", "--in", required=True, help="Layout file")
@@ -1187,6 +1206,11 @@ if __name__ == "__main__":
         ),
     )
     parser.add_argument(
+        "--open-editor",
+        action="store_true",
+        help="Opens layout in kle-ng web editor",
+    )
+    parser.add_argument(
         "--log-level",
         required=False,
         default="WARNING",
@@ -1203,6 +1227,7 @@ if __name__ == "__main__":
     print_result = args.text
     ergogen_filter = args.ergogen_filter
     collapse = args.collapse
+    open_editor = args.open_editor
 
     # set up logger
     logging.basicConfig(
@@ -1249,6 +1274,9 @@ if __name__ == "__main__":
         keyboard = MatrixAnnotatedKeyboard(meta=keyboard.meta, keys=keyboard.keys)
         keyboard.collapse()
         keyboard = keyboard.to_keyboard()
+
+    if open_editor:
+        webbrowser.open(keyboard_to_url(keyboard))
 
     if output_format == "KLE_INTERNAL":
         result = _keyboard_to_kle_internal(keyboard)

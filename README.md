@@ -596,14 +596,6 @@ The `kbplacer` is used by additional tools available in [tools](tools/README.md)
         <td><img src="resources/absolem.svg"/></td>
     </tr>
     <tr>
-        <td><code>layout2url.py</code> - small utility to generate KLE url</td>
-        <td>
-            To open new firefox tab with layout using <a href="http://editor.keyboard-tools.xyz">Keyboard Layout Editor NG</a> run</br>
-            <code>python layout2url.py --in kle.json | xargs firefox</code></br>
-            Example result: <a href="http://editor.keyboard-tools.xyz/#share=NrDeCIENwLgBgL4BpzheAuk4r0Y0A">url</a>
-        </td>
-    </tr>
-    <tr>
         <td>
             <code>layout2openscad.py</code> - generate plate for <a href="https://openscad.org/">openscad</a></br>
             (⚠️ experimental)
