@@ -33,6 +33,7 @@ class BoardBuilder:
         switch_footprint: str,
         diode_footprint: str,
         stabilizer_footprint: Optional[str] = None,
+        encoder_footprint: Optional[str] = None,
     ) -> None:
         # Switches support variable width with template footprints
         self.switch_footprint = SwitchFootprintLoader(switch_footprint)
@@ -41,6 +42,11 @@ class BoardBuilder:
         self.stabilizer_footprint = (
             StabilizerFootprintLoader(stabilizer_footprint)
             if stabilizer_footprint
+            else None
+        )
+        self.encoder_footprint = (
+            FootprintIdentifier.from_str(encoder_footprint)
+            if encoder_footprint
             else None
         )
 
@@ -82,6 +88,15 @@ class BoardBuilder:
             fp.SetValue("SW_stab")
             return self._add_footprint(fp)
         return None
+
+    def _add_encoder_footprint(self, ref: str) -> pcbnew.FOOTPRINT:
+        fp = load_footprint(
+            self.encoder_footprint.library_path,
+            self.encoder_footprint.footprint_name,
+        )
+        fp.SetReference(ref)
+        fp.SetValue("RotaryEncoder_Switch")
+        return self._add_footprint(fp)
 
     def _add_or_get_net(self, netname: str) -> pcbnew.NETINFO_ITEM:
         """Add new net with netname if it does not exist already
@@ -145,56 +160,101 @@ class BoardBuilder:
         for k, position in zip(keys, positions):
             row, column = position
             if position not in progress:
-                switch = self._add_switch_footprint(f"SW{current_ref}", key=k)
-                diode = self._add_diode_footprint(f"D{current_ref}")
+                if k.sm == "rot_ec11":
+                    if not self.encoder_footprint:
+                        msg = "Encoder footprint not configured but layout contains encoder keys"
+                        raise RuntimeError(msg)
+                    encoder = self._add_encoder_footprint(f"SW{current_ref}")
+                    diode = self._add_diode_footprint(f"D{current_ref}")
 
-                if add_stabilizers and uses_stabilizer(k):
-                    self._add_stabilizer_footprint(f"ST{current_ref}", key=k)
+                    encoder_s1 = encoder.FindPadByNumber("S1")
+                    encoder_s2 = encoder.FindPadByNumber("S2")
+                    encoder_s1.SetPinFunction("S1")
+                    encoder_s2.SetPinFunction("S2")
+                    diode_pad1 = diode.FindPadByNumber("1")
+                    diode_pad2 = diode.FindPadByNumber("2")
+                    diode_pad1.SetPinFunction("K")
+                    diode_pad2.SetPinFunction("A")
 
-                switch_pad1 = switch.FindPadByNumber("1")
-                switch_pad2 = switch.FindPadByNumber("2")
-                switch_pad1.SetPinFunction("1")
-                switch_pad2.SetPinFunction("2")
-                diode_pad1 = diode.FindPadByNumber("1")
-                diode_pad2 = diode.FindPadByNumber("2")
-                diode_pad1.SetPinFunction("K")
-                diode_pad2.SetPinFunction("A")
+                    column_name = f"COL{column}" if column.isdigit() else column
+                    net = self._add_or_get_net(column_name)
+                    encoder_s1.SetNet(net)
 
-                column_name = f"COL{column}" if column.isdigit() else column
-                net = self._add_or_get_net(column_name)
-                switch_pad1.SetNet(net)
+                    row_name = f"ROW{row}" if row.isdigit() else row
+                    net = self._add_or_get_net(row_name)
+                    diode_pad1.SetNet(net)
 
-                row_name = f"ROW{row}" if row.isdigit() else row
-                net = self._add_or_get_net(row_name)
-                diode_pad1.SetNet(net)
+                    net = self._add_or_get_net(f"Net-(D{current_ref}-A)")
+                    encoder_s2.SetNet(net)
+                    diode_pad2.SetNet(net)
 
-                net = self._add_or_get_net(f"Net-(D{current_ref}-A)")
-                switch_pad2.SetNet(net)
-                diode_pad2.SetNet(net)
+                    current_ref += 1
+                    progress[position].append(encoder)
+                else:
+                    switch = self._add_switch_footprint(f"SW{current_ref}", key=k)
+                    diode = self._add_diode_footprint(f"D{current_ref}")
 
-                current_ref += 1
-                progress[position].append(switch)
+                    if add_stabilizers and uses_stabilizer(k):
+                        self._add_stabilizer_footprint(f"ST{current_ref}", key=k)
+
+                    switch_pad1 = switch.FindPadByNumber("1")
+                    switch_pad2 = switch.FindPadByNumber("2")
+                    switch_pad1.SetPinFunction("1")
+                    switch_pad2.SetPinFunction("2")
+                    diode_pad1 = diode.FindPadByNumber("1")
+                    diode_pad2 = diode.FindPadByNumber("2")
+                    diode_pad1.SetPinFunction("K")
+                    diode_pad2.SetPinFunction("A")
+
+                    column_name = f"COL{column}" if column.isdigit() else column
+                    net = self._add_or_get_net(column_name)
+                    switch_pad1.SetNet(net)
+
+                    row_name = f"ROW{row}" if row.isdigit() else row
+                    net = self._add_or_get_net(row_name)
+                    diode_pad1.SetNet(net)
+
+                    net = self._add_or_get_net(f"Net-(D{current_ref}-A)")
+                    switch_pad2.SetNet(net)
+                    diode_pad2.SetNet(net)
+
+                    current_ref += 1
+                    progress[position].append(switch)
             else:
-                # this must be alternative layout key, do not need to create nets
+                # alternative layout key, do not need to create nets
                 # or add diode for it. Load the appropriate footprint for this key
-                # and copy net assignments from the default switch.
-                switches = progress[position]
-                default_switch = switches[0]
+                # and copy net assignments from the default footprint at this position.
+                footprints = progress[position]
+                default_fp = footprints[0]
 
-                suffix = ascii_lowercase[len(switches) - 1]
-                switch_reference = default_switch.GetReference() + suffix
-                switch = self._add_switch_footprint(switch_reference, key=k)
-                for pad_number in ("1", "2"):
-                    default_pad = default_switch.FindPadByNumber(pad_number)
-                    new_pad = switch.FindPadByNumber(pad_number)
-                    if default_pad and new_pad:
-                        new_pad.SetNet(default_pad.GetNet())
-                        new_pad.SetPinFunction(pad_number)
+                suffix = ascii_lowercase[len(footprints) - 1]
+                reference = default_fp.GetReference() + suffix
+                if k.sm == "rot_ec11":
+                    if not self.encoder_footprint:
+                        msg = "Encoder footprint not configured but layout contains encoder keys"
+                        raise RuntimeError(msg)
+                    fp = self._add_encoder_footprint(reference)
+                    # default_fp is a switch with pads "1"/"2"; map them to encoder S1/S2
+                    pad_mapping = {"S1": "1", "S2": "2"}
+                    for encoder_pad_number, switch_pad_number in pad_mapping.items():
+                        default_pad = default_fp.FindPadByNumber(switch_pad_number)
+                        new_pad = fp.FindPadByNumber(encoder_pad_number)
+                        if default_pad and new_pad:
+                            new_pad.SetNet(default_pad.GetNet())
+                            new_pad.SetPinFunction(encoder_pad_number)
+                else:
+                    fp = self._add_switch_footprint(reference, key=k)
+                    for pad_number in ("1", "2"):
+                        default_pad = default_fp.FindPadByNumber(pad_number)
+                        new_pad = fp.FindPadByNumber(pad_number)
+                        if default_pad and new_pad:
+                            new_pad.SetNet(default_pad.GetNet())
+                            new_pad.SetPinFunction(pad_number)
 
-                if add_stabilizers and uses_stabilizer(k):
-                    stabilizer_reference = switch_reference.replace("SW", "ST")
-                    self._add_stabilizer_footprint(stabilizer_reference, key=k)
+                    if add_stabilizers and uses_stabilizer(k):
+                        stabilizer_reference = reference.replace("SW", "ST")
+                        self._add_stabilizer_footprint(stabilizer_reference, key=k)
 
-                progress[position].append(switch)
+                progress[position].append(fp)
 
         return self.board

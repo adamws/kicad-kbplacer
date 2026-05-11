@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import shutil
@@ -14,6 +15,9 @@ from pathlib import Path
 import pcbnew
 import pytest
 import sexpdata
+
+from kbplacer.board_builder import BoardBuilder
+from kbplacer.schematic_builder import can_create_schematic, create_schematic
 
 from .conftest import (
     KICAD_VERSION,
@@ -341,3 +345,131 @@ class TestSchematicBuilderCli:
 
         assert "Matrix coordinates label missing or invalid" in errs
         assert p.returncode == 1
+
+
+class TestEncoderBoardSchematic:
+    # Layout: 2x2 matrix with rotary encoder at position (0,1)
+    # Row 0: key "0,0", encoder (sm='rot_ec11'), key "0,1"
+    # Row 1: key (sm=''), key "1,0", key "1,1"
+    # Encoder inherits sm from the dict preceding it in the KLE raw row
+    ENCODER_LAYOUT_1 = [
+        ["0,0", {"sm": "rot_ec11"}, "0,1"],
+        [{"sm": ""}, "1,0", "1,1"],
+    ]
+    # 2 encoders, both as alternative choice for a regular switch,
+    # with a space key forcing use of stabilizer to test if encoder
+    # symbols are placed correctly
+    ENCODER_LAYOUT_2 = [
+        [
+            "0,0\n\n\n0,0",
+            "0,1\n\n\n1,0",
+            {"x": 0.5, "sm": "rot_ec11"},
+            "0,0\n\n\n0,1\n\n\n\n\n\ne0",
+            "0,1\n\n\n1,1\n\n\n\n\n\ne1",
+        ],
+        [{"sm": "", "w": 2}, "1,0"],
+    ]
+
+    @pytest.mark.skipif(
+        KICAD_VERSION < (10, 0, 0), reason="Requires KiCad 10.0 or higher"
+    )
+    @pytest.mark.parametrize(
+        "layout,expected_encoder_count",
+        [
+            (ENCODER_LAYOUT_1, 1),
+            (ENCODER_LAYOUT_2, 2),
+        ],
+    )
+    def test_encoder_board(
+        self, request, tmpdir, layout, expected_encoder_count
+    ) -> None:
+        if not can_create_schematic():
+            pytest.skip("Requires optional schematic dependencies")
+
+        layout_file = Path(tmpdir) / "layout.json"
+        with open(layout_file, "w") as f:
+            json.dump(layout, f)
+
+        pcb_file = Path(tmpdir) / "test.kicad_pcb"
+        schematic_file = Path(tmpdir) / "test.kicad_sch"
+
+        fp_dir = str(get_footprints_dir(request))
+        switch_footprint = fp_dir + ":SW_Cherry_MX_PCB_1.00u"
+        diode_footprint = fp_dir + ":D_SOD-323"
+        encoder_footprint = (
+            fp_dir
+            + ":RotaryEncoder_Alps_EC11E-Switch_Vertical_H20mm_CircularMountingHoles"
+        )
+
+        # Create schematic
+        create_schematic(
+            layout_file,
+            schematic_file,
+            switch_footprint=switch_footprint,
+            diode_footprint=diode_footprint,
+        )
+
+        # Create board
+        builder = BoardBuilder(
+            pcb_file,
+            switch_footprint=switch_footprint,
+            diode_footprint=diode_footprint,
+            encoder_footprint=encoder_footprint,
+        )
+        board = builder.create_board(layout_file)
+        board.Save(str(pcb_file))
+
+        # Verify encoder footprints are present in the board
+        encoder_fps = [
+            f for f in board.GetFootprints() if f.GetValue() == "RotaryEncoder_Switch"
+        ]
+        assert len(encoder_fps) == expected_encoder_count, (
+            f"Expected {expected_encoder_count} encoder footprints, "
+            f"got {len(encoder_fps)}"
+        )
+
+        # Generate netlist from schematic and compare with board nets
+        generate_schematic_image(tmpdir, schematic_file)
+        netlist = generate_netlist(tmpdir, schematic_file)
+        assert netlist.exists()
+        nets_parsed = parse_netlist_file(netlist)
+        for n in nets_parsed:
+            logger.debug(n)
+
+        board_nets = board.GetNetsByNetcode()
+        board_nets_parsed = []
+        for netcode, netinfo in board_nets.items():
+            netinfo_parsed = parse_netinfo_item(netinfo)
+            logger.debug(f"{netcode=} {netinfo_parsed=}")
+            board_nets_parsed.append(netinfo_parsed)
+
+        # Compare nets from schematic and board.
+        # Filter out unconnected nets (encoder A/B/C output pins are
+        # not part of the matrix and are left unconnected in the schematic).
+        def _normalize(nets):
+            if KICAD_VERSION >= (10, 0, 0):
+                # KiCad 10 prefixes locally-labeled schematic nets with '/'
+                # (hierarchical path notation); board nets have no such prefix.
+                return [
+                    (n["name"].lstrip("/"), n["class"])
+                    for n in nets
+                    if int(n["code"]) != 0 and "unconnected" not in n["name"]
+                ]
+            return [
+                (int(n["code"]), n["name"], n["class"])
+                for n in nets
+                if int(n["code"]) != 0 and "unconnected" not in n["name"]
+            ]
+
+        nets_set = set(_normalize(nets_parsed))
+        board_nets_set = set(_normalize(board_nets_parsed))
+
+        assert len(nets_set) == len(board_nets_set), (
+            f"Different number of nets: schematic has {len(nets_set)}, "
+            f"board has {len(board_nets_set)}"
+        )
+        assert nets_set == board_nets_set, (
+            f"Nets mismatch:\n"
+            f"Only in schematic: {nets_set - board_nets_set}\n"
+            f"Only in board: {board_nets_set - nets_set}"
+        )

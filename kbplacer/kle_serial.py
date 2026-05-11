@@ -476,6 +476,7 @@ class MatrixAnnotatedKeyboard(Keyboard):
                 key.labels[self.MATRIX_COORDINATES_LABEL],
                 *_key_center(key),
                 key.decal,
+                key.sm,
             )
             return props
 
@@ -1164,7 +1165,7 @@ def keyboard_to_url(keyboard: Keyboard) -> str:
 
 
 def keyboard_from_url(url: str) -> Keyboard:
-    encoded = url.removeprefix(KLE_NG_SHARE_PREFIX)
+    encoded = url.removeprefix("https://editor.keyboard-tools.xyz/#share=")
     kle_raw = lz.decompressFromEncodedURIComponent(encoded)
     layout = json.loads(kle_raw)
     return get_keyboard(layout)
