@@ -472,12 +472,12 @@ workflows:
                 - 7.0.11-mantic
                 - 8.0.9-jammy
                 - 9.0.9-noble
-                - 10.0.2-noble
+                - 10.0.3-noble
       - test-linux-performance:
           matrix:
             parameters:
               version:
-                - 10.0.2-noble
+                - 10.0.3-noble
       - collect-coverage:
           requires:
             - test-linux
@@ -504,7 +504,7 @@ workflows:
               version:
                 - 8.0.9-jammy
                 - 9.0.9-noble
-                - 10.0.2-noble
+                - 10.0.3-noble
       - create-pcm-package:
           requires: &required-tests
             - test-linux
