@@ -28,6 +28,7 @@ from kbplacer.kle_serial import (
     Keyboard,
     KeyboardTag,
     MatrixAnnotatedKeyboard,
+    apply_via_encoder_switch_mount,
     get_explicit_spacing_from_file,
     get_keyboard,
     get_keyboard_from_file,
@@ -1116,3 +1117,110 @@ def test_keyboard_url_roundtrip(layout_file, reference_file, request) -> None:
     url = keyboard_to_url(reference)
     result = keyboard_from_url(url)
     assert result == reference
+
+
+class TestApplyViaEncoderSwitchMount:
+    def _make_via_keyboard(
+        self, *, num_regular: int = 2, encoder_labels: list
+    ) -> Keyboard:
+        """Build a keyboard with `num_regular` normal keys and one key per
+        encoder label.  Encoders use alignment=7 so the label lands at index 4."""
+        rows = [["0," + str(i) for i in range(num_regular)]]
+        for label in encoder_labels:
+            rows.append([{"a": 7}, label])
+        return parse_kle(rows)
+
+    def test_encoder_keys_get_sm_set(self) -> None:
+        keyboard = self._make_via_keyboard(encoder_labels=["e0", "e1"])
+        apply_via_encoder_switch_mount(keyboard)
+        regular_keys = keyboard.keys[:2]
+        encoder_keys = keyboard.keys[2:]
+        assert all(k.sm == "" for k in regular_keys)
+        assert all(k.sm == "rot_ec11" for k in encoder_keys)
+
+    def test_no_encoders_no_change(self) -> None:
+        keyboard = self._make_via_keyboard(encoder_labels=[])
+        original_sm = [k.sm for k in keyboard.keys]
+        apply_via_encoder_switch_mount(keyboard)
+        assert [k.sm for k in keyboard.keys] == original_sm
+
+    @pytest.mark.parametrize("label", ["e0", "e1", "e10", "e99"])
+    def test_encoder_label_patterns_match(self, label: str) -> None:
+        keyboard = self._make_via_keyboard(encoder_labels=[label])
+        apply_via_encoder_switch_mount(keyboard)
+        assert keyboard.keys[-1].sm == "rot_ec11"
+
+    @pytest.mark.parametrize("label", ["0,0", "enc0", "e", "e0x", "E0"])
+    def test_non_encoder_label_patterns_no_match(self, label: str) -> None:
+        # Place label at index 4 (a=7 alignment) but it must NOT trigger conversion
+        keyboard = parse_kle([[{"a": 7}, label]])
+        apply_via_encoder_switch_mount(keyboard)
+        assert keyboard.keys[0].sm == ""
+
+    def test_existing_sm_not_overwritten_for_non_encoder(self) -> None:
+        keyboard = parse_kle([[{"sm": "myswitch"}, "A"]])
+        apply_via_encoder_switch_mount(keyboard)
+        assert keyboard.keys[0].sm == "myswitch"
+
+    def test_encoder_sm_overwritten(self) -> None:
+        # Even if an encoder already has sm set, conversion updates it
+        keyboard = self._make_via_keyboard(encoder_labels=["e0"])
+        keyboard.keys[-1].sm = "old_value"
+        apply_via_encoder_switch_mount(keyboard)
+        assert keyboard.keys[-1].sm == "rot_ec11"
+
+
+class TestConvertViaEncodersCli(TestKleSerialCli):
+    def test_convert_via_encoders_flag_sets_sm(
+        self, request, tmpdir, package_path, package_name
+    ) -> None:
+        test_dir = request.fspath.dirname
+        layout_file = f"{test_dir}/data/via-layouts/2x2-with-encoders.json"
+        out_file = f"{tmpdir}/result.json"
+
+        p = self._run_subprocess(
+            package_path,
+            package_name,
+            {
+                "--in": layout_file,
+                "--inform": "KLE_VIA",
+                "--out": out_file,
+                "--outform": "KLE_INTERNAL",
+                "--convert-via-encoders": "",
+            },
+        )
+        p.communicate()
+        assert p.returncode == 0
+
+        with open(out_file, "r") as f:
+            result = json.load(f)
+
+        keys = result["keys"]
+        # 2x2 regular keys + 2 encoders
+        assert len(keys) == 6
+        regular_keys = keys[:4]
+        encoder_keys = keys[4:]
+        assert all(k["sm"] == "" for k in regular_keys)
+        assert all(k["sm"] == "rot_ec11" for k in encoder_keys)
+
+    @pytest.mark.parametrize(
+        "inform",
+        ["KLE_RAW", "KLE_INTERNAL", "ERGOGEN_INTERNAL", "QMK"],
+    )
+    def test_convert_via_encoders_requires_kle_via(
+        self, request, tmpdir, package_path, package_name, inform
+    ) -> None:
+        # --convert-via-encoders with any non-KLE_VIA inform must exit non-zero
+        p = self._run_subprocess(
+            package_path,
+            package_name,
+            {
+                "--in": f"{tmpdir}/dummy.json",
+                "--inform": inform,
+                "--outform": "KLE_INTERNAL",
+                "--convert-via-encoders": "",
+            },
+        )
+        _, stderr = p.communicate()
+        assert p.returncode != 0
+        assert "--convert-via-encoders can only be used with --inform KLE_VIA" in stderr

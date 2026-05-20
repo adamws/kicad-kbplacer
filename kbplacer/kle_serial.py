@@ -1158,6 +1158,19 @@ def layout_classification(keyboard: Keyboard) -> List[KeyboardTag]:
     return tags
 
 
+_VIA_ENCODER_LABEL_PATTERN = re.compile(r"^e\d+$")
+_VIA_ENCODER_LABEL_INDEX = 4  # center label (position used by VIA encoder convention)
+
+
+def apply_via_encoder_switch_mount(keyboard: Keyboard) -> None:
+    """Set sm='rot_ec11' on keys that carry a VIA encoder label (e0, e1, …) at
+    the center label position (index 4, used when alignment a=7)."""
+    for key in keyboard.keys:
+        label = key.get_label(_VIA_ENCODER_LABEL_INDEX)
+        if label is not None and _VIA_ENCODER_LABEL_PATTERN.match(label):
+            key.sm = "rot_ec11"
+
+
 def keyboard_to_url(keyboard: Keyboard) -> str:
     kle_raw = "[" + keyboard.to_kle() + "]"
     encoded = lz.compressToEncodedURIComponent(kle_raw)
@@ -1212,6 +1225,14 @@ if __name__ == "__main__":
         help="Opens layout in kle-ng web editor",
     )
     parser.add_argument(
+        "--convert-via-encoders",
+        action="store_true",
+        help=(
+            "Detect VIA encoder keys (center label matching e0, e1, …) and set "
+            "sm='rot_ec11' on them. Only valid with --inform KLE_VIA"
+        ),
+    )
+    parser.add_argument(
         "--log-level",
         required=False,
         default="WARNING",
@@ -1229,11 +1250,15 @@ if __name__ == "__main__":
     ergogen_filter = args.ergogen_filter
     collapse = args.collapse
     open_editor = args.open_editor
+    convert_via_encoders = args.convert_via_encoders
 
     # set up logger
     logging.basicConfig(
         level=args.log_level, format="%(asctime)s: %(message)s", datefmt="%H:%M:%S"
     )
+
+    if convert_via_encoders and input_format != "KLE_VIA":
+        parser.error("--convert-via-encoders can only be used with --inform KLE_VIA")
 
     if input_format == output_format and not collapse:
         print("Output format equal input format, nothing to do...")
@@ -1264,6 +1289,8 @@ if __name__ == "__main__":
         # internal representation and it is not the same thing
         # as KLE_INTERNAL format, so it is not used here
         keyboard = parse_kle(layout["layouts"]["keymap"])
+        if convert_via_encoders:
+            apply_via_encoder_switch_mount(keyboard)
     elif input_format == "KLE_INTERNAL":
         keyboard = Keyboard.from_json(layout)
     elif input_format == "ERGOGEN_INTERNAL":
