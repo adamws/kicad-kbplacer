@@ -332,6 +332,18 @@ def app() -> None:
         ),
     )
     parser.add_argument(
+        "--encoder-adjustment",
+        default=None,
+        action=XYAction,
+        help=(
+            "X and Y adjustment offset for encoder footprints in mm, "
+            "as two space separated numeric values. "
+            "Applied to encoder keys (sm='rot_ec11') to compensate for "
+            "the footprint reference point not being at the body center.\n"
+            'For example: --encoder-adjustment "-7.5 -2.5"'
+        ),
+    )
+    parser.add_argument(
         "-t",
         "--template",
         required=False,
@@ -522,6 +534,7 @@ def app() -> None:
         diode_footprint=args.diode_footprint,
         stabilizer_footprint=args.stabilizer_footprint,
         add_stabilizers=args.add_stabilizers,
+        encoder_adjustment=args.encoder_adjustment,
     )
 
     if args.create_sch_file:

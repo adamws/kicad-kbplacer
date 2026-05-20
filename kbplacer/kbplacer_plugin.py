@@ -40,6 +40,7 @@ class PluginSettings:
     stabilizer_footprint: str
     layout_offset: Optional[Tuple[float, float]] = None
     add_stabilizers: bool = True
+    encoder_adjustment: Optional[Tuple[float, float]] = None
 
 
 def run_schematic(settings: PluginSettings):
@@ -82,6 +83,7 @@ def run_board(settings: PluginSettings) -> pcbnew.BOARD:
         optimize_diodes_orientation=settings.optimize_diodes_orientation,
         key_distance=settings.key_distance,
         layout_offset=settings.layout_offset,
+        encoder_adjustment=settings.encoder_adjustment,
     )
 
     if settings.generate_outline:

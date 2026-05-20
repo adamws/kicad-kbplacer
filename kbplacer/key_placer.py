@@ -747,6 +747,7 @@ class KeyPlacer(BoardModifier):
         key_info: ElementInfo,
         key_distance: Optional[Tuple[float, float]] = None,
         layout_offset: Optional[Tuple[float, float]] = None,
+        encoder_adjustment: Optional[Tuple[float, float]] = None,
     ) -> None:
         key_position = key_info.position
         start_index = key_info.start_index
@@ -804,6 +805,10 @@ class KeyPlacer(BoardModifier):
                 )
                 + offset
             )
+            if encoder_adjustment and key.sm == "rot_ec11":
+                position = position + pcbnew.VECTOR2I_MM(
+                    encoder_adjustment[0], encoder_adjustment[1]
+                )
             set_position(switch_footprint, position)
 
             angle = key.rotation_angle
@@ -1104,6 +1109,7 @@ class KeyPlacer(BoardModifier):
         optimize_diodes_orientation: bool = False,
         key_distance: Optional[Tuple[float, float]] = None,
         layout_offset: Optional[Tuple[float, float]] = None,
+        encoder_adjustment: Optional[Tuple[float, float]] = None,
     ) -> None:
         if key_info.start_index < 0:
             logger.warning(
@@ -1171,7 +1177,12 @@ class KeyPlacer(BoardModifier):
                 # can be called only once:
                 keyboard.collapse()
             self.place_switches(
-                keyboard, key_matrix, key_info, key_distance, layout_offset
+                keyboard,
+                key_matrix,
+                key_info,
+                key_distance,
+                layout_offset,
+                encoder_adjustment=encoder_adjustment,
             )
 
         logger.info(f"Diode info: {diode_infos}")

@@ -7,6 +7,7 @@ from __future__ import annotations
 import copy
 import json
 import logging
+import math
 import re
 from contextlib import contextmanager
 from enum import Enum, auto
@@ -54,6 +55,12 @@ from .conftest import (
 )
 
 logger = logging.getLogger(__name__)
+
+ENCODER_FOOTPRINT = (
+    "RotaryEncoder_Alps_EC11E-Switch_Vertical_H20mm_CircularMountingHoles"
+)
+# Shaft center (fp_circle center) offset from footprint reference point (pad A) in mm
+ENCODER_SHAFT_CENTER_OFFSET = (7.5, 2.5)
 
 
 def get_board_with_one_switch(
@@ -1117,3 +1124,106 @@ def test_stab_rotation_applied_to_st_element_only(request) -> None:
     assert get_orientation(stab) == -90
     # Non-stabilizer LED should be unaffected.
     assert get_orientation(led) == 0
+
+
+def _encoder_shaft_center(encoder_footprint: pcbnew.FOOTPRINT) -> pcbnew.VECTOR2I:
+    """Return world position of the encoder shaft center after placement/rotation."""
+    pos = get_position(encoder_footprint)
+    # get_orientation returns CCW-positive (KiCad convention); negate for CW-screen
+    # so local footprint coords are correctly mapped to world coords.
+    # CW screen-coords rotation: x' = x*cos - y*sin, y' = x*sin + y*cos
+    angle = -get_orientation(encoder_footprint)
+    rad = math.radians(angle)
+    sx, sy = ENCODER_SHAFT_CENTER_OFFSET
+    # Round to 6 decimal places
+    shaft_x = round(sx * math.cos(rad) - sy * math.sin(rad), 6)
+    shaft_y = round(sx * math.sin(rad) + sy * math.cos(rad), 6)
+    return pos + pcbnew.VECTOR2I_MM(shaft_x, shaft_y)
+
+
+@pytest.mark.skipif(KICAD_VERSION < (10, 0, 0), reason="Requires KiCad 10.0 or higher")
+def test_encoder_position_simple(tmpdir, request) -> None:
+    key_distance = (19.05, 19.05)
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
+    diode_info = ElementInfo("D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, "")
+
+    regular_layout_path = f"{tmpdir}/regular.json"
+    with open(regular_layout_path, "w") as f:
+        json.dump([["", ""]], f)
+
+    board_regular = pcbnew.CreateEmptyBoard()
+    add_switch_footprint(board_regular, request, 1)
+    add_switch_footprint(board_regular, request, 2)
+    KeyPlacer(board_regular).run(
+        regular_layout_path, key_info, diode_info, key_distance=key_distance
+    )
+    reference_pos = get_position(get_footprint(board_regular, "SW2"))
+
+    encoder_layout_path = f"{tmpdir}/encoder.json"
+    with open(encoder_layout_path, "w") as f:
+        json.dump([["", {"sm": "rot_ec11"}, ""]], f)
+
+    board_encoder = pcbnew.CreateEmptyBoard()
+    add_switch_footprint(board_encoder, request, 1)
+    add_switch_footprint(board_encoder, request, 2, footprint=ENCODER_FOOTPRINT)
+    KeyPlacer(board_encoder).run(
+        encoder_layout_path,
+        key_info,
+        diode_info,
+        key_distance=key_distance,
+        encoder_adjustment=(
+            -ENCODER_SHAFT_CENTER_OFFSET[0],
+            -ENCODER_SHAFT_CENTER_OFFSET[1],
+        ),
+    )
+
+    save_and_render(board_encoder, tmpdir, request)
+
+    encoder_fp = get_footprint(board_encoder, "SW2")
+    assert _encoder_shaft_center(encoder_fp) == reference_pos
+
+
+@pytest.mark.skipif(KICAD_VERSION < (10, 0, 0), reason="Requires KiCad 10.0 or higher")
+def test_encoder_position_with_rotation(tmpdir, request) -> None:
+    key_distance = (19.05, 19.05)
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
+    diode_info = ElementInfo("D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, "")
+
+    rotation_props = {"r": 45, "rx": 1, "ry": 1, "y": -1}
+    regular_layout = [[""], [{**rotation_props}, ""]]
+    encoder_layout = [[""], [{**rotation_props, "sm": "rot_ec11"}, ""]]
+
+    regular_layout_path = f"{tmpdir}/regular.json"
+    with open(regular_layout_path, "w") as f:
+        json.dump(regular_layout, f)
+
+    board_regular = pcbnew.CreateEmptyBoard()
+    add_switch_footprint(board_regular, request, 1)
+    add_switch_footprint(board_regular, request, 2)
+    KeyPlacer(board_regular).run(
+        regular_layout_path, key_info, diode_info, key_distance=key_distance
+    )
+    reference_pos = get_position(get_footprint(board_regular, "SW2"))
+
+    encoder_layout_path = f"{tmpdir}/encoder.json"
+    with open(encoder_layout_path, "w") as f:
+        json.dump(encoder_layout, f)
+
+    board_encoder = pcbnew.CreateEmptyBoard()
+    add_switch_footprint(board_encoder, request, 1)
+    add_switch_footprint(board_encoder, request, 2, footprint=ENCODER_FOOTPRINT)
+    KeyPlacer(board_encoder).run(
+        encoder_layout_path,
+        key_info,
+        diode_info,
+        key_distance=key_distance,
+        encoder_adjustment=(
+            -ENCODER_SHAFT_CENTER_OFFSET[0],
+            -ENCODER_SHAFT_CENTER_OFFSET[1],
+        ),
+    )
+
+    save_and_render(board_encoder, tmpdir, request)
+
+    encoder_fp = get_footprint(board_encoder, "SW2")
+    assert _encoder_shaft_center(encoder_fp) == reference_pos
