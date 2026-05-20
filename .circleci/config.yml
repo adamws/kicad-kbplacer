@@ -263,10 +263,14 @@ jobs:
             elif [ "<<parameters.kicad-version>>" = "10.0.2" ]; then
               revision=0d849b5089048cedb8108de635820233b2c1050a
               filepath=Casks/k/kicad.rb
+            elif [ "<<parameters.kicad-version>>" = "10.0.3" ]; then
+              revision=92a6bada7efb4639f3f7bfe82022363564088b02
+              filepath=Casks/k/kicad.rb
             else
               echo "Unsupported KiCad version!"
             fi
             curl -L https://raw.githubusercontent.com/Homebrew/homebrew-cask/$revision/$filepath > kicad.rb
+            sed -i '' 's/depends_on macos: :big_sur/depends_on macos: ">= :big_sur"/' kicad.rb
             brew install kicad.rb
             rm kicad.rb
       - run:
@@ -490,14 +494,14 @@ workflows:
               kicad-version:
                 - 8.0.9
                 - 9.0.8
-                - 10.0.2
+                - 10.0.3
       - test-macos:
           matrix:
             parameters:
               kicad-version:
                 - 8.0.9
                 - 9.0.8
-                - 10.0.2
+                - 10.0.3
       - run-tools-sanity-checks:
           matrix:
             parameters:
