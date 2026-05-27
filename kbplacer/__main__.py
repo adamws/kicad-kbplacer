@@ -427,6 +427,18 @@ def app() -> None:
         ),
     )
     parser.add_argument(
+        "--encoder-footprint",
+        required=False,
+        default="",
+        action=FootprintIdentifierAction,
+        help=(
+            "Encoder footprint identifier.\n"
+            "Follows same semantic as --switch-footprint option.\n"
+            "Required when `--create-pcb-file` or `--create-sch-file` is used\n"
+            "with a layout containing encoders."
+        ),
+    )
+    parser.add_argument(
         "--log-level",
         required=False,
         default="WARNING",
@@ -533,6 +545,7 @@ def app() -> None:
         switch_footprint=args.switch_footprint,
         diode_footprint=args.diode_footprint,
         stabilizer_footprint=args.stabilizer_footprint,
+        encoder_footprint=args.encoder_footprint,
         add_stabilizers=args.add_stabilizers,
         encoder_adjustment=args.encoder_adjustment,
     )

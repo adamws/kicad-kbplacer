@@ -52,6 +52,7 @@ def get_default(board_path: str) -> PluginSettings:
         switch_footprint="",
         diode_footprint="",
         stabilizer_footprint="",
+        encoder_footprint="",
         layout_offset=None,
     )
 
@@ -400,6 +401,31 @@ def expects_settings(default_difference: Dict):
         #   - Windows path without .pretty extension
         (
             ["--switch-footprint", r"C:\kicad\footprints\library:FootprintName"],
+            pytest.raises(ArgumentTypeError,
+                match=r"invalid footprint identifier, library path must end with '.pretty'"
+            ),
+        ),
+        # valid encoder footprint
+        (
+            ["--encoder-footprint", "/usr/share/kicad/footprints/Encoder.pretty:EC11"],
+            expects_settings({"encoder_footprint": "/usr/share/kicad/footprints/Encoder.pretty:EC11"}),
+        ),
+        #   - encoder footprint with relative path
+        (
+            ["--encoder-footprint", "footprints/MyEncoders.pretty:EC11"],
+            expects_settings({"encoder_footprint": "footprints/MyEncoders.pretty:EC11"}),
+        ),
+        # invalid encoder footprint option values
+        #   - missing colon
+        (
+            ["--encoder-footprint", "/path/to/library.pretty/EC11"],
+            pytest.raises(ArgumentTypeError,
+                match=r"invalid footprint identifier, it must contain at least one ':' separator"
+            ),
+        ),
+        #   - library path missing .pretty
+        (
+            ["--encoder-footprint", "/path/to/library:EC11"],
             pytest.raises(ArgumentTypeError,
                 match=r"invalid footprint identifier, library path must end with '.pretty'"
             ),

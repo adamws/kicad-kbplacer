@@ -1300,6 +1300,7 @@ def create_schematic(
     switch_footprint="",
     diode_footprint="",
     stabilizer_footprint="",
+    encoder_footprint="",
     add_stabilizers: bool = True,
 ) -> None:
     if not can_create_schematic():
@@ -1403,6 +1404,11 @@ def create_schematic(
         base_diode.property.Footprint.value = diode_identifier.format_for_schematic()
 
     base_encoder = sch.symbol.reference_startswith("ROT")[0]
+    if encoder_footprint:
+        encoder_identifier = FootprintIdentifier.from_str(encoder_footprint)
+        base_encoder.property.Footprint.value = (
+            encoder_identifier.format_for_schematic()
+        )
 
     progress: Dict[Tuple[int, int], List[str]] = defaultdict(list)
     diode_connection_positions = dict()
