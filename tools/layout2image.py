@@ -21,6 +21,7 @@ from kbplacer.kle_serial import (
     Key,
     Keyboard,
     MatrixAnnotatedKeyboard,
+    apply_via_encoder_switch_mount,
     get_keyboard_from_file,
 )
 
@@ -72,19 +73,83 @@ def rotate(origin, point, angle):
     return qx, qy
 
 
-def build_key(key: Key):
-    group = dw.Group()
-    not_rectangle = key.width != key.width2 or key.height != key.height2
+ENCODER_LABEL_X_POSITION = [
+    (lambda _: KEYTOP_GAP_LEFT_PX + 5, "start"),
+    (lambda width: width * KEY_WIDTH_PX / 2, "middle"),
+    (lambda width: width * KEY_WIDTH_PX - KEYTOP_GAP_LEFT_PX - 5, "end"),
+]
+ENCODER_LABEL_Y_POSITION = [
+    (lambda _: KEYTOP_GAP_TOP_PX + 7, "hanging"),
+    (lambda height: height * KEY_HEIGHT_PX / 2, "middle"),
+    (lambda height: height * KEY_HEIGHT_PX - KEYTOP_GAP_BOTTOM_PX - 2, "auto"),
+    (lambda height: height * KEY_HEIGHT_PX - 2, "auto"),
+]
 
-    # some layouts used to fail due to: 'input #ccccccc is not in #RRGGBB format',
-    # truncate too long strings, if color is still illegal then use default
+
+def _get_colors(key: Key) -> tuple[str, str]:
     dark_color = key.color[0:7]
     try:
         sRGBColor.new_from_rgb_hex(dark_color)
     except Exception:
         logger.warning(f"Illegal color ('{dark_color}') value found, using default")
         dark_color = "#cccccc"
-    light_color = lighten_color(dark_color)
+    return dark_color, lighten_color(dark_color)
+
+
+def _build_encoder(key: Key) -> dw.Group:
+    group = dw.Group()
+    dark_color, light_color = _get_colors(key)
+
+    w = key.width * KEY_WIDTH_PX
+    h = key.height * KEY_HEIGHT_PX
+    cx = w / 2
+    cy = h / 2
+    outer_r = min(w, h) / 2
+
+    if not key.decal:
+        group.append(
+            dw.Circle(
+                cx,
+                cy,
+                outer_r - KEY_STROKE_WIDTH / 2,
+                fill="none",
+                stroke="black",
+                stroke_width=KEY_STROKE_WIDTH,
+            )
+        )
+        group.append(dw.Circle(cx, cy, outer_r - KEY_STROKE_WIDTH, fill=dark_color))
+        keytop_r = (outer_r - KEY_STROKE_WIDTH) * 0.85
+        group.append(dw.Circle(cx, cy, keytop_r, fill=light_color))
+
+    for i, label in enumerate(key.labels):
+        if label:
+            lines = label.split("<br>")
+            position_x = ENCODER_LABEL_X_POSITION[i % 3]
+            position_y = ENCODER_LABEL_Y_POSITION[int(i / 3)]
+            label_size = LABEL_SIZES[int(i / 3)]
+            group.append(
+                dw.Text(
+                    lines,
+                    font_size=label_size,
+                    x=position_x[0](key.width),
+                    y=position_y[0](key.height),
+                    text_anchor=position_x[1],
+                    dominant_baseline=position_y[1],
+                )
+            )
+    return group
+
+
+def build_key(key: Key):
+    if key.sm == "rot_ec11":
+        return _build_encoder(key)
+
+    group = dw.Group()
+    not_rectangle = key.width != key.width2 or key.height != key.height2
+
+    # some layouts used to fail due to: 'input #ccccccc is not in #RRGGBB format',
+    # truncate too long strings, if color is still illegal then use default
+    dark_color, light_color = _get_colors(key)
 
     def border(x, y, w, h) -> dw.Rectangle:  # pyright: ignore
         return dw.Rectangle(
@@ -175,8 +240,10 @@ def calcualte_canvas_corners(key_iterator: Iterator) -> tuple[int, int, int, int
     return min_x, min_y, max_x + 2 * ORIGIN_X, max_y + 2 * ORIGIN_Y
 
 
-def create_images(input_path: str, output_path):
+def create_images(input_path: str, output_path, *, convert_via_encoders: bool = False):
     _keyboard: Keyboard = get_keyboard_from_file(input_path)
+    if convert_via_encoders:
+        apply_via_encoder_switch_mount(_keyboard)
 
     def _get_iterator():
         if isinstance(_keyboard, MatrixAnnotatedKeyboard):
@@ -226,6 +293,14 @@ if __name__ == "__main__":
         help="Override output if already exists",
     )
     parser.add_argument(
+        "--convert-via-encoders",
+        action="store_true",
+        help=(
+            "Detect VIA encoder keys (center label matching e0, e1, ...) and render "
+            "them as encoders"
+        ),
+    )
+    parser.add_argument(
         "--log-level",
         required=False,
         default="WARNING",
@@ -238,6 +313,7 @@ if __name__ == "__main__":
     input_path = getattr(args, "in")
     output_path = getattr(args, "out")
     force = args.force
+    convert_via_encoders = args.convert_via_encoders
 
     # set up logger
     logging.basicConfig(
@@ -250,4 +326,4 @@ if __name__ == "__main__":
         logger.error(f"Output file '{output_path}' already exists, exiting...")
         sys.exit(1)
 
-    create_images(input_path, output_path)
+    create_images(input_path, output_path, convert_via_encoders=convert_via_encoders)
