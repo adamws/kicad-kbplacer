@@ -173,12 +173,18 @@ dependencies = [
   "colormath==3.0.0",
   "drawsvg==2.4.0",
   "PyYAML==6.0.1",
-  "shapely==2.0.6",
-  "solidpython==1.1.3",
   "pytest>=6.0.0",
 ]
 [tool.hatch.envs.tools.scripts]
 layout2image = "python tools/layout2image.py {args}"
-layout2openscad = "python tools/layout2openscad.py {args}"
 kle2kle = "python tools/kle2kle.py {args}"
 test = "python tools/run_tests.py {args}"
+
+[tool.hatch.envs.tools-openscad]
+dependencies = [
+  "shapely==2.0.6",
+  "solidpython==1.1.3",
+  "PyYAML==6.0.1",
+]
+[tool.hatch.envs.tools-openscad.scripts]
+layout2openscad = "python tools/layout2openscad.py {args}"
