@@ -1162,13 +1162,16 @@ _VIA_ENCODER_LABEL_PATTERN = re.compile(r"^e\d+$")
 _VIA_ENCODER_LABEL_INDEX = 4  # center label (position used by VIA encoder convention)
 
 
-def apply_via_encoder_switch_mount(keyboard: Keyboard) -> None:
-    """Set sm='rot_ec11' on keys that carry a VIA encoder label (e0, e1, …) at
-    the center label position (index 4, used when alignment a=7)."""
+def apply_via_encoder_switch_mount(keyboard: Keyboard, clear: bool = False) -> None:
+    """Set sm='rot_ec11' on keys that carry a VIA encoder label (e0, e1, ...) at
+    the center label position (index 4, used when alignment a=7)
+    and optionally clear that label"""
     for key in keyboard.keys:
         label = key.get_label(_VIA_ENCODER_LABEL_INDEX)
         if label is not None and _VIA_ENCODER_LABEL_PATTERN.match(label):
             key.sm = "rot_ec11"
+        if clear:
+            key.set_label(_VIA_ENCODER_LABEL_INDEX, "")
 
 
 def keyboard_to_url(keyboard: Keyboard) -> str:

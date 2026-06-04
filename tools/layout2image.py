@@ -243,7 +243,7 @@ def calcualte_canvas_corners(key_iterator: Iterator) -> tuple[int, int, int, int
 def create_images(input_path: str, output_path, *, convert_via_encoders: bool = False):
     _keyboard: Keyboard = get_keyboard_from_file(input_path)
     if convert_via_encoders:
-        apply_via_encoder_switch_mount(_keyboard)
+        apply_via_encoder_switch_mount(_keyboard, True)
 
     def _get_iterator():
         if isinstance(_keyboard, MatrixAnnotatedKeyboard):
