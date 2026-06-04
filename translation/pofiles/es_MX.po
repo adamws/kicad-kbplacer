@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-03-29 17:59+0200\n"
+"POT-Creation-Date: 2026-06-04 13:39+0200\n"
 "PO-Revision-Date: 2024-02-15 17:02+0000\n"
 "Last-Translator: Ulices <hasecilu@tuta.io>\n"
 "Language-Team: Spanish (Mexico) <https://hosted.weblate.org/projects/kicad-"
@@ -34,13 +34,19 @@ msgstr "Guardar en:"
 msgid "Load from:"
 msgstr "Cargar desde:"
 
-msgid "Keyboard layout file:"
-msgstr "Archivo de diseño de teclado:"
+msgid "Keyboard Layout:"
+msgstr "Diseño de teclado:"
+
+msgid "Layout file or kle-ng share link"
+msgstr ""
 
 msgid "How many millimeters 1U spans between switches horizontally"
 msgstr ""
 
 msgid "How many millimeters 1U spans between switches vertically"
+msgstr ""
+
+msgid "Layout filepath or kle-ng share URL"
 msgstr ""
 
 msgid "Start index"
@@ -92,3 +98,9 @@ msgstr ""
 
 msgid "Other settings"
 msgstr "Otras configuraciones"
+
+msgid "Open in Keyboard Layout Editor NG"
+msgstr ""
+
+msgid "Actions"
+msgstr ""

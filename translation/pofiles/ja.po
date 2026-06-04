@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-03-29 17:59+0200\n"
+"POT-Creation-Date: 2026-06-04 13:39+0200\n"
 "PO-Revision-Date: 2023-07-14 20:04+0200\n"
 "Last-Translator: Google translate\n"
 "Language-Team: none\n"
@@ -31,13 +31,19 @@ msgstr ""
 msgid "Load from:"
 msgstr ""
 
-msgid "Keyboard layout file:"
-msgstr "キーボードレイアウトファイル:"
+msgid "Keyboard Layout:"
+msgstr "キーボードレイアウト:"
+
+msgid "Layout file or kle-ng share link"
+msgstr ""
 
 msgid "How many millimeters 1U spans between switches horizontally"
 msgstr ""
 
 msgid "How many millimeters 1U spans between switches vertically"
+msgstr ""
+
+msgid "Layout filepath or kle-ng share URL"
 msgstr ""
 
 msgid "Start index"
@@ -89,3 +95,9 @@ msgstr ""
 
 msgid "Other settings"
 msgstr "その他の設定"
+
+msgid "Open in Keyboard Layout Editor NG"
+msgstr ""
+
+msgid "Actions"
+msgstr ""

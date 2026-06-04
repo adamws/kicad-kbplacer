@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-03-29 17:59+0200\n"
+"POT-Creation-Date: 2026-06-04 13:39+0200\n"
 "PO-Revision-Date: 2025-12-07 09:00+0000\n"
 "Last-Translator: Stefan Bjornelund the Gnome "
 "<stefan.bjornelund.gnome@gmail.com>\n"
@@ -35,13 +35,19 @@ msgstr "Spara till:"
 msgid "Load from:"
 msgstr "Ladda från:"
 
-msgid "Keyboard layout file:"
-msgstr "Tangentbordslayoutsfil:"
+msgid "Keyboard Layout:"
+msgstr "Tangentbordslayout:"
+
+msgid "Layout file or kle-ng share link"
+msgstr ""
 
 msgid "How many millimeters 1U spans between switches horizontally"
 msgstr ""
 
 msgid "How many millimeters 1U spans between switches vertically"
+msgstr ""
+
+msgid "Layout filepath or kle-ng share URL"
 msgstr ""
 
 msgid "Start index"
@@ -93,3 +99,9 @@ msgstr ""
 
 msgid "Other settings"
 msgstr "Andra inställningar"
+
+msgid "Open in Keyboard Layout Editor NG"
+msgstr ""
+
+msgid "Actions"
+msgstr ""

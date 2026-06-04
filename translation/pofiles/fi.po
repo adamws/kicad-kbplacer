@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-03-29 17:59+0200\n"
+"POT-Creation-Date: 2026-06-04 13:39+0200\n"
 "PO-Revision-Date: 2024-11-28 14:00+0000\n"
 "Last-Translator: Ricky Tigg <ricky.tigg@gmail.com>\n"
 "Language-Team: Finnish <https://hosted.weblate.org/projects/kicad-kbplacer/"
@@ -33,13 +33,19 @@ msgstr "Tallenna kohteeseen:"
 msgid "Load from:"
 msgstr "Lataa tästä:"
 
-msgid "Keyboard layout file:"
-msgstr "Näppäimistön asettelutiedosto:"
+msgid "Keyboard Layout:"
+msgstr "Näppäimistön asettelu:"
+
+msgid "Layout file or kle-ng share link"
+msgstr ""
 
 msgid "How many millimeters 1U spans between switches horizontally"
 msgstr ""
 
 msgid "How many millimeters 1U spans between switches vertically"
+msgstr ""
+
+msgid "Layout filepath or kle-ng share URL"
 msgstr ""
 
 msgid "Start index"
@@ -91,3 +97,9 @@ msgstr ""
 
 msgid "Other settings"
 msgstr "Muut asetukset"
+
+msgid "Open in Keyboard Layout Editor NG"
+msgstr ""
+
+msgid "Actions"
+msgstr ""
