@@ -473,3 +473,42 @@ class TestEncoderBoardSchematic:
             f"Only in schematic: {nets_set - board_nets_set}\n"
             f"Only in board: {board_nets_set - nets_set}"
         )
+
+    @pytest.mark.skipif(
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
+    )
+    def test_single_encoder_key(self, tmpdir) -> None:
+        # Regression test: a layout whose only key is a rotary encoder has no
+        # regular matrix keys, so no row/column labels are created and
+        # `labels_positions` ends up empty. Stabilizer/encoder placement used
+        # to call min() on that empty mapping and crash with
+        # `ValueError: min() iterable argument is empty`. Placement must now
+        # succeed and still emit the encoder symbol.
+        if not can_create_schematic():
+            pytest.skip("Requires optional schematic dependencies")
+
+        # `sm` is sticky in KLE and applies to the following key, making "0,0"
+        # a rotary encoder.
+        layout = [[{"sm": "rot_ec11"}, "0,0"]]
+        layout_file = Path(tmpdir) / "layout.json"
+        with open(layout_file, "w") as f:
+            json.dump(layout, f)
+
+        schematic_file = Path(tmpdir) / "test.kicad_sch"
+
+        # Must not raise.
+        create_schematic(layout_file, schematic_file)
+        assert schematic_file.exists()
+
+        # Generate netlist from schematic
+        generate_schematic_image(tmpdir, schematic_file)
+
+        with open(schematic_file, "r") as f:
+            schematic_sexp = sexpdata.load(f)
+        encoder_symbols = [
+            s
+            for s in find_children(schematic_sexp, "symbol")
+            if (lib_id := find_child(s, "lib_id")) is not None
+            and lib_id[1] == "Device:RotaryEncoder_Switch"
+        ]
+        assert len(encoder_symbols) == 1

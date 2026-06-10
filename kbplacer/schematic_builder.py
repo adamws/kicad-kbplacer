@@ -1528,10 +1528,18 @@ def create_schematic(
         progress[position].append(switch_reference)
 
     # Placing stabilizers after we are done with key matrix because it makes it easier to position.
-    # Get leftmost label and start placing stabilizer symbols below it
-    stabilizer_position = min(labels_positions.values(), key=lambda p: p.value[0])
-    stabilizer_x = stabilizer_position.value[0]
-    stabilizer_y = stabilizer_position.value[1] + 20
+    # Get leftmost label and start placing stabilizer symbols below it.
+    # `labels_positions` is only populated by regular matrix keys. It can be
+    # empty when the layout has no regular keys (e.g. a single rotary encoder
+    # key), in which case `min()` would raise. Fall back to a default origin so
+    # stabilizer/encoder placement still works instead of crashing.
+    if labels_positions:
+        stabilizer_position = min(labels_positions.values(), key=lambda p: p.value[0])
+        stabilizer_x = stabilizer_position.value[0]
+        stabilizer_y = stabilizer_position.value[1] + 20
+    else:
+        stabilizer_x = _x(4)
+        stabilizer_y = _y(15) + 20
     for reference, key in switches_with_stabs:
         logger.debug(
             f"Processing stabilizer for {reference} (size {key.width}x{key.height})"
@@ -1551,7 +1559,7 @@ def create_schematic(
     # because the rotary encoder symbol is too large to fit in the grid layout.
     # Encoders are placed below stabilizers, each with its own row/column labels.
     if encoder_keys:
-        enc_x = stabilizer_position.value[0]
+        enc_x = stabilizer_x
         enc_y = stabilizer_y + (20 if len(switches_with_stabs) != 0 else 0)
 
         for key, row, column in encoder_keys:
