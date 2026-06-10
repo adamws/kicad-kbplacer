@@ -33,10 +33,10 @@ def is_valid_template(s: str) -> bool:
 
 def load_footprint(lib_name: str, fp_name: str) -> pcbnew.FOOTPRINT:
     # The pcbnew.FootprintLoad leaks memory [1].
-    # Treating all versions before 9.0.8 but after introduction
+    # Treating all versions before 10.0.0 but after introduction
     # of PCB_IO_KICAD_SEXPR as potentially broken
     # [1] https://gitlab.com/kicad/code/kicad/-/issues/22526
-    if KICAD_VERSION >= (8, 0, 0) and KICAD_VERSION < (9, 0, 8):
+    if KICAD_VERSION >= (8, 0, 0) and KICAD_VERSION < (10, 0, 0):
         sexpr = pcbnew.PCB_IO_KICAD_SEXPR()
         fp = sexpr.FootprintLoad(lib_name, fp_name)
     else:
