@@ -2,6 +2,27 @@
 
 - `layout2image.py` - generate KLE style SVG image from keyboard layout
 - `layout2openscad.py` - generate plate for [openscad](https://openscad.org/) (:warning: experimental)
+- `profiling/kle-ng-api-task.sh` - reproduce a complete kle-ng-api task (schematic + pcb) for memory profiling
+
+## Memory profiling (memray)
+
+`profiling/kle-ng-api-task.sh` runs one `kbplacer` process with both
+`--create-sch-file` and `--create-pcb-file`, mirroring the arguments
+`kle-ng-api` builds for a single generation request. It is meant to estimate the
+peak memory of a complete task (useful for sizing worker memory limits, since
+KiCad's `pcbnew` SWIG bindings have historically leaked). Run it under
+[memray](https://github.com/bloomberg/memray) inside docker with:
+
+```shell
+just profile-memray                  # KiCad 9.0.9, full routing (worst case)
+just profile-memray 10.0.3-noble     # different KiCad version
+just profile-memray 9.0.9-noble none # disable routing
+```
+
+Outputs land in `./output_memray/`: `profile.bin`, `flamegraph.html` (peak
+usage) and `flamegraph-leaks.html` (memory still allocated at exit). The recipe
+also prints `memray summary`/`stats`, whose peak/high-water-mark is the number
+to compare against the container memory limit.
 
 ## How to run
 

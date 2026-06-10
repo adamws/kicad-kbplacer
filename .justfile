@@ -79,6 +79,56 @@ tools-layout2openscad version="9.0.9-noble" *args="--help":
         "{{image_prefix}}:{{version}}" \
         bash -c "pip3 install --no-cache-dir hatch && hatch run tools-openscad:layout2openscad {{args}}"
 
+# === Profiling ===
+
+# profile memory of a complete kle-ng-api task (schematic + pcb) with memray
+# Outputs profile.bin + flamegraphs to ./output_memray/. ROUTING: none|switch-diode|full
+profile-memray version="9.0.9-noble" routing="full":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    outdir="{{justfile_directory()}}/output_memray"
+    mkdir -p "$outdir"
+    docker run --rm \
+        -v "{{justfile_directory()}}:/workspace" -w /workspace \
+        -e PYTHONPATH=/workspace \
+        -e OUTDIR=/workspace/output_memray \
+        -e ROUTING="{{routing}}" \
+        "{{image_prefix}}:{{version}}" \
+        bash -c '
+            set -euo pipefail
+            # memray + the schematic builder dependency (kicad-skip); kbplacer
+            # itself runs from the mounted source via PYTHONPATH, the same way
+            # kle-ng-api runs "python3 -m kbplacer" on this base image.
+            pip3 install --no-cache-dir memray "kicad-skip==0.2.5"
+            # Install the perigoso/kiswitch keyswitch footprints the same way
+            # kle-ng-api'"'"'s worker Dockerfile does (the base image does not ship
+            # keyboard switch footprints). Idempotent across re-runs.
+            lib="$HOME/.local/share/kicad/3rdparty/footprints/com_github_perigoso_keyswitch-kicad-library"
+            if [ ! -d "$lib" ]; then
+                mkdir -p "$(dirname "$lib")"
+                tmp="$(mktemp -d)"
+                ( cd "$tmp" \
+                  && wget -q https://github.com/kiswitch/keyswitch-kicad-library/releases/download/v2.4/keyswitch-kicad-library.zip \
+                  && echo "b38d56323acb91ad660567340ca938c5b4a83a27eea52308ef14aa7857b0071b  keyswitch-kicad-library.zip" | sha256sum -c \
+                  && unzip -q keyswitch-kicad-library.zip \
+                  && mv footprints "$lib" )
+                rm -rf "$tmp"
+            fi
+            bin="$OUTDIR/profile.bin"
+            # Run the complete task under memray (RUNNER injects the tracker
+            # around the single kbplacer process).
+            RUNNER="python3 -m memray run --force -o $bin" \
+                tools/profiling/kle-ng-api-task.sh
+            echo "=== memray summary (peak / high-water-mark) ==="
+            python3 -m memray summary "$bin"
+            echo "=== memray stats ==="
+            python3 -m memray stats "$bin"
+            python3 -m memray flamegraph --force -o "$OUTDIR/flamegraph.html" "$bin"
+            # --leaks highlights memory still allocated at exit, e.g. pcbnew SWIG leaks
+            python3 -m memray flamegraph --leaks --force -o "$OUTDIR/flamegraph-leaks.html" "$bin"
+            echo ">>> Reports: output_memray/flamegraph.html, output_memray/flamegraph-leaks.html"
+        '
+
 # === GUI ===
 
 # launch KiCad GUI from docker with X11 forwarding
