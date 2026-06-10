@@ -512,3 +512,47 @@ class TestEncoderBoardSchematic:
             and lib_id[1] == "Device:RotaryEncoder_Switch"
         ]
         assert len(encoder_symbols) == 1
+
+
+class TestSingleKeySchematic:
+    @pytest.mark.skipif(
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
+    )
+    def test_single_regular_key(self, tmpdir) -> None:
+        # A layout with a single regular (non-encoder) switch is supported: the
+        # one key emits its own row/column labels, so `labels_positions` is not
+        # empty and placement has positions to work with. Verify the schematic
+        # is created with exactly one switch and one diode.
+        if not can_create_schematic():
+            pytest.skip("Requires optional schematic dependencies")
+
+        layout = [["0,0"]]
+        layout_file = Path(tmpdir) / "layout.json"
+        with open(layout_file, "w") as f:
+            json.dump(layout, f)
+
+        schematic_file = Path(tmpdir) / "test.kicad_sch"
+
+        # Must not raise.
+        create_schematic(layout_file, schematic_file)
+        assert schematic_file.exists()
+
+        # Smoke-check that the produced schematic is renderable.
+        generate_schematic_image(tmpdir, schematic_file)
+
+        with open(schematic_file, "r") as f:
+            schematic_sexp = sexpdata.load(f)
+
+        def _instances(lib_id_value):
+            return [
+                s
+                for s in find_children(schematic_sexp, "symbol")
+                if (lib_id := find_child(s, "lib_id")) is not None
+                and lib_id[1] == lib_id_value
+            ]
+
+        assert len(_instances("Switch:SW_Push_45deg")) == 1
+        assert len(_instances("Device:D_Small")) == 1
+        # A single regular key needs neither encoders nor stabilizers.
+        assert len(_instances("Device:RotaryEncoder_Switch")) == 0
+        assert len(_instances("Mechanical:SW_stab")) == 0
