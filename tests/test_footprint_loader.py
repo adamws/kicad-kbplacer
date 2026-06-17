@@ -519,7 +519,7 @@ class TestStabilizerFootprintLoader:
         assert "using 2u as fallback" in caplog.text
 
     def test_fallback_6u_to_preceding_available(self, stab_library, caplog) -> None:
-        # 6.0u not in library → preceding STABILIZER_SIZES entries are 3, 2.75, ..., 2
+        # 6.0u not in library → preceding STABILIZED_KEY_SIZES entries are 3, 2.75, ..., 2
         # 3.0u IS in library → should use it
         name = self._loader(stab_library).get_footprint_name(key=Key(width=6.0))
         assert name == "Stabilizer_Cherry_MX_3.00u"
@@ -537,7 +537,7 @@ class TestStabilizerFootprintLoader:
         assert "No stabilizer footprint found for width 2.0u" in caplog.text
 
     def test_unexpected_size_warns_and_returns_none(self, stab_library, caplog) -> None:
-        # 1.5u is not in STABILIZER_SIZES
+        # 1.5u is not in STABILIZED_KEY_SIZES
         name = self._loader(stab_library).get_footprint_name(key=Key(width=1.5))
         assert name is None
         assert "Unexpected stabilizer width 1.5u" in caplog.text
@@ -575,3 +575,11 @@ class TestStabilizerFootprintLoader:
     def test_schematic_no_key_returns_none(self, stab_library) -> None:
         result = self._loader(stab_library).get_footprint_for_schematic()
         assert result is None
+
+    def test_load_unexpected_size_returns_none(self, stab_library) -> None:
+        # 1.5u is not in STABILIZED_KEY_SIZES; load must return None instead of
+        # raising (regression: previously load_footprint was called with None).
+        assert self._loader(stab_library).load(key=Key(width=1.5)) is None
+
+    def test_load_no_key_returns_none(self, stab_library) -> None:
+        assert self._loader(stab_library).load() is None

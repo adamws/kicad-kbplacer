@@ -84,6 +84,9 @@ class BoardBuilder:
     ) -> Optional[pcbnew.FOOTPRINT]:
         if self.stabilizer_footprint:
             fp = self.stabilizer_footprint.load(key=key)
+            if fp is None:
+                # No suitable stabilizer footprint for this key size; skip it.
+                return None
             fp.SetReference(ref)
             fp.SetValue("SW_stab")
             return self._add_footprint(fp)

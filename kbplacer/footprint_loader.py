@@ -413,7 +413,9 @@ class SwitchFootprintLoader:
 
 class StabilizerFootprintLoader(SwitchFootprintLoader):
 
-    STABILIZER_SIZES = [2, 2.25, 2.5, 2.75, 3, 6, 6.25, 7, 8, 9, 10]
+    # Key sizes (width/height in units) that are known to use a stabilizer.
+    # This lists the supported key dimensions, not stabilizer hardware sizes.
+    STABILIZED_KEY_SIZES = [2, 2.25, 2.5, 2.75, 3, 6, 6.25, 7, 8, 9, 10]
 
     def __init__(self, identifier_str: str) -> None:
         SwitchFootprintLoader.__init__(self, identifier_str)
@@ -424,10 +426,22 @@ class StabilizerFootprintLoader(SwitchFootprintLoader):
             )
             raise ValueError(msg)
 
+    def load(self, key: Optional[Key] = None) -> Optional[pcbnew.FOOTPRINT]:  # type: ignore[override]
+        """Load stabilizer footprint for the given key.
+
+        Unlike the base loader, returns None when no suitable footprint can be
+        resolved for the key size (e.g. unexpected stabilizer width) instead of
+        raising, so callers can skip placing a stabilizer for that key.
+        """
+        footprint_name = self.get_footprint_name(key=key)
+        if footprint_name is None:
+            return None
+        return load_footprint(self.identifier.library_path, footprint_name)
+
     def get_footprint_name(self, key: Optional[Key] = None) -> Optional[str]:  # type: ignore[override]
         """Get stabilizer footprint name for the given key size.
 
-        For known stabilizer sizes (STABILIZER_SIZES), falls back to the
+        For known stabilized key sizes (STABILIZED_KEY_SIZES), falls back to the
         nearest smaller standard width if exact match is unavailable.
         For unexpected widths, issues a warning and returns None.
         """
@@ -446,10 +460,10 @@ class StabilizerFootprintLoader(SwitchFootprintLoader):
             available = self._get_discovery().get_available_widths(base_name)
             if size in available:
                 return self._format(size)
-            if size in self.STABILIZER_SIZES:
-                idx = self.STABILIZER_SIZES.index(size)
+            if size in self.STABILIZED_KEY_SIZES:
+                idx = self.STABILIZED_KEY_SIZES.index(size)
                 for i in range(idx - 1, -1, -1):
-                    fallback = self.STABILIZER_SIZES[i]
+                    fallback = self.STABILIZED_KEY_SIZES[i]
                     if fallback in available:
                         logger.warning(
                             f"No stabilizer footprint for width {size}u, "
