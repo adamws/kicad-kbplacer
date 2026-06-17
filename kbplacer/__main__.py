@@ -316,7 +316,7 @@ def app() -> None:
         default=None,
         action=XYAction,
         help=(
-            "X and Y key 1U distance in mm, as two space separated numeric values. "
+            "X and Y key 1U distance in mm, as two space separated numeric values.\n"
             "If not specified, uses spacing from keyboard metadata or defaults to 19.05 19.05"
         ),
     )
@@ -326,8 +326,8 @@ def app() -> None:
         action=XYAction,
         help=(
             "X and Y placement offset for the keyboard layout in mm, "
-            "as two space separated numeric values. "
-            "If not specified, offset is auto-calculated to align the first key to a grid"
+            "as two space separated numeric values.\n"
+            "If not specified, offset is auto-calculated to align the first key to a grid\n"
             "with an offset to avoid pcbnew's Drawing Sheet borders."
         ),
     )
@@ -337,7 +337,7 @@ def app() -> None:
         action=XYAction,
         help=(
             "X and Y adjustment offset for encoder footprints in mm, "
-            "as two space separated numeric values. "
+            "as two space separated numeric values.\n"
             "Applied to encoder keys (sm='rot_ec11') to compensate for "
             "the footprint reference point not being at the body center.\n"
             'For example: --encoder-adjustment "-7.5 -2.5"'
@@ -447,6 +447,13 @@ def app() -> None:
         help="Provide logging level, default=%(default)s",
     )
     parser.add_argument(
+        "--log-format",
+        required=False,
+        default="%(asctime)s: %(message)s",
+        type=str,
+        help="Provide logging format, default='%(default)s'",
+    )
+    parser.add_argument(
         "--optimize-diodes-orientation",
         action="store_true",
         help=(
@@ -489,7 +496,7 @@ def app() -> None:
 
     # set up logger
     logging.basicConfig(
-        level=args.log_level, format="%(asctime)s: %(message)s", datefmt="%H:%M:%S"
+        level=args.log_level, format=args.log_format, datefmt="%H:%M:%S"
     )
 
     if args.create_pcb_file and os.path.isfile(pcb_file_path):
