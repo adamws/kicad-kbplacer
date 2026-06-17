@@ -631,12 +631,18 @@ schematics and PCB files) based on [via](https://github.com/the-via/keyboards) l
 Combines usage of `kbplacer` KiCad plugin and accompanying [tools](tools/README.md).
 - [keyboard-tools](https://keyboard-tools.xyz/) ([repository](https://github.com/adamws/keyboard-tools)) -
 website for generating PCB files from user uploaded layout files, combines `kbplacer` plugin
-with [skidl](https://devbisme.github.io/skidl/) and aims to introduce no-schematic workflows
-or provide decent starting point for traditional KiCad projects.
+with its `schematic_builder` module to generate KiCad schematics and PCBs, providing a decent
+starting point for traditional KiCad projects.
 
-Creating keyboard PCB file from scratch (without skidl or using schematic generated with
-`schematic_builder` module) is also possible using `kbplacer` CLI interface although it is
+Creating keyboard PCB file from scratch (without a schematic, or using schematic generated with
+the `schematic_builder` module) is also possible using `kbplacer` CLI interface although it is
 currently considered experimental.
+
+Using the CLI also enables more advanced workflows. For example, the `schematic_builder` module
+can generate schematics that include additional components such as stabilizers and rotary encoders,
+and the resulting PCB can be created with the proper footprints assigned to them. This goes beyond
+the basic switch-and-diode matrix and allows building more complete keyboard projects
+programmatically.
 
 <!-- TOC --><a name="demo-keyboard-project"></a>
 ## Demo keyboard project
