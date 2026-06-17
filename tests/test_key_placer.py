@@ -36,6 +36,7 @@ from kbplacer.key_placer import (
     MatrixAnnotatedKeyboardSwitchIterator,
 )
 from kbplacer.kle_serial import (
+    Key,
     Keyboard,
     MatrixAnnotatedKeyboard,
     get_keyboard,
@@ -48,6 +49,7 @@ from .conftest import (
     KICAD_VERSION,
     add_diode_footprint,
     add_led_footprint,
+    add_stabilizer_footprint,
     add_switch_footprint,
     equal_ignore_order,
     save_and_render,
@@ -1124,6 +1126,114 @@ def test_stab_rotation_applied_to_st_element_only(request) -> None:
     assert get_orientation(stab) == -90
     # Non-stabilizer LED should be unaffected.
     assert get_orientation(led) == 0
+
+
+def _normalize_angle(angle: float) -> float:
+    return ((angle + 180) % 360) - 180
+
+
+def _place_single_key_with_stab(
+    request, tmpdir, key, stab_rotation=0, rotation_angle=0
+):
+    """Helper: place a single switch + real Cherry MX stabilizer for the given key.
+
+    Uses an actual 2U stabilizer footprint (not a stand-in) and renders the
+    resulting board so the orientation can be visually confirmed in the HTML
+    report. Returns ``(switch, stab)`` so the stabilizer orientation can be
+    asserted both in absolute terms and relative to the switch. The key's
+    dimensions/stabRotation are taken from `key`; `rotation_angle` applies a
+    layout rotation about the key center (so the key rotates in place).
+    """
+    board, key_matrix = _get_single_switch_board_and_matrix(request)
+    stab = add_stabilizer_footprint(board, request, 1)  # reference = "ST1"
+
+    keyboard = parse_kle([["A"]])
+    keyboard.keys[0].width = key.width
+    keyboard.keys[0].height = key.height
+    keyboard.keys[0].width2 = key.width2
+    keyboard.keys[0].height2 = key.height2
+    keyboard.keys[0].stabRotation = stab_rotation
+    keyboard.keys[0].rotation_angle = rotation_angle
+    # Rotate about the key center so the footprint stays in place (nicer render).
+    keyboard.keys[0].rotation_x = keyboard.keys[0].x + key.width / 2
+    keyboard.keys[0].rotation_y = keyboard.keys[0].y + key.height / 2
+
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
+    stab_info = ElementInfo("ST{}", PositionOption.CUSTOM, ZERO_POSITION, "")
+
+    key_placer = KeyPlacer(board)
+    key_placer.place_switches(keyboard, key_matrix, key_info)
+    key_placer.place_switch_elements([stab_info], key_matrix)
+
+    save_and_render(board, tmpdir, request)
+
+    switch = get_footprint(board, "SW1")
+    return switch, stab
+
+
+def test_vertical_key_auto_rotates_stabilizer(tmpdir, request) -> None:
+    """A taller-than-wide key auto-rotates its stabilizer 90 degrees (KiCad -90)."""
+    _, stab = _place_single_key_with_stab(request, tmpdir, Key(width=1, height=2))
+    assert get_orientation(stab) == -90
+
+
+def test_wide_key_does_not_rotate_stabilizer(tmpdir, request) -> None:
+    """A wider-than-tall key leaves the stabilizer in its default orientation."""
+    _, stab = _place_single_key_with_stab(request, tmpdir, Key(width=2, height=1))
+    assert get_orientation(stab) == 0
+
+
+def test_iso_enter_auto_rotates_stabilizer(tmpdir, request) -> None:
+    """ISO Enter (height > width) auto-rotates its stabilizer 90 degrees."""
+    _, stab = _place_single_key_with_stab(
+        request, tmpdir, Key(width=1.25, height=2, width2=1.5, height2=1)
+    )
+    assert get_orientation(stab) == -90
+
+
+def test_vertical_key_with_user_stab_rotation_composes(tmpdir, request) -> None:
+    """Auto vertical rotation and user stabRotation compose additively.
+
+    Vertical key (auto +90 KLE) plus stabRotation=90 (KLE) == 180 KLE,
+    which is KiCad orientation -180/180.
+    """
+    _, stab = _place_single_key_with_stab(
+        request, tmpdir, Key(width=1, height=2), stab_rotation=90
+    )
+    assert _normalize_angle(get_orientation(stab)) == _normalize_angle(180)
+
+
+def test_rotated_key_stabilizer_follows_layout_rotation(tmpdir, request) -> None:
+    """A horizontal 2U key rotated 30 degrees rotates its stabilizer to match.
+
+    No auto/user rotation applies (height <= width), so the stabilizer must end
+    up at exactly the switch orientation. 30 deg KLE (clockwise) == KiCad -30.
+    """
+    switch, stab = _place_single_key_with_stab(
+        request, tmpdir, Key(width=2, height=1), rotation_angle=30
+    )
+    assert _normalize_angle(get_orientation(switch)) == _normalize_angle(-30)
+    assert _normalize_angle(get_orientation(stab)) == _normalize_angle(
+        get_orientation(switch)
+    )
+
+
+def test_rotated_vertical_key_stabilizer_composes_with_layout_rotation(
+    tmpdir, request
+) -> None:
+    """A vertical 2U key rotated 30 degrees: layout rotation + auto vertical 90.
+
+    Switch ends at KiCad -30; the stabilizer adds the auto +90 KLE (== -90 KiCad
+    delta) on top, so it must end at the switch orientation minus 90 (KiCad -120).
+    """
+    switch, stab = _place_single_key_with_stab(
+        request, tmpdir, Key(width=1, height=2), rotation_angle=30
+    )
+    assert _normalize_angle(get_orientation(switch)) == _normalize_angle(-30)
+    assert _normalize_angle(get_orientation(stab)) == _normalize_angle(
+        get_orientation(switch) - 90
+    )
+    assert _normalize_angle(get_orientation(stab)) == _normalize_angle(-120)
 
 
 def _encoder_shaft_center(encoder_footprint: pcbnew.FOOTPRINT) -> pcbnew.VECTOR2I:

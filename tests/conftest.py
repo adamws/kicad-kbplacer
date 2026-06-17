@@ -483,6 +483,12 @@ def add_led_footprint(board, request, ref_count) -> pcbnew.FOOTPRINT:
     return _add_footprint(board, request, "D_SOD-323", f"LED{ref_count}")
 
 
+def add_stabilizer_footprint(
+    board, request, ref_count, footprint: str = "Stabilizer_Cherry_MX_2.00u"
+) -> pcbnew.FOOTPRINT:
+    return _add_footprint(board, request, footprint, f"ST{ref_count}")
+
+
 def get_track(board, start: pcbnew.VECTOR2I, end: pcbnew.VECTOR2I, layer):
     track = pcbnew.PCB_TRACK(board)
     track.SetWidth(pcbnew.FromMM(0.25))

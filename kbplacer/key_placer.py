@@ -57,6 +57,7 @@ from .kle_serial import (
     KeyboardTag,
     MatrixAnnotatedKeyboard,
     get_keyboard_from_file,
+    is_iso_enter,
     keyboard_from_url,
     layout_classification,
 )
@@ -827,12 +828,20 @@ class KeyPlacer(BoardModifier):
                 rotate(switch_footprint, switch_center, key.switchRotation)
             elif key.switchRotation != 0:
                 logger.error(
-                    "Not supporting individual switch rotation other than multiple of 90 degrees."
+                    "Not supporting individual switch rotation other than multiple of 90 degrees. "
                     f"Got switch rotation of {key.switchRotation}, ignoring."
                 )
 
+            # Vertical keys (taller than wide, e.g. a 2U numpad key or ISO Enter)
+            # need their stabilizer rotated 90 degrees so the bar runs along the
+            # key's long axis. +90 in KLE convention (clockwise positive) maps
+            # to KiCad orientation -90.
+            auto_stab_rotation = (
+                90 if (is_iso_enter(key) or key.height > key.width) else 0
+            )
             self._stab_rotation_by_switch[switch_footprint.GetReference()] = (
-                key.stabRotation
+                key.stabRotation,
+                auto_stab_rotation,
             )
 
     def place_element(
@@ -915,14 +924,23 @@ class KeyPlacer(BoardModifier):
                     )
 
     def rotate_stabilizer(self, switch_reference: str, stabilizer: pcbnew.FOOTPRINT):
-        stab_rotation = self._stab_rotation_by_switch.get(switch_reference, 0)
-        if stab_rotation != 0 and stab_rotation % 90 == 0:
-            stab_center = get_position(stabilizer)
-            rotate(stabilizer, stab_center, stab_rotation)
-        elif stab_rotation != 0:
+        user_rotation, auto_rotation = self._stab_rotation_by_switch.get(
+            switch_reference, (0, 0)
+        )
+        stab_center = get_position(stabilizer)
+
+        # Automatic rotation for vertical keys (height > width / ISO Enter).
+        # Always a multiple of 90, applied unconditionally.
+        if auto_rotation:
+            rotate(stabilizer, stab_center, auto_rotation)
+
+        # Per-key user override, must be a multiple of 90 degrees.
+        if user_rotation != 0 and user_rotation % 90 == 0:
+            rotate(stabilizer, stab_center, user_rotation)
+        elif user_rotation != 0:
             logger.error(
                 "Not supporting individual stabilizer rotation other than multiple of 90 degrees."
-                f"Got stabilizer rotation of {stab_rotation}, ignoring."
+                f"Got stabilizer rotation of {user_rotation}, ignoring."
             )
 
     def place_switch_elements(
@@ -951,9 +969,14 @@ class KeyPlacer(BoardModifier):
                         switch_orientation,
                     )
                     # Apply stab_rotation to stabilizer elements only.
-                    # Heuristic: annotation format starting with "ST" identifies
-                    # stabilizer footprints (e.g. ST{}, ST20_1).
-                    is_stabilizer = footprint.GetReference().startswith("ST")
+                    # Heuristic: a reference starting with "ST" (e.g. ST{},
+                    # ST20_1) or a footprint name containing "stabilizer"
+                    # (case-insensitive) identifies a stabilizer footprint.
+                    footprint_name = str(footprint.GetFPID().GetLibItemName())
+                    is_stabilizer = (
+                        footprint.GetReference().startswith("ST")
+                        or "stabilizer" in footprint_name.lower()
+                    )
                     if is_stabilizer:
                         self.rotate_stabilizer(reference, footprint)
 
