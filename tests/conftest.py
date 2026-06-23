@@ -61,7 +61,7 @@ def pytest_addoption(parser) -> None:
     parser.addoption(
         "--test-plugin-installation",
         action="store_true",
-        help="Run tests using ~/.local/share/kicad/8.0/3rdparty/plugins instance instead of local one",
+        help="Run tests using ~/.local/share/kicad/[major].0/3rdparty/plugins instance instead of local one",
         default=False,
     )
     parser.addoption(
@@ -85,11 +85,16 @@ def pytest_addoption(parser) -> None:
     )
 
 
+def get_kicad_major() -> int:
+    return KICAD_VERSION[0] if KICAD_VERSION else 0
+
+
 @pytest.fixture(scope="session")
 def package_path(request):
     if request.config.getoption("--test-plugin-installation"):
         home_directory = Path.home()
-        return f"{home_directory}/.local/share/kicad/8.0/3rdparty/plugins"
+        major = get_kicad_major()
+        return f"{home_directory}/.local/share/kicad/{major}.0/3rdparty/plugins"
     return Path(os.path.realpath(__file__)).parents[1]
 
 
@@ -145,7 +150,7 @@ def get_footprints_dir(request):
 
 def get_references_dir(request, example_name, route_option, diode_option):
     test_dir = Path(request.module.__file__).parent
-    major = KICAD_VERSION[0] if KICAD_VERSION else 0
+    major = get_kicad_major()
 
     def get_references_dir_for_kicad(major):
         references_dir = test_dir / f"data/examples-references/kicad{major}"
@@ -419,7 +424,7 @@ def generate_schematic_image(tmpdir, schematic_path: Union[str, os.PathLike]) ->
 
 def prepare_project_file(request, board_path: Union[str, os.PathLike]) -> None:
     test_dir = Path(request.module.__file__).parent
-    major = KICAD_VERSION[0] if KICAD_VERSION else 0
+    major = get_kicad_major()
     if major == 9 or major == 10:
         # reuse previous project files for kicad 9 and 10
         major = 8
