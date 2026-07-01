@@ -25,6 +25,9 @@ from .conftest import (
     generate_netlist,
     generate_schematic_image,
     get_footprints_dir,
+    prepare_project_file,
+    run_schematic_parity_drc,
+    write_fp_lib_table,
 )
 
 logger = logging.getLogger(__name__)
@@ -86,6 +89,28 @@ def parse_netinfo_item(netinfo: pcbnew.NETINFO_ITEM):
         "class": netinfo.GetNetClassName(),
     }
     return netinfo_parsed
+
+
+def assert_board_schematic_footprint_parity(request, tmpdir, pcb_file) -> None:
+    """Assert schematic-parity DRC finds no footprint/symbol mismatches.
+
+    Runs ``kicad-cli pcb drc --schematic-parity`` on ``pcb_file`` and checks that
+    every board footprint matches the symbol in the co-located schematic. This
+    guards that both builders emit the same footprint identifiers (library
+    nickname included).
+
+    The board and its schematic must already be saved and share the same base
+    name and directory. Writes the project file (to link board and schematic)
+    and an fp-lib-table registering the shared ``tests`` footprint library, both
+    of which DRC needs to resolve the board footprints.
+    """
+    prepare_project_file(request, pcb_file)
+    write_fp_lib_table(tmpdir, [("tests", get_footprints_dir(request))])
+
+    report = run_schematic_parity_drc(tmpdir, pcb_file)
+    parity = report.get("schematic_parity", [])
+    mismatches = [v for v in parity if v.get("type") == "footprint_symbol_mismatch"]
+    assert mismatches == [], f"Unexpected footprint/symbol mismatches: {mismatches}"
 
 
 class TestSchematicBuilderCli:
@@ -227,6 +252,8 @@ class TestSchematicBuilderCli:
             f"Only in schematic: {nets_set - board_nets_set}\n"
             f"Only in board: {board_nets_set - nets_set}"
         )
+
+        assert_board_schematic_footprint_parity(request, tmpdir, pcb_file)
 
     @pytest.mark.skipif(
         KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
@@ -407,6 +434,7 @@ class TestEncoderBoardSchematic:
             schematic_file,
             switch_footprint=switch_footprint,
             diode_footprint=diode_footprint,
+            encoder_footprint=encoder_footprint,
         )
 
         # Create board
@@ -473,6 +501,8 @@ class TestEncoderBoardSchematic:
             f"Only in schematic: {nets_set - board_nets_set}\n"
             f"Only in board: {board_nets_set - nets_set}"
         )
+
+        assert_board_schematic_footprint_parity(request, tmpdir, pcb_file)
 
     @pytest.mark.skipif(
         KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
@@ -579,6 +609,8 @@ class TestMatrixNetNameParity:
         # No phantom COL00 net/label on either side.
         assert "COL00" not in board_matrix_nets
         assert "COL00" not in schematic_matrix_labels
+
+        assert_board_schematic_footprint_parity(request, tmpdir, pcb_file)
 
 
 class TestSingleKeySchematic:

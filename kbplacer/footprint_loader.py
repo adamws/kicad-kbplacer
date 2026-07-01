@@ -31,6 +31,24 @@ def is_valid_template(s: str) -> bool:
         return False
 
 
+def library_name_from_path(library_path: str) -> str:
+    """Extract the library nickname from a ``.pretty`` library path.
+
+    Examples:
+        /usr/share/kicad/footprints/Diode_SMD.pretty -> Diode_SMD
+        C:\\kicad\\footprints\\Button_Switch.pretty -> Button_Switch
+    """
+    # Get the last path component (directory name)
+    # Handle both Unix (/) and Windows (\\) path separators
+    library_dir = library_path.replace("\\", "/").rstrip("/").split("/")[-1]
+
+    # Remove .pretty suffix if present
+    if library_dir.endswith(".pretty"):
+        library_dir = library_dir[:-7]  # len(".pretty") == 7
+
+    return library_dir
+
+
 def load_footprint(lib_name: str, fp_name: str) -> pcbnew.FOOTPRINT:
     # The pcbnew.FootprintLoad leaks memory [1].
     # Treating all versions before 10.0.0 but after introduction
@@ -45,6 +63,16 @@ def load_footprint(lib_name: str, fp_name: str) -> pcbnew.FOOTPRINT:
     if fp is None:
         msg = f"Unable to load footprint: {lib_name}:{fp_name}"
         raise RuntimeError(msg)
+
+    # FootprintLoad leaves the library nickname of the FPID empty, so the board
+    # footprint would be identified as just ``fp_name``. The schematic symbol's
+    # Footprint field is ``LibraryName:fp_name`` (see
+    # ``FootprintIdentifier.format_for_schematic``), so without the nickname the
+    # schematic-parity DRC reports a ``footprint_symbol_mismatch``. Set the FPID
+    # nickname using the same library-name derivation the schematic uses so the
+    # two always agree.
+    fp.SetFPID(pcbnew.LIB_ID(library_name_from_path(lib_name), fp_name))
+
     return fp
 
 
@@ -93,15 +121,7 @@ class FootprintIdentifier:
         Returns:
             Library name without path or .pretty suffix
         """
-        # Get the last path component (directory name)
-        # Handle both Unix (/) and Windows (\\) path separators
-        library_dir = self.library_path.replace("\\", "/").rstrip("/").split("/")[-1]
-
-        # Remove .pretty suffix if present
-        if library_dir.endswith(".pretty"):
-            library_dir = library_dir[:-7]  # len(".pretty") == 7
-
-        return library_dir
+        return library_name_from_path(self.library_path)
 
     def format_for_schematic(self, footprint_name: Optional[str] = None) -> str:
         """Format footprint identifier for KiCad schematic symbol.

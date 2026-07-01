@@ -33,6 +33,7 @@ from .conftest import (
     pointMM,
     prepare_project_file,
     rotate,
+    write_fp_lib_table,
 )
 
 logger = logging.getLogger(__name__)
@@ -353,13 +354,7 @@ def prepare_fp_lib_table(request, tmpdir) -> None:
     libs = [
         ("examples", Path(f"{test_dir}/../examples/examples.pretty").absolute()),
     ]
-    with open(f"{tmpdir}/fp-lib-table", "w") as f:
-        f.write("(fp_lib_table\n")
-        for name, uri in libs:
-            f.write(
-                f'  (lib (name {name})(type KiCad)(uri {uri})(options "")(descr ""))\n'
-            )
-        f.write(")")
+    write_fp_lib_table(tmpdir, libs)
 
 
 def prepare_project(request, tmpdir, example: str, layout_file: str) -> None:

@@ -391,6 +391,51 @@ def generate_drc(tmpdir, board_path: Union[str, os.PathLike]) -> None:
         logger.debug(f.read())
 
 
+def write_fp_lib_table(tmpdir, libs) -> None:
+    """Write a project-local ``fp-lib-table`` registering footprint libraries.
+
+    ``libs`` is an iterable of ``(nickname, uri)`` pairs, where ``nickname`` is
+    the library nickname used in footprint FPIDs (e.g. ``tests`` for
+    ``tests:D_SOD-323``). Registering the libraries is required for
+    ``kicad-cli pcb drc --schematic-parity`` to resolve board footprints and
+    compare them against the schematic symbols.
+    """
+    with open(f"{tmpdir}/fp-lib-table", "w") as f:
+        f.write("(fp_lib_table\n")
+        for name, uri in libs:
+            f.write(
+                f'  (lib (name {name})(type KiCad)(uri {uri})(options "")(descr ""))\n'
+            )
+        f.write(")")
+
+
+def run_schematic_parity_drc(tmpdir, board_path: Union[str, os.PathLike]) -> dict:
+    """Run schematic-parity DRC via kicad-cli and return the parsed JSON report.
+
+    The board and its schematic must share the same base name and directory, and
+    the footprint libraries referenced by the board FPIDs must be registered in a
+    project-local ``fp-lib-table`` (see :func:`write_fp_lib_table`).
+    """
+    if KICAD_VERSION < (9, 0, 0):
+        msg = "Schematic parity DRC not supported"
+        raise RuntimeError(msg)
+
+    board_path = Path(board_path)
+    report_path = tmpdir / f"{board_path.stem}-parity-drc.json"
+
+    subprocess.run(
+        f"{kicad_cli()} pcb drc --schematic-parity --format json "
+        f"--output {report_path} {board_path}",
+        shell=True,
+        check=False,
+    )
+
+    with open(report_path, "r") as f:
+        report = json.load(f)
+    logger.debug(report)
+    return report
+
+
 def generate_netlist(tmpdir, schematic_path: Union[str, os.PathLike]) -> Path:
     if KICAD_VERSION < (9, 0, 0):
         msg = "Schematic to netlist conversion not supported"

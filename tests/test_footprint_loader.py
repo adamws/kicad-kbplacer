@@ -385,6 +385,10 @@ class TestSwitchFootprintLoader:
 
         assert fp is not None
         assert fp.GetFPID().GetUniStringLibItemName() == "SW_Cherry_MX_PCB_1.00u"
+        # The FPID must carry the library nickname (derived from the .pretty
+        # directory name) so schematic-parity DRC does not report a
+        # footprint_symbol_mismatch against the symbol's `tests:...` footprint.
+        assert str(fp.GetFPID().GetLibNickname()) == "tests"
 
     def test_load_template_footprint(self, examples_library) -> None:
         loader = SwitchFootprintLoader(f"{examples_library}:SW_Cherry_MX_PCB_{{:.2f}}u")
