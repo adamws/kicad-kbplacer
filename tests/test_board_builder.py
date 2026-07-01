@@ -13,7 +13,11 @@ import pytest
 from kbplacer.board_builder import BoardBuilder
 from kbplacer.board_modifier import get_common_nets
 from kbplacer.key_placer import KeyMatrix
-from kbplacer.kle_serial import get_keyboard_from_file
+from kbplacer.kle_serial import (
+    MatrixAnnotatedKeyboard,
+    get_keyboard_from_file,
+    parse_kle,
+)
 
 from .conftest import get_footprints_dir, save_and_render
 
@@ -178,6 +182,42 @@ def test_create_board_alternative_layout_loads_correct_footprint(
         ), f"Pad {pad_number}: default net '{default_net}' != alternative net '{alt_net}'"
 
     save_and_render(board, tmpdir, request)
+
+
+def test_create_board_leading_zero_matrix_label(tmpdir, request, builder) -> None:
+    """Leading-zero matrix labels must not create phantom nets.
+
+    A label like ``0,00`` denotes the same matrix column as ``0,0``. The board
+    builder must normalize digit-only coordinates through int() so the switch
+    lands on ``COL0`` (the canonical net used by the int-based placement lookup)
+    instead of a separate, unreachable ``COL00`` net.
+    """
+    keyboard = parse_kle([["0,00"], ["1,0"]])
+    keyboard = MatrixAnnotatedKeyboard(meta=keyboard.meta, keys=keyboard.keys)
+
+    board = builder.create_board(keyboard)
+
+    switches = {
+        fp.GetReference(): fp
+        for fp in board.GetFootprints()
+        if fp.GetReference().startswith("SW")
+    }
+    assert set(switches) == {"SW1", "SW2"}
+
+    # Both keys are in column 0; the leading-zero variant must collapse onto COL0
+    sw1_col_net = switches["SW1"].FindPadByNumber("1").GetNet().GetNetname()
+    sw2_col_net = switches["SW2"].FindPadByNumber("1").GetNet().GetNetname()
+    assert sw1_col_net == "COL0"
+    assert sw2_col_net == "COL0"
+
+    # No phantom COL00 net is created
+    net_names = {str(n.GetNetname()) for n in board.GetNetInfo().NetsByName().values()}
+    assert "COL0" in net_names
+    assert "COL00" not in net_names
+
+    # The placement lookup (int-based) must resolve the leading-zero position
+    matrix = KeyMatrix(board, "SW{}", "D{}")
+    assert "SW1" in matrix.switches_references_by_coordinates(0, 0)
 
 
 def test_create_board_diode_footprint_not_found(tmpdir, request) -> None:

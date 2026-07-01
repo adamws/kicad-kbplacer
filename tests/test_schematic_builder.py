@@ -514,6 +514,73 @@ class TestEncoderBoardSchematic:
         assert len(encoder_symbols) == 1
 
 
+class TestMatrixNetNameParity:
+    @pytest.mark.skipif(
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
+    )
+    def test_leading_zero_matrix_net_parity(self, request, tmpdir) -> None:
+        """Board nets and schematic labels must match for leading-zero labels.
+
+        A label like ``0,00`` denotes the same matrix column as ``0,0``. Both
+        builders route matrix coordinates through the shared ``matrix_net_name``
+        helper, so a digit-only ``00`` collapses onto the canonical ``COL0`` net
+        on the board *and* the matching ``COL0`` global label in the schematic
+        (never a phantom ``COL00``). This guards parity between the two builders.
+        """
+        if not can_create_schematic():
+            pytest.skip("Requires optional schematic dependencies")
+
+        # Both keys are in column 0; the first uses the leading-zero variant.
+        layout = [["0,00"], ["1,0"]]
+        layout_file = Path(tmpdir) / "layout.json"
+        with open(layout_file, "w") as f:
+            json.dump(layout, f)
+
+        pcb_file = Path(tmpdir) / "test.kicad_pcb"
+        schematic_file = Path(tmpdir) / "test.kicad_sch"
+
+        fp_dir = str(get_footprints_dir(request))
+        switch_footprint = fp_dir + ":SW_Cherry_MX_PCB_1.00u"
+        diode_footprint = fp_dir + ":D_SOD-323"
+
+        create_schematic(
+            layout_file,
+            schematic_file,
+            switch_footprint=switch_footprint,
+            diode_footprint=diode_footprint,
+        )
+
+        builder = BoardBuilder(
+            pcb_file,
+            switch_footprint=switch_footprint,
+            diode_footprint=diode_footprint,
+        )
+        board = builder.create_board(layout_file)
+        board.Save(str(pcb_file))
+
+        # Matrix net names present on the board.
+        board_matrix_nets = {
+            str(n.GetNetname())
+            for n in board.GetNetsByNetcode().values()
+            if str(n.GetNetname()).startswith(("COL", "ROW"))
+        }
+
+        # Matrix labels emitted into the schematic.
+        with open(schematic_file, "r") as f:
+            schematic_sexp = sexpdata.load(f)
+        schematic_matrix_labels = {
+            label[1]
+            for label in find_children(schematic_sexp, "global_label")
+            if isinstance(label[1], str) and label[1].startswith(("COL", "ROW"))
+        }
+
+        # The two builders must agree on the matrix net names exactly.
+        assert schematic_matrix_labels == board_matrix_nets == {"COL0", "ROW0", "ROW1"}
+        # No phantom COL00 net/label on either side.
+        assert "COL00" not in board_matrix_nets
+        assert "COL00" not in schematic_matrix_labels
+
+
 class TestSingleKeySchematic:
     @pytest.mark.skipif(
         KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"

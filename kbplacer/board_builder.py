@@ -13,7 +13,7 @@ from typing import Dict, List, Optional, Tuple, Union
 import pcbnew
 
 from .board_modifier import KICAD_VERSION
-from .builders_commons import uses_stabilizer
+from .builders_commons import matrix_net_name, uses_stabilizer
 from .footprint_loader import (
     FootprintIdentifier,
     StabilizerFootprintLoader,
@@ -143,8 +143,8 @@ class BoardBuilder:
         for k, position in zip(keys, positions):
             row, column = position
             if position not in position_tracker:
-                column_name = f"COL{column}" if column.isdigit() else column
-                row_name = f"ROW{row}" if row.isdigit() else row
+                column_name = matrix_net_name("COL", column)
+                row_name = matrix_net_name("ROW", row)
                 net_names.add(column_name)
                 net_names.add(row_name)
                 net_names.add(f"Net-(D{current_ref}-A)")
@@ -179,11 +179,11 @@ class BoardBuilder:
                     diode_pad1.SetPinFunction("K")
                     diode_pad2.SetPinFunction("A")
 
-                    column_name = f"COL{column}" if column.isdigit() else column
+                    column_name = matrix_net_name("COL", column)
                     net = self._add_or_get_net(column_name)
                     encoder_s1.SetNet(net)
 
-                    row_name = f"ROW{row}" if row.isdigit() else row
+                    row_name = matrix_net_name("ROW", row)
                     net = self._add_or_get_net(row_name)
                     diode_pad1.SetNet(net)
 
@@ -209,11 +209,11 @@ class BoardBuilder:
                     diode_pad1.SetPinFunction("K")
                     diode_pad2.SetPinFunction("A")
 
-                    column_name = f"COL{column}" if column.isdigit() else column
+                    column_name = matrix_net_name("COL", column)
                     net = self._add_or_get_net(column_name)
                     switch_pad1.SetNet(net)
 
-                    row_name = f"ROW{row}" if row.isdigit() else row
+                    row_name = matrix_net_name("ROW", row)
                     net = self._add_or_get_net(row_name)
                     diode_pad1.SetNet(net)
 

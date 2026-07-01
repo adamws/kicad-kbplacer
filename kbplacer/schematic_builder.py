@@ -8,7 +8,7 @@ from collections import defaultdict
 from typing import Dict, List, Tuple, Union
 
 from .board_modifier import KICAD_VERSION
-from .builders_commons import uses_stabilizer
+from .builders_commons import matrix_net_name, uses_stabilizer
 from .footprint_loader import (
     FootprintIdentifier,
     StabilizerFootprintLoader,
@@ -1328,9 +1328,10 @@ def create_schematic(
     )
 
     keys = [k for k in _keyboard.keys_in_matrix_order()]
+    raw_positions = [MatrixAnnotatedKeyboard.get_matrix_position(k) for k in keys]
     matrix = [
         (int(pos[0][len(row_prefix) :]), int(pos[1][len(column_prefix) :]))
-        for pos in (MatrixAnnotatedKeyboard.get_matrix_position(k) for k in keys)
+        for pos in raw_positions
     ]
     logger.debug(f"Matrix: {matrix}")
 
@@ -1354,18 +1355,25 @@ def create_schematic(
             ref_map[pos] = _ref
             _ref += 1
 
-    # Separate rotary encoder keys (sm='rot_ec11') from regular switch keys
+    # Separate rotary encoder keys (sm='rot_ec11') from regular switch keys.
+    # Net label names are derived from the raw matrix position via the shared
+    # `matrix_net_name` helper so that schematic labels match the net names
+    # produced by the board builder exactly (including leading-zero collapsing,
+    # e.g. "00" -> "COL0").
     regular_keys = []
     encoder_keys = []
-    for key, (row, column) in zip(keys, matrix):
+    for key, (row, column), raw_position in zip(keys, matrix, raw_positions):
+        row_label = matrix_net_name(row_label_prefix, raw_position[0])
+        column_label = matrix_net_name(column_label_prefix, raw_position[1])
+        entry = (key, row, column, row_label, column_label)
         if key.sm == "rot_ec11":
-            encoder_keys.append((key, row, column))
+            encoder_keys.append(entry)
         else:
-            regular_keys.append((key, row, column))
+            regular_keys.append(entry)
 
     # Precompute positions that have encoder alternatives,
     # so the regular keys loop can add net labels on shared diode nets.
-    encoder_positions = {(row, col) for _, row, col in encoder_keys}
+    encoder_positions = {(row, col) for _, row, col, _, _ in encoder_keys}
 
     with open(output_path, "w") as f:
         size = (rows, columns)
@@ -1419,11 +1427,9 @@ def create_schematic(
 
     switches_with_stabs: List[Tuple[str, Key]] = []
 
-    for key, row, column in regular_keys:
+    for key, row, column, row_label, column_label in regular_keys:
         position = (row, column)
         logger.debug(f"row: {row} column: {column}")
-        row_label = f"{row_label_prefix}{row}"
-        column_label = f"{column_label_prefix}{column}"
 
         used_slots = len(progress[position])
         # clamp to maximum value (use same slot for all 3+ alternative keys)
@@ -1562,7 +1568,7 @@ def create_schematic(
         enc_x = stabilizer_x
         enc_y = stabilizer_y + (20 if len(switches_with_stabs) != 0 else 0)
 
-        for key, row, column in encoder_keys:
+        for key, row, column, row_label, column_label in encoder_keys:
             position = (row, column)
             used_slots = len(progress[position])
             # clamp to maximum value (same treatment as alternative switches)
@@ -1577,7 +1583,6 @@ def create_schematic(
             encoder.move(enc_x, enc_y)
 
             # Wire S1 → column label
-            col_label = f"{column_label_prefix}{column}"
             s1_loc = encoder.pin.S1.location
             s2_loc = encoder.pin.S2.location
             target_x = s1_loc.value[0] + 1 * UNIT
@@ -1586,7 +1591,7 @@ def create_schematic(
             label = sch.global_label.new()
             label.move(target_x, target_y, 0)
             label.effects.justify.value = "left"
-            label.value = col_label
+            label.value = column_label
 
             wire = sch.wire.new()
             wire.start_at(encoder.pin.S1)
@@ -1618,7 +1623,6 @@ def create_schematic(
                 wire3.delta_x = 0
                 wire3.delta_y = 1 * UNIT
 
-                row_label = f"{row_label_prefix}{row}"
                 row_wire = sch.wire.new()
                 row_wire.start_at(wire3.end)
                 row_wire.delta_x = 1 * UNIT

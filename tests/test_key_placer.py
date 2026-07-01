@@ -577,6 +577,7 @@ def test_switch_iterator_default_mode_ignore_decal(request) -> None:
     [
         ["0, 0", "0, 1", "1, 0", "1, 1"],
         ["ROW0, COL0", "ROW0, COL1", "ROW1, COL0", "ROW1, COL1"],
+        ["0, 00", "0, 01", "1, 0", "01, 1"],  # leading zeros should be ok
     ],
 )
 def test_switch_iterator_via_annotation_mode(request, labels) -> None:
