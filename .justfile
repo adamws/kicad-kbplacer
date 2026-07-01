@@ -44,14 +44,14 @@ test-perf version=default_version:
 # === Tools ===
 
 # run tools test suite inside docker
-tools-test version="9.0.9-noble":
+tools-test version=default_version:
     docker run --rm \
         -v "{{justfile_directory()}}:/workspace" -w /workspace \
         "{{image_prefix}}:{{version}}" \
         bash -c "pip3 install --no-cache-dir hatch && hatch run tools:test"
 
 # run layout2image tool and write SVG outputs to ./output_svgs/
-tools-layout2image version="9.0.9-noble":
+tools-layout2image version=default_version:
     #!/usr/bin/env bash
     set -euo pipefail
     mkdir -p "{{justfile_directory()}}/output_svgs"
@@ -66,14 +66,14 @@ tools-layout2image version="9.0.9-noble":
             done"
 
 # run kle2kle tool (pass extra args after --)
-tools-kle2kle version="9.0.9-noble" *args="--help":
+tools-kle2kle version=default_version *args="--help":
     docker run --rm \
         -v "{{justfile_directory()}}:/workspace" -w /workspace \
         "{{image_prefix}}:{{version}}" \
         bash -c "pip3 install --no-cache-dir hatch && hatch run tools:kle2kle {{args}}"
 
 # run layout2openscad tool (pass extra args after --)
-tools-layout2openscad version="9.0.9-noble" *args="--help":
+tools-layout2openscad version=default_version *args="--help":
     docker run --rm \
         -v "{{justfile_directory()}}:/workspace" -w /workspace \
         "{{image_prefix}}:{{version}}" \
@@ -83,7 +83,7 @@ tools-layout2openscad version="9.0.9-noble" *args="--help":
 
 # profile memory of a complete kle-ng-api task (schematic + pcb) with memray
 # Outputs profile.bin + flamegraphs to ./output_memray/. ROUTING: none|switch-diode|full
-profile-memray version="9.0.9-noble" routing="full":
+profile-memray version=default_version routing="full":
     #!/usr/bin/env bash
     set -euo pipefail
     outdir="{{justfile_directory()}}/output_memray"
