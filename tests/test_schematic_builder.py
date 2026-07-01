@@ -655,3 +655,64 @@ class TestSingleKeySchematic:
         # A single regular key needs neither encoders nor stabilizers.
         assert len(_instances("Device:RotaryEncoder_Switch")) == 0
         assert len(_instances("Mechanical:SW_stab")) == 0
+
+
+class TestSchematicWithoutFootprints:
+    @pytest.mark.skipif(
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
+    )
+    def test_schematic_only_no_footprints(self, tmpdir) -> None:
+        # Creating a schematic without any footprint assigned is a valid,
+        # supported use case: someone may want to generate the schematic first
+        # and assign footprints later. It must succeed and produce a valid
+        # schematic with the symbols' Footprint fields left empty.
+        if not can_create_schematic():
+            pytest.skip("Requires optional schematic dependencies")
+
+        layout = [["0,0", "0,1"], ["1,0", "1,1"]]
+        layout_file = Path(tmpdir) / "layout.json"
+        with open(layout_file, "w") as f:
+            json.dump(layout, f)
+
+        schematic_file = Path(tmpdir) / "test.kicad_sch"
+
+        # No footprint arguments passed - must not raise.
+        create_schematic(layout_file, schematic_file)
+        assert schematic_file.exists()
+
+        # Netlist generation is a strong validity check: kicad-cli must be able
+        # to fully load and process the schematic.
+        generate_schematic_image(tmpdir, schematic_file)
+        netlist = generate_netlist(tmpdir, schematic_file)
+        assert netlist.exists()
+        nets = {n["name"].lstrip("/") for n in parse_netlist_file(netlist)}
+        assert {"COL0", "COL1", "ROW0", "ROW1"} <= nets
+
+        with open(schematic_file, "r") as f:
+            schematic_sexp = sexpdata.load(f)
+
+        symbols = find_children(schematic_sexp, "symbol")
+        switches = [
+            s
+            for s in symbols
+            if (lib_id := find_child(s, "lib_id")) is not None
+            and lib_id[1] == "Switch:SW_Push_45deg"
+        ]
+        diodes = [
+            s
+            for s in symbols
+            if (lib_id := find_child(s, "lib_id")) is not None
+            and lib_id[1] == "Device:D_Small"
+        ]
+        assert len(switches) == 4
+        assert len(diodes) == 4
+
+        # Every symbol's Footprint field must be empty since none were assigned.
+        def _footprint_value(symbol):
+            for prop in find_children(symbol, "property"):
+                if prop[1] == "Footprint":
+                    return prop[2]
+            return None
+
+        for symbol in switches + diodes:
+            assert _footprint_value(symbol) == ""
