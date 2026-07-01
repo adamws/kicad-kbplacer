@@ -37,6 +37,10 @@ KICAD_VERSION = tuple(map(int, version_match.groups())) if version_match else ()
 MIN_KICAD_VERSION = 6
 logger = logging.getLogger(__name__)
 
+# The `skip` package (used by the schematic builder) is very chatty at DEBUG/INFO
+# and floods the HTML test report. Only surface its warnings and above.
+logging.getLogger("skip").setLevel(logging.WARNING)
+
 
 def pytest_collection_modifyitems(items) -> None:
     try:
