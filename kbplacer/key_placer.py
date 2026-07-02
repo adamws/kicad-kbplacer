@@ -131,17 +131,25 @@ class KeyMatrix:
                         diodes_unique_nets[reference]
                     )
 
+        self._invalid_switches: Dict[str, Set[str]] = {}
         for k, v in switches_nets.items():
-            if len(list(v)) == 2:
+            if len(v) == 2:
                 self._switches_references_by_net[frozenset(v)].append(k)
             else:
-                logger.warning(
-                    "Unexpected switch net position detected, "
-                    "each switch should have two unique nets unambiguously defining "
-                    "position in key matrix, switch-by-matrix association can't be used"
-                )
-                self._switches_references_by_net = {}
-                break
+                self._invalid_switches[k] = set(v)
+        if self._invalid_switches:
+            details = ", ".join(
+                f"{ref} (nets: {sorted(nets) if nets else 'none'})"
+                for ref, nets in sorted(self._invalid_switches.items())
+            )
+            logger.warning(
+                "Unexpected switch net position detected. Each switch should have "
+                "exactly two unique nets unambiguously defining its position in the "
+                "key matrix (one ROW and one COL). The following switches do not: "
+                f"{details}. Their pads may be unconnected or wired incorrectly, so "
+                "switch-by-matrix association can't be used."
+            )
+            self._switches_references_by_net = {}
         logger.debug(f"Switches by nets: {self._switches_references_by_net}")
         self._diodes_references_by_switch = {
             k: [f.GetReference() for f in v] for k, v in self._diodes_by_switch.items()
@@ -177,6 +185,12 @@ class KeyMatrix:
 
     def is_matrix_ok(self) -> bool:
         return len(self._switches_references_by_net) != 0
+
+    def invalid_switches(self) -> Dict[str, Set[str]]:
+        """Switches which do not have exactly two matrix nets, keyed by
+        reference with their detected nets. Populated when matrix association
+        fails so callers can report the offending footprints."""
+        return self._invalid_switches
 
     def is_likely_direct_pin(self) -> bool:
         # assume that matrix netlist is direct-pin if:
@@ -392,11 +406,24 @@ def get_key_iterator(
 ) -> Iterator:
     if isinstance(keyboard, MatrixAnnotatedKeyboard):
         if not key_matrix.is_matrix_ok():
+            invalid = key_matrix.invalid_switches()
+            if invalid:
+                details = ", ".join(
+                    f"{ref} (nets: {sorted(nets) if nets else 'none'})"
+                    for ref, nets in sorted(invalid.items())
+                )
+                reason = (
+                    "The following switch footprints do not have exactly two "
+                    f"matrix nets (one ROW, one COL): {details}.\n"
+                    "Their pads appear unconnected or incorrectly wired.\n"
+                )
+            else:
+                reason = "Either net names are unrecognized or netlist is invalid.\n"
             msg = (
                 "Detected layout file with via-annotated matrix positions "
                 "while not all footprints on PCB can be unambiguously associated "
                 "with row/column position.\n"
-                "Either net names are unrecognized or netlist is invalid.\n"
+                f"{reason}"
                 "Fix netlist problems or use layout file which uses 'explicit annotation'.\n"
                 f"For details see {ANNOTATION_GUIDE_URL}"
             )
