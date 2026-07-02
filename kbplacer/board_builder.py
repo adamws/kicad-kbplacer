@@ -101,6 +101,26 @@ class BoardBuilder:
         fp.SetValue("RotaryEncoder_Switch")
         return self._add_footprint(fp)
 
+    @staticmethod
+    def _matrix_pad_numbers(fp: pcbnew.FOOTPRINT) -> Tuple[str, str]:
+        """Return the ordered (column-side, diode-side) matrix pad numbers
+        of a switch or encoder footprint.
+
+        Plain switches use pads "1"/"2", encoders use "S1"/"S2". The two roles
+        (default vs alternative) can be either type, so pad names must be probed
+        instead of assumed. Encoder naming is checked first because an encoder
+        may also expose numerically named rotary pads.
+        """
+        if fp.FindPadByNumber("S1") and fp.FindPadByNumber("S2"):
+            return ("S1", "S2")
+        if fp.FindPadByNumber("1") and fp.FindPadByNumber("2"):
+            return ("1", "2")
+        msg = (
+            f"Cannot determine matrix pads of footprint {fp.GetReference()}; "
+            "expected pads '1'/'2' (switch) or 'S1'/'S2' (encoder)"
+        )
+        raise RuntimeError(msg)
+
     def _add_or_get_net(self, netname: str) -> pcbnew.NETINFO_ITEM:
         """Add new net with netname if it does not exist already
         or return if it does exist
@@ -237,26 +257,24 @@ class BoardBuilder:
                         msg = "Encoder footprint not configured but layout contains encoder keys"
                         raise RuntimeError(msg)
                     fp = self._add_encoder_footprint(reference)
-                    # default_fp is a switch with pads "1"/"2"; map them to encoder S1/S2
-                    pad_mapping = {"S1": "1", "S2": "2"}
-                    for encoder_pad_number, switch_pad_number in pad_mapping.items():
-                        default_pad = default_fp.FindPadByNumber(switch_pad_number)
-                        new_pad = fp.FindPadByNumber(encoder_pad_number)
-                        if default_pad and new_pad:
-                            new_pad.SetNet(default_pad.GetNet())
-                            new_pad.SetPinFunction(encoder_pad_number)
                 else:
                     fp = self._add_switch_footprint(reference, key=k)
-                    for pad_number in ("1", "2"):
-                        default_pad = default_fp.FindPadByNumber(pad_number)
-                        new_pad = fp.FindPadByNumber(pad_number)
-                        if default_pad and new_pad:
-                            new_pad.SetNet(default_pad.GetNet())
-                            new_pad.SetPinFunction(pad_number)
-
                     if add_stabilizers and uses_stabilizer(k):
                         stabilizer_reference = reference.replace("SW", "ST")
                         self._add_stabilizer_footprint(stabilizer_reference, key=k)
+
+                # Copy matrix nets from the default footprint at this position.
+                # Either footprint may be a switch ("1"/"2") or an encoder
+                # ("S1"/"S2"), so probe the pad names on both sides instead of
+                # assuming the default is a plain switch.
+                default_pads = self._matrix_pad_numbers(default_fp)
+                new_pads = self._matrix_pad_numbers(fp)
+                for default_number, new_number in zip(default_pads, new_pads):
+                    default_pad = default_fp.FindPadByNumber(default_number)
+                    new_pad = fp.FindPadByNumber(new_number)
+                    if default_pad and new_pad:
+                        new_pad.SetNet(default_pad.GetNet())
+                        new_pad.SetPinFunction(new_number)
 
                 progress[position].append(fp)
 

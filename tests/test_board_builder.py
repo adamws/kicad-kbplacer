@@ -19,7 +19,7 @@ from kbplacer.kle_serial import (
     parse_kle,
 )
 
-from .conftest import get_footprints_dir, save_and_render
+from .conftest import KICAD_VERSION, get_footprints_dir, save_and_render
 
 
 def test_get_builder_invalid_footprint(tmpdir) -> None:
@@ -180,6 +180,81 @@ def test_create_board_alternative_layout_loads_correct_footprint(
         assert (
             default_net == alt_net
         ), f"Pad {pad_number}: default net '{default_net}' != alternative net '{alt_net}'"
+
+    save_and_render(board, tmpdir, request)
+
+
+@pytest.mark.skipif(
+    KICAD_VERSION < (10, 0, 0),
+    reason="Encoder footprint not recognized by KiCad older than 10.0",
+)
+def test_create_board_encoder_default_switch_alternative(tmpdir, request) -> None:
+    """Encoder as the default key with a plain switch alternative at the same
+    position.
+
+    Regression test: previously the alternative plain switch (``SW1a``) inherited
+    its nets from the default footprint by pad numbers ``1``/``2``. When the
+    default is an encoder its matrix pads are named ``S1``/``S2``, so the lookup
+    returned nothing and the alternative switch was left with unconnected pads.
+    That in turn made ``KeyMatrix`` reject the whole board as not associable with
+    matrix positions. The alternative switch must inherit the encoder's matrix
+    nets so the matrix stays valid.
+    """
+    pcb_path = f"{tmpdir}/test.kicad_pcb"
+
+    fp_dir = str(get_footprints_dir(request))
+    switch_footprint = f"{fp_dir}:SW_Cherry_MX_PCB_1.00u"
+    diode_footprint = f"{fp_dir}:D_SOD-323"
+    encoder_footprint = (
+        f"{fp_dir}:RotaryEncoder_Alps_EC11E-Switch_Vertical_H20mm_CircularMountingHoles"
+    )
+
+    builder = BoardBuilder(
+        pcb_path,
+        switch_footprint=switch_footprint,
+        diode_footprint=diode_footprint,
+        encoder_footprint=encoder_footprint,
+    )
+
+    # default at (0,0) is the encoder (choice 0), alternative is a plain switch
+    keyboard = parse_kle(
+        [
+            [
+                {"sm": "rot_ec11"},
+                "0,0\n\n\n1,0\n\n\n\n\n\ne0",
+                {"sm": ""},
+                "0,0\n\n\n1,1",
+            ],
+            ["0,1", "1,1"],
+        ]
+    )
+    keyboard = MatrixAnnotatedKeyboard(meta=keyboard.meta, keys=keyboard.keys)
+
+    board = builder.create_board(keyboard)
+
+    switches = {
+        fp.GetReference(): fp
+        for fp in board.GetFootprints()
+        if fp.GetReference().startswith("SW")
+    }
+    # SW1 is the default encoder at (0,0); SW1a is the plain switch alternative
+    assert "SW1" in switches
+    assert "SW1a" in switches
+
+    # The alternative switch's matrix pads ('1'/'2') must inherit the encoder's
+    # matrix nets ('S1'/'S2') and none of them may be left unconnected.
+    for encoder_pad, switch_pad in (("S1", "1"), ("S2", "2")):
+        encoder_net = switches["SW1"].FindPadByNumber(encoder_pad).GetNet().GetNetname()
+        alt_net = switches["SW1a"].FindPadByNumber(switch_pad).GetNet().GetNetname()
+        assert alt_net != "", f"SW1a pad {switch_pad} left unconnected"
+        assert (
+            encoder_net == alt_net
+        ), f"pad {switch_pad}: encoder net '{encoder_net}' != alternative net '{alt_net}'"
+
+    # With both footprints correctly netted the matrix must be associable.
+    matrix = KeyMatrix(board, "SW{}", "D{}")
+    assert matrix.invalid_switches() == {}
+    assert matrix.is_matrix_ok()
 
     save_and_render(board, tmpdir, request)
 
