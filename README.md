@@ -571,7 +571,7 @@ matrix position and size.
 To generate schematic file and schematic image based on layout file:
 
 ```shell
-python -m kbplacer.schematic_builder --in <via-annotated-layout.json> --out output.kicad_sch
+python -m kbplacer --create-sch-file --layout <via-annotated-layout.json> --sch-file output.kicad_sch
 kicad-cli sch export svg -e output.kicad_sch
 ```
 

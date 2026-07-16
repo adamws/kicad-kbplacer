@@ -79,6 +79,74 @@ tools-layout2openscad version=default_version *args="--help":
         "{{image_prefix}}:{{version}}" \
         bash -c "pip3 install --no-cache-dir hatch && hatch run tools-openscad:layout2openscad {{args}}"
 
+# === Schematic ===
+
+# Writes <layout>.kicad_sch + <layout>.pdf to ./output_schematic/. LAYOUT names a file
+# in tests/data/via-layouts/. Requires KiCad >= 9.0 (the default image satisfies this).
+#
+# Params are positional: `just schematic [VERSION] [LAYOUT] [-- EXTRA_KBPLACER_ARGS...]`.
+# To pass extra kbplacer args you MUST spell out VERSION and LAYOUT before the `--`
+# (`--` only lets the following dash-prefixed tokens bind positionally, it does NOT skip
+# earlier params). Examples:
+#   just schematic                                        # defaults: 10.0.4-noble, wt60_a
+#   just schematic 10.0.4-noble 0_sixty                   # pick version + layout
+#   just schematic 10.0.4-noble wt60_a --start-index 5    # append args to kbplacer
+# build a schematic from a representative layout and export it to PDF for inspection
+schematic version=default_version layout="wt60_a" *args="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mkdir -p "{{justfile_directory()}}/output_schematic"
+    docker run --rm \
+        -v "{{justfile_directory()}}:/workspace" -w /workspace \
+        "{{image_prefix}}:{{version}}" \
+        bash -c '
+            set -euo pipefail
+            # schematic builder dependency (kicad-skip);
+            # No keyswitch footprint library is needed: the schematic path only writes the
+            # footprint identifiers as symbol metadata strings, it never loads the
+            # .pretty dirs (that is a PCB-builder concern, see the profile-memray recipe).
+            pip3 install --no-cache-dir .[schematic]
+
+            outdir="output_schematic"
+            name="{{layout}}"
+            via_layout="tests/data/via-layouts/$name.json"
+            kle_layout="$outdir/$name-kle.json"
+            sch_file="$outdir/$name.kicad_sch"
+            pdf_file="$outdir/$name.pdf"
+
+            # kbplacer and kicad-cli abort rather than overwrite; clear stale artifacts.
+            rm -f "$kle_layout" "$sch_file" "$pdf_file"
+
+            # 1. Prep: convert the VIA layout into the matrix-annotated KLE_RAW shape
+            #    that kle-ng-api feeds to kbplacer (also expands VIA encoders).
+            python3 -m kbplacer.kle_serial \
+                --in "$via_layout" --inform KLE_VIA --convert-via-encoders \
+                --outform KLE_RAW --out "$kle_layout"
+
+            # 2. Schematic-only kbplacer run (no --pcb-file / --create-pcb-file). The
+            #    templated switch footprint is a plain literal: the `}` in `{:.2f}` would
+            #    corrupt a ${VAR:-default} expansion, so it must not live inside one.
+            python3 -m kbplacer \
+                --create-sch-file \
+                --sch-file "$sch_file" \
+                --layout "$kle_layout" \
+                --switch-footprint "Switch_Keyboard_Cherry_MX.pretty:SW_Cherry_MX_PCB_{:.2f}u" \
+                --diode-footprint "/usr/share/kicad/footprints/Diode_SMD.pretty:D_SOD-123F" \
+                --encoder-footprint "/usr/share/kicad/footprints/Rotary_Encoder.pretty:RotaryEncoder_Alps_EC11E-Switch_Vertical_H20mm" \
+                --encoder-adjustment "-7.5 -2.5" \
+                --switch "SW{} 0 FRONT" \
+                --diode "D{} CUSTOM 0 0 0 BACK" \
+                --no-stabilizers \
+                --log-level "INFO" \
+                {{args}}
+
+            # 3. Export the schematic to PDF for easy visual inspection.
+            kicad-cli sch export pdf --output "$pdf_file" "$sch_file"
+
+            echo ">>> Schematic: $sch_file"
+            echo ">>> PDF:       $pdf_file"
+        '
+
 # === Profiling ===
 
 # profile memory of a complete kle-ng-api task (schematic + pcb) with memray

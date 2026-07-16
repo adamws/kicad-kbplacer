@@ -25,3 +25,6 @@ _autosave-*
 *-save.pro
 *-save.kicad_pcb
 fp-info-cache
+
+# example artifacts
+output_schematic/
