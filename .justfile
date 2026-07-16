@@ -158,16 +158,13 @@ profile-memray version=default_version routing="full":
     mkdir -p "$outdir"
     docker run --rm \
         -v "{{justfile_directory()}}:/workspace" -w /workspace \
-        -e PYTHONPATH=/workspace \
         -e OUTDIR=/workspace/output_memray \
         -e ROUTING="{{routing}}" \
         "{{image_prefix}}:{{version}}" \
         bash -c '
             set -euo pipefail
-            # memray + the schematic builder dependency (kicad-skip); kbplacer
-            # itself runs from the mounted source via PYTHONPATH, the same way
-            # kle-ng-api runs "python3 -m kbplacer" on this base image.
-            pip3 install --no-cache-dir memray "kicad-skip==0.2.5"
+            # memray + kbplacer with the schematic builder dependency (kicad-skip);
+            pip3 install --no-cache-dir .[schematic] memray
             # Install the perigoso/kiswitch keyswitch footprints the same way
             # kle-ng-api'"'"'s worker Dockerfile does (the base image does not ship
             # keyboard switch footprints). Idempotent across re-runs.
@@ -236,3 +233,9 @@ typing:
 # run all lint checks (style + typing)
 lint-all:
     hatch run lint:all
+
+
+# === Cleanup ===
+
+cleanup:
+  rm -rf output_schematic output_memray
