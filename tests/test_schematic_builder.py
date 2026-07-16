@@ -52,6 +52,14 @@ def find_children(expr, name):
     ]
 
 
+def reference_value(symbol):
+    """Return a schematic symbol's ``Reference`` property value (e.g. ``SW1``)"""
+    for prop in find_children(symbol, "property"):
+        if prop[1] == "Reference":
+            return prop[2]
+    return None
+
+
 def parse_netlist_file(netlist_path: Path):
     with open(netlist_path, "r") as f:
         netlist_sexp = sexpdata.load(f)
@@ -716,3 +724,140 @@ class TestSchematicWithoutFootprints:
 
         for symbol in switches + diodes:
             assert _footprint_value(symbol) == ""
+
+
+class TestStartIndex:
+    """`create_schematic`'s `start_index` controls the first number used for
+    both switch (SW) and diode (D) references, mirroring `--start-index`
+    of the `key_placer` PCB placement path.
+    """
+
+    LAYOUT = [["0,0", "0,1"], ["1,0", "1,1"]]
+
+    def _build(self, tmpdir, **kwargs):
+        layout_file = Path(tmpdir) / "layout.json"
+        with open(layout_file, "w") as f:
+            json.dump(self.LAYOUT, f)
+
+        schematic_file = Path(tmpdir) / "test.kicad_sch"
+        create_schematic(layout_file, schematic_file, **kwargs)
+
+        with open(schematic_file, "r") as f:
+            schematic_sexp = sexpdata.load(f)
+        return schematic_sexp
+
+    def _references(self, schematic_sexp, prefix):
+        return sorted(
+            reference_value(s)
+            for s in find_children(schematic_sexp, "symbol")
+            if (ref := reference_value(s)) is not None and ref.startswith(prefix)
+        )
+
+    @pytest.mark.skipif(
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
+    )
+    def test_default_start_index(self, tmpdir) -> None:
+        if not can_create_schematic():
+            pytest.skip("Requires optional schematic dependencies")
+
+        schematic_sexp = self._build(tmpdir)
+
+        assert self._references(schematic_sexp, "SW") == ["SW1", "SW2", "SW3", "SW4"]
+        assert self._references(schematic_sexp, "D") == ["D1", "D2", "D3", "D4"]
+
+    @pytest.mark.parametrize("start_index", [0, 5])
+    @pytest.mark.skipif(
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
+    )
+    def test_custom_start_index(self, tmpdir, start_index) -> None:
+        if not can_create_schematic():
+            pytest.skip("Requires optional schematic dependencies")
+
+        schematic_sexp = self._build(tmpdir, start_index=start_index)
+
+        expected = [f"SW{i}" for i in range(start_index, start_index + 4)]
+        assert self._references(schematic_sexp, "SW") == expected
+        expected = [f"D{i}" for i in range(start_index, start_index + 4)]
+        assert self._references(schematic_sexp, "D") == expected
+
+    @pytest.mark.skipif(
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
+    )
+    def test_negative_start_index_falls_back_to_one(self, tmpdir, caplog) -> None:
+        if not can_create_schematic():
+            pytest.skip("Requires optional schematic dependencies")
+
+        with caplog.at_level(logging.WARNING):
+            schematic_sexp = self._build(tmpdir, start_index=-5)
+
+        assert "Invalid switch start index: -5, defaults to 1" in caplog.text
+        assert self._references(schematic_sexp, "SW") == ["SW1", "SW2", "SW3", "SW4"]
+        assert self._references(schematic_sexp, "D") == ["D1", "D2", "D3", "D4"]
+
+
+class TestStartIndexCli:
+    def _run_subprocess(
+        self, package_path, package_name, args: dict[str, str]
+    ) -> subprocess.Popen:
+        kbplacer_args = ["python3", "-m", f"{package_name}", "--create-sch-file"]
+        for k, v in args.items():
+            kbplacer_args.append(k)
+            if v:
+                kbplacer_args.append(v)
+
+        p = subprocess.Popen(
+            kbplacer_args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdin=subprocess.PIPE,
+            text=True,
+            cwd=package_path,
+            env=os.environ.copy(),
+        )
+        return p
+
+    @pytest.mark.skipif(
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
+    )
+    def test_start_index_option(
+        self, request, tmpdir, package_path, package_name
+    ) -> None:
+        # End-to-end check of the full `--start-index` plumbing (CLI parsing ->
+        # PluginSettings -> run_schematic -> create_schematic), complementing
+        # the direct create_schematic-level checks in TestStartIndex.
+        test_dir = request.fspath.dirname
+        source_dir = f"{test_dir}/../examples/2x2"
+        shutil.copy(f"{source_dir}/kle-annotated.json", tmpdir)
+        layout_file = f"{tmpdir}/kle-annotated.json"
+        schematic_file = Path(layout_file).with_suffix(".kicad_sch")
+
+        p = self._run_subprocess(
+            package_path,
+            package_name,
+            args={
+                "--layout": layout_file,
+                "--sch-file": str(schematic_file),
+                "--start-index": "5",
+            },
+        )
+        _, errs = p.communicate()
+
+        if sys.platform != "darwin":
+            assert filter_kiacd10_errs(errs) == ""
+        assert p.returncode == 0
+
+        with open(schematic_file, "r") as f:
+            schematic_sexp = sexpdata.load(f)
+
+        switch_refs = sorted(
+            reference_value(s)
+            for s in find_children(schematic_sexp, "symbol")
+            if (ref := reference_value(s)) is not None and ref.startswith("SW")
+        )
+        diode_refs = sorted(
+            reference_value(s)
+            for s in find_children(schematic_sexp, "symbol")
+            if (ref := reference_value(s)) is not None and ref.startswith("D")
+        )
+        assert switch_refs == ["SW5", "SW6", "SW7", "SW8"]
+        assert diode_refs == ["D5", "D6", "D7", "D8"]

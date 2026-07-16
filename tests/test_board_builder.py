@@ -5,6 +5,11 @@
 from __future__ import annotations
 
 import itertools
+import logging
+import os
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 import pcbnew
@@ -19,7 +24,12 @@ from kbplacer.kle_serial import (
     parse_kle,
 )
 
-from .conftest import KICAD_VERSION, get_footprints_dir, save_and_render
+from .conftest import (
+    KICAD_VERSION,
+    filter_kiacd10_errs,
+    get_footprints_dir,
+    save_and_render,
+)
 
 
 def test_get_builder_invalid_footprint(tmpdir) -> None:
@@ -359,3 +369,114 @@ def test_create_board_with_stabilizers(tmpdir, request) -> None:
     assert footprint_names.count("Stabilizer_Cherry_MX_7.00u") == 1
 
     save_and_render(board, tmpdir, request)
+
+
+class TestStartIndex:
+    """`create_board`'s `start_index` controls the first number used for
+    both switch (SW) and diode (D) references, mirroring `--start-index`
+    of the schematic builder and `key_placer` PCB placement path.
+    """
+
+    LAYOUT = [["0,0", "0,1"], ["1,0", "1,1"]]
+
+    def _build(self, builder, **kwargs) -> pcbnew.BOARD:
+        keyboard = parse_kle(self.LAYOUT)
+        keyboard = MatrixAnnotatedKeyboard(meta=keyboard.meta, keys=keyboard.keys)
+        return builder.create_board(keyboard, **kwargs)
+
+    def _references(self, board, prefix):
+        return sorted(
+            fp.GetReference()
+            for fp in board.GetFootprints()
+            if fp.GetReference().startswith(prefix)
+        )
+
+    def test_default_start_index(self, builder) -> None:
+        board = self._build(builder)
+
+        assert self._references(board, "SW") == ["SW1", "SW2", "SW3", "SW4"]
+        assert self._references(board, "D") == ["D1", "D2", "D3", "D4"]
+
+    @pytest.mark.parametrize("start_index", [0, 5])
+    def test_custom_start_index(self, builder, start_index) -> None:
+        board = self._build(builder, start_index=start_index)
+
+        expected = [f"SW{i}" for i in range(start_index, start_index + 4)]
+        assert self._references(board, "SW") == expected
+        expected = [f"D{i}" for i in range(start_index, start_index + 4)]
+        assert self._references(board, "D") == expected
+
+    def test_negative_start_index_falls_back_to_one(self, builder, caplog) -> None:
+        with caplog.at_level(logging.WARNING):
+            board = self._build(builder, start_index=-5)
+
+        assert "Invalid switch start index: -5, defaults to 1" in caplog.text
+        assert self._references(board, "SW") == ["SW1", "SW2", "SW3", "SW4"]
+        assert self._references(board, "D") == ["D1", "D2", "D3", "D4"]
+
+
+class TestStartIndexCli:
+    def _run_subprocess(
+        self, package_path, package_name, args: dict[str, str]
+    ) -> subprocess.Popen:
+        kbplacer_args = ["python3", "-m", f"{package_name}", "--create-pcb-file"]
+        for k, v in args.items():
+            kbplacer_args.append(k)
+            if v:
+                kbplacer_args.append(v)
+
+        p = subprocess.Popen(
+            kbplacer_args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdin=subprocess.PIPE,
+            text=True,
+            cwd=package_path,
+            env=os.environ.copy(),
+        )
+        return p
+
+    def test_start_index_option(
+        self, request, tmpdir, package_path, package_name
+    ) -> None:
+        # End-to-end check of the full `--start-index` plumbing (CLI parsing ->
+        # PluginSettings -> run_board -> BoardBuilder.create_board), complementing
+        # the direct create_board-level checks in TestStartIndex.
+        test_dir = request.fspath.dirname
+        source_dir = f"{test_dir}/../examples/2x2"
+        shutil.copy(f"{source_dir}/kle-annotated.json", tmpdir)
+        layout_file = f"{tmpdir}/kle-annotated.json"
+        pcb_file = Path(layout_file).with_suffix(".kicad_pcb")
+
+        footprints_dir = get_footprints_dir(request)
+
+        p = self._run_subprocess(
+            package_path,
+            package_name,
+            args={
+                "--layout": layout_file,
+                "--pcb-file": str(pcb_file),
+                "--switch-footprint": f"{footprints_dir}:SW_Cherry_MX_PCB_1.00u",
+                "--diode-footprint": f"{footprints_dir}:D_SOD-323",
+                "--start-index": "5",
+            },
+        )
+        _, errs = p.communicate()
+
+        if sys.platform != "darwin":
+            assert filter_kiacd10_errs(errs) == ""
+        assert p.returncode == 0
+
+        board = pcbnew.LoadBoard(str(pcb_file))
+        switch_refs = sorted(
+            fp.GetReference()
+            for fp in board.GetFootprints()
+            if fp.GetReference().startswith("SW")
+        )
+        diode_refs = sorted(
+            fp.GetReference()
+            for fp in board.GetFootprints()
+            if fp.GetReference().startswith("D")
+        )
+        assert switch_refs == ["SW5", "SW6", "SW7", "SW8"]
+        assert diode_refs == ["D5", "D6", "D7", "D8"]

@@ -57,6 +57,7 @@ def run_schematic(settings: PluginSettings):
             stabilizer_footprint=settings.stabilizer_footprint,
             encoder_footprint=settings.encoder_footprint,
             add_stabilizers=settings.add_stabilizers,
+            start_index=settings.key_info.start_index,
         )
 
 
@@ -70,7 +71,9 @@ def run_board(settings: PluginSettings) -> pcbnew.BOARD:
             encoder_footprint=settings.encoder_footprint,
         )
         board = builder.create_board(
-            settings.layout_path, add_stabilizers=settings.add_stabilizers
+            settings.layout_path,
+            add_stabilizers=settings.add_stabilizers,
+            start_index=settings.key_info.start_index,
         )
     else:
         board = pcbnew.LoadBoard(settings.pcb_file_path)

@@ -1302,6 +1302,7 @@ def create_schematic(
     stabilizer_footprint="",
     encoder_footprint="",
     add_stabilizers: bool = True,
+    start_index: int = 1,
 ) -> None:
     if not can_create_schematic():
         msg = "Requires optional schematic dependencies"
@@ -1309,6 +1310,12 @@ def create_schematic(
     if KICAD_VERSION < (9, 0, 0):
         msg = "Requires KiCad 9.0 or higher"
         raise RuntimeError(msg)
+
+    # A negative start index is the "unset" sentinel used by `ElementInfo`
+    # (see element_position.py); mirror the key placer and fall back to 1.
+    if start_index < 0:
+        logger.warning(f"Invalid switch start index: {start_index}, defaults to 1")
+        start_index = 1
 
     if isinstance(keyboard, str) or isinstance(keyboard, os.PathLike):
         _keyboard = get_annotated_keyboard_from_file(keyboard)
@@ -1346,9 +1353,12 @@ def create_schematic(
     columns = max(set([x[1] for x in matrix]))
     logger.debug(f"Matrix size: {rows}x{columns}")
 
-    # Build reference map based on matrix position order (shared by switches and encoders)
+    # Build reference map based on matrix position order (shared by switches
+    # and encoders). Numbering starts at `start_index` so the created switches
+    # (SW) and their diodes (D) can begin from a caller-specified value (e.g.
+    # 0 -> SW0/D0) instead of 1.
     ref_map: Dict[Tuple[int, int], int] = {}
-    _ref = 1
+    _ref = start_index
     for _key, (_row, _col) in zip(keys, matrix):
         pos = (_row, _col)
         if pos not in ref_map:
@@ -1421,7 +1431,6 @@ def create_schematic(
     progress: Dict[Tuple[int, int], List[str]] = defaultdict(list)
     diode_connection_positions = dict()
 
-    current_ref = 1
     labels = set()
     labels_positions = dict()
 

@@ -145,7 +145,14 @@ class BoardBuilder:
         keyboard: Union[str, os.PathLike, MatrixAnnotatedKeyboard],
         *,
         add_stabilizers: bool = True,
+        start_index: int = 1,
     ) -> pcbnew.BOARD:
+        # A negative start index is the "unset" sentinel used by `ElementInfo`
+        # (see element_position.py); mirror the key placer and fall back to 1.
+        if start_index < 0:
+            logger.warning(f"Invalid switch start index: {start_index}, defaults to 1")
+            start_index = 1
+
         if isinstance(keyboard, str) or isinstance(keyboard, os.PathLike):
             _keyboard = get_annotated_keyboard_from_file(keyboard)
         else:
@@ -158,7 +165,7 @@ class BoardBuilder:
 
         # First pass: collect all unique net names
         net_names = set()
-        current_ref = 1
+        current_ref = start_index
         position_tracker: Dict[Tuple[str, str], bool] = {}
         for k, position in zip(keys, positions):
             row, column = position
@@ -178,7 +185,7 @@ class BoardBuilder:
             self._add_or_get_net(net_name)
 
         # Second pass: create footprints and assign nets
-        current_ref = 1
+        current_ref = start_index
         progress: Dict[Tuple[str, str], List[pcbnew.FOOTPRINT]] = defaultdict(list)
         for k, position in zip(keys, positions):
             row, column = position
