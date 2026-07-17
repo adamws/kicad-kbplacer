@@ -14,6 +14,7 @@ import shutil
 import subprocess
 import sys
 import time
+import uuid
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Tuple, Union
@@ -393,6 +394,20 @@ def generate_drc(tmpdir, board_path: Union[str, os.PathLike]) -> None:
 
     with open(drc_path, "r") as f:
         logger.debug(f.read())
+
+
+def default_schematic_kwargs(**overrides) -> dict:
+    """Default `project_name`/`own_uuid`/`sheet_page` kwargs for tests that call
+    `create_key_matrix_schematic`/`create_led_chain_schematic` directly and don't
+    care about multi-sheet bundling specifics.
+    """
+    kwargs = {
+        "project_name": "test",
+        "own_uuid": str(uuid.uuid4()),
+        "sheet_page": 1,
+    }
+    kwargs.update(overrides)
+    return kwargs
 
 
 def write_fp_lib_table(tmpdir, libs) -> None:

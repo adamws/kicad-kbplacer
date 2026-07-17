@@ -54,6 +54,9 @@ def get_default(board_path: str) -> PluginSettings:
         stabilizer_footprint="",
         encoder_footprint="",
         layout_offset=None,
+        create_led_sch_file=False,
+        led_sch_file_path="",
+        project_path="",
     )
 
 
@@ -503,6 +506,108 @@ def test_schematic_creation_when_exist(
 
     run_mock.assert_not_called()
     assert caplog.records[0].message == f"File {fake_schematic} already exist, aborting"
+
+
+def test_led_schematic_creation_when_exist(
+    caplog, monkeypatch, cli_isolation, fake_board
+) -> None:
+    run_mock = Mock()
+    monkeypatch.setattr("kbplacer.__main__.run_schematic", run_mock)
+
+    fake_led_schematic = Path(fake_board).with_name(
+        Path(fake_board).stem + "-led-chain.kicad_sch"
+    )
+    args = ["--pcb-file", fake_board, "--create-sch-file", "--create-led-sch-file"]
+    with cli_isolation(args):
+        shutil.copy(fake_board, fake_led_schematic)
+        with pytest.raises(ExitTest):
+            app()
+
+    run_mock.assert_not_called()
+    assert (
+        caplog.records[0].message
+        == f"File {fake_led_schematic} already exist, aborting"
+    )
+
+
+def test_project_file_creation_when_exist(
+    caplog, monkeypatch, cli_isolation, fake_board
+) -> None:
+    run_mock = Mock()
+    monkeypatch.setattr("kbplacer.__main__.run_schematic", run_mock)
+
+    fake_project = Path(fake_board).with_suffix(".kicad_pro")
+    args = ["--pcb-file", fake_board, "--create-sch-file"]
+    with cli_isolation(args):
+        shutil.copy(fake_board, fake_project)
+        with pytest.raises(ExitTest):
+            app()
+
+    run_mock.assert_not_called()
+    assert caplog.records[0].message == f"File {fake_project} already exist, aborting"
+
+
+def test_led_only_flags_populate_settings(
+    monkeypatch, cli_isolation, fake_board
+) -> None:
+    run_mock = Mock()
+    monkeypatch.setattr("kbplacer.__main__.run_schematic", run_mock)
+    monkeypatch.setattr("kbplacer.__main__.run_board", Mock())
+
+    args = [
+        "--pcb-file",
+        fake_board,
+        "--create-led-sch-file",
+    ]
+    with cli_isolation(args):
+        app()
+
+    run_mock.assert_called_once()
+    settings = run_mock.call_args[0][0]
+    assert settings.create_sch_file is False
+    assert settings.create_led_sch_file is True
+    # LED chain is the only requested type, so it becomes primary and gets the
+    # project-basename-matching filename (no "-led-chain" suffix).
+    assert settings.led_sch_file_path == str(Path(fake_board).with_suffix(".kicad_sch"))
+    assert settings.project_path == str(Path(fake_board).with_suffix(".kicad_pro"))
+
+
+def test_key_matrix_and_led_flags_populate_settings(
+    monkeypatch, cli_isolation, fake_board
+) -> None:
+    run_mock = Mock()
+    monkeypatch.setattr("kbplacer.__main__.run_schematic", run_mock)
+    monkeypatch.setattr("kbplacer.__main__.run_board", Mock())
+
+    args = [
+        "--pcb-file",
+        fake_board,
+        "--create-sch-file",
+        "--create-led-sch-file",
+    ]
+    with cli_isolation(args):
+        app()
+
+    run_mock.assert_called_once()
+    settings = run_mock.call_args[0][0]
+    # Key matrix outranks LED chain, so it keeps the project-basename-matching
+    # filename; LED chain gets pushed to the suffixed name.
+    assert settings.sch_file_path == str(Path(fake_board).with_suffix(".kicad_sch"))
+    assert settings.led_sch_file_path == str(
+        Path(fake_board).with_name(Path(fake_board).stem + "-led-chain.kicad_sch")
+    )
+    assert settings.project_path == str(Path(fake_board).with_suffix(".kicad_pro"))
+
+
+def test_multi_sheet_bundling_requires_kicad_10(
+    monkeypatch, cli_isolation, fake_board
+) -> None:
+    monkeypatch.setattr("kbplacer.schematic_project.KICAD_VERSION", (9, 0, 0))
+
+    args = ["--pcb-file", fake_board, "--create-sch-file", "--create-led-sch-file"]
+    with cli_isolation(args):
+        with pytest.raises(RuntimeError, match="KiCad 10.0"):
+            app()
 
 
 def test_max_keys_validation_passes(monkeypatch, cli_isolation, fake_board) -> None:

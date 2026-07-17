@@ -17,6 +17,7 @@ from .element_position import ElementInfo, ElementPosition, PositionOption, Side
 from .footprint_loader import FootprintIdentifier
 from .kbplacer_plugin import PluginSettings, run_board, run_schematic
 from .kle_serial import get_keyboard_from_file
+from .schematic_project import plan_sheet_filenames
 
 logger = logging.getLogger(__name__)
 
@@ -377,7 +378,8 @@ def app() -> None:
         required=False,
         action="store_true",
         help=(
-            "Creates schematic out of via-annotated kle layout.\n"
+            "Creates key matrix schematic out of via-annotated kle layout, bundled\n"
+            "into a KiCad project (a `.kicad_pro` is always written alongside it).\n"
             "Requires kbplacer installation with optional `schematic` dependencies."
         ),
     )
@@ -387,7 +389,31 @@ def app() -> None:
         default="",
         help=(
             ".kicad_sch file to be created if `--create-sch-file` option used.\n"
-            "Using `--pcb-file` path with extension changed to `.kicad_sch` if not defined."
+            "Using `--pcb-file` path with extension changed to `.kicad_sch` if not defined.\n"
+            "Its basename (or `--pcb-file`'s, when given) also becomes the project's\n"
+            "basename; if `--create-led-sch-file` is also used, that sheet is named\n"
+            "`<basename>-led-chain.kicad_sch` regardless of `--led-sch-file`'s value."
+        ),
+    )
+    parser.add_argument(
+        "--create-led-sch-file",
+        required=False,
+        action="store_true",
+        help=(
+            "Creates a placeholder LED-chain schematic sheet (stage 1: title block\n"
+            "only, no components yet), bundled into the same KiCad project as\n"
+            "`--create-sch-file`. Bundling more than one sheet type into one project\n"
+            "requires KiCad 10.0 or higher."
+        ),
+    )
+    parser.add_argument(
+        "--led-sch-file",
+        required=False,
+        default="",
+        help=(
+            ".kicad_sch file to be created if `--create-led-sch-file` option used\n"
+            "and no other schematic type is requested (its basename becomes the\n"
+            "project's basename in that case). Ignored otherwise."
         ),
     )
     parser.add_argument(
@@ -503,17 +529,61 @@ def app() -> None:
         logger.error(f"File {pcb_file_path} already exist, aborting")
         sys.exit(1)
 
+    requested_sheet_types = []
     if args.create_sch_file:
-        sch_path = (
-            str(args.sch_file)
-            if args.sch_file
-            else str(Path(pcb_file_path).with_suffix(".kicad_sch"))
-        )
-        if os.path.isfile(sch_path):
-            logger.error(f"File {sch_path} already exist, aborting")
+        requested_sheet_types.append("key_matrix")
+    if args.create_led_sch_file:
+        requested_sheet_types.append("led_chain")
+
+    if requested_sheet_types:
+        # Project basename: `--pcb-file`'s stem when given (matching today's
+        # `--sch-file` default-derivation precedent), otherwise whichever
+        # explicit schematic path was given, in priority order.
+        if pcb_file_path:
+            basename_source = pcb_file_path
+        elif args.create_sch_file and args.sch_file:
+            basename_source = args.sch_file
+        elif args.create_led_sch_file and args.led_sch_file:
+            basename_source = args.led_sch_file
+        else:
+            basename_source = None
+
+        if not basename_source:
+            logger.error(
+                "Could not determine project basename: provide --pcb-file, "
+                "--sch-file, or --led-sch-file"
+            )
             sys.exit(1)
+
+        basename_path = Path(basename_source)
+        project_basename = basename_path.stem
+        project_dir = basename_path.parent
+        project_path = str(project_dir / f"{project_basename}.kicad_pro")
+
+        planned_filenames = dict(
+            plan_sheet_filenames(project_basename, requested_sheet_types)
+        )
+        sch_path = (
+            str(project_dir / planned_filenames["key_matrix"])
+            if args.create_sch_file
+            else ""
+        )
+        led_sch_path = (
+            str(project_dir / planned_filenames["led_chain"])
+            if args.create_led_sch_file
+            else ""
+        )
+
+        for output_path in [
+            project_dir / filename for filename in planned_filenames.values()
+        ] + [Path(project_path)]:
+            if output_path.is_file():
+                logger.error(f"File {output_path} already exist, aborting")
+                sys.exit(1)
     else:
         sch_path = ""
+        led_sch_path = ""
+        project_path = ""
 
     # Validate max-keys if specified
     if args.max_keys is not None and layout_path:
@@ -555,9 +625,12 @@ def app() -> None:
         encoder_footprint=args.encoder_footprint,
         add_stabilizers=args.add_stabilizers,
         encoder_adjustment=args.encoder_adjustment,
+        create_led_sch_file=args.create_led_sch_file,
+        led_sch_file_path=led_sch_path,
+        project_path=project_path,
     )
 
-    if args.create_sch_file:
+    if args.create_sch_file or args.create_led_sch_file:
         run_schematic(settings)
 
     if pcb_file_path:

@@ -17,10 +17,11 @@ import pytest
 import sexpdata
 
 from kbplacer.board_builder import BoardBuilder
-from kbplacer.schematic_builder import can_create_schematic, create_schematic
+from kbplacer.schematic_builder import can_create_schematic, create_key_matrix_schematic
 
 from .conftest import (
     KICAD_VERSION,
+    default_schematic_kwargs,
     filter_kiacd10_errs,
     generate_netlist,
     generate_schematic_image,
@@ -263,6 +264,70 @@ class TestSchematicBuilderCli:
 
         assert_board_schematic_footprint_parity(request, tmpdir, pcb_file)
 
+    def test_schematic_build_with_led_chain(
+        self, request, tmpdir, package_path, package_name
+    ) -> None:
+        layout_file = self.example_isolation(
+            request, tmpdir, ("2x2", "kle-annotated.json")
+        )
+
+        pcb_file = Path(layout_file).with_suffix(".kicad_pcb")
+        schematic_file = Path(layout_file).with_suffix(".kicad_sch")
+        project_file = Path(layout_file).with_suffix(".kicad_pro")
+        led_schematic_file = schematic_file.with_name(
+            schematic_file.stem + "-led-chain.kicad_sch"
+        )
+
+        switch_footprint = str(get_footprints_dir(request)) + ":SW_Cherry_MX_PCB_1.00u"
+        diode_footprint = str(get_footprints_dir(request)) + ":D_SOD-323"
+
+        p = self._run_subprocess(
+            package_path,
+            package_name,
+            args={
+                "--layout": layout_file,
+                "--pcb-file": str(pcb_file),
+                "--sch-file": str(schematic_file),
+                "--switch-footprint": switch_footprint,
+                "--diode-footprint": diode_footprint,
+            },
+            flags=["--create-pcb-file", "--create-led-sch-file"],
+        )
+        outs, errs = p.communicate()
+
+        logger.info(f"Process stdout: {outs}")
+        logger.info(f"Process stderr: {errs}")
+
+        if KICAD_VERSION < (10, 0, 0):
+            assert (
+                "Bundling multiple schematic sheets into one project"
+                " requires KiCad 10.0 or higher"
+            ) in errs
+            assert p.returncode == 1
+            return
+
+        if sys.platform != "darwin":
+            assert filter_kiacd10_errs(errs) == ""
+        assert p.returncode == 0
+
+        assert schematic_file.exists()
+        assert led_schematic_file.exists()
+        assert project_file.exists()
+
+        with open(project_file, "r") as f:
+            project = json.load(f)
+        assert [s[1] for s in project["sheets"]] == ["Key Matrix", "Led Chain"]
+        assert [s["filename"] for s in project["schematic"]["top_level_sheets"]] == [
+            schematic_file.name,
+            led_schematic_file.name,
+        ]
+
+        generate_schematic_image(tmpdir, schematic_file)
+        netlist = generate_netlist(tmpdir, schematic_file)
+        assert netlist.exists()
+
+        assert_board_schematic_footprint_parity(request, tmpdir, pcb_file)
+
     @pytest.mark.skipif(
         KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
     )
@@ -437,9 +502,10 @@ class TestEncoderBoardSchematic:
         )
 
         # Create schematic
-        create_schematic(
+        create_key_matrix_schematic(
             layout_file,
             schematic_file,
+            **default_schematic_kwargs(),
             switch_footprint=switch_footprint,
             diode_footprint=diode_footprint,
             encoder_footprint=encoder_footprint,
@@ -535,7 +601,9 @@ class TestEncoderBoardSchematic:
         schematic_file = Path(tmpdir) / "test.kicad_sch"
 
         # Must not raise.
-        create_schematic(layout_file, schematic_file)
+        create_key_matrix_schematic(
+            layout_file, schematic_file, **default_schematic_kwargs()
+        )
         assert schematic_file.exists()
 
         # Generate netlist from schematic
@@ -581,9 +649,10 @@ class TestMatrixNetNameParity:
         switch_footprint = fp_dir + ":SW_Cherry_MX_PCB_1.00u"
         diode_footprint = fp_dir + ":D_SOD-323"
 
-        create_schematic(
+        create_key_matrix_schematic(
             layout_file,
             schematic_file,
+            **default_schematic_kwargs(),
             switch_footprint=switch_footprint,
             diode_footprint=diode_footprint,
         )
@@ -641,7 +710,9 @@ class TestSingleKeySchematic:
         schematic_file = Path(tmpdir) / "test.kicad_sch"
 
         # Must not raise.
-        create_schematic(layout_file, schematic_file)
+        create_key_matrix_schematic(
+            layout_file, schematic_file, **default_schematic_kwargs()
+        )
         assert schematic_file.exists()
 
         # Smoke-check that the produced schematic is renderable.
@@ -685,7 +756,9 @@ class TestSchematicWithoutFootprints:
         schematic_file = Path(tmpdir) / "test.kicad_sch"
 
         # No footprint arguments passed - must not raise.
-        create_schematic(layout_file, schematic_file)
+        create_key_matrix_schematic(
+            layout_file, schematic_file, **default_schematic_kwargs()
+        )
         assert schematic_file.exists()
 
         # Netlist generation is a strong validity check: kicad-cli must be able
@@ -727,7 +800,7 @@ class TestSchematicWithoutFootprints:
 
 
 class TestStartIndex:
-    """`create_schematic`'s `start_index` controls the first number used for
+    """`create_key_matrix_schematic`'s `start_index` controls the first number used for
     both switch (SW) and diode (D) references, mirroring `--start-index`
     of the `key_placer` PCB placement path.
     """
@@ -740,7 +813,9 @@ class TestStartIndex:
             json.dump(self.LAYOUT, f)
 
         schematic_file = Path(tmpdir) / "test.kicad_sch"
-        create_schematic(layout_file, schematic_file, **kwargs)
+        create_key_matrix_schematic(
+            layout_file, schematic_file, **default_schematic_kwargs(), **kwargs
+        )
 
         with open(schematic_file, "r") as f:
             schematic_sexp = sexpdata.load(f)
@@ -823,8 +898,9 @@ class TestStartIndexCli:
         self, request, tmpdir, package_path, package_name
     ) -> None:
         # End-to-end check of the full `--start-index` plumbing (CLI parsing ->
-        # PluginSettings -> run_schematic -> create_schematic), complementing
-        # the direct create_schematic-level checks in TestStartIndex.
+        # PluginSettings -> run_schematic -> create_key_matrix_schematic),
+        # complementing the direct create_key_matrix_schematic-level checks in
+        # TestStartIndex.
         test_dir = request.fspath.dirname
         source_dir = f"{test_dir}/../examples/2x2"
         shutil.copy(f"{source_dir}/kle-annotated.json", tmpdir)

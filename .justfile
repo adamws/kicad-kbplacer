@@ -8,11 +8,11 @@ default:
 # === Tests ===
 
 # run tests inside docker against a specific KiCad version (default: {{default_version}})
-test version=default_version:
+test version=default_version *args="":
     docker run --rm \
         -v "{{justfile_directory()}}:/workspace" -w /workspace \
         "{{image_prefix}}:{{version}}" \
-        bash -c "pip3 install --no-cache-dir hatch && hatch run test:test tests/"
+        bash -c "pip3 install --no-cache-dir hatch && hatch run test:test tests/ {{args}}"
 
 # run tests for all supported KiCad versions, reporting failures at the end
 test-all:
@@ -81,8 +81,10 @@ tools-layout2openscad version=default_version *args="--help":
 
 # === Schematic ===
 
-# Writes <layout>.kicad_sch + <layout>.pdf to ./output_schematic/. LAYOUT names a file
-# in tests/data/via-layouts/. Requires KiCad >= 9.0 (the default image satisfies this).
+# Writes <layout>.kicad_sch (+ a .kicad_pro, and any other bundled sheet e.g. from
+# `schematic-with-leds`) to ./output_schematic/, then exports a PDF for every
+# .kicad_sch found there. LAYOUT names a file in tests/data/via-layouts/.
+# Requires KiCad >= 9.0 (the default image satisfies this).
 #
 # Params are positional: `just schematic [VERSION] [LAYOUT] [-- EXTRA_KBPLACER_ARGS...]`.
 # To pass extra kbplacer args you MUST spell out VERSION and LAYOUT before the `--`
@@ -91,7 +93,7 @@ tools-layout2openscad version=default_version *args="--help":
 #   just schematic                                        # defaults: 10.0.4-noble, wt60_a
 #   just schematic 10.0.4-noble 0_sixty                   # pick version + layout
 #   just schematic 10.0.4-noble wt60_a --start-index 5    # append args to kbplacer
-# build a schematic from a representative layout and export it to PDF for inspection
+# build a schematic from a representative layout and export each sheet to PDF for inspection
 schematic version=default_version layout="wt60_a" *args="":
     #!/usr/bin/env bash
     set -euo pipefail
@@ -111,11 +113,11 @@ schematic version=default_version layout="wt60_a" *args="":
             name="{{layout}}"
             via_layout="tests/data/via-layouts/$name.json"
             kle_layout="$outdir/$name-kle.json"
+            pro_file="$outdir/$name.kicad_pro"
             sch_file="$outdir/$name.kicad_sch"
-            pdf_file="$outdir/$name.pdf"
 
-            # kbplacer and kicad-cli abort rather than overwrite; clear stale artifacts.
-            rm -f "$kle_layout" "$sch_file" "$pdf_file"
+            # kbplacer and kicad-cli abort rather than overwrite; clear stale artifacts
+            rm -rf "$outdir"/*
 
             # 1. Prep: convert the VIA layout into the matrix-annotated KLE_RAW shape
             #    that kle-ng-api feeds to kbplacer (also expands VIA encoders).
@@ -133,19 +135,22 @@ schematic version=default_version layout="wt60_a" *args="":
                 --switch-footprint "Switch_Keyboard_Cherry_MX.pretty:SW_Cherry_MX_PCB_{:.2f}u" \
                 --diode-footprint "/usr/share/kicad/footprints/Diode_SMD.pretty:D_SOD-123F" \
                 --encoder-footprint "/usr/share/kicad/footprints/Rotary_Encoder.pretty:RotaryEncoder_Alps_EC11E-Switch_Vertical_H20mm" \
-                --encoder-adjustment "-7.5 -2.5" \
-                --switch "SW{} 0 FRONT" \
-                --diode "D{} CUSTOM 0 0 0 BACK" \
-                --no-stabilizers \
                 --log-level "INFO" \
                 {{args}}
 
-            # 3. Export the schematic to PDF for easy visual inspection.
-            kicad-cli sch export pdf --output "$pdf_file" "$sch_file"
-
-            echo ">>> Schematic: $sch_file"
-            echo ">>> PDF:       $pdf_file"
+            # 3. Export every generated schematic sheet (the key-matrix/LED-chain
+            #    bundling above can write more than one .kicad_sch into $outdir)
+            #    to PDF for easy visual inspection.
+            for sch in "$outdir"/*.kicad_sch; do
+                pdf="${sch%.kicad_sch}.pdf"
+                kicad-cli sch export pdf --output "$pdf" "$sch"
+                echo ">>> Schematic: $sch"
+                echo ">>> PDF:       $pdf"
+            done
         '
+
+schematic-with-leds version=default_version layout="wt60_a" *args="":
+    just schematic {{version}} {{layout}} --create-led-sch-file {{args}}
 
 # === Profiling ===
 

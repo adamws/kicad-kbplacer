@@ -44,9 +44,6 @@ COPY points.yaml $WORK_PATH
 
 WORKDIR $WORK_PATH
 
-COPY template.kicad_pro $WORK_PATH/$PROJECT_NAME.kicad_pro
-RUN sed -i 's/template\.kicad_pro/$PROJECT_NAME\.kicad_pro/g' $PROJECT_NAME.kicad_pro
-
 RUN python3 -m kbplacer.kle_serial \
   --in points.yaml --inform ERGOGEN_INTERNAL \
   --outform KLE_RAW --out $PROJECT_NAME-kle.json

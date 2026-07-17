@@ -42,7 +42,7 @@ TEMPLATE = """\
     (version 20250114)
     (generator "eeschema")
     (generator_version "9.0")
-    (uuid "9e45a776-7007-48ff-b543-dc98423173b7")
+    (uuid "{own_uuid}")
     (paper "{page_size}")
     (lib_symbols
         (symbol "Device:D_Small"
@@ -1023,8 +1023,8 @@ TEMPLATE = """\
             (uuid "ef827767-19b4-4ee5-b4b6-65189b88f8ee")
         )
         (instances
-            (project "template"
-                (path "/9e45a776-7007-48ff-b543-dc98423173b7"
+            (project "{project_name}"
+                (path "/{own_uuid}"
                     (reference "SW1")
                     (unit 1)
                 )
@@ -1100,8 +1100,8 @@ TEMPLATE = """\
             (uuid "57a6f7b1-72b8-4589-bac5-6c331ee37168")
         )
         (instances
-            (project "template"
-                (path "/9e45a776-7007-48ff-b543-dc98423173b7"
+            (project "{project_name}"
+                (path "/{own_uuid}"
                     (reference "ROT1")
                     (unit 1)
                 )
@@ -1164,8 +1164,8 @@ TEMPLATE = """\
             )
         )
         (instances
-            (project "template"
-                (path "/9e45a776-7007-48ff-b543-dc98423173b7"
+            (project "{project_name}"
+                (path "/{own_uuid}"
                     (reference "ST1")
                     (unit 1)
                 )
@@ -1251,8 +1251,8 @@ TEMPLATE = """\
             (uuid "428af732-f843-4705-863e-a0095a5fb80a")
         )
         (instances
-            (project "template"
-                (path "/9e45a776-7007-48ff-b543-dc98423173b7"
+            (project "{project_name}"
+                (path "/{own_uuid}"
                     (reference "D1")
                     (unit 1)
                 )
@@ -1261,7 +1261,7 @@ TEMPLATE = """\
     )
     (sheet_instances
         (path "/"
-            (page "1")
+            (page "{sheet_page}")
         )
     )
     (embedded_fonts no)
@@ -1293,10 +1293,13 @@ def can_create_schematic() -> bool:
     return _has_schematic
 
 
-def create_schematic(
+def create_key_matrix_schematic(
     keyboard: Union[str, os.PathLike, MatrixAnnotatedKeyboard],
     output_path,
     *,
+    project_name: str,
+    own_uuid: str,
+    sheet_page: int = 1,
     switch_footprint="",
     diode_footprint="",
     stabilizer_footprint="",
@@ -1387,7 +1390,14 @@ def create_schematic(
 
     with open(output_path, "w") as f:
         size = (rows, columns)
-        f.write(TEMPLATE.format(page_size=get_lowest_paper_size(size)))
+        f.write(
+            TEMPLATE.format(
+                page_size=get_lowest_paper_size(size),
+                own_uuid=own_uuid,
+                project_name=project_name,
+                sheet_page=sheet_page,
+            )
+        )
 
     sch = Schematic(output_path)
     base_switch = sch.symbol.reference_startswith("SW")[0]
@@ -1654,6 +1664,15 @@ def create_schematic(
 
 
 if __name__ == "__main__":
+    import uuid
+
     with open("schematic_builder.kicad_sch", "w") as f:
         size = (10, 10)
-        f.write(TEMPLATE.format(page_size=get_lowest_paper_size(size)))
+        f.write(
+            TEMPLATE.format(
+                page_size=get_lowest_paper_size(size),
+                own_uuid=str(uuid.uuid4()),
+                project_name="schematic_builder",
+                sheet_page=1,
+            )
+        )

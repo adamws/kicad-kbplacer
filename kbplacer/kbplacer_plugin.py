@@ -14,7 +14,8 @@ from .edge_generator import build_board_outline
 from .element_position import ElementInfo, PositionOption
 from .kbplacer_dialog import WindowState
 from .key_placer import KeyPlacer
-from .schematic_builder import can_create_schematic, create_schematic
+from .schematic_builder import can_create_schematic
+from .schematic_project import SchematicRequest, create_schematic_project
 from .template_copier import copy_from_template_to_board
 
 
@@ -42,23 +43,35 @@ class PluginSettings:
     layout_offset: Optional[Tuple[float, float]] = None
     add_stabilizers: bool = True
     encoder_adjustment: Optional[Tuple[float, float]] = None
+    create_led_sch_file: bool = False
+    led_sch_file_path: str = ""
+    project_path: str = ""
 
 
 def run_schematic(settings: PluginSettings):
+    requests: List[SchematicRequest] = []
     if settings.create_sch_file:
         if not can_create_schematic():
             msg = "Requires optional schematic dependencies"
             raise RuntimeError(msg)
-        create_schematic(
-            settings.layout_path,
-            settings.sch_file_path,
-            switch_footprint=settings.switch_footprint,
-            diode_footprint=settings.diode_footprint,
-            stabilizer_footprint=settings.stabilizer_footprint,
-            encoder_footprint=settings.encoder_footprint,
-            add_stabilizers=settings.add_stabilizers,
-            start_index=settings.key_info.start_index,
+        requests.append(
+            SchematicRequest(
+                "key_matrix",
+                kwargs={
+                    "switch_footprint": settings.switch_footprint,
+                    "diode_footprint": settings.diode_footprint,
+                    "stabilizer_footprint": settings.stabilizer_footprint,
+                    "encoder_footprint": settings.encoder_footprint,
+                    "add_stabilizers": settings.add_stabilizers,
+                    "start_index": settings.key_info.start_index,
+                },
+            )
         )
+    if settings.create_led_sch_file:
+        requests.append(SchematicRequest("led_chain"))
+
+    if requests:
+        create_schematic_project(settings.project_path, settings.layout_path, requests)
 
 
 def run_board(settings: PluginSettings) -> pcbnew.BOARD:
@@ -131,5 +144,8 @@ def run_from_gui(pcb_file_path: str, state: WindowState) -> pcbnew.BOARD:
         switch_footprint="",
         diode_footprint="",
         stabilizer_footprint="",
+        create_led_sch_file=False,
+        led_sch_file_path="",
+        project_path="",
     )
     return run_board(settings)

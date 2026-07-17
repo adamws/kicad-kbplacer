@@ -88,7 +88,7 @@ jobs:
           path: htmlcov
   run-absolem-example:
     machine:
-      image: ubuntu-2204:2022.10.2
+      image: ubuntu-2204:2026.05.1
     steps:
       - checkout
       - run:
@@ -131,6 +131,27 @@ jobs:
             done
       - store_artifacts:
           path: output_svgs
+  run-schematic-generation-sanity-checks:
+    parameters:
+      version:
+        type: string
+    machine:
+      image: ubuntu-2204:2026.05.1
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            mkdir -p ~/bin
+            curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh \
+              | bash -s -- --to ~/bin --tag 1.56.0
+              echo "export PATH=\"$PATH:$HOME/bin\"" >> $BASH_ENV
+      - run:
+          name: Run schematic generation
+          command: |
+            just schematic-with-leds <<parameters.version>>
+      - store_artifacts:
+          path: output_schematic
   test-windows:
     machine:
       image: windows-server-2022-gui:edge
@@ -404,7 +425,7 @@ jobs:
               /tmp/dist/repository/resources.zip
   deploy-image:
     machine:
-      image: ubuntu-2204:2022.10.2
+      image: ubuntu-2204:2026.05.1
     steps:
       - checkout
       - run:
@@ -444,7 +465,7 @@ jobs:
                   docker push admwscki/$IMAGE_NAME:latest
   build-nightly-image:
     machine:
-      image: ubuntu-2204:2022.10.2
+      image: ubuntu-2204:2026.05.1
     steps:
       - checkout
       - run:
@@ -511,6 +532,11 @@ workflows:
               version:
                 - 8.0.9-jammy
                 - 9.0.9-noble
+                - 10.0.4-noble
+      - run-schematic-generation-sanity-checks:
+          matrix:
+            parameters:
+              version:
                 - 10.0.4-noble
       - create-pcm-package:
           requires: &required-tests
