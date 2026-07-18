@@ -762,6 +762,18 @@ TEMPLATE = """\
             (embedded_fonts no)
         )
     )
+    (text "WARNING: Assumes a shared 5V VCC - adjust if your supply differs.\nAdditional driving circuitry (e.g. a level shifter) may be needed depending on your setup and is not included."
+        (exclude_from_sim no)
+        (at 13.335 16.51 0)
+        (effects
+            (font
+                (size 1.27 1.27)
+                (thickness 0.1588)
+            )
+            (justify left)
+        )
+        (uuid "638ede5a-d948-41d5-8c3a-9bf6b15dccfc")
+    )
     (symbol
         (lib_id "LED:SK6812MINI-E")
         (at 0 0 0)
