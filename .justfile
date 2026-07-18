@@ -203,23 +203,19 @@ profile-memray version=default_version routing="full":
 
 # launch KiCad GUI from docker with X11 forwarding
 gui version=default_version:
-    xhost +local:docker
-    docker run --rm -it \
-        -e DISPLAY \
-        -v /tmp/.X11-unix:/tmp/.X11-unix \
-        -v "{{justfile_directory()}}:/workspace" -w /workspace \
+    x11docker --hostdisplay --gpu=virgl \
+        --share {{justfile_directory()}} \
+        --home=$HOME \
         "{{image_prefix}}:{{version}}" \
         kicad
 
 # launch pcbnew with a specific .kicad_pcb file (relative to repo root)
 pcbnew version=default_version pcb="demo/demo.kicad_pcb":
-    xhost +local:docker
-    docker run --rm -it \
-        -e DISPLAY \
-        -v /tmp/.X11-unix:/tmp/.X11-unix \
-        -v "{{justfile_directory()}}:/workspace" -w /workspace \
+    x11docker --hostdisplay --gpu=virgl \
+        --share {{justfile_directory()}} \
+        --home=$HOME \
         "{{image_prefix}}:{{version}}" \
-        pcbnew /workspace/{{pcb}}
+        pcbnew {{justfile_directory()}}/{{pcb}}
 
 # === Lint ===
 
