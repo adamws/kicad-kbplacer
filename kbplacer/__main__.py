@@ -374,6 +374,18 @@ def app() -> None:
         ),
     )
     parser.add_argument(
+        "--create-led-pcb-elements",
+        required=False,
+        action="store_true",
+        help=(
+            "Adds one LED and one decoupling capacitor footprint per unique key\n"
+            "position to the board created by `--create-pcb-file`.\n"
+            "Requires `--create-pcb-file`, `--led-footprint` and `--led-capacitor-footprint`.\n"
+            "Positioning of the created footprints is controlled via\n"
+            '`--additional-elements`, e.g. "LED{} RELATIVE;C{} RELATIVE"'
+        ),
+    )
+    parser.add_argument(
         "--create-sch-file",
         required=False,
         action="store_true",
@@ -400,10 +412,11 @@ def app() -> None:
         required=False,
         action="store_true",
         help=(
-            "Creates a placeholder LED-chain schematic sheet (stage 1: title block\n"
-            "only, no components yet), bundled into the same KiCad project as\n"
-            "`--create-sch-file`. Bundling more than one sheet type into one project\n"
-            "requires KiCad 10.0 or higher."
+            "Creates the LED-chain schematic sheet (LEDs, decoupling capacitors\n"
+            "unless `--skip-led-decoupling`, per-LED VCC/GND, and the DIN/DOUT\n"
+            "daisy chain), bundled into the same KiCad project as `--create-sch-file`.\n"
+            "Requires KiCad 10.0 or higher, whether used alone or together with\n"
+            "`--create-sch-file`."
         ),
     )
     parser.add_argument(
@@ -462,6 +475,51 @@ def app() -> None:
             "Follows same semantic as --switch-footprint option.\n"
             "Required when `--create-pcb-file` or `--create-sch-file` is used\n"
             "with a layout containing encoders."
+        ),
+    )
+    parser.add_argument(
+        "--led-footprint",
+        required=False,
+        default="",
+        action=FootprintIdentifierAction,
+        help=(
+            "LED footprint identifier.\n"
+            "Follows same semantic as --switch-footprint option.\n"
+            "Only SK6812MINI-E-pinout-compatible footprints are supported\n"
+            "(pad 1=GND, 2=DIN, 3=VCC, 4=DOUT).\n"
+            "Required when `--create-led-pcb-elements` is used; also applied\n"
+            "to the LED-chain schematic's Footprint field when\n"
+            "`--create-led-sch-file` is used (that path requires KiCad 10.0\n"
+            "or higher, see `--create-led-sch-file`; `--create-led-pcb-elements`\n"
+            "has no such requirement)."
+        ),
+    )
+    parser.add_argument(
+        "--led-capacitor-footprint",
+        required=False,
+        default="",
+        action=FootprintIdentifierAction,
+        help=(
+            "Decoupling capacitor footprint identifier for the LED chain.\n"
+            "Follows same semantic as --switch-footprint option.\n"
+            "Required when `--create-led-pcb-elements` is used, unless\n"
+            "`--skip-led-decoupling` is also given; also applied to the\n"
+            "LED-chain schematic's Footprint field when `--create-led-sch-file`\n"
+            "is used (that path requires KiCad 10.0 or higher, see\n"
+            "`--create-led-sch-file`; `--create-led-pcb-elements` has no such\n"
+            "requirement)."
+        ),
+    )
+    parser.add_argument(
+        "--skip-led-decoupling",
+        required=False,
+        action="store_true",
+        help=(
+            "Do not create per-LED decoupling capacitors when building the\n"
+            "LED-chain schematic (`--create-led-sch-file`, which requires\n"
+            "KiCad 10.0 or higher) or PCB elements (`--create-led-pcb-elements`,\n"
+            "which has no such requirement). Decoupling is recommended but\n"
+            "often skipped in practice."
         ),
     )
     parser.add_argument(
@@ -527,6 +585,27 @@ def app() -> None:
 
     if args.create_pcb_file and os.path.isfile(pcb_file_path):
         logger.error(f"File {pcb_file_path} already exist, aborting")
+        sys.exit(1)
+
+    if args.create_led_pcb_elements and not args.create_pcb_file:
+        logger.error("--create-led-pcb-elements requires --create-pcb-file")
+        sys.exit(1)
+
+    if args.create_led_pcb_elements and not args.led_footprint:
+        logger.error(
+            "--led-footprint is required when --create-led-pcb-elements is used"
+        )
+        sys.exit(1)
+
+    if (
+        args.create_led_pcb_elements
+        and not args.skip_led_decoupling
+        and not args.led_capacitor_footprint
+    ):
+        logger.error(
+            "--led-capacitor-footprint is required when --create-led-pcb-elements "
+            "is used, unless --skip-led-decoupling is also given"
+        )
         sys.exit(1)
 
     requested_sheet_types = []
@@ -628,6 +707,10 @@ def app() -> None:
         create_led_sch_file=args.create_led_sch_file,
         led_sch_file_path=led_sch_path,
         project_path=project_path,
+        led_footprint=args.led_footprint,
+        cap_footprint=args.led_capacitor_footprint,
+        create_led_pcb_elements=args.create_led_pcb_elements,
+        skip_led_decoupling=args.skip_led_decoupling,
     )
 
     if args.create_sch_file or args.create_led_sch_file:

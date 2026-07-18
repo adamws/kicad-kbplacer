@@ -167,17 +167,24 @@ class TestKeyMatrixAndLed:
         layout_file = _write_layout(tmpdir)
         project_path = Path(tmpdir) / "keyboard.kicad_pro"
 
-        # A single requested type is unrestricted on any supported KiCad version.
+        # A single requested type bypasses the multi-sheet-bundling gate on
+        # any supported KiCad version. Uses "key_matrix" rather than
+        # "led_chain" here since the LED-chain schematic itself is KiCad 10
+        # only (its template requires KiCad 10 schema features) regardless
+        # of bundling - this test is only about the bundling gate.
         create_schematic_project(
             project_path,
             layout_file,
-            [SchematicRequest("led_chain")],
+            [SchematicRequest("key_matrix")],
         )
         assert project_path.exists()
         assert (Path(tmpdir) / "keyboard.kicad_sch").exists()
 
 
 class TestLedOnly:
+    @pytest.mark.skipif(
+        KICAD_VERSION < (10, 0, 0), reason="Requires KiCad 10.0 or higher"
+    )
     def test_led_only_becomes_primary(self, tmpdir) -> None:
         layout_file = _write_layout(tmpdir)
         project_path = Path(tmpdir) / "keyboard.kicad_pro"
@@ -196,6 +203,9 @@ class TestLedOnly:
         assert len(project["sheets"]) == 1
         assert project["sheets"][0][1] == "Led Chain"
 
+    @pytest.mark.skipif(
+        KICAD_VERSION < (10, 0, 0), reason="Requires KiCad 10.0 or higher"
+    )
     def test_visual_wt60_a(self, request, tmpdir) -> None:
         """Not a correctness check. `LAYOUT` (used by every other test in this
         file) only has 4 keys, far below the ~9-14 LEDs/row that force the LED

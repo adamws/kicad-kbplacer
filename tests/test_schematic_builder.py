@@ -17,6 +17,7 @@ import pytest
 import sexpdata
 
 from kbplacer.board_builder import BoardBuilder
+from kbplacer.led_schematic_builder import PAPER_SIZES, create_led_chain_schematic
 from kbplacer.schematic_builder import can_create_schematic, create_key_matrix_schematic
 
 from .conftest import (
@@ -59,6 +60,22 @@ def reference_value(symbol):
         if prop[1] == "Reference":
             return prop[2]
     return None
+
+
+def footprint_by_reference(schematic_path) -> dict:
+    """Return ``{reference: Footprint property value}`` for every symbol in a
+    ``.kicad_sch`` file (e.g. ``{"LED1": "test_leds:LED_..."}``)."""
+    with open(schematic_path, "r") as f:
+        sch = sexpdata.load(f)
+    result = {}
+    for symbol in find_children(sch, "symbol"):
+        ref = reference_value(symbol)
+        if ref is None:
+            continue
+        for prop in find_children(symbol, "property"):
+            if prop[1] == "Footprint":
+                result[ref] = prop[2]
+    return result
 
 
 def parse_netlist_file(netlist_path: Path):
@@ -326,6 +343,254 @@ class TestSchematicBuilderCli:
         netlist = generate_netlist(tmpdir, schematic_file)
         assert netlist.exists()
 
+        assert_board_schematic_footprint_parity(request, tmpdir, pcb_file)
+
+    def test_schematic_build_with_led_chain_pcb_elements(
+        self, request, tmpdir, package_path, package_name
+    ) -> None:
+        """`--create-led-pcb-elements` must add LED/capacitor footprints to
+        the board using the user-chosen `--led-footprint`/
+        `--led-capacitor-footprint`, matching both the footprint identity
+        and the net topology the LED-chain schematic sheet assigns to its own
+        LED/C symbols - the same two-pronged parity `test_schematic_build`
+        checks for the key-matrix case (full net-set comparison + DRC
+        footprint parity), applied here to the LED-chain sheet specifically.
+
+        Note: `kicad-cli pcb drc --schematic-parity` does not correctly
+        resolve footprints against a secondary bundled top-level sheet (the
+        Led Chain sheet here is not the project's primary/page-1 sheet) - it
+        reports every LED/C footprint as `extra_footprint` even when they do
+        match a schematic symbol, regardless of layout size (verified with
+        both a 4-key and a 12-key layout). So footprint-identity and net
+        parity for the LED chain are both checked directly here (FPID vs.
+        the schematic's `Footprint` property; board nets vs. the LED-chain
+        sheet's own exported netlist) instead of relying on that DRC check,
+        while `assert_board_schematic_footprint_parity` below still covers
+        the primary Key Matrix sheet's SW/D footprints, which the DRC check
+        does resolve correctly.
+        """
+        layout_file = self.example_isolation(
+            request, tmpdir, ("2x2", "kle-annotated.json")
+        )
+
+        pcb_file = Path(layout_file).with_suffix(".kicad_pcb")
+        schematic_file = Path(layout_file).with_suffix(".kicad_sch")
+        led_schematic_file = schematic_file.with_name(
+            schematic_file.stem + "-led-chain.kicad_sch"
+        )
+
+        fp_dir = str(get_footprints_dir(request))
+        switch_footprint = f"{fp_dir}:SW_Cherry_MX_PCB_1.00u"
+        diode_footprint = f"{fp_dir}:D_SOD-323"
+        led_footprint = f"{fp_dir}:LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount"
+        cap_footprint = f"{fp_dir}:C_0603_1608Metric"
+
+        p = self._run_subprocess(
+            package_path,
+            package_name,
+            args={
+                "--layout": layout_file,
+                "--pcb-file": str(pcb_file),
+                "--sch-file": str(schematic_file),
+                "--switch-footprint": switch_footprint,
+                "--diode-footprint": diode_footprint,
+                "--led-footprint": led_footprint,
+                "--led-capacitor-footprint": cap_footprint,
+            },
+            flags=[
+                "--create-pcb-file",
+                "--create-led-sch-file",
+                "--create-led-pcb-elements",
+            ],
+        )
+        outs, errs = p.communicate()
+
+        logger.info(f"Process stdout: {outs}")
+        logger.info(f"Process stderr: {errs}")
+
+        if KICAD_VERSION < (10, 0, 0):
+            assert (
+                "Bundling multiple schematic sheets into one project"
+                " requires KiCad 10.0 or higher"
+            ) in errs
+            assert p.returncode == 1
+            return
+
+        if sys.platform != "darwin":
+            assert filter_kiacd10_errs(errs) == ""
+        assert p.returncode == 0
+
+        assert schematic_file.exists()
+        assert led_schematic_file.exists()
+
+        # Board's LED/cap FPIDs must match the LED-chain sheet's own symbols,
+        # per unique physical position (4 keys -> LED1..LED4/C1..C4).
+        led_chain_footprints = footprint_by_reference(led_schematic_file)
+        board = pcbnew.LoadBoard(str(pcb_file))
+        board_footprints = {
+            fp.GetReference(): str(fp.GetFPID().GetUniStringLibId())
+            for fp in board.GetFootprints()
+            if fp.GetReference().startswith(("LED", "C"))
+        }
+        assert sorted(board_footprints) == [
+            "C1",
+            "C2",
+            "C3",
+            "C4",
+            "LED1",
+            "LED2",
+            "LED3",
+            "LED4",
+        ]
+        for ref, fpid in board_footprints.items():
+            assert led_chain_footprints.get(ref) == fpid, (
+                f"{ref}: board FPID '{fpid}' != schematic Footprint "
+                f"'{led_chain_footprints.get(ref)}'"
+            )
+
+        generate_schematic_image(tmpdir, led_schematic_file)
+        led_netlist = generate_netlist(tmpdir, led_schematic_file)
+        assert led_netlist.exists()
+        led_nets_parsed = parse_netlist_file(led_netlist)
+        for n in led_nets_parsed:
+            logger.debug(n)
+            assert "unconnected" not in n["name"]
+
+        # Full net-topology parity between the LED-chain schematic and the
+        # board, mirroring `test_schematic_build`'s key-matrix net comparison
+        # above. Each bundled top-level sheet is exported to netlist
+        # independently, so the LED-chain sheet's netlist only contains its
+        # own nets (VCC, GND, LEDIN/LEDOUT, DIN/DOUT chain links) - compare
+        # only those against the same-named nets on the board.
+        def _normalize(nets):
+            if KICAD_VERSION >= (10, 0, 0):
+                return {(n["name"], n["class"]) for n in nets if int(n["code"]) != 0}
+            return {
+                (int(n["code"]), n["name"], n["class"])
+                for n in nets
+                if int(n["code"]) != 0
+            }
+
+        led_net_prefixes = ("VCC", "GND", "LEDIN", "LEDOUT", "Net-(LED")
+        schematic_led_nets = _normalize(
+            [n for n in led_nets_parsed if n["name"].startswith(led_net_prefixes)]
+        )
+
+        board_nets_parsed = [
+            parse_netinfo_item(netinfo) for netinfo in board.GetNetsByNetcode().values()
+        ]
+        board_led_nets = _normalize(
+            [n for n in board_nets_parsed if n["name"].startswith(led_net_prefixes)]
+        )
+
+        assert schematic_led_nets == board_led_nets
+
+        generate_schematic_image(tmpdir, schematic_file)
+        netlist = generate_netlist(tmpdir, schematic_file)
+        assert netlist.exists()
+
+        # Covers the primary (Key Matrix) sheet's SW/D footprints only - see
+        # the docstring above for why the LED chain sheet isn't covered here.
+        assert_board_schematic_footprint_parity(request, tmpdir, pcb_file)
+
+    def test_schematic_build_with_led_chain_pcb_elements_skip_decoupling(
+        self, request, tmpdir, package_path, package_name
+    ) -> None:
+        """`--skip-led-decoupling` must omit capacitors from both the
+        LED-chain schematic sheet and the board's LED chain elements, while
+        the LED chain itself (LEDs, VCC/GND, LEDIN/LEDOUT, DIN/DOUT daisy
+        chain) still forms correctly - mirroring
+        `test_schematic_build_with_led_chain_pcb_elements` without the
+        `--led-capacitor-footprint` requirement.
+        """
+        layout_file = self.example_isolation(
+            request, tmpdir, ("2x2", "kle-annotated.json")
+        )
+
+        pcb_file = Path(layout_file).with_suffix(".kicad_pcb")
+        schematic_file = Path(layout_file).with_suffix(".kicad_sch")
+        led_schematic_file = schematic_file.with_name(
+            schematic_file.stem + "-led-chain.kicad_sch"
+        )
+
+        fp_dir = str(get_footprints_dir(request))
+        switch_footprint = f"{fp_dir}:SW_Cherry_MX_PCB_1.00u"
+        diode_footprint = f"{fp_dir}:D_SOD-323"
+        led_footprint = f"{fp_dir}:LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount"
+
+        p = self._run_subprocess(
+            package_path,
+            package_name,
+            args={
+                "--layout": layout_file,
+                "--pcb-file": str(pcb_file),
+                "--sch-file": str(schematic_file),
+                "--switch-footprint": switch_footprint,
+                "--diode-footprint": diode_footprint,
+                "--led-footprint": led_footprint,
+            },
+            flags=[
+                "--create-pcb-file",
+                "--create-led-sch-file",
+                "--create-led-pcb-elements",
+                "--skip-led-decoupling",
+            ],
+        )
+        outs, errs = p.communicate()
+
+        logger.info(f"Process stdout: {outs}")
+        logger.info(f"Process stderr: {errs}")
+
+        if KICAD_VERSION < (10, 0, 0):
+            assert (
+                "Bundling multiple schematic sheets into one project"
+                " requires KiCad 10.0 or higher"
+            ) in errs
+            assert p.returncode == 1
+            return
+
+        if sys.platform != "darwin":
+            assert filter_kiacd10_errs(errs) == ""
+        assert p.returncode == 0
+
+        assert schematic_file.exists()
+        assert led_schematic_file.exists()
+
+        # No capacitor symbols on the LED-chain sheet, LEDs still present.
+        led_chain_footprints = footprint_by_reference(led_schematic_file)
+        assert not any(ref.startswith("C") for ref in led_chain_footprints)
+        assert sorted(ref for ref in led_chain_footprints if ref.startswith("LED")) == [
+            "LED1",
+            "LED2",
+            "LED3",
+            "LED4",
+        ]
+
+        # No capacitor footprints on the board either.
+        board = pcbnew.LoadBoard(str(pcb_file))
+        board_refs = {fp.GetReference() for fp in board.GetFootprints()}
+        assert sorted(ref for ref in board_refs if ref.startswith("LED")) == [
+            "LED1",
+            "LED2",
+            "LED3",
+            "LED4",
+        ]
+        assert not any(ref.startswith("C") for ref in board_refs)
+
+        generate_schematic_image(tmpdir, led_schematic_file)
+        led_netlist = generate_netlist(tmpdir, led_schematic_file)
+        assert led_netlist.exists()
+        led_nets_parsed = parse_netlist_file(led_netlist)
+        for n in led_nets_parsed:
+            logger.debug(n)
+            assert "unconnected" not in n["name"]
+
+        generate_schematic_image(tmpdir, schematic_file)
+        netlist = generate_netlist(tmpdir, schematic_file)
+        assert netlist.exists()
+
+        # Covers the primary (Key Matrix) sheet's SW/D footprints only - see
+        # the docstring above for why the LED chain sheet isn't covered here.
         assert_board_schematic_footprint_parity(request, tmpdir, pcb_file)
 
     @pytest.mark.skipif(
@@ -688,6 +953,184 @@ class TestMatrixNetNameParity:
         assert "COL00" not in schematic_matrix_labels
 
         assert_board_schematic_footprint_parity(request, tmpdir, pcb_file)
+
+
+class TestLedChainNetNameParity:
+    @pytest.mark.skipif(
+        KICAD_VERSION < (10, 0, 0), reason="Requires KiCad 10.0 or higher"
+    )
+    def test_lexicographic_net_parity(self, request, tmpdir) -> None:
+        """Board nets and the LED-chain schematic's auto-named nets must
+        match exactly, including KiCad's lexicographic (not numeric) rule for
+        naming anonymous nets - e.g. the link between LED9 and LED10 is named
+        "Net-(LED10-DIN)", not "Net-(LED9-DOUT)", because "LED10..." sorts
+        before "LED9..." as a string (the first differing character, '1' vs
+        '9', puts "LED10" first) even though 10 is numerically larger than 9.
+        A layout with fewer than 10 unique key positions can never exercise
+        this (single-digit reference numbers never invert order), so this
+        uses a 10-key single-row layout. Uses KiCad's own netlist generator
+        as the source of truth for the schematic side, rather than
+        re-deriving the naming rule a second time in the test.
+        """
+        if not can_create_schematic():
+            pytest.skip("Requires optional schematic dependencies")
+
+        layout = [[f"0,{i}" for i in range(10)]]
+        layout_file = Path(tmpdir) / "layout.json"
+        with open(layout_file, "w") as f:
+            json.dump(layout, f)
+
+        pcb_file = Path(tmpdir) / "test.kicad_pcb"
+        schematic_file = Path(tmpdir) / "test.kicad_sch"
+
+        fp_dir = str(get_footprints_dir(request))
+        if KICAD_VERSION >= (10, 0, 0):
+            led_footprint = f"{fp_dir}:LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount"
+        else:
+            led_footprint = f"{fp_dir}:LED_SK6812MINI_PLCC4_3.5x3.5mm_P1.75mm"
+        cap_footprint = f"{fp_dir}:C_0603_1608Metric"
+
+        create_led_chain_schematic(
+            layout_file,
+            schematic_file,
+            **default_schematic_kwargs(),
+            led_footprint=led_footprint,
+            cap_footprint=cap_footprint,
+        )
+
+        builder = BoardBuilder(
+            pcb_file,
+            switch_footprint=f"{fp_dir}:SW_Cherry_MX_PCB_1.00u",
+            diode_footprint=f"{fp_dir}:D_SOD-323",
+            led_footprint=led_footprint,
+            cap_footprint=cap_footprint,
+        )
+        board = builder.create_board(layout_file, create_leds=True)
+        board.Save(str(pcb_file))
+
+        led_net_prefixes = ("VCC", "GND", "LEDIN", "LEDOUT", "Net-(LED")
+
+        netlist = generate_netlist(tmpdir, schematic_file)
+        assert netlist.exists()
+        schematic_nets = {
+            n["name"]
+            for n in parse_netlist_file(netlist)
+            if n["name"] and n["name"].startswith(led_net_prefixes)
+        }
+
+        board_nets = {
+            str(n.GetNetname())
+            for n in board.GetNetsByNetcode().values()
+            if str(n.GetNetname()).startswith(led_net_prefixes)
+        }
+
+        assert schematic_nets == board_nets
+        # Directly encode the digit-count lexicographic quirk.
+        assert "Net-(LED10-DIN)" in schematic_nets
+        assert "Net-(LED9-DOUT)" not in schematic_nets
+
+
+class TestLedDecouplingSkip:
+    """`skip_led_decoupling` omits the decoupling-capacitor bank from the
+    generated LED-chain schematic entirely, while the LED chain itself
+    (LEDs, per-LED VCC/GND, LEDIN/LEDOUT, DIN/DOUT daisy chain) is
+    unaffected.
+    """
+
+    @pytest.mark.skipif(
+        KICAD_VERSION < (10, 0, 0), reason="Requires KiCad 10.0 or higher"
+    )
+    def test_omits_capacitors(self, request, tmpdir) -> None:
+        if not can_create_schematic():
+            pytest.skip("Requires optional schematic dependencies")
+
+        layout = [["0,0", "0,1"], ["1,0", "1,1"]]
+        layout_file = Path(tmpdir) / "layout.json"
+        with open(layout_file, "w") as f:
+            json.dump(layout, f)
+
+        schematic_file = Path(tmpdir) / "test.kicad_sch"
+
+        fp_dir = str(get_footprints_dir(request))
+        led_footprint = f"{fp_dir}:LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount"
+
+        # No cap_footprint given either - must not be required when skipped.
+        create_led_chain_schematic(
+            layout_file,
+            schematic_file,
+            **default_schematic_kwargs(),
+            led_footprint=led_footprint,
+            skip_led_decoupling=True,
+        )
+        assert schematic_file.exists()
+
+        generate_schematic_image(tmpdir, schematic_file)
+        netlist = generate_netlist(tmpdir, schematic_file)
+        assert netlist.exists()
+        for n in parse_netlist_file(netlist):
+            logger.debug(n)
+            assert "unconnected" not in n["name"]
+
+        with open(schematic_file, "r") as f:
+            schematic_sexp = sexpdata.load(f)
+
+        def _instances(lib_id_value):
+            return [
+                s
+                for s in find_children(schematic_sexp, "symbol")
+                if (lib_id := find_child(s, "lib_id")) is not None
+                and lib_id[1] == lib_id_value
+            ]
+
+        assert _instances("Device:C") == []
+        assert len(_instances("LED:SK6812MINI-E")) == 4
+
+    @pytest.mark.skipif(
+        KICAD_VERSION < (10, 0, 0), reason="Requires KiCad 10.0 or higher"
+    )
+    def test_smaller_page_than_with_decoupling(self, request, tmpdir) -> None:
+        """Without the capacitor bank reserving vertical space, the planned
+        page for a small layout should never be larger than with it."""
+        if not can_create_schematic():
+            pytest.skip("Requires optional schematic dependencies")
+
+        layout = [["0,0", "0,1"], ["1,0", "1,1"]]
+        layout_file = Path(tmpdir) / "layout.json"
+        with open(layout_file, "w") as f:
+            json.dump(layout, f)
+
+        fp_dir = str(get_footprints_dir(request))
+        led_footprint = f"{fp_dir}:LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount"
+        cap_footprint = f"{fp_dir}:C_0603_1608Metric"
+
+        with_caps_file = Path(tmpdir) / "with_caps.kicad_sch"
+        create_led_chain_schematic(
+            layout_file,
+            with_caps_file,
+            **default_schematic_kwargs(),
+            led_footprint=led_footprint,
+            cap_footprint=cap_footprint,
+        )
+
+        skip_caps_file = Path(tmpdir) / "skip_caps.kicad_sch"
+        create_led_chain_schematic(
+            layout_file,
+            skip_caps_file,
+            **default_schematic_kwargs(),
+            led_footprint=led_footprint,
+            skip_led_decoupling=True,
+        )
+
+        def _page_size(path):
+            with open(path, "r") as f:
+                sch = sexpdata.load(f)
+            paper = find_child(sch, "paper")
+            return paper[1]
+
+        page_order = [name for name, _, _ in PAPER_SIZES]
+        assert page_order.index(_page_size(skip_caps_file)) <= page_order.index(
+            _page_size(with_caps_file)
+        )
 
 
 class TestSingleKeySchematic:

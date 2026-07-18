@@ -7,6 +7,7 @@ import os
 from typing import List, Tuple, Union
 
 from .board_modifier import KICAD_VERSION
+from .footprint_loader import FootprintIdentifier
 from .kle_serial import MatrixAnnotatedKeyboard, get_annotated_keyboard_from_file
 from .schematic_builder import can_create_schematic
 
@@ -1099,7 +1100,9 @@ def _per_row(width: float, first_x: float, pitch_x: float) -> int:
     return max(int(usable_span // pitch_x) + 1, 1)
 
 
-def _plan_layout(led_count: int) -> Tuple[str, int, int, int, int]:
+def _plan_layout(
+    led_count: int, include_caps: bool = True
+) -> Tuple[str, int, int, int, int]:
     """Pick the smallest paper size that fits `led_count` LEDs plus the
     capacitor bank, and how many LEDs/capacitors go in each row before
     wrapping.
@@ -1110,27 +1113,44 @@ def _plan_layout(led_count: int) -> Tuple[str, int, int, int, int]:
     density seen in `example_led_chain.kicad_sch`. Capacitors are pitched
     much tighter than LEDs, so the capacitor bank typically wraps into fewer
     rows than the LED chain, but for large layouts it still needs to wrap.
+
+    `include_caps=False` (decoupling capacitors skipped) leaves no room
+    reserved below the LED chain and returns 0 for the capacitor counts.
     """
     last_name, last_width, last_height = PAPER_SIZES[-1]
     for name, width, height in PAPER_SIZES:
         led_per_row = _per_row(width, FIRST_LED_X, LED_PITCH_X)
         led_rows = -(-led_count // led_per_row)  # ceil division
-        cap_per_row = _per_row(width, CAP_FIRST_X, CAP_PITCH_X)
-        cap_rows = -(-led_count // cap_per_row)
+        if include_caps:
+            cap_per_row = _per_row(width, CAP_FIRST_X, CAP_PITCH_X)
+            cap_rows = -(-led_count // cap_per_row)
+            cap_height = (
+                CAP_ROW_MARGIN_Y
+                + (cap_rows - 1) * CAP_ROW_PITCH_Y
+                + 2 * CAP_POWER_OFFSET
+            )
+        else:
+            cap_per_row = 0
+            cap_rows = 0
+            cap_height = 0
         total_height = (
             FIRST_LED_Y
             + (led_rows - 1) * ROW_PITCH_Y
             + LED_POWER_OFFSET
-            + CAP_ROW_MARGIN_Y
-            + (cap_rows - 1) * CAP_ROW_PITCH_Y
-            + 2 * CAP_POWER_OFFSET
+            + cap_height
             + BOTTOM_MARGIN_Y
         )
         if total_height <= height or name == last_name:
             return name, led_per_row, led_rows, cap_per_row, cap_rows
 
     # unreachable, `last_name` is always visited by the loop above
-    return last_name, 1, led_count, 1, led_count
+    return (
+        last_name,
+        1,
+        led_count,
+        (1 if include_caps else 0),
+        (led_count if include_caps else 0),
+    )
 
 
 def _unique_matrix_positions(
@@ -1159,20 +1179,31 @@ def create_led_chain_schematic(
     project_name: str,
     own_uuid: str,
     sheet_page: int = 1,
+    led_footprint: str = "",
+    cap_footprint: str = "",
+    start_index: int = 1,
+    skip_led_decoupling: bool = False,
 ) -> None:
     """Write an LED-chain `.kicad_sch`: one `LED:SK6812MINI-E` per physical
     key (matrix order = chain order, matching the key matrix builder's use of
     `keys_in_matrix_order`), daisy-chained DOUT -> DIN with global labels at
-    both ends, individual per-LED VCC/GND, and a decoupling capacitor per LED
-    placed in its own row/bank below with a single shared VCC/GND symbol
-    pair.
+    both ends, individual per-LED VCC/GND, and - unless `skip_led_decoupling`
+    is set - a decoupling capacitor per LED placed in its own row/bank below
+    with a single shared VCC/GND symbol pair. Decoupling is recommended but
+    often skipped in practice to save cost/space.
     """
     if not can_create_led_chain_schematic():
         msg = "Requires optional schematic dependencies"
         raise ImportError(msg)
-    if KICAD_VERSION < (9, 0, 0):
-        msg = "Requires KiCad 9.0 or higher"
+    if KICAD_VERSION < (10, 0, 0):
+        msg = "Requires KiCad 10.0 or higher"
         raise RuntimeError(msg)
+
+    # A negative start index is the "unset" sentinel used by `ElementInfo`
+    # (see element_position.py); mirror the key placer and fall back to 1.
+    if start_index < 0:
+        logger.warning(f"Invalid switch start index: {start_index}, defaults to 1")
+        start_index = 1
 
     if isinstance(keyboard, (str, os.PathLike)):
         _keyboard = get_annotated_keyboard_from_file(keyboard)
@@ -1186,12 +1217,20 @@ def create_led_chain_schematic(
         msg = "Layout has no keys to generate an LED chain for"
         raise ValueError(msg)
 
-    page_size, led_per_row, led_rows, cap_per_row, cap_rows = _plan_layout(led_count)
-    logger.debug(
-        f"LED chain: {led_count} LEDs, {led_per_row} per row, {led_rows} rows; "
-        f"{led_count} capacitors, {cap_per_row} per row, {cap_rows} rows; "
-        f"page {page_size}"
+    page_size, led_per_row, led_rows, cap_per_row, cap_rows = _plan_layout(
+        led_count, include_caps=not skip_led_decoupling
     )
+    if skip_led_decoupling:
+        logger.debug(
+            f"LED chain: {led_count} LEDs, {led_per_row} per row, {led_rows} rows; "
+            f"decoupling capacitors skipped; page {page_size}"
+        )
+    else:
+        logger.debug(
+            f"LED chain: {led_count} LEDs, {led_per_row} per row, {led_rows} rows; "
+            f"{led_count} capacitors, {cap_per_row} per row, {cap_rows} rows; "
+            f"page {page_size}"
+        )
 
     with open(output_path, "w") as f:
         f.write(
@@ -1208,6 +1247,14 @@ def create_led_chain_schematic(
     base_cap = sch.symbol.reference_startswith("C0")[0]
     base_gnd = sch.symbol.reference_startswith("#PWRG0")[0]
     base_vcc = sch.symbol.reference_startswith("#PWRV0")[0]
+
+    if led_footprint:
+        led_identifier = FootprintIdentifier.from_str(led_footprint)
+        base_led.property.Footprint.value = led_identifier.format_for_schematic()
+
+    if cap_footprint and not skip_led_decoupling:
+        cap_identifier = FootprintIdentifier.from_str(cap_footprint)
+        base_cap.property.Footprint.value = cap_identifier.format_for_schematic()
 
     pwr_index = 0
 
@@ -1227,7 +1274,7 @@ def create_led_chain_schematic(
         led_y = FIRST_LED_Y + row * ROW_PITCH_Y
 
         led = base_led.clone()
-        led.setAllReferences(f"LED{index + 1}")
+        led.setAllReferences(f"LED{start_index + index}")
         led.move(led_x, led_y)
 
         vdd_loc = led.pin.VDD.location
@@ -1298,126 +1345,131 @@ def create_led_chain_schematic(
 
         prev_dout_loc = dout_loc
 
-    # Capacitor bank: one per LED, placed below the chain, wrapping to a new
-    # row once a row runs out of horizontal space (same rule as the LED
-    # chain above, just with a much tighter pitch). All rows share a single
-    # VCC/GND symbol pair, carried across rows by two dedicated "spine"
-    # columns to the left of the bank.
-    last_led_row_y = FIRST_LED_Y + (led_rows - 1) * ROW_PITCH_Y
-    first_cap_row_y = last_led_row_y + LED_POWER_OFFSET + CAP_ROW_MARGIN_Y
+    if not skip_led_decoupling:
+        # Capacitor bank: one per LED, placed below the chain, wrapping to a new
+        # row once a row runs out of horizontal space (same rule as the LED
+        # chain above, just with a much tighter pitch). All rows share a single
+        # VCC/GND symbol pair, carried across rows by two dedicated "spine"
+        # columns to the left of the bank.
+        last_led_row_y = FIRST_LED_Y + (led_rows - 1) * ROW_PITCH_Y
+        first_cap_row_y = last_led_row_y + LED_POWER_OFFSET + CAP_ROW_MARGIN_Y
 
-    top_bus_ys = []
-    bottom_bus_ys = []
-    for cap_row in range(cap_rows):
-        cap_y = first_cap_row_y + cap_row * CAP_ROW_PITCH_Y
-        top_bus_y = cap_y - CAP_BUS_OFFSET
-        bottom_bus_y = cap_y + CAP_BUS_OFFSET
-        top_bus_ys.append(top_bus_y)
-        bottom_bus_ys.append(bottom_bus_y)
+        top_bus_ys = []
+        bottom_bus_ys = []
+        for cap_row in range(cap_rows):
+            cap_y = first_cap_row_y + cap_row * CAP_ROW_PITCH_Y
+            top_bus_y = cap_y - CAP_BUS_OFFSET
+            bottom_bus_y = cap_y + CAP_BUS_OFFSET
+            top_bus_ys.append(top_bus_y)
+            bottom_bus_ys.append(bottom_bus_y)
 
-        row_start = cap_row * cap_per_row
-        row_end = min(row_start + cap_per_row, led_count)
-        row_size = row_end - row_start
+            row_start = cap_row * cap_per_row
+            row_end = min(row_start + cap_per_row, led_count)
+            row_size = row_end - row_start
 
-        for col in range(row_size):
-            index = row_start + col
-            cap_x = CAP_FIRST_X + col * CAP_PITCH_X
-            cap = base_cap.clone()
-            cap.setAllReferences(f"C{index + 1}")
-            cap.move(cap_x, cap_y)
+            for col in range(row_size):
+                index = row_start + col
+                cap_x = CAP_FIRST_X + col * CAP_PITCH_X
+                cap = base_cap.clone()
+                cap.setAllReferences(f"C{start_index + index}")
+                cap.move(cap_x, cap_y)
 
-            pin_a, pin_b = cap.pin[0].location, cap.pin[1].location
-            top_loc, bottom_loc = (
-                (pin_a, pin_b) if pin_a.value[1] < pin_b.value[1] else (pin_b, pin_a)
-            )
+                pin_a, pin_b = cap.pin[0].location, cap.pin[1].location
+                top_loc, bottom_loc = (
+                    (pin_a, pin_b)
+                    if pin_a.value[1] < pin_b.value[1]
+                    else (pin_b, pin_a)
+                )
+
+                wire = sch.wire.new()
+                wire.start_at(top_loc)
+                wire.end_at([cap_x, top_bus_y])
+
+                wire = sch.wire.new()
+                wire.start_at(bottom_loc)
+                wire.end_at([cap_x, bottom_bus_y])
+
+                # A plain corner (this cap's stub meeting the bus turning
+                # towards the next one) needs no junction; a T-connection (bus
+                # continuing past this point, or - for column 0 - the spine tap
+                # branching off) does. The last capacitor in a row is always a
+                # plain corner; when a row has a single capacitor, column 0 is
+                # also the last one, so it correctly gets no junction either.
+                if col != row_size - 1:
+                    junc = sch.junction.new()
+                    junc.move(cap_x, top_bus_y)
+                    junc = sch.junction.new()
+                    junc.move(cap_x, bottom_bus_y)
+
+            for col in range(row_size - 1):
+                cap_x = CAP_FIRST_X + col * CAP_PITCH_X
+                next_cap_x = CAP_FIRST_X + (col + 1) * CAP_PITCH_X
+
+                wire = sch.wire.new()
+                wire.start_at([cap_x, top_bus_y])
+                wire.end_at([next_cap_x, top_bus_y])
+
+                wire = sch.wire.new()
+                wire.start_at([cap_x, bottom_bus_y])
+                wire.end_at([next_cap_x, bottom_bus_y])
+
+            # Tap this row's bus into the shared VCC/GND spine columns.
+            wire = sch.wire.new()
+            wire.start_at([CAP_VCC_SPINE_X, top_bus_y])
+            wire.end_at([CAP_FIRST_X, top_bus_y])
 
             wire = sch.wire.new()
-            wire.start_at(top_loc)
-            wire.end_at([cap_x, top_bus_y])
+            wire.start_at([CAP_GND_SPINE_X, bottom_bus_y])
+            wire.end_at([CAP_FIRST_X, bottom_bus_y])
+
+        # Vertical spine wires connecting every row's tap together, plus
+        # junctions at interior rows (top and bottom of the spine are plain
+        # corners/attachment points, not T-connections).
+        for cap_row in range(cap_rows - 1):
+            wire = sch.wire.new()
+            wire.start_at([CAP_VCC_SPINE_X, top_bus_ys[cap_row]])
+            wire.end_at([CAP_VCC_SPINE_X, top_bus_ys[cap_row + 1]])
 
             wire = sch.wire.new()
-            wire.start_at(bottom_loc)
-            wire.end_at([cap_x, bottom_bus_y])
+            wire.start_at([CAP_GND_SPINE_X, bottom_bus_ys[cap_row]])
+            wire.end_at([CAP_GND_SPINE_X, bottom_bus_ys[cap_row + 1]])
 
-            # A plain corner (this cap's stub meeting the bus turning
-            # towards the next one) needs no junction; a T-connection (bus
-            # continuing past this point, or - for column 0 - the spine tap
-            # branching off) does. The last capacitor in a row is always a
-            # plain corner; when a row has a single capacitor, column 0 is
-            # also the last one, so it correctly gets no junction either.
-            if col != row_size - 1:
+            if cap_row != 0:
                 junc = sch.junction.new()
-                junc.move(cap_x, top_bus_y)
+                junc.move(CAP_VCC_SPINE_X, top_bus_ys[cap_row])
                 junc = sch.junction.new()
-                junc.move(cap_x, bottom_bus_y)
+                junc.move(CAP_GND_SPINE_X, bottom_bus_ys[cap_row])
 
-        for col in range(row_size - 1):
-            cap_x = CAP_FIRST_X + col * CAP_PITCH_X
-            next_cap_x = CAP_FIRST_X + (col + 1) * CAP_PITCH_X
-
-            wire = sch.wire.new()
-            wire.start_at([cap_x, top_bus_y])
-            wire.end_at([next_cap_x, top_bus_y])
-
-            wire = sch.wire.new()
-            wire.start_at([cap_x, bottom_bus_y])
-            wire.end_at([next_cap_x, bottom_bus_y])
-
-        # Tap this row's bus into the shared VCC/GND spine columns.
+        bank_vcc = _new_power(base_vcc, CAP_VCC_SPINE_X, top_bus_ys[0] - 1.27)
         wire = sch.wire.new()
-        wire.start_at([CAP_VCC_SPINE_X, top_bus_y])
-        wire.end_at([CAP_FIRST_X, top_bus_y])
+        wire.start_at([CAP_VCC_SPINE_X, top_bus_ys[0]])
+        wire.end_at(bank_vcc.at)
 
+        # GND is placed next to VCC (same row, same "pointing away from the
+        # bank" rotation) instead of hanging below row 0's bus: that position
+        # sits directly on the spine wire's path down to the next wrapped
+        # capacitor row, which would overlap the symbol whenever the bank wraps.
+        bank_gnd = _new_power(
+            base_gnd, CAP_GND_SPINE_X, top_bus_ys[0] - 1.27, rotation=180
+        )
+        # The 180 rotation flips the symbol's own body/pin drawing (so the flag
+        # points up, matching VCC), but kicad-skip only translates property text
+        # along with the symbol - it doesn't mirror it for the new rotation. Flip
+        # the "GND" label to the opposite side so it doesn't land below the
+        # symbol as if the flag still pointed down.
+        value_offset_y = bank_gnd.property.Value.at.value[1] - bank_gnd.at.value[1]
+        bank_gnd.property.Value.move(
+            bank_gnd.at.value[0], bank_gnd.at.value[1] - value_offset_y, 0
+        )
         wire = sch.wire.new()
-        wire.start_at([CAP_GND_SPINE_X, bottom_bus_y])
-        wire.end_at([CAP_FIRST_X, bottom_bus_y])
+        wire.start_at([CAP_GND_SPINE_X, bottom_bus_ys[0]])
+        wire.end_at(bank_gnd.at)
 
-    # Vertical spine wires connecting every row's tap together, plus
-    # junctions at interior rows (top and bottom of the spine are plain
-    # corners/attachment points, not T-connections).
-    for cap_row in range(cap_rows - 1):
-        wire = sch.wire.new()
-        wire.start_at([CAP_VCC_SPINE_X, top_bus_ys[cap_row]])
-        wire.end_at([CAP_VCC_SPINE_X, top_bus_ys[cap_row + 1]])
-
-        wire = sch.wire.new()
-        wire.start_at([CAP_GND_SPINE_X, bottom_bus_ys[cap_row]])
-        wire.end_at([CAP_GND_SPINE_X, bottom_bus_ys[cap_row + 1]])
-
-        if cap_row != 0:
+        if cap_rows > 1:
             junc = sch.junction.new()
-            junc.move(CAP_VCC_SPINE_X, top_bus_ys[cap_row])
+            junc.move(CAP_VCC_SPINE_X, top_bus_ys[0])
             junc = sch.junction.new()
-            junc.move(CAP_GND_SPINE_X, bottom_bus_ys[cap_row])
-
-    bank_vcc = _new_power(base_vcc, CAP_VCC_SPINE_X, top_bus_ys[0] - 1.27)
-    wire = sch.wire.new()
-    wire.start_at([CAP_VCC_SPINE_X, top_bus_ys[0]])
-    wire.end_at(bank_vcc.at)
-
-    # GND is placed next to VCC (same row, same "pointing away from the
-    # bank" rotation) instead of hanging below row 0's bus: that position
-    # sits directly on the spine wire's path down to the next wrapped
-    # capacitor row, which would overlap the symbol whenever the bank wraps.
-    bank_gnd = _new_power(base_gnd, CAP_GND_SPINE_X, top_bus_ys[0] - 1.27, rotation=180)
-    # The 180 rotation flips the symbol's own body/pin drawing (so the flag
-    # points up, matching VCC), but kicad-skip only translates property text
-    # along with the symbol - it doesn't mirror it for the new rotation. Flip
-    # the "GND" label to the opposite side so it doesn't land below the
-    # symbol as if the flag still pointed down.
-    value_offset_y = bank_gnd.property.Value.at.value[1] - bank_gnd.at.value[1]
-    bank_gnd.property.Value.move(
-        bank_gnd.at.value[0], bank_gnd.at.value[1] - value_offset_y, 0
-    )
-    wire = sch.wire.new()
-    wire.start_at([CAP_GND_SPINE_X, bottom_bus_ys[0]])
-    wire.end_at(bank_gnd.at)
-
-    if cap_rows > 1:
-        junc = sch.junction.new()
-        junc.move(CAP_VCC_SPINE_X, top_bus_ys[0])
-        junc = sch.junction.new()
-        junc.move(CAP_GND_SPINE_X, bottom_bus_ys[0])
+            junc.move(CAP_GND_SPINE_X, bottom_bus_ys[0])
 
     base_led.delete()
     base_cap.delete()

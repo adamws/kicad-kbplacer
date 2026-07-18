@@ -12,9 +12,17 @@
 # loads KiCad's `pcbnew` SWIG bindings, which have historically leaked memory,
 # so the whole task is what we want to measure for OOM sizing.
 #
+# Also enables the LED-chain schematic + PCB elements feature
+# (`--create-led-sch-file`/`--create-led-pcb-elements`) ahead of kle-ng-api
+# actually sending those flags, so its integration (memory profile, project
+# bundling, footprint wiring) is exercised here first.
+#
 # This script mirrors those CLI arguments. The expensive kbplacer step is run
 # through $RUNNER, which defaults to plain `python3` but is set to
 # `python3 -m memray run ...` by the `just profile-memray` recipe.
+#
+# Bundling the key-matrix and LED-chain sheets into one project requires
+# KiCad 10.0+ (the `just profile-memray` default image satisfies this).
 #
 # Env knobs (all optional):
 #   VIA_LAYOUT   VIA layout to feed in, relative to repo root.
@@ -26,6 +34,8 @@
 #                  (installed by the `just profile-memray` recipe)
 #   SWITCH_FP    Switch footprint identifier (lib.pretty:name with {} size slot)
 #   DIODE_FP     Diode footprint identifier
+#   LED_FP       LED footprint identifier (SK6812MINI-E-pinout-compatible)
+#   CAP_FP       LED decoupling capacitor footprint identifier
 #   RUNNER       Command prefix for the kbplacer process (memray injects here)
 #
 set -euo pipefail
@@ -52,16 +62,23 @@ if [ -z "${SWITCH_FP:-}" ]; then
 fi
 DIODE_FP="${DIODE_FP:-/usr/share/kicad/footprints/Diode_SMD.pretty:D_SOD-123F}"
 ENCODER_FP="/usr/share/kicad/footprints/Rotary_Encoder.pretty:RotaryEncoder_Alps_EC11E-Switch_Vertical_H20mm"
+# LED/capacitor footprints come from KiCad's own bundled libraries (no extra
+# download needed, unlike the switch library) - matches the LED-chain
+# schematic's own hardcoded default LED footprint.
+LED_FP="${LED_FP:-/usr/share/kicad/footprints/LED_SMD.pretty:LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount}"
+CAP_FP="${CAP_FP:-/usr/share/kicad/footprints/Capacitor_SMD.pretty:C_0603_1608Metric}"
 
 mkdir -p "$OUTDIR"
 PROJECT_NAME="kle-ng-api-task"
 KLE_LAYOUT="$OUTDIR/$PROJECT_NAME-kle.json"
 KICAD_PCB="$OUTDIR/$PROJECT_NAME.kicad_pcb"
 KICAD_SCH="$OUTDIR/$PROJECT_NAME.kicad_sch"
+KICAD_LED_SCH="$OUTDIR/$PROJECT_NAME-led-chain.kicad_sch"
+KICAD_PRO="$OUTDIR/$PROJECT_NAME.kicad_pro"
 
 # kbplacer aborts rather than overwrite existing files; clear artifacts from a
 # previous run so profiling is repeatable.
-rm -f "$KICAD_PCB" "$KICAD_SCH" "$KLE_LAYOUT"
+rm -f "$KICAD_PCB" "$KICAD_SCH" "$KICAD_LED_SCH" "$KICAD_PRO" "$KLE_LAYOUT"
 
 echo ">>> Repo:        $REPO_ROOT"
 echo ">>> VIA layout:  $VIA_LAYOUT"
@@ -86,26 +103,35 @@ case "$ROUTING" in
   *) echo "!!! unknown ROUTING='$ROUTING' (use none|switch-diode|full)" >&2; exit 2 ;;
 esac
 
-# 3. The complete task: one kbplacer process doing schematic + PCB, exactly the
-#    argument set kle-ng-api builds in RunKBPlacer. This is what $RUNNER wraps.
-echo ">>> Running complete kbplacer task (schematic builder + PCB builder)"
+# 3. The complete task: one kbplacer process doing schematic + PCB + LED chain,
+#    the argument set kle-ng-api builds in RunKBPlacer plus the LED-chain flags
+#    it will add once it adopts that feature. This is what $RUNNER wraps.
+echo ">>> Running complete kbplacer task (schematic + PCB + LED chain builders)"
 # shellcheck disable=SC2086
 $RUNNER -m kbplacer \
   --pcb-file "$KICAD_PCB" \
   --create-sch-file \
   --sch-file "$KICAD_SCH" \
   --create-pcb-file \
+  --create-led-sch-file \
+  --create-led-pcb-elements \
   --switch-footprint "$SWITCH_FP" \
   --diode-footprint "$DIODE_FP" \
   --encoder-footprint "$ENCODER_FP" \
   --encoder-adjustment "-7.5 -2.5" \
+  --led-footprint "$LED_FP" \
+  --led-capacitor-footprint "$CAP_FP" \
   --layout "$KLE_LAYOUT" \
   --layout-offset "0 0" \
   --switch "SW{} 0 FRONT" \
-  --diode "D{} CUSTOM 0 0 0 BACK" \
-  --no-stabilizers \
+  --diode "D{} CUSTOM 7.5 0 90 BACK" \
+  --additional-elements "ST{} CUSTOM 0 0 0 FRONT;LED{} CUSTOM 0 4.7625 0 BACK;C{} CUSTOM 5 5.5125 0 BACK" \
   --log-level "INFO" \
   --max-keys 150 \
   "${ROUTE_ARGS[@]}"
 
 echo ">>> Done. Artifacts in $OUTDIR"
+echo ">>>   $KICAD_SCH"
+echo ">>>   $KICAD_LED_SCH"
+echo ">>>   $KICAD_PRO"
+echo ">>>   $KICAD_PCB"

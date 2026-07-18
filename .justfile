@@ -154,7 +154,7 @@ schematic-with-leds version=default_version layout="wt60_a" *args="":
 
 # === Profiling ===
 
-# profile memory of a complete kle-ng-api task (schematic + pcb) with memray
+# profile memory of a complete kle-ng-api task (schematic + pcb + LED chain) with memray
 # Outputs profile.bin + flamegraphs to ./output_memray/. ROUTING: none|switch-diode|full
 profile-memray version=default_version routing="full":
     #!/usr/bin/env bash
@@ -171,7 +171,7 @@ profile-memray version=default_version routing="full":
             # memray + kbplacer with the schematic builder dependency (kicad-skip);
             pip3 install --no-cache-dir .[schematic] memray
             # Install the perigoso/kiswitch keyswitch footprints the same way
-            # kle-ng-api'"'"'s worker Dockerfile does (the base image does not ship
+            # kle-ng-api worker Dockerfile does (the base image does not ship
             # keyboard switch footprints). Idempotent across re-runs.
             lib="$HOME/.local/share/kicad/3rdparty/footprints/com_github_perigoso_keyswitch-kicad-library"
             if [ ! -d "$lib" ]; then

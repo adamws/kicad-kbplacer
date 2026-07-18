@@ -480,3 +480,182 @@ class TestStartIndexCli:
         )
         assert switch_refs == ["SW5", "SW6", "SW7", "SW8"]
         assert diode_refs == ["D5", "D6", "D7", "D8"]
+
+
+class TestLedChainElements:
+    """`create_leds` adds one LED + one decoupling capacitor per unique
+    physical key position, wired into shared VCC/GND rails and a DIN/DOUT
+    daisy chain, mirroring the LED-chain schematic builder's component count,
+    reference numbering (`LED{n}`/`C{n}`, paired 1:1 with `SW{n}`) and
+    per-position dedup (`_unique_matrix_positions`).
+    """
+
+    LAYOUT = [["0,0", "0,1"], ["1,0", "1,1"]]
+
+    def _led_builder(self, tmpdir, request, **kwargs) -> BoardBuilder:
+        pcb_path = f"{tmpdir}/test.kicad_pcb"
+        fp_dir = str(get_footprints_dir(request))
+        if KICAD_VERSION >= (10, 0, 0):
+            led_footprint = f"{fp_dir}:LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount"
+        else:
+            led_footprint = f"{fp_dir}:LED_SK6812MINI_PLCC4_3.5x3.5mm_P1.75mm"
+        return BoardBuilder(
+            pcb_path,
+            switch_footprint=f"{fp_dir}:SW_Cherry_MX_PCB_1.00u",
+            diode_footprint=f"{fp_dir}:D_SOD-323",
+            led_footprint=led_footprint,
+            cap_footprint=f"{fp_dir}:C_0603_1608Metric",
+            **kwargs,
+        )
+
+    def _build(self, builder, layout=None, **kwargs) -> pcbnew.BOARD:
+        keyboard = parse_kle(self.LAYOUT if layout is None else layout)
+        keyboard = MatrixAnnotatedKeyboard(meta=keyboard.meta, keys=keyboard.keys)
+        return builder.create_board(keyboard, **kwargs)
+
+    def _references(self, board, prefix):
+        return sorted(
+            fp.GetReference()
+            for fp in board.GetFootprints()
+            if fp.GetReference().startswith(prefix)
+        )
+
+    def _pad_net(self, board, ref, pad_number):
+        fp = next(f for f in board.GetFootprints() if f.GetReference() == ref)
+        return fp.FindPadByNumber(pad_number).GetNetname()
+
+    def test_create_and_wire(self, tmpdir, request) -> None:
+        builder = self._led_builder(tmpdir, request)
+        board = self._build(builder, create_leds=True)
+
+        save_and_render(board, tmpdir, request)
+
+        assert self._references(board, "LED") == ["LED1", "LED2", "LED3", "LED4"]
+        assert self._references(board, "C") == ["C1", "C2", "C3", "C4"]
+
+        for ref in ("LED1", "LED2", "LED3", "LED4"):
+            assert self._pad_net(board, ref, "1") == "GND"
+            assert self._pad_net(board, ref, "3") == "VCC"
+        for ref in ("C1", "C2", "C3", "C4"):
+            assert self._pad_net(board, ref, "1") == "VCC"
+            assert self._pad_net(board, ref, "2") == "GND"
+
+        # first LED's DIN and last LED's DOUT connect to the global chain labels
+        assert self._pad_net(board, "LED1", "2") == "LEDIN"
+        assert self._pad_net(board, "LED4", "4") == "LEDOUT"
+
+        # consecutive LEDs' DOUT/DIN pads share the same (internal) net
+        for i in range(1, 4):
+            dout_net = self._pad_net(board, f"LED{i}", "4")
+            din_net = self._pad_net(board, f"LED{i + 1}", "2")
+            assert dout_net == din_net
+
+    def test_requires_led_footprint(self, tmpdir, request) -> None:
+        pcb_path = f"{tmpdir}/test.kicad_pcb"
+        fp_dir = str(get_footprints_dir(request))
+        builder = BoardBuilder(
+            pcb_path,
+            switch_footprint=f"{fp_dir}:SW_Cherry_MX_PCB_1.00u",
+            diode_footprint=f"{fp_dir}:D_SOD-323",
+        )
+        with pytest.raises(
+            RuntimeError,
+            match="LED footprint must be configured",
+        ):
+            self._build(builder, create_leds=True)
+
+    def test_requires_cap_footprint_unless_skipped(self, tmpdir, request) -> None:
+        pcb_path = f"{tmpdir}/test.kicad_pcb"
+        fp_dir = str(get_footprints_dir(request))
+        if KICAD_VERSION >= (10, 0, 0):
+            led_footprint = f"{fp_dir}:LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount"
+        else:
+            led_footprint = f"{fp_dir}:LED_SK6812MINI_PLCC4_3.5x3.5mm_P1.75mm"
+        builder = BoardBuilder(
+            pcb_path,
+            switch_footprint=f"{fp_dir}:SW_Cherry_MX_PCB_1.00u",
+            diode_footprint=f"{fp_dir}:D_SOD-323",
+            led_footprint=led_footprint,
+        )
+        with pytest.raises(
+            RuntimeError,
+            match="Capacitor footprint must be configured",
+        ):
+            self._build(builder, create_leds=True)
+
+        # With skip_led_decoupling, the missing capacitor footprint is fine.
+        board = self._build(builder, create_leds=True, skip_led_decoupling=True)
+        assert self._references(board, "LED") == ["LED1", "LED2", "LED3", "LED4"]
+        assert not self._references(board, "C")
+
+    def test_skip_led_decoupling(self, tmpdir, request) -> None:
+        """`skip_led_decoupling` must omit the per-LED decoupling capacitor
+        entirely - no `C{n}` footprint, no `VCC`/`GND` net left dangling -
+        while the LED itself is still created and wired normally.
+        """
+        builder = self._led_builder(tmpdir, request)
+        board = self._build(builder, create_leds=True, skip_led_decoupling=True)
+
+        save_and_render(board, tmpdir, request)
+
+        assert self._references(board, "LED") == ["LED1", "LED2", "LED3", "LED4"]
+        assert not self._references(board, "C")
+
+        for ref in ("LED1", "LED2", "LED3", "LED4"):
+            assert self._pad_net(board, ref, "1") == "GND"
+            assert self._pad_net(board, ref, "3") == "VCC"
+
+        assert self._pad_net(board, "LED1", "2") == "LEDIN"
+        assert self._pad_net(board, "LED4", "4") == "LEDOUT"
+
+        for i in range(1, 4):
+            dout_net = self._pad_net(board, f"LED{i}", "4")
+            din_net = self._pad_net(board, f"LED{i + 1}", "2")
+            assert dout_net == din_net
+
+    def test_gate_disabled_by_default(self, tmpdir, request) -> None:
+        builder = self._led_builder(tmpdir, request)
+        board = self._build(builder)  # create_leds defaults to False
+
+        assert not self._references(board, "LED")
+        assert not self._references(board, "C")
+
+    def test_no_duplicate_for_alternate_position(self, tmpdir, request) -> None:
+        """Position (1,0) has a default 1.0u key and a 2.0u alternative
+        (`SW3`/`SW3a`, see the alternative-layout footprint test above). Both
+        share one physical spot, so it must get exactly one LED/cap -
+        contrasting with stabilizers, which currently get a separate
+        footprint per alternate (`ST{n}a`).
+        """
+        builder = self._led_builder(tmpdir, request)
+        test_dir = request.fspath.dirname
+        layout = (
+            Path(test_dir).parent
+            / "examples"
+            / "2x2-with-alternative-layout"
+            / "via.json"
+        )
+        board = builder.create_board(layout, create_leds=True)
+
+        save_and_render(board, tmpdir, request)
+
+        assert self._references(board, "LED") == ["LED1", "LED2", "LED3", "LED4"]
+        assert self._references(board, "C") == ["C1", "C2", "C3", "C4"]
+
+    def test_lexicographic_net_naming(self, tmpdir, request) -> None:
+        """KiCad names an anonymous net after the lexicographically (string,
+        not numeric) smallest "{ref}-{pin}" among the connected pins - e.g.
+        "LED10-DIN" sorts before "LED9-DOUT" because '1' < '9' at the first
+        differing character, even though 10 is numerically larger than 9.
+        A layout with fewer than 10 unique key positions can never exercise
+        this (single-digit reference numbers never invert order), so this
+        uses a 10-key single-row layout.
+        """
+        builder = self._led_builder(tmpdir, request)
+        layout = [[f"0,{i}" for i in range(10)]]
+        board = self._build(builder, layout=layout, create_leds=True)
+
+        save_and_render(board, tmpdir, request)
+
+        assert self._pad_net(board, "LED8", "4") == "Net-(LED8-DOUT)"
+        assert self._pad_net(board, "LED9", "4") == "Net-(LED10-DIN)"

@@ -46,6 +46,10 @@ class PluginSettings:
     create_led_sch_file: bool = False
     led_sch_file_path: str = ""
     project_path: str = ""
+    led_footprint: str = ""
+    cap_footprint: str = ""
+    create_led_pcb_elements: bool = False
+    skip_led_decoupling: bool = False
 
 
 def run_schematic(settings: PluginSettings):
@@ -68,7 +72,17 @@ def run_schematic(settings: PluginSettings):
             )
         )
     if settings.create_led_sch_file:
-        requests.append(SchematicRequest("led_chain"))
+        requests.append(
+            SchematicRequest(
+                "led_chain",
+                kwargs={
+                    "led_footprint": settings.led_footprint,
+                    "cap_footprint": settings.cap_footprint,
+                    "start_index": settings.key_info.start_index,
+                    "skip_led_decoupling": settings.skip_led_decoupling,
+                },
+            )
+        )
 
     if requests:
         create_schematic_project(settings.project_path, settings.layout_path, requests)
@@ -82,11 +96,15 @@ def run_board(settings: PluginSettings) -> pcbnew.BOARD:
             diode_footprint=settings.diode_footprint,
             stabilizer_footprint=settings.stabilizer_footprint,
             encoder_footprint=settings.encoder_footprint,
+            led_footprint=settings.led_footprint,
+            cap_footprint=settings.cap_footprint,
         )
         board = builder.create_board(
             settings.layout_path,
             add_stabilizers=settings.add_stabilizers,
             start_index=settings.key_info.start_index,
+            create_leds=settings.create_led_pcb_elements,
+            skip_led_decoupling=settings.skip_led_decoupling,
         )
     else:
         board = pcbnew.LoadBoard(settings.pcb_file_path)
