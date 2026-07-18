@@ -125,7 +125,7 @@ $RUNNER -m kbplacer \
   --layout-offset "0 0" \
   --switch "SW{} 0 FRONT" \
   --diode "D{} CUSTOM 7.5 0 90 BACK" \
-  --additional-elements "ST{} CUSTOM 0 0 0 FRONT;LED{} CUSTOM 0 4.7625 0 BACK;C{} CUSTOM 5 5.5125 0 BACK" \
+  --additional-elements "ST{} CUSTOM 0 0 0 FRONT;LED{} CUSTOM 0 5.25 0 BACK;C{} CUSTOM 5 6 0 BACK" \
   --log-level "INFO" \
   --max-keys 150 \
   "${ROUTE_ARGS[@]}"
