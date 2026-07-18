@@ -73,18 +73,22 @@ msgstr ""
 msgid "Switch diodes settings"
 msgstr "Brytardiods inställningar"
 
+#, fuzzy
 msgid "Additional elements settings"
 msgstr "Inställningar för ytterligare element"
 
+#, fuzzy
 msgid "Route rows and columns"
 msgstr "Layout i rader och kolumner"
 
 msgid "Controller circuit template file:"
 msgstr "Mallfil för styrkrets:"
 
+#, fuzzy
 msgid "Build board outline"
 msgstr "Konstruktionsskiss"
 
+#, fuzzy
 msgid "Outline delta:"
 msgstr "Konturdelta:"
 
