@@ -240,3 +240,5 @@ lint-all:
 
 cleanup:
   rm -rf output_schematic output_memray
+  rm -rf .benchmarks
+  rm -f examples/absolem-ergogen/absolem.zip
