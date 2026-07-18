@@ -44,6 +44,10 @@ TEMPLATE = """\
     (generator_version "9.0")
     (uuid "{own_uuid}")
     (paper "{page_size}")
+    (title_block
+        (comment 1 "https://github.com/adamws/kicad-kbplacer")
+        (comment 2 "Auto-generated with kicad-kbplacer, requires validation before production!")
+    )
     (lib_symbols
         (symbol "Device:D_Small"
             (pin_numbers

@@ -76,6 +76,10 @@ TEMPLATE = """\
     (generator_version "10.0")
     (uuid "{own_uuid}")
     (paper "{page_size}")
+    (title_block
+        (comment 1 "https://github.com/adamws/kicad-kbplacer")
+        (comment 2 "Auto-generated with kicad-kbplacer, requires validation before production!")
+    )
     (lib_symbols
         (symbol "Device:C"
             (pin_numbers
@@ -1477,3 +1481,18 @@ def create_led_chain_schematic(
     base_vcc.delete()
 
     sch.write(output_path)
+
+
+if __name__ == "__main__":
+    import uuid
+
+    with open("led_schematic_builder.kicad_sch", "w") as f:
+        size = (10, 10)
+        f.write(
+            TEMPLATE.format(
+                page_size="A4",
+                own_uuid=str(uuid.uuid4()),
+                project_name="led_schematic_builder",
+                sheet_page=1,
+            )
+        )
