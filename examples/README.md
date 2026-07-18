@@ -2,9 +2,9 @@
 
 Each example has own directory with following file structure:
 
-- `kle.json` - keyboard's layout downloaded from [keyboard-layout-editor](http://www.keyboard-layout-editor.com).
+- `kle.json` - keyboard's layout downloaded from [Keyboard Layout Editor NG](https://editor.keyboard-tools.xyz/).
 - `kle-internal.json` - keyboard's layout after processing with [kle-serial](https://github.com/ijprest/kle-serial).
-  This file is expected by `kbplacer` plugin.
+  This file is also supported by `kbplacer` plugin.
 - `keyboard.net` - example's netlist.
 - `keyboard-before.kicad_pcb` - PCB file with loaded netlist and parts placed
   at default location (by KiCad's netlist loader). This file is useful for manual
@@ -13,7 +13,7 @@ Each example has own directory with following file structure:
   current capabilities - this file does not contain any manual changes.
 - `fp-lib-table` - footprints location file, points to external footprints
   stored in parent's `examples.pretty` directory.
-- `keyboard-layout.png` - picture of keyboard-layout-editor layout.
+- `keyboard-layout.png` - picture of layout.
 - `render.svg` - picture of PCB, this file is created by KiCad's SVG export.
 
 ## Examples summary

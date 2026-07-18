@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 adamws <adamws@users.noreply.github.com>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 import enum
 import logging
 from typing import List, Tuple
@@ -7,6 +11,7 @@ import pytest
 
 from kbplacer.board_modifier import (
     BoardModifier,
+    duplicate_track,
     get_footprint,
     get_optional_footprint,
     set_position_by_points,
@@ -17,10 +22,10 @@ from kbplacer.element_position import Side
 from .conftest import (
     KICAD_VERSION,
     add_track,
-    generate_render,
     get_footprints_dir,
     pointMM,
     prepare_project_file,
+    save_and_render,
     update_netinfo,
 )
 
@@ -52,12 +57,6 @@ def add_nets(board, netnames) -> None:
         net = pcbnew.NETINFO_ITEM(board, n, net_count + i)
         update_netinfo(board, net)
         board.Add(net)
-
-
-def save_and_render(board: pcbnew.BOARD, tmpdir, request) -> None:
-    pcb_path = f"{tmpdir}/test.kicad_pcb"
-    board.Save(pcb_path)
-    generate_render(request, pcb_path)
 
 
 def __get_parameters():
@@ -302,3 +301,49 @@ def test_find_footprint_raises_when_not_found() -> None:
 def test_find_optional_footprint_return_none_when_not_found() -> None:
     board = pcbnew.CreateEmptyBoard()
     assert get_optional_footprint(board, "SW1") is None
+
+
+def test_duplicate_track_preserves_geometry() -> None:
+    board = pcbnew.CreateEmptyBoard()
+    track = pcbnew.PCB_TRACK(board)
+    if KICAD_VERSION < (7, 0, 0):
+        track.SetStart(pcbnew.wxPointMM(0, 0))
+        track.SetEnd(pcbnew.wxPointMM(5, 0))
+    else:
+        track.SetStart(pcbnew.VECTOR2I_MM(0, 0))
+        track.SetEnd(pcbnew.VECTOR2I_MM(5, 0))
+    track.SetWidth(pcbnew.FromMM(0.2))
+    track.SetLayer(pcbnew.B_Cu)
+    board.Add(track)
+
+    dup = duplicate_track(track)
+
+    assert dup.GetStart() == track.GetStart()
+    assert dup.GetEnd() == track.GetEnd()
+    assert dup.GetWidth() == track.GetWidth()
+    assert dup.GetLayer() == track.GetLayer()
+
+
+@pytest.mark.skipif(
+    KICAD_VERSION < (10, 0, 0), reason="PCB_GROUP available since KiCad 10"
+)
+def test_duplicate_track_with_parent_group() -> None:
+    board = pcbnew.CreateEmptyBoard()
+    track = pcbnew.PCB_TRACK(board)
+    track.SetStart(pcbnew.VECTOR2I(pcbnew.FromMM(0), pcbnew.FromMM(0)))
+    track.SetEnd(pcbnew.VECTOR2I(pcbnew.FromMM(5), pcbnew.FromMM(0)))
+    board.Add(track)
+
+    group = pcbnew.PCB_GROUP(board)
+    board.Add(group)
+    group.AddItem(track)
+    assert track.GetParentGroup() is not None
+
+    dup = duplicate_track(track)
+
+    # original must still belong to its group
+    assert track.GetParentGroup() is not None
+    # duplicate must not inherit group membership
+    assert dup.GetParentGroup() is None
+    assert dup.GetStart() == track.GetStart()
+    assert dup.GetEnd() == track.GetEnd()

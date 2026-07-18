@@ -1,7 +1,11 @@
+# SPDX-FileCopyrightText: 2025 adamws <adamws@users.noreply.github.com>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import pcbnew
 
@@ -10,15 +14,17 @@ from .edge_generator import build_board_outline
 from .element_position import ElementInfo, PositionOption
 from .kbplacer_dialog import WindowState
 from .key_placer import KeyPlacer
+from .schematic_builder import can_create_schematic
+from .schematic_project import SchematicRequest, create_schematic_project
 from .template_copier import copy_from_template_to_board
 
 
 @dataclass
 class PluginSettings:
-    board_path: str
+    pcb_file_path: str
     layout_path: str
     key_info: ElementInfo
-    key_distance: Tuple[float, float]
+    key_distance: Optional[Tuple[float, float]]
     diode_info: ElementInfo
     route_switches_with_diodes: bool
     optimize_diodes_orientation: bool
@@ -27,23 +33,83 @@ class PluginSettings:
     generate_outline: bool
     outline_delta: float
     template_path: str
-    create_from_annotated_layout: bool
+    create_pcb_file: bool
+    create_sch_file: bool
+    sch_file_path: str
     switch_footprint: str
     diode_footprint: str
+    stabilizer_footprint: str
+    encoder_footprint: str = ""
+    layout_offset: Optional[Tuple[float, float]] = None
+    add_stabilizers: bool = True
+    encoder_adjustment: Optional[Tuple[float, float]] = None
+    create_led_sch_file: bool = False
+    led_sch_file_path: str = ""
+    project_path: str = ""
+    led_footprint: str = ""
+    cap_footprint: str = ""
+    create_led_pcb_elements: bool = False
+    skip_led_decoupling: bool = False
 
 
-def run(settings: PluginSettings) -> pcbnew.BOARD:
-    if settings.create_from_annotated_layout:
+def run_schematic(settings: PluginSettings):
+    requests: List[SchematicRequest] = []
+    if settings.create_sch_file:
+        if not can_create_schematic():
+            msg = "Requires optional schematic dependencies"
+            raise RuntimeError(msg)
+        requests.append(
+            SchematicRequest(
+                "key_matrix",
+                kwargs={
+                    "switch_footprint": settings.switch_footprint,
+                    "diode_footprint": settings.diode_footprint,
+                    "stabilizer_footprint": settings.stabilizer_footprint,
+                    "encoder_footprint": settings.encoder_footprint,
+                    "add_stabilizers": settings.add_stabilizers,
+                    "start_index": settings.key_info.start_index,
+                },
+            )
+        )
+    if settings.create_led_sch_file:
+        requests.append(
+            SchematicRequest(
+                "led_chain",
+                kwargs={
+                    "led_footprint": settings.led_footprint,
+                    "cap_footprint": settings.cap_footprint,
+                    "start_index": settings.key_info.start_index,
+                    "skip_led_decoupling": settings.skip_led_decoupling,
+                },
+            )
+        )
+
+    if requests:
+        create_schematic_project(settings.project_path, settings.layout_path, requests)
+
+
+def run_board(settings: PluginSettings) -> pcbnew.BOARD:
+    if settings.create_pcb_file:
         builder = BoardBuilder(
-            settings.board_path,
+            settings.pcb_file_path,
             switch_footprint=settings.switch_footprint,
             diode_footprint=settings.diode_footprint,
+            stabilizer_footprint=settings.stabilizer_footprint,
+            encoder_footprint=settings.encoder_footprint,
+            led_footprint=settings.led_footprint,
+            cap_footprint=settings.cap_footprint,
         )
-        board = builder.create_board(settings.layout_path)
+        board = builder.create_board(
+            settings.layout_path,
+            add_stabilizers=settings.add_stabilizers,
+            start_index=settings.key_info.start_index,
+            create_leds=settings.create_led_pcb_elements,
+            skip_led_decoupling=settings.skip_led_decoupling,
+        )
     else:
-        board = pcbnew.LoadBoard(settings.board_path)
+        board = pcbnew.LoadBoard(settings.pcb_file_path)
 
-    placer = KeyPlacer(board, settings.key_distance)
+    placer = KeyPlacer(board)
     placer.run(
         settings.layout_path,
         settings.key_info,
@@ -52,6 +118,9 @@ def run(settings: PluginSettings) -> pcbnew.BOARD:
         settings.route_rows_and_columns,
         additional_elements=settings.additional_elements,
         optimize_diodes_orientation=settings.optimize_diodes_orientation,
+        key_distance=settings.key_distance,
+        layout_offset=settings.layout_offset,
+        encoder_adjustment=settings.encoder_adjustment,
     )
 
     if settings.generate_outline:
@@ -67,17 +136,18 @@ def run(settings: PluginSettings) -> pcbnew.BOARD:
     return board
 
 
-def run_from_gui(board_path: str, state: WindowState) -> pcbnew.BOARD:
+def run_from_gui(pcb_file_path: str, state: WindowState) -> pcbnew.BOARD:
     """Same as 'run' but with additional WindowState to PluginSettings translation"""
     if not state.enable_diode_placement:
         state.diode_info.position_option = PositionOption.UNCHANGED
         state.diode_info.template_path = ""
 
     settings = PluginSettings(
-        board_path=board_path,
+        pcb_file_path=pcb_file_path,
         layout_path=state.layout_path,
         key_info=state.key_info,
         key_distance=state.key_distance,
+        layout_offset=state.layout_offset,
         diode_info=state.diode_info,
         route_switches_with_diodes=state.route_switches_with_diodes,
         optimize_diodes_orientation=state.optimize_diodes_orientation,
@@ -86,8 +156,14 @@ def run_from_gui(board_path: str, state: WindowState) -> pcbnew.BOARD:
         generate_outline=state.generate_outline,
         outline_delta=state.outline_delta,
         template_path=state.template_path,
-        create_from_annotated_layout=False,
+        create_pcb_file=False,
+        create_sch_file=False,
+        sch_file_path="",
         switch_footprint="",
         diode_footprint="",
+        stabilizer_footprint="",
+        create_led_sch_file=False,
+        led_sch_file_path="",
+        project_path="",
     )
-    return run(settings)
+    return run_board(settings)

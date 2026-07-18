@@ -8,7 +8,9 @@
     "radii": "6px 6px 12px 12px / 18px 18px 12px 12px",
     "switchBrand": "",
     "switchMount": "",
-    "switchType": ""
+    "switchType": "",
+    "spacing_x": 19.05,
+    "spacing_y": 19.05
   },
   "keys": [
     {
@@ -44,7 +46,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -93,7 +97,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -142,7 +148,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -191,7 +199,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -240,7 +250,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -289,7 +301,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -338,7 +352,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -387,7 +403,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -436,7 +454,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -485,7 +505,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -534,7 +556,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -583,7 +607,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -632,7 +658,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -667,7 +695,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -705,7 +735,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -743,7 +775,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -781,7 +815,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -819,7 +855,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -857,7 +895,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -895,7 +935,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -933,7 +975,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -971,7 +1015,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1009,7 +1055,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1047,7 +1095,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1085,7 +1135,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1123,7 +1175,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1161,7 +1215,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1200,7 +1256,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1237,7 +1295,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1272,7 +1332,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1307,7 +1369,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1342,7 +1406,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1377,7 +1443,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1412,7 +1480,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1447,7 +1517,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1482,7 +1554,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1517,7 +1591,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1552,7 +1628,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1587,7 +1665,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1625,7 +1705,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1663,7 +1745,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1701,7 +1785,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1740,7 +1826,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1775,7 +1863,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1810,7 +1900,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1845,7 +1937,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1880,7 +1974,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1915,7 +2011,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1950,7 +2048,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1985,7 +2085,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -2020,7 +2122,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -2055,7 +2159,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -2093,7 +2199,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -2131,7 +2239,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -2174,7 +2284,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -2211,7 +2323,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -2246,7 +2360,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -2281,7 +2397,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -2316,7 +2434,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -2351,7 +2471,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -2386,7 +2508,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -2421,7 +2545,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -2456,7 +2582,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -2494,7 +2622,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -2532,7 +2662,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -2570,7 +2702,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -2609,7 +2743,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -2646,7 +2782,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -2683,7 +2821,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -2722,14 +2862,16 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
       "labels": [
         null,
         null,
-        "⌘",
+        "\u2318",
         null,
         null,
         null,
@@ -2765,7 +2907,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -2794,12 +2938,14 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
       "labels": [
-        "⌘",
+        "\u2318",
         null,
         null,
         null,
@@ -2833,7 +2979,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -2876,7 +3024,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -2885,7 +3035,7 @@
         null,
         null,
         null,
-        "↑"
+        "\u2191"
       ],
       "textColor": [],
       "textSize": [],
@@ -2911,7 +3061,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -2920,7 +3072,7 @@
         null,
         null,
         null,
-        "←"
+        "\u2190"
       ],
       "textColor": [],
       "textSize": [],
@@ -2946,7 +3098,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -2955,7 +3109,7 @@
         null,
         null,
         null,
-        "↓"
+        "\u2193"
       ],
       "textColor": [],
       "textSize": [],
@@ -2981,7 +3135,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -2990,7 +3146,7 @@
         null,
         null,
         null,
-        "→"
+        "\u2192"
       ],
       "textColor": [],
       "textSize": [],
@@ -3016,7 +3172,9 @@
       "profile": "CHICKLET",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     }
   ]
 }

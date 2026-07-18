@@ -1,10 +1,18 @@
+# SPDX-FileCopyrightText: 2025 adamws <adamws@users.noreply.github.com>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 from __future__ import annotations
 
 import copy
 import json
 import logging
+import math
+import re
+from contextlib import contextmanager
+from enum import Enum, auto
 from pathlib import Path
-from typing import List, Tuple
+from typing import Iterator, List, Tuple
 
 import pcbnew
 import pytest
@@ -21,22 +29,40 @@ from kbplacer.board_modifier import (
 from kbplacer.defaults import DEFAULT_DIODE_POSITION, ZERO_POSITION
 from kbplacer.element_position import ElementInfo, PositionOption, Side
 from kbplacer.key_placer import (
+    ANNOTATION_GUIDE_URL,
     KeyboardSwitchIterator,
     KeyMatrix,
     KeyPlacer,
+    MatrixAnnotatedKeyboardSwitchIterator,
 )
-from kbplacer.kle_serial import Keyboard, get_keyboard, get_keyboard_from_file
+from kbplacer.kle_serial import (
+    Key,
+    Keyboard,
+    MatrixAnnotatedKeyboard,
+    get_keyboard,
+    get_keyboard_from_file,
+    parse_kle,
+)
 from kbplacer.plugin_error import PluginError
 
 from .conftest import (
     KICAD_VERSION,
     add_diode_footprint,
     add_led_footprint,
+    add_stabilizer_footprint,
     add_switch_footprint,
     equal_ignore_order,
-    generate_render,
+    save_and_render,
     update_netinfo,
 )
+
+logger = logging.getLogger(__name__)
+
+ENCODER_FOOTPRINT = (
+    "RotaryEncoder_Alps_EC11E-Switch_Vertical_H20mm_CircularMountingHoles"
+)
+# Shaft center (fp_circle center) offset from footprint reference point (pad A) in mm
+ENCODER_SHAFT_CENTER_OFFSET = (7.5, 2.5)
 
 
 def get_board_with_one_switch(
@@ -74,10 +100,9 @@ def get_board_with_one_switch(
     return board, switch, diodes
 
 
-def save_and_render(board: pcbnew.BOARD, tmpdir, request) -> None:
-    pcb_path = f"{tmpdir}/test.kicad_pcb"
-    board.Save(pcb_path)
-    generate_render(request, pcb_path)
+def assert_iterator_end(iterator: Iterator) -> None:
+    with pytest.raises(StopIteration):
+        next(iterator)
 
 
 def assert_board_tracks(
@@ -166,7 +191,7 @@ def test_diode_switch_routing(
     diode_position = switch_pad_position + pcbnew.VECTOR2I_MM(*position)
     set_position(diodes[0], diode_position)
     set_side(diodes[0], side)
-    diodes[0].SetOrientationDegrees(orientation)
+    set_rotation(diodes[0], orientation)
 
     key_placer.route_switch_with_diode(switch, diodes)
     key_placer.remove_dangling_tracks()
@@ -194,7 +219,7 @@ def test_diode_switch_routing_complicated_footprint(
     key_placer = KeyPlacer(board)
 
     set_position(diodes[0], pcbnew.VECTOR2I_MM(*position))
-    diodes[0].SetOrientationDegrees(orientation)
+    set_rotation(diodes[0], orientation)
 
     key_placer.route_switch_with_diode(switch, diodes)
 
@@ -210,7 +235,7 @@ def test_multi_diode_switch_routing(tmpdir, request) -> None:
     diode_positions = [(0, 5), (0, -10)]
     for position, diode in zip(diode_positions, diodes):
         set_position(diode, pcbnew.VECTOR2I_MM(*position))
-        diode.SetOrientationDegrees(0)
+        set_rotation(diode, 0)
     key_placer.route_switch_with_diode(switch, diodes)
 
     save_and_render(board, tmpdir, request)
@@ -253,7 +278,7 @@ def test_multi_diode_illegal_position_setting(request) -> None:
     ):
         key_placer.run(
             "",  # not important, should raise even when layout not provided
-            ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, ""),
+            ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1),
             ElementInfo("D{}", PositionOption.CUSTOM, ZERO_POSITION, ""),
         )
 
@@ -295,6 +320,33 @@ def get_board_for_2x2_example(request) -> pcbnew.BOARD:
     return board
 
 
+def add_2x2_direct_pin_nets(board):
+    net_count = board.GetNetCount()
+    for i, n in enumerate(
+        [
+            "GND",
+            "SW1",
+            "SW2",
+            "SW3",
+            "SW4",
+        ]
+    ):
+        net = pcbnew.NETINFO_ITEM(board, n, net_count + i)
+        update_netinfo(board, net)
+        board.Add(net)
+    return board.GetNetInfo().NetsByName()
+
+
+def get_board_for_2x2_direct_pin_example(request) -> pcbnew.BOARD:
+    board = pcbnew.CreateEmptyBoard()
+    netcodes_map = add_2x2_direct_pin_nets(board)
+    for i in range(1, 5):
+        switch = add_switch_footprint(board, request, i)
+        switch.FindPadByNumber("1").SetNet(netcodes_map[f"SW{i}"])
+        switch.FindPadByNumber("2").SetNet(netcodes_map["GND"])
+    return board
+
+
 def assert_2x2_layout_switches(
     board: pcbnew.BOARD, key_distance: Tuple[float, float]
 ) -> None:
@@ -323,13 +375,14 @@ def assert_2x2_layout_switches(
 )
 def test_switch_distance(key_distance, tmpdir, request) -> None:
     board = get_board_for_2x2_example(request)
-    key_placer = KeyPlacer(board, key_distance)
+    key_placer = KeyPlacer(board)
     diode_position = DEFAULT_DIODE_POSITION
     key_placer.run(
         get_2x2_layout_path(request),
-        ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, ""),
+        ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1),
         ElementInfo("D{}", PositionOption.DEFAULT, diode_position, ""),
         True,
+        key_distance=key_distance,
     )
 
     save_and_render(board, tmpdir, request)
@@ -342,10 +395,43 @@ def test_switch_distance(key_distance, tmpdir, request) -> None:
         assert get_position(diode) == get_position(switch) + pcbnew.VECTOR2I_MM(x, y)
 
 
+@pytest.mark.parametrize(
+    "layout_offset,key_distance",
+    [
+        # explicit offsets
+        ((0.0, 0.0), (19.05, 19.05)),
+        ((10.0, 20.0), (19.05, 19.05)),
+        ((40.0, 30.0), (19.05, 19.05)),
+        # None uses auto-calculation (2U margin)
+        (None, (19.05, 19.05)),
+    ],
+)
+def test_layout_offset(layout_offset, key_distance, tmpdir, request) -> None:
+    board = get_board_for_2x2_example(request)
+    key_placer = KeyPlacer(board)
+    key_placer.run(
+        get_2x2_layout_path(request),
+        ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1),
+        ElementInfo("D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, ""),
+        key_distance=key_distance,
+        layout_offset=layout_offset,
+    )
+
+    sw1 = get_footprint(board, "SW1")
+    sw1_pos = get_position(sw1)
+
+    if layout_offset is not None:
+        ox, oy = layout_offset
+        assert sw1_pos == pcbnew.VECTOR2I_MM(ox, oy)
+    else:
+        # auto-calculated: 2U margin
+        assert sw1_pos == pcbnew.VECTOR2I_MM(key_distance[0] * 2, key_distance[1] * 2)
+
+
 def test_diode_placement_ignore(tmpdir, request) -> None:
     board = get_board_for_2x2_example(request)
     key_placer = KeyPlacer(board)
-    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
     diode_info = ElementInfo(
         "D{}", PositionOption.UNCHANGED, DEFAULT_DIODE_POSITION, ""
     )
@@ -366,7 +452,7 @@ def test_diode_placement_ignore(tmpdir, request) -> None:
 def test_placer_invalid_layout(tmpdir, request) -> None:
     board = get_board_for_2x2_example(request)
     key_placer = KeyPlacer(board)
-    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
     diode_info = ElementInfo("D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, "")
 
     layout_path = f"{tmpdir}/kle.json"
@@ -387,9 +473,13 @@ def test_switch_iterator_default_mode(request) -> None:
     iterator = KeyboardSwitchIterator(keyboard, key_matrix)
     expected_keys = iter(keyboard.keys)
     expected_footprints = iter(["SW1", "SW2", "SW3", "SW4"])
+    count = 0
     for key, footprint in iterator:
+        count += 1
         assert key == next(expected_keys)
         assert footprint.GetReference() == next(expected_footprints)
+    assert count == 4
+    assert_iterator_end(iterator)
 
 
 def test_switch_iterator_default_mode_missing_footprint(request) -> None:
@@ -426,9 +516,13 @@ def test_switch_iterator_explicit_annotation_mode(request) -> None:
     iterator = KeyboardSwitchIterator(keyboard, key_matrix)
     expected_keys = iter(keyboard.keys)
     expected_footprints = iter([f"SW{i}" for i in expected_order])
+    count = 0
     for key, footprint in iterator:
+        count += 1
         assert key == next(expected_keys)
         assert footprint.GetReference() == next(expected_footprints)
+    assert count == 4
+    assert_iterator_end(iterator)
 
 
 def test_switch_iterator_explicit_annotation_mode_missing_footprint(request) -> None:
@@ -469,9 +563,61 @@ def test_switch_iterator_default_mode_ignore_decal(request) -> None:
     iterator = KeyboardSwitchIterator(keyboard, key_matrix)
     expected_keys = iter(keyboard.keys[0:4])
     expected_footprints = iter(["SW1", "SW2", "SW3", "SW4"])
+    count = 0
     for key, footprint in iterator:
+        count += 1
         assert key == next(expected_keys)
         assert footprint.GetReference() == next(expected_footprints)
+    assert count == 4
+    assert_iterator_end(iterator)
+
+
+@pytest.mark.parametrize(
+    "labels",
+    [
+        ["0, 0", "0, 1", "1, 0", "1, 1"],
+        ["ROW0, COL0", "ROW0, COL1", "ROW1, COL0", "ROW1, COL1"],
+        ["0, 00", "0, 01", "1, 0", "01, 1"],  # leading zeros should be ok
+    ],
+)
+def test_switch_iterator_via_annotation_mode(request, labels) -> None:
+    board = get_board_for_2x2_example(request)
+
+    def _swap_columns(s1: str, s2: str):
+        sw1 = board.FindFootprintByReference(s1)
+        sw1p1 = sw1.FindPadByNumber("1")
+        n1 = sw1p1.GetNet()
+        sw2 = board.FindFootprintByReference(s2)
+        sw2p1 = sw2.FindPadByNumber("1")
+        n2 = sw2p1.GetNet()
+        sw1p1.SetNet(n2)
+        sw2p1.SetNet(n1)
+
+    _swap_columns("SW1", "SW2")
+    _swap_columns("SW3", "SW4")
+
+    key_matrix = KeyMatrix(board, "SW{}", "D{}")
+    with open(get_2x2_layout_path(request), "r") as f:
+        layout = json.load(f)
+        keyboard = get_keyboard(layout)
+    for i, k in enumerate(keyboard.keys):
+        k.set_label(MatrixAnnotatedKeyboard.MATRIX_COORDINATES_LABEL, labels[i])
+    # make sure that decal does not affect iterator
+    decal = copy.copy(keyboard.keys[0])
+    decal.decal = True
+    keyboard.keys.append(decal)
+    keyboard = MatrixAnnotatedKeyboard(meta=keyboard.meta, keys=keyboard.keys)
+    iterator = MatrixAnnotatedKeyboardSwitchIterator(keyboard, key_matrix)
+    expected_order = ["2", "1", "4", "3"]
+    expected_keys = iter(keyboard.keys)
+    expected_footprints = iter([f"SW{i}" for i in expected_order])
+    count = 0
+    for key, footprint in iterator:
+        count += 1
+        assert key == next(expected_keys)
+        assert footprint.GetReference() == next(expected_footprints)
+    assert count == 4
+    assert_iterator_end(iterator)
 
 
 def test_placer_board_without_matching_switches(request) -> None:
@@ -493,7 +639,7 @@ def test_placing_additional_elements(tmpdir, request) -> None:
     """
     board = get_board_for_2x2_example(request)
     key_placer = KeyPlacer(board)
-    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
     diode_info = ElementInfo("D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, "")
     additional_elements = [ElementInfo("LED{}", PositionOption.RELATIVE, None, "")]
     layout_path = get_2x2_layout_path(request)
@@ -547,7 +693,7 @@ def test_placing_additional_elements_for_alternative_keys(tmpdir, request) -> No
     stab = add_led_footprint(board, request, destination)
 
     key_placer = KeyPlacer(board)
-    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
     diode_info = ElementInfo("", PositionOption.DEFAULT, ZERO_POSITION, "")
     additional_elements = [
         ElementInfo("LED{}", PositionOption.CUSTOM, ZERO_POSITION, "")
@@ -565,7 +711,7 @@ def test_placing_additional_elements_for_alternative_keys(tmpdir, request) -> No
 def test_placer_diode_from_preset_missing_path(request) -> None:
     board = get_board_for_2x2_example(request)
     key_placer = KeyPlacer(board)
-    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
     diode_info = ElementInfo("D{}", PositionOption.PRESET, None, "")
     layout_path = get_2x2_layout_path(request)
 
@@ -577,7 +723,7 @@ def test_placer_diode_from_illegal_preset(tmpdir, request) -> None:
     template_path = f"{tmpdir}/template.kicad_pcb"
     board = get_board_for_2x2_example(request)
     key_placer = KeyPlacer(board)
-    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
     diode_info = ElementInfo("D{}", PositionOption.PRESET, None, template_path)
     layout_path = get_2x2_layout_path(request)
 
@@ -599,72 +745,122 @@ def test_placer_diode_from_illegal_preset(tmpdir, request) -> None:
     save_and_render(board, tmpdir, request)
 
 
-def get_board_for_2x2_without_diodes_example(request) -> pcbnew.BOARD:
-    board = get_board_for_2x2_example(request)
-    netcodes_map = board.GetNetInfo().NetsByNetcode()
+class TestPlacerNoDiodes:
+    class BoardType(Enum):
+        PIN_UNCONNECTED = auto()
+        PIN_OLD_DIODE_NET = auto()
+        REALISTIC_DIRECT_PIN = auto()
 
-    for f in board.GetFootprints():
-        ref = f.GetReference()
-        if ref.startswith("D"):
-            board.RemoveNative(f)
-        elif ref.startswith("SW"):
-            sw_pad = f.FindPadByNumber("2")
-            sw_pad.SetNet(netcodes_map[0])
-    return board
+    @pytest.fixture()
+    def board(self, tmpdir, request):
+        @contextmanager
+        def _get_board(board_type: TestPlacerNoDiodes.BoardType):
+            if board_type == TestPlacerNoDiodes.BoardType.REALISTIC_DIRECT_PIN:
+                board = get_board_for_2x2_direct_pin_example(request)
+            else:
+                board = get_board_for_2x2_example(request)
+                netcodes_map = board.GetNetInfo().NetsByNetcode()
 
+                for f in board.GetFootprints():
+                    ref = f.GetReference()
+                    if ref.startswith("D"):
+                        board.RemoveNative(f)
+                    elif ref.startswith("SW"):
+                        sw_pad = f.FindPadByNumber("2")
+                        if board_type == TestPlacerNoDiodes.BoardType.PIN_UNCONNECTED:
+                            sw_pad.SetNet(netcodes_map[0])
 
-def test_placer_no_diodes(tmpdir, request) -> None:
-    """Tests if placing switches works when diodes can't be found.
-    This can be intentional when using direct-pin switch connections
-    (there is no matrix, each switch is connected directed to MCU).
-    For such PCBs placer should still work as long as layout file is not
-    via-annotated (row/column assignments makes no sense for direct-pin).
-    QMK solves that by creating virtual key matrix, but for that we
-    would need to define switch mcu nets to virtual row/key mapping.
-    """
-    board = get_board_for_2x2_without_diodes_example(request)
-    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
-    diode_info = ElementInfo("", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, "")
-    layout_path = f"{request.fspath.dirname}/../examples/2x2/kle.json"
+            yield board
+            save_and_render(board, tmpdir, request)
 
-    key_placer = KeyPlacer(board)
-    # enable routing, we expect that no tracks are added
-    key_placer.run(layout_path, key_info, diode_info, route_rows_and_columns=True)
+        yield _get_board
 
-    save_and_render(board, tmpdir, request)
+    @pytest.mark.parametrize("board_type", [e for e in BoardType])
+    def test_placer_no_diodes(self, request, board, board_type) -> None:
+        """Tests if placing switches works when diodes can't be found.
+        This can be intentional when using direct-pin switch connections
+        (there is no matrix, each switch is connected directed to MCU).
+        For such PCBs placer should still work as long as layout file is not
+        via-annotated (row/column assignments makes no sense for direct-pin).
+        QMK solves that by creating virtual key matrix, but for that we
+        would need to define switch mcu nets to virtual row/key mapping.
+        """
+        key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
+        diode_info = ElementInfo("", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, "")
+        layout_path = f"{request.fspath.dirname}/../examples/2x2/kle.json"
+        with board(board_type) as board:
+            key_placer = KeyPlacer(board)
+            key_placer.run(
+                layout_path, key_info, diode_info, route_rows_and_columns=True
+            )
 
-    assert_2x2_layout_switches(board, (19.05, 19.05))
-    assert len(board.GetTracks()) == 0
+        assert_2x2_layout_switches(board, (19.05, 19.05))
+        if board_type == TestPlacerNoDiodes.BoardType.PIN_UNCONNECTED:
+            # routing has been enabled, when one side of the switch has no net then matrix is invalid
+            # and there is no tracks added
+            assert len(board.GetTracks()) == 0
+        elif board_type == TestPlacerNoDiodes.BoardType.PIN_OLD_DIODE_NET:
+            # but when second pin has valid net (even when diode does not exist anymore)
+            # then COLUMN routing should succeed
+            assert len(board.GetTracks()) == 2
+        elif board_type == TestPlacerNoDiodes.BoardType.REALISTIC_DIRECT_PIN:
+            # each switch has unique net and shared GND (ground would be routed)
+            assert len(board.GetTracks()) == 3
 
+    def _get_expected_error(self, board_type: TestPlacerNoDiodes.BoardType) -> str:
+        if board_type == TestPlacerNoDiodes.BoardType.PIN_UNCONNECTED:
+            return (
+                "Detected layout file with via-annotated matrix positions "
+                "while not all footprints on PCB can be unambiguously associated "
+                "with row/column position."
+            )
+        if board_type == TestPlacerNoDiodes.BoardType.PIN_OLD_DIODE_NET:
+            return (
+                "Could not find switches connected to ('0', '0') matrix position "
+                "which is used in provided layout.\n"
+                "Either required footprint is missing or it can't be found due to "
+                "unexpected net names.\n"
+                "When using via-annotated layouts it must be possible to associate "
+                "footprints with following net names:\n"
+                "ROW{}, R{}, /ROW{}, /R{}, COLUMN{}, COL{}, C{}, /COLUMN{}, /COL{}, /C{}"
+            )
+        if board_type == TestPlacerNoDiodes.BoardType.REALISTIC_DIRECT_PIN:
+            return (
+                "Detected layout file with via-annotated matrix positions "
+                "while key connections appear to be direct-pin (no matrix with diodes found).\n"
+                "This means that footprints on PCB can't be reliably matched to layout.\n"
+                "Please use layout file which uses 'explicit annotation'.\n"
+                f"For details see {ANNOTATION_GUIDE_URL}"
+            )
 
-def test_placer_no_diodes_via_annotated_layout(tmpdir, request) -> None:
-    """If via-annotated layout detected and no diodes,
-    best we can do is raise clear error message with suggestion to use
-    implicit annotations.
-    """
-    board = get_board_for_2x2_without_diodes_example(request)
-    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "")
-    diode_info = ElementInfo("", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, "")
-    layout_path = f"{request.fspath.dirname}/../examples/2x2/kle-annotated.json"
+    @pytest.mark.parametrize("board_type", [e for e in BoardType])
+    def test_placer_no_diodes_via_annotated_layout(
+        self, request, board, board_type
+    ) -> None:
+        """If via-annotated layout detected and no diodes,
+        best we can do is raise clear error message with suggestion to use
+        implicit annotations.
+        The error message details will be different depending on which 'diodeless'
+        key matrix is used.
+        """
+        key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
+        diode_info = ElementInfo("", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, "")
+        layout_path = f"{request.fspath.dirname}/../examples/2x2/kle-annotated.json"
 
-    key_placer = KeyPlacer(board)
+        with board(board_type) as board:
+            key_placer = KeyPlacer(board)
 
-    with pytest.raises(
-        PluginError,
-        match=(
-            "Detected layout file with via-annotated matrix positions "
-            "while not all footprints on PCB can be unambiguously associated "
-            "with row/column position."
-        ),
-    ):
-        key_placer.run(layout_path, key_info, diode_info, route_rows_and_columns=True)
+            with pytest.raises(
+                PluginError, match=re.escape(self._get_expected_error(board_type))
+            ):
+                key_placer.run(
+                    layout_path, key_info, diode_info, route_rows_and_columns=True
+                )
 
-    switches = [get_footprint(board, f"SW{i}") for i in range(1, 5)]
-    for sw in switches:
-        assert sw.GetPosition() == pcbnew.VECTOR2I(0, 0)
-    assert len(board.GetTracks()) == 0
-
-    save_and_render(board, tmpdir, request)
+        switches = [get_footprint(board, f"SW{i}") for i in range(1, 5)]
+        for sw in switches:
+            assert sw.GetPosition() == pcbnew.VECTOR2I(0, 0)
+        assert len(board.GetTracks()) == 0
 
 
 def get_board_with_column(
@@ -772,3 +968,373 @@ def test_column_routing(
     assert len(added_tracks) == len(expected_tracks) - 1
 
     assert_board_tracks(expected_tracks, board)
+
+
+@pytest.mark.parametrize(
+    "blocker_position,blocker_rotation",
+    [
+        # The route between SW1 and SW2 is routed SW2.pad1-corner-SW1.pad1.
+        # First segment is the diagonal SW2.pad1(34.29,64.135)-corner(53.34,45.085),
+        # on the line x+y=98.425mm. Rotation 45° aligns pads along that diagonal so
+        # both land on the line: (43.07,55.35) and (44.56,53.87), x+y=98.425mm.
+        ((43.815, 54.61), 45),
+        # Second segment is the vertical corner(53.34,45.085)-SW1.pad1(53.34,35.56).
+        # Rotation 90° puts pads on X=53.34mm within that Y range.
+        # This is the scenario the refactor targeted: first segment would be added
+        # before the collision on the second was detected.
+        ((53.34, 40.3225), 90),
+    ],
+)
+def test_column_routing_blocked_by_collision(
+    tmpdir,
+    request,
+    blocker_position: Tuple[float, float],
+    blocker_rotation: float,
+) -> None:
+    """When a footprint pad collides with either segment of the two-segment route
+    between SW1 and SW2, _route must not add either segment (no partial tracks).
+    All other column connections should be routed normally.
+    """
+    test_dir = request.fspath.dirname
+
+    layout_file = (
+        Path(test_dir) / "data/kle-layouts/typical-column-from-full-layout.json"
+    )
+    keyboard = get_keyboard_from_file(str(layout_file))
+
+    positions = [
+        (57.15, 38.1),
+        (38.1, 66.675),
+        (47.625, 85.725),
+        (52.3875, 112.775),
+        (45.24375, 142.875),
+    ]
+    board = get_board_with_column(request, keyboard, positions)
+
+    blocker = add_diode_footprint(board, request, 99)
+    set_position(blocker, pcbnew.VECTOR2I_MM(*blocker_position))
+    set_rotation(blocker, blocker_rotation)
+    # Note: no Flip needed — routing uses F.Cu, same as D_SOD-323 default side.
+
+    key_matrix = KeyMatrix(board, "SW{}", "")
+    key_placer = KeyPlacer(board)
+    key_placer.route_rows_and_columns(key_matrix)
+
+    save_and_render(board, tmpdir, request)
+
+    added_tracks = board.Tracks()
+    # 8 tracks total in unblocked case; SW1-SW2 needs 2 segments -> 6 remain
+    assert len(added_tracks) == 6
+
+    # SW1.pad1 (53340000, 35560000) and corner (53340000, 45085000) are absent;
+    # all other track endpoints from the unblocked case are still present.
+    expected_remaining_tracks = [
+        (34290000, 64135000),
+        (34290000, 73660000),
+        (43815000, 83185000),
+        (43815000, 105472500),
+        (48577500, 110235000),
+        (48577500, 133191250),
+        (41433750, 140335000),
+    ]
+    assert_board_tracks(expected_remaining_tracks, board)
+
+
+def test_switches_references_by_netname(request) -> None:
+    board = get_board_for_2x2_example(request)
+    key_matrix = KeyMatrix(board, "SW{}", "D{}")
+    nets_to_switches = {
+        "ROW0": ["SW1", "SW2"],
+        "ROW1": ["SW3", "SW4"],
+        "COL0": ["SW1", "SW3"],
+        "COL1": ["SW2", "SW4"],
+    }
+    for k, v in nets_to_switches.items():
+        # this API is not used/tested elsewhere:
+        result = key_matrix.switches_references_by_netname(k)
+        assert sorted(result) == v
+
+
+def _get_single_switch_board_and_matrix(request) -> Tuple[pcbnew.BOARD, KeyMatrix]:
+    board = pcbnew.CreateEmptyBoard()
+    add_switch_footprint(board, request, 1)
+    key_matrix = KeyMatrix(board, "SW{}", "")
+    return board, key_matrix
+
+
+@pytest.mark.parametrize("switch_rotation", [90, -90, 180])
+def test_switch_rotation_changes_orientation(tmpdir, request, switch_rotation) -> None:
+    """A non-zero switch_rotation should rotate the switch around its own center."""
+    board, key_matrix = _get_single_switch_board_and_matrix(request)
+    sw = board.FindFootprintByReference("SW1")
+
+    keyboard = parse_kle([["A"]])
+    keyboard.keys[0].switchRotation = switch_rotation
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
+
+    key_placer = KeyPlacer(board)
+    key_placer.place_switches(keyboard, key_matrix, key_info)
+
+    save_and_render(board, tmpdir, request)
+
+    def _normalize_angle(angle: float) -> float:
+        return ((angle + 180) % 360) - 180
+
+    assert _normalize_angle(get_orientation(sw)) == _normalize_angle(
+        -1 * switch_rotation
+    )
+
+
+@pytest.mark.parametrize("switch_rotation", [0, 45])
+def test_switch_rotation_zero_or_unsupported_leaves_orientation_unchanged(
+    request, switch_rotation
+) -> None:
+    """switch_rotation == 0 should not affect orientation (default behaviour)."""
+    board, key_matrix = _get_single_switch_board_and_matrix(request)
+    sw = board.FindFootprintByReference("SW1")
+
+    keyboard = parse_kle([["A"]])
+    keyboard.keys[0].switchRotation = switch_rotation
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
+
+    key_placer = KeyPlacer(board)
+    key_placer.place_switches(keyboard, key_matrix, key_info)
+
+    assert get_orientation(sw) == 0
+
+
+def test_stab_rotation_applied_to_st_element_only(request) -> None:
+    """stab_rotation rotates ST{} elements but leaves non-ST elements (LED{}) unchanged."""
+    board, key_matrix = _get_single_switch_board_and_matrix(request)
+
+    # Add a stabilizer (ST1) and a non-stabilizer (LED1) to the board.
+    # SW1 -> reference_value "1"-> ST{} looks for "ST1", LED{} looks for "LED1".
+    stab = add_led_footprint(board, request, 1)
+    stab.SetReference("ST1")
+    led = add_led_footprint(board, request, 1)  # reference = "LED1"
+
+    keyboard = parse_kle([["A"]])
+    keyboard.keys[0].stabRotation = 90
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
+    stab_info = ElementInfo("ST{}", PositionOption.CUSTOM, ZERO_POSITION, "")
+    led_info = ElementInfo("LED{}", PositionOption.CUSTOM, ZERO_POSITION, "")
+
+    key_placer = KeyPlacer(board)
+    key_placer.place_switches(keyboard, key_matrix, key_info)
+    key_placer.place_switch_elements([stab_info, led_info], key_matrix)
+
+    # Stabilizer should have been rotated by stab_rotation.
+    assert get_orientation(stab) == -90
+    # Non-stabilizer LED should be unaffected.
+    assert get_orientation(led) == 0
+
+
+def _normalize_angle(angle: float) -> float:
+    return ((angle + 180) % 360) - 180
+
+
+def _place_single_key_with_stab(
+    request, tmpdir, key, stab_rotation=0, rotation_angle=0
+):
+    """Helper: place a single switch + real Cherry MX stabilizer for the given key.
+
+    Uses an actual 2U stabilizer footprint (not a stand-in) and renders the
+    resulting board so the orientation can be visually confirmed in the HTML
+    report. Returns ``(switch, stab)`` so the stabilizer orientation can be
+    asserted both in absolute terms and relative to the switch. The key's
+    dimensions/stabRotation are taken from `key`; `rotation_angle` applies a
+    layout rotation about the key center (so the key rotates in place).
+    """
+    board, key_matrix = _get_single_switch_board_and_matrix(request)
+    stab = add_stabilizer_footprint(board, request, 1)  # reference = "ST1"
+
+    keyboard = parse_kle([["A"]])
+    keyboard.keys[0].width = key.width
+    keyboard.keys[0].height = key.height
+    keyboard.keys[0].width2 = key.width2
+    keyboard.keys[0].height2 = key.height2
+    keyboard.keys[0].stabRotation = stab_rotation
+    keyboard.keys[0].rotation_angle = rotation_angle
+    # Rotate about the key center so the footprint stays in place (nicer render).
+    keyboard.keys[0].rotation_x = keyboard.keys[0].x + key.width / 2
+    keyboard.keys[0].rotation_y = keyboard.keys[0].y + key.height / 2
+
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
+    stab_info = ElementInfo("ST{}", PositionOption.CUSTOM, ZERO_POSITION, "")
+
+    key_placer = KeyPlacer(board)
+    key_placer.place_switches(keyboard, key_matrix, key_info)
+    key_placer.place_switch_elements([stab_info], key_matrix)
+
+    save_and_render(board, tmpdir, request)
+
+    switch = get_footprint(board, "SW1")
+    return switch, stab
+
+
+def test_vertical_key_auto_rotates_stabilizer(tmpdir, request) -> None:
+    """A taller-than-wide key auto-rotates its stabilizer 90 degrees (KiCad -90)."""
+    _, stab = _place_single_key_with_stab(request, tmpdir, Key(width=1, height=2))
+    assert get_orientation(stab) == -90
+
+
+def test_wide_key_does_not_rotate_stabilizer(tmpdir, request) -> None:
+    """A wider-than-tall key leaves the stabilizer in its default orientation."""
+    _, stab = _place_single_key_with_stab(request, tmpdir, Key(width=2, height=1))
+    assert get_orientation(stab) == 0
+
+
+def test_iso_enter_auto_rotates_stabilizer(tmpdir, request) -> None:
+    """ISO Enter (height > width) auto-rotates its stabilizer 90 degrees."""
+    _, stab = _place_single_key_with_stab(
+        request, tmpdir, Key(width=1.25, height=2, width2=1.5, height2=1)
+    )
+    assert get_orientation(stab) == -90
+
+
+def test_vertical_key_with_user_stab_rotation_composes(tmpdir, request) -> None:
+    """Auto vertical rotation and user stabRotation compose additively.
+
+    Vertical key (auto +90 KLE) plus stabRotation=90 (KLE) == 180 KLE,
+    which is KiCad orientation -180/180.
+    """
+    _, stab = _place_single_key_with_stab(
+        request, tmpdir, Key(width=1, height=2), stab_rotation=90
+    )
+    assert _normalize_angle(get_orientation(stab)) == _normalize_angle(180)
+
+
+def test_rotated_key_stabilizer_follows_layout_rotation(tmpdir, request) -> None:
+    """A horizontal 2U key rotated 30 degrees rotates its stabilizer to match.
+
+    No auto/user rotation applies (height <= width), so the stabilizer must end
+    up at exactly the switch orientation. 30 deg KLE (clockwise) == KiCad -30.
+    """
+    switch, stab = _place_single_key_with_stab(
+        request, tmpdir, Key(width=2, height=1), rotation_angle=30
+    )
+    assert _normalize_angle(get_orientation(switch)) == _normalize_angle(-30)
+    assert _normalize_angle(get_orientation(stab)) == _normalize_angle(
+        get_orientation(switch)
+    )
+
+
+def test_rotated_vertical_key_stabilizer_composes_with_layout_rotation(
+    tmpdir, request
+) -> None:
+    """A vertical 2U key rotated 30 degrees: layout rotation + auto vertical 90.
+
+    Switch ends at KiCad -30; the stabilizer adds the auto +90 KLE (== -90 KiCad
+    delta) on top, so it must end at the switch orientation minus 90 (KiCad -120).
+    """
+    switch, stab = _place_single_key_with_stab(
+        request, tmpdir, Key(width=1, height=2), rotation_angle=30
+    )
+    assert _normalize_angle(get_orientation(switch)) == _normalize_angle(-30)
+    assert _normalize_angle(get_orientation(stab)) == _normalize_angle(
+        get_orientation(switch) - 90
+    )
+    assert _normalize_angle(get_orientation(stab)) == _normalize_angle(-120)
+
+
+def _encoder_shaft_center(encoder_footprint: pcbnew.FOOTPRINT) -> pcbnew.VECTOR2I:
+    """Return world position of the encoder shaft center after placement/rotation."""
+    pos = get_position(encoder_footprint)
+    # get_orientation returns CCW-positive (KiCad convention); negate for CW-screen
+    # so local footprint coords are correctly mapped to world coords.
+    # CW screen-coords rotation: x' = x*cos - y*sin, y' = x*sin + y*cos
+    angle = -get_orientation(encoder_footprint)
+    rad = math.radians(angle)
+    sx, sy = ENCODER_SHAFT_CENTER_OFFSET
+    # Round to 6 decimal places
+    shaft_x = round(sx * math.cos(rad) - sy * math.sin(rad), 6)
+    shaft_y = round(sx * math.sin(rad) + sy * math.cos(rad), 6)
+    return pos + pcbnew.VECTOR2I_MM(shaft_x, shaft_y)
+
+
+@pytest.mark.skipif(KICAD_VERSION < (10, 0, 0), reason="Requires KiCad 10.0 or higher")
+def test_encoder_position_simple(tmpdir, request) -> None:
+    key_distance = (19.05, 19.05)
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
+    diode_info = ElementInfo("D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, "")
+
+    regular_layout_path = f"{tmpdir}/regular.json"
+    with open(regular_layout_path, "w") as f:
+        json.dump([["", ""]], f)
+
+    board_regular = pcbnew.CreateEmptyBoard()
+    add_switch_footprint(board_regular, request, 1)
+    add_switch_footprint(board_regular, request, 2)
+    KeyPlacer(board_regular).run(
+        regular_layout_path, key_info, diode_info, key_distance=key_distance
+    )
+    reference_pos = get_position(get_footprint(board_regular, "SW2"))
+
+    encoder_layout_path = f"{tmpdir}/encoder.json"
+    with open(encoder_layout_path, "w") as f:
+        json.dump([["", {"sm": "rot_ec11"}, ""]], f)
+
+    board_encoder = pcbnew.CreateEmptyBoard()
+    add_switch_footprint(board_encoder, request, 1)
+    add_switch_footprint(board_encoder, request, 2, footprint=ENCODER_FOOTPRINT)
+    KeyPlacer(board_encoder).run(
+        encoder_layout_path,
+        key_info,
+        diode_info,
+        key_distance=key_distance,
+        encoder_adjustment=(
+            -ENCODER_SHAFT_CENTER_OFFSET[0],
+            -ENCODER_SHAFT_CENTER_OFFSET[1],
+        ),
+    )
+
+    save_and_render(board_encoder, tmpdir, request)
+
+    encoder_fp = get_footprint(board_encoder, "SW2")
+    assert _encoder_shaft_center(encoder_fp) == reference_pos
+
+
+@pytest.mark.skipif(KICAD_VERSION < (10, 0, 0), reason="Requires KiCad 10.0 or higher")
+def test_encoder_position_with_rotation(tmpdir, request) -> None:
+    key_distance = (19.05, 19.05)
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
+    diode_info = ElementInfo("D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, "")
+
+    rotation_props = {"r": 45, "rx": 1, "ry": 1, "y": -1}
+    regular_layout = [[""], [{**rotation_props}, ""]]
+    encoder_layout = [[""], [{**rotation_props, "sm": "rot_ec11"}, ""]]
+
+    regular_layout_path = f"{tmpdir}/regular.json"
+    with open(regular_layout_path, "w") as f:
+        json.dump(regular_layout, f)
+
+    board_regular = pcbnew.CreateEmptyBoard()
+    add_switch_footprint(board_regular, request, 1)
+    add_switch_footprint(board_regular, request, 2)
+    KeyPlacer(board_regular).run(
+        regular_layout_path, key_info, diode_info, key_distance=key_distance
+    )
+    reference_pos = get_position(get_footprint(board_regular, "SW2"))
+
+    encoder_layout_path = f"{tmpdir}/encoder.json"
+    with open(encoder_layout_path, "w") as f:
+        json.dump(encoder_layout, f)
+
+    board_encoder = pcbnew.CreateEmptyBoard()
+    add_switch_footprint(board_encoder, request, 1)
+    add_switch_footprint(board_encoder, request, 2, footprint=ENCODER_FOOTPRINT)
+    KeyPlacer(board_encoder).run(
+        encoder_layout_path,
+        key_info,
+        diode_info,
+        key_distance=key_distance,
+        encoder_adjustment=(
+            -ENCODER_SHAFT_CENTER_OFFSET[0],
+            -ENCODER_SHAFT_CENTER_OFFSET[1],
+        ),
+    )
+
+    save_and_render(board_encoder, tmpdir, request)
+
+    encoder_fp = get_footprint(board_encoder, "SW2")
+    assert _encoder_shaft_center(encoder_fp) == reference_pos

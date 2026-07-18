@@ -8,7 +8,9 @@
     "radii": "",
     "switchBrand": "",
     "switchMount": "",
-    "switchType": ""
+    "switchType": "",
+    "spacing_x": 19.05,
+    "spacing_y": 19.05
   },
   "keys": [
     {
@@ -40,7 +42,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -71,7 +75,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -102,7 +108,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -133,7 +141,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -164,7 +174,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -195,7 +207,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -226,7 +240,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -257,7 +273,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -288,7 +306,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -319,7 +339,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -350,7 +372,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -381,7 +405,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -412,7 +438,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -443,7 +471,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -474,7 +504,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -505,7 +537,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -536,7 +570,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -567,7 +603,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -598,7 +636,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -629,7 +669,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -660,7 +702,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -691,7 +735,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -722,7 +768,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -753,7 +801,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -784,7 +834,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -815,7 +867,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -846,7 +900,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -877,7 +933,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -908,7 +966,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -939,7 +999,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -970,7 +1032,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1001,7 +1065,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1032,7 +1098,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1063,7 +1131,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1094,7 +1164,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -1125,7 +1197,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -1156,7 +1230,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1187,7 +1263,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1218,7 +1296,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1249,7 +1329,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1280,7 +1362,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1311,7 +1395,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1342,7 +1428,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1373,7 +1461,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1404,7 +1494,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1435,7 +1527,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#cccccc",
@@ -1466,7 +1560,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -1497,7 +1593,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -1528,7 +1626,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -1559,7 +1659,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -1590,7 +1692,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -1621,7 +1725,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -1660,7 +1766,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -1699,7 +1807,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -1738,7 +1848,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -1777,7 +1889,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -1808,7 +1922,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -1839,7 +1955,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -1870,7 +1988,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -1901,7 +2021,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -1940,7 +2062,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -1979,7 +2103,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -2018,7 +2144,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -2057,7 +2185,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -2096,7 +2226,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -2135,7 +2267,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -2174,7 +2308,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -2213,7 +2349,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -2252,7 +2390,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -2291,7 +2431,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     },
     {
       "color": "#aaaaaa",
@@ -2330,7 +2472,9 @@
       "profile": "",
       "sm": "",
       "sb": "",
-      "st": ""
+      "st": "",
+      "switchRotation": 0,
+      "stabRotation": 0
     }
   ]
 }

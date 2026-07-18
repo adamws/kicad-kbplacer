@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 adamws <adamws@users.noreply.github.com>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 from __future__ import annotations
 
 import builtins
@@ -60,8 +64,13 @@ def position_in_cartesian_coordinates(
     return pcbnew.VECTOR2I(int(x), int(y))
 
 
+def __get_filename(board: pcbnew.BOARD) -> str:
+    filename = board.GetFileName()
+    return filename if filename != "" else "<unsaved>"
+
+
 def get_footprint(board: pcbnew.BOARD, reference: str) -> pcbnew.FOOTPRINT:
-    logger.debug(f"Searching for {reference} footprint in {board.GetFileName()}")
+    logger.debug(f"Searching for {reference} footprint in {__get_filename(board)}")
     footprint = board.FindFootprintByReference(reference)
     if footprint is None:
         msg = f"Cannot find footprint {reference}"
@@ -73,12 +82,37 @@ def get_optional_footprint(
     board: pcbnew.BOARD, reference: str
 ) -> pcbnew.FOOTPRINT | None:
     logger.debug(
-        f"Searching for optional {reference} footprint in {board.GetFileName()}"
+        f"Searching for optional {reference} footprint in {__get_filename(board)}"
     )
     footprint = board.FindFootprintByReference(reference)
     if footprint is None:
         logger.debug("Footprint not found")
     return footprint
+
+
+def duplicate_footprint(footprint: pcbnew.FOOTPRINT) -> pcbnew.FOOTPRINT:
+    duplicate = None
+    if KICAD_VERSION < (10, 0, 0):
+        duplicate = footprint.Duplicate()
+    else:
+        duplicate = footprint.Duplicate(False)
+    if duplicate is None:
+        msg = f"Failed to duplicate footprint {footprint.GetReference()}"
+        raise RuntimeError(msg)
+    return pcbnew.Cast_to_FOOTPRINT(duplicate)
+
+
+def duplicate_track(item: pcbnew.PCB_TRACK) -> pcbnew.PCB_TRACK:
+    if KICAD_VERSION >= (10, 0, 0):
+        parent_group = item.GetParentGroup()
+        if parent_group:
+            item.SetParentGroup(None)
+        dup = item.Duplicate()
+        if parent_group:
+            item.SetParentGroup(parent_group)
+    else:
+        dup = item.Duplicate()
+    return dup
 
 
 def set_position(footprint: pcbnew.FOOTPRINT, position: pcbnew.VECTOR2I) -> None:
@@ -103,7 +137,10 @@ def get_position(footprint: pcbnew.FOOTPRINT) -> pcbnew.VECTOR2I:
 
 def set_side(footprint: pcbnew.FOOTPRINT, side: Side) -> None:
     if side != get_side(footprint):
-        footprint.Flip(footprint.GetPosition(), False)
+        position = footprint.GetPosition()
+        footprint.Flip(position, False)
+        if KICAD_VERSION >= (9, 0, 0):
+            rotate(footprint, position, 180)
 
 
 def get_side(footprint: pcbnew.FOOTPRINT) -> Side:
@@ -114,7 +151,10 @@ def get_side(footprint: pcbnew.FOOTPRINT) -> Side:
 
 
 def set_rotation(footprint: pcbnew.FOOTPRINT, angle: float) -> None:
-    footprint.SetOrientationDegrees(angle)
+    current = get_orientation(footprint)
+    diff = current - angle
+    if diff != 0:
+        rotate(footprint, footprint.GetPosition(), diff)
 
 
 def reset_rotation(footprint: pcbnew.FOOTPRINT) -> None:
@@ -152,18 +192,20 @@ def get_common_layers(p1: pcbnew.PAD, p2: pcbnew.PAD) -> list[int]:
     """Returns list of common layer ids for both of the given pads,
     may be empty if no common layers found
     """
-    set1 = [layer for layer in p1.GetLayerSet().CuStack()]
-    set2 = [layer for layer in p2.GetLayerSet().CuStack()]
-    return list(set(set1).intersection(set2))
+    return list(
+        set(p1.GetLayerSet().CuStack()).intersection(p2.GetLayerSet().CuStack())
+    )
 
 
 def get_common_nets(f1: pcbnew.FOOTPRINT, f2: pcbnew.FOOTPRINT) -> list[int]:
     """Returns list of netcodes which are used by both of the
     given footprints, may be empty if no common nets found
     """
-    codes1 = [p.GetNetCode() for p in f1.Pads()]
-    codes2 = [p.GetNetCode() for p in f2.Pads()]
-    return list(set(codes1).intersection(codes2))
+    return list(
+        set(p.GetNetCode() for p in f1.Pads()).intersection(
+            p.GetNetCode() for p in f2.Pads()
+        )
+    )
 
 
 def get_closest(
@@ -309,6 +351,13 @@ def get_netclass(
             return board.GetAllNetClasses()["Default"]
 
 
+def get_effective_shape(item: pcbnew.BOARD_ITEM) -> pcbnew.SHAPE:
+    if KICAD_VERSION < (9, 0, 0):
+        return item.GetEffectiveShape()
+    else:
+        return item.GetEffectiveShape(item.GetLayer())
+
+
 class BoardModifier:
     def __init__(self, board: pcbnew.BOARD) -> None:
         self.board = board
@@ -319,7 +368,7 @@ class BoardModifier:
 
     def _test_collision_track_without_net(self, track: pcbnew.PCB_TRACK) -> bool:
         collide_list = []
-        track_shape = track.GetEffectiveShape()
+        track_shape = get_effective_shape(track)
         track_start = track.GetStart()
         track_end = track.GetEnd()
         # connectivity needs to be last,
@@ -331,7 +380,7 @@ class BoardModifier:
             if hit_test_result := hull.Collide(track_shape):
                 for p in f.Pads():
                     pad_name = p.GetName()
-                    pad_shape = p.GetEffectiveShape()
+                    pad_shape = get_effective_shape(p)
 
                     # if track starts or ends in pad then assume that
                     # this collision is expected, with the exception of case
@@ -384,7 +433,7 @@ class BoardModifier:
                                 "which leads to that pad"
                             )
                             collide_list.remove(collision)
-                elif hit_test_result := t.GetEffectiveShape().Collide(
+                elif hit_test_result := get_effective_shape(t).Collide(
                     track_shape, get_clearance(t, track)
                 ):
                     logger.debug(f"Track collide with another track: {track_uuid}")
@@ -401,13 +450,13 @@ class BoardModifier:
 
     def _test_collision_track_with_net(self, track: pcbnew.PCB_TRACK) -> bool:
         track_netcode = track.GetNetCode()
-        track_shape = track.GetEffectiveShape()
+        track_shape = get_effective_shape(track)
         track_layer = track.GetLayer()
         for item in self.board.AllConnectedItems():
             if track_netcode == item.GetNetCode():
                 continue
 
-            item_shape = item.GetEffectiveShape()
+            item_shape = get_effective_shape(item)
             if item_shape.Collide(track_shape, get_clearance(item, track)):
                 if isinstance(item.Cast(), pcbnew.PCB_TRACK):
                     if item.GetLayer() == track_layer:
@@ -455,7 +504,7 @@ class BoardModifier:
             logger.debug("Could not add track segment due to detected collision")
             return None
 
-    def add_track_segment_by_points(
+    def _build_track_segment(
         self,
         start: pcbnew.VECTOR2I,
         end: pcbnew.VECTOR2I,
@@ -463,7 +512,7 @@ class BoardModifier:
         layer: int = pcbnew.B_Cu,
         netcode: int = 0,
         width: int = 200000,
-    ) -> Optional[pcbnew.VECTOR2I]:
+    ) -> pcbnew.PCB_TRACK:
         track = pcbnew.PCB_TRACK(self.board)
         track.SetWidth(width)
         track.SetLayer(layer)
@@ -475,6 +524,20 @@ class BoardModifier:
         else:
             track.SetStart(start)
             track.SetEnd(end)
+        return track
+
+    def add_track_segment_by_points(
+        self,
+        start: pcbnew.VECTOR2I,
+        end: pcbnew.VECTOR2I,
+        *,
+        layer: int = pcbnew.B_Cu,
+        netcode: int = 0,
+        width: int = 200000,
+    ) -> Optional[pcbnew.VECTOR2I]:
+        track = self._build_track_segment(
+            start, end, layer=layer, netcode=netcode, width=width
+        )
         return self.add_track_to_board(track)
 
     def route(self, pad1: pcbnew.PAD, pad2: pcbnew.PAD) -> bool:
@@ -513,9 +576,16 @@ class BoardModifier:
 
         Returns True if routing done, False otherwise
         """
+
+        def _pad_str(pad: pcbnew.PAD) -> str:
+            return f"{pad.GetParentAsString()}:{pad.GetPadName()}"
+
         layers = get_common_layers(pad1, pad2)
         if not layers:
-            logger.warning("Could not route pads, no common layers found")
+            logger.warning(
+                "Could not route pads, no common layers found. "
+                f"Pads: '{_pad_str(pad1)}', '{_pad_str(pad2)}'"
+            )
             return False
 
         layer = layers[0]
@@ -563,10 +633,13 @@ class BoardModifier:
         def _route(
             pos1: pcbnew.VECTOR2I, pos2: pcbnew.VECTOR2I, corner: pcbnew.VECTOR2I
         ) -> bool:
-            if end := self.add_track_segment_by_points(pos1, corner, **track_args):
-                end = self.add_track_segment_by_points(end, pos2, **track_args)
-                return end is not None
-            return False
+            track1 = self._build_track_segment(pos1, corner, **track_args)
+            track2 = self._build_track_segment(corner, pos2, **track_args)
+            if self.test_track_collision(track1) or self.test_track_collision(track2):
+                return False
+            self.add_track_to_board(track1)
+            self.add_track_to_board(track2)
+            return True
 
         def _angles_equal(angle1: float, angle2: float) -> bool:
             return abs(angle1 - angle2) <= 0.1
@@ -594,13 +667,14 @@ class BoardModifier:
         else:
             logger.warning(
                 "Could not route pads when parent footprints not rotated the same, "
-                f"orientations: {orientation1} and {orientation2}"
+                f"footprint1: {parent1.GetReference()} at {orientation1} degree(s) and "
+                f"footprint2: {parent2.GetReference()} at {orientation2} degree(s)"
             )
             return False
 
         logger.debug(
-            f"Routing pad '{pad1.GetParentAsString()}:{pad1.GetPadName()}' at {pos1} "
-            f"with pad '{pad2.GetParentAsString()}:{pad2.GetPadName()}' at {pos2} "
+            f"Routing pad '{_pad_str(pad1)}' at {pos1} "
+            f"with pad '{_pad_str(pad2)}' at {pos2} "
             f"using coordinate system rotated by {angle} degree(s)"
         )
 

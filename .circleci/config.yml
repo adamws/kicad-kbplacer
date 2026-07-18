@@ -12,11 +12,11 @@ jobs:
       - run:
           name: Prepare tests
           command: |
-            pip3 install --no-cache-dir -r dev-requirements.txt
+            pip3 install --no-cache-dir hatch
       - run:
           name: Run tests
           command: |
-            pytest --junitxml=test-results/pytest/results.xml tests/
+            hatch run test:test --junitxml=test-results/pytest/results.xml tests/
       - run:
           name: Move coverage file
           command: |
@@ -40,13 +40,18 @@ jobs:
       - run:
           name: Prepare tests
           command: |
-            pip3 install --no-cache-dir -r dev-requirements.txt
+            pip3 install --no-cache-dir hatch
       - run:
-          name: Run tests
+          name: Run representative test case
           command: |
-            pytest --junitxml=test-results/pytest/results.xml \
+            hatch run test:test --junitxml=test-results/pytest/results.xml \
               -k "2x3-rotations-custom-diode and RAW and PRESET" \
               --no-cov --profile tests/
+      - run:
+          name: Run benchmark
+          command: |
+            # just to check if it works
+            hatch run test:benchmark --benchmark-rounds 3
       - store_artifacts:
           path: report.html
       - store_test_results:
@@ -83,7 +88,7 @@ jobs:
           path: htmlcov
   run-absolem-example:
     machine:
-      image: ubuntu-2204:2022.10.2
+      image: ubuntu-2204:2026.05.1
     steps:
       - checkout
       - run:
@@ -95,7 +100,58 @@ jobs:
       - store_artifacts:
           path: examples/absolem-ergogen/absolem.svg
       - store_artifacts:
+          path: examples/absolem-ergogen/absolem-plate.png
+      - store_artifacts:
           path: examples/absolem-ergogen/absolem.zip
+  run-tools-sanity-checks:
+    parameters:
+      version:
+        type: string
+    docker:
+      - image: admwscki/kicad-kbplacer-primary:<<parameters.version>>
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            python3 -m pip install --upgrade hatch
+      - run:
+          name: Run tools tests
+          command: |
+            hatch run tools:test
+      - run:
+          name: Run layout2image example
+          command: |
+            mkdir output_svgs
+            layouts=(0_sixty arya)
+            for l in "${layouts[@]}"; do
+                hatch run tools:layout2image \
+                    --in tests/data/via-layouts/$l.json \
+                    --out output_svgs/$l.svg
+            done
+      - store_artifacts:
+          path: output_svgs
+  run-schematic-generation-sanity-checks:
+    parameters:
+      version:
+        type: string
+    machine:
+      image: ubuntu-2204:2026.05.1
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            mkdir -p ~/bin
+            curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh \
+              | bash -s -- --to ~/bin --tag 1.56.0
+              echo "export PATH=\"$PATH:$HOME/bin\"" >> $BASH_ENV
+      - run:
+          name: Run schematic generation
+          command: |
+            just schematic-with-leds <<parameters.version>>
+      - store_artifacts:
+          path: output_schematic
   test-windows:
     machine:
       image: windows-server-2022-gui:edge
@@ -111,15 +167,25 @@ jobs:
           command: |
             irm get.scoop.sh -outfile "install.ps1"
             .\install.ps1 -RunAsAdmin -ScoopDir "C:\scoop"
+            scoop config use_external_7zip true
             scoop bucket add extras
             scoop install kicad@<<parameters.kicad-version>>
             scoop cache rm --all
+      - run:
+          name: Install Mesa # required for running pcbnew GUI
+          command: |
+            scoop bucket add games
+            scoop install games/mesa3d
+            scoop cache rm --all
+            C:\scoop\apps\mesa3d\current\systemwidedeploy.cmd 1
       - run:
           name: Install dependencies
           command: |
             .\.circleci\scripts\use-kicad-python.ps1
             python -m pip install --upgrade pip
-            pip install --no-cache-dir -r dev-requirements.txt
+            python -m pip install "tomli >= 1.1.0 ; python_version < '3.11'"
+            $deps = python .\.circleci\scripts\get_test_env_deps.py | Where-Object { $_ -ne "" }
+            python -m pip install --no-cache-dir @deps
       - run:
           name: Run tests
           command: |
@@ -131,7 +197,8 @@ jobs:
           path: test-results
   test-macos:
     macos:
-      xcode: 15.3
+      xcode: 16.4.0
+    resource_class: m4pro.medium
     environment:
       HOMEBREW_NO_AUTO_UPDATE: 1
     parameters:
@@ -139,6 +206,12 @@ jobs:
         type: string
     steps:
       - checkout
+      - run:
+          name: Downgrade brew
+          command: | # workaround for https://github.com/orgs/Homebrew/discussions/6351
+            cd "$(brew --repo)"
+            git fetch
+            git checkout 4.6.3
       - run:
           name: Install KiCad
           command: |
@@ -169,17 +242,69 @@ jobs:
             elif [ "<<parameters.kicad-version>>" = "8.0.7" ]; then
               revision=31491f462adfdde7537180dc9d1eede7131b01cd
               filepath=Casks/k/kicad.rb
+            elif [ "<<parameters.kicad-version>>" = "8.0.8" ]; then
+              revision=e01c785e8fd8e3fa33d6ee954f9266278b2bffc4
+              filepath=Casks/k/kicad.rb
+            elif [ "<<parameters.kicad-version>>" = "8.0.9" ]; then
+              revision=89eed7ad76ec6874edfa0e47fc257739a849cc6c
+              filepath=Casks/k/kicad.rb
+            elif [ "<<parameters.kicad-version>>" = "9.0.0" ]; then
+              revision=12f823b34ecbcefa08c605bca5e57b816684a686
+              filepath=Casks/k/kicad.rb
+            elif [ "<<parameters.kicad-version>>" = "9.0.1" ]; then
+              revision=6672ee977d65e0e9f2766ce73ea0f6399a1fcac6
+              filepath=Casks/k/kicad.rb
+            elif [ "<<parameters.kicad-version>>" = "9.0.2" ]; then
+              revision=d3557f0bbb9829b1302932c575bee62e504d56ab
+              filepath=Casks/k/kicad.rb
+            elif [ "<<parameters.kicad-version>>" = "9.0.3" ]; then
+              revision=2dd81f13990982761946fa73cc1d7b7dc74eb0b0
+              filepath=Casks/k/kicad.rb
+            elif [ "<<parameters.kicad-version>>" = "9.0.4" ]; then
+              revision=f9214eaa52048e16dbcfaac9ffd22caea1b92fad
+              filepath=Casks/k/kicad.rb
+            elif [ "<<parameters.kicad-version>>" = "9.0.5" ]; then
+              revision=113c2bb69ff77780961174f1fc0f8cc9c39cf41a
+              filepath=Casks/k/kicad.rb
+            elif [ "<<parameters.kicad-version>>" = "9.0.6" ]; then
+              revision=bb39a357767d45f8b532daeef70f683b1432097a
+              filepath=Casks/k/kicad.rb
+            elif [ "<<parameters.kicad-version>>" = "9.0.7" ]; then
+              revision=bbd308f3878db9b327c286d8bc5a715f06605460
+              filepath=Casks/k/kicad.rb
+            elif [ "<<parameters.kicad-version>>" = "9.0.8" ]; then
+              revision=61ef15e03fd712bbccab7fd91aa0ef6929cf5651
+              filepath=Casks/k/kicad.rb
+            elif [ "<<parameters.kicad-version>>" = "10.0.0" ]; then
+              revision=5c96043fbafb7f6103bd06f88e6ab3347552e53c
+              filepath=Casks/k/kicad.rb
+            elif [ "<<parameters.kicad-version>>" = "10.0.1" ]; then
+              revision=2c2574c0ad7140d56d0e167a3b1986156b43ea79
+              filepath=Casks/k/kicad.rb
+            elif [ "<<parameters.kicad-version>>" = "10.0.2" ]; then
+              revision=0d849b5089048cedb8108de635820233b2c1050a
+              filepath=Casks/k/kicad.rb
+            elif [ "<<parameters.kicad-version>>" = "10.0.3" ]; then
+              revision=92a6bada7efb4639f3f7bfe82022363564088b02
+              filepath=Casks/k/kicad.rb
+            elif [ "<<parameters.kicad-version>>" = "10.0.4" ]; then
+              revision=a6e42d6bc7099fc4bfc0e921cf1d2090996d5082
+              filepath=Casks/k/kicad.rb
             else
               echo "Unsupported KiCad version!"
             fi
             curl -L https://raw.githubusercontent.com/Homebrew/homebrew-cask/$revision/$filepath > kicad.rb
+            sed -i '' 's/depends_on macos: :big_sur/depends_on macos: ">= :big_sur"/' kicad.rb
             brew install kicad.rb
             rm kicad.rb
       - run:
           name: Install dependencies
           command: |
             source .circleci/scripts/use-kicad-python-macos.sh
-            pip install --no-cache-dir -r dev-requirements.txt
+            python -m pip install --upgrade pip
+            python -m pip install 'tomli >= 1.1.0 ; python_version < "3.11"'
+            python .circleci/scripts/get_test_env_deps.py \
+              | xargs -r python -m pip install --no-cache-dir
       - run:
           name: Run tests
           command: |
@@ -189,7 +314,21 @@ jobs:
           path: report.html
       - store_test_results:
           path: test-results
-
+  check-github-cli:
+    docker:
+      - image: cimg/base:2023.12
+    steps:
+      - attach_workspace:
+          at: /tmp
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            ./release/install_gh.sh
+      - run:
+          name: Check auth
+          command: |
+            gh auth status && gh api user --silent
   create-pcm-package:
     docker:
       - image: cimg/python:3.11
@@ -212,8 +351,6 @@ jobs:
             python -m pip install --upgrade hatch
       - run:
           name: Create zip package and repository
-          environment:
-            HATCH_BUILD_HOOK_ENABLE_KICAD-REPOSITORY: true
           command: |
             python -m hatch build --target kicad-package
       - store_artifacts:
@@ -288,7 +425,7 @@ jobs:
               /tmp/dist/repository/resources.zip
   deploy-image:
     machine:
-      image: ubuntu-2204:2022.10.2
+      image: ubuntu-2204:2026.05.1
     steps:
       - checkout
       - run:
@@ -312,8 +449,7 @@ jobs:
           command: |
             docker build -t admwscki/$IMAGE_NAME:$TAG -f docker/Dockerfile .
             docker run --rm -v $(pwd):/kicad/tmp -w /kicad/tmp admwscki/$IMAGE_NAME:$TAG \
-              /bin/bash -c \
-              "python -m pip install -r dev-requirements.txt && python -m pytest -c /dev/null --test-plugin-installation --continue-on-collection-errors -k test_with_examples"
+              /bin/bash -c ".circleci/scripts/test_plugin_installation.sh"
       - when: # run only on master or tag
           condition:
             or:
@@ -329,7 +465,7 @@ jobs:
                   docker push admwscki/$IMAGE_NAME:latest
   build-nightly-image:
     machine:
-      image: ubuntu-2204:2022.10.2
+      image: ubuntu-2204:2026.05.1
     steps:
       - checkout
       - run:
@@ -349,24 +485,27 @@ jobs:
 
 workflows:
   main:
+    # some GUI tests and some macos tests are flaky
+    # use new circleci auto-rerun feature:
+    # https://circleci.com/docs/guides/orchestrate/automatic-reruns/
+    max_auto_reruns: 3
     jobs:
+      - check-github-cli
       - test-linux:
           matrix:
             parameters:
               version:
-                - 6.0.11-focal
                 - 6.0.11-lunar
-                - 7.0.6-focal
                 - 7.0.6-lunar
-                - 7.0.11-focal
                 - 7.0.11-mantic
-                - 8.0.7-focal
-                - 8.0.7-jammy
+                - 8.0.9-jammy
+                - 9.0.9-noble
+                - 10.0.4-noble
       - test-linux-performance:
           matrix:
             parameters:
               version:
-                - 8.0.7-jammy
+                - 10.0.4-noble
       - collect-coverage:
           requires:
             - test-linux
@@ -377,15 +516,28 @@ workflows:
           matrix:
             parameters:
               kicad-version:
-                - 6.0.11
-                - 7.0.11
-                - 8.0.7
+                - 8.0.9
+                - 9.0.8
+                - 10.0.4
       - test-macos:
           matrix:
             parameters:
               kicad-version:
-                - 7.0.11
-                - 8.0.7
+                - 8.0.9
+                - 9.0.8
+                - 10.0.4
+      - run-tools-sanity-checks:
+          matrix:
+            parameters:
+              version:
+                - 8.0.9-jammy
+                - 9.0.9-noble
+                - 10.0.4-noble
+      - run-schematic-generation-sanity-checks:
+          matrix:
+            parameters:
+              version:
+                - 10.0.4-noble
       - create-pcm-package:
           requires: &required-tests
             - test-linux

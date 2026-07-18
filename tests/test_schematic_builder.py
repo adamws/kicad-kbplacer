@@ -1,0 +1,1382 @@
+# SPDX-FileCopyrightText: 2025 adamws <adamws@users.noreply.github.com>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+from __future__ import annotations
+
+import json
+import logging
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+import pcbnew
+import pytest
+import sexpdata
+
+from kbplacer.board_builder import BoardBuilder
+from kbplacer.led_schematic_builder import PAPER_SIZES, create_led_chain_schematic
+from kbplacer.schematic_builder import can_create_schematic, create_key_matrix_schematic
+
+from .conftest import (
+    KICAD_VERSION,
+    default_schematic_kwargs,
+    filter_kiacd10_errs,
+    generate_netlist,
+    generate_schematic_image,
+    get_footprints_dir,
+    prepare_project_file,
+    run_schematic_parity_drc,
+    write_fp_lib_table,
+)
+
+logger = logging.getLogger(__name__)
+
+
+def is_symbol(x, name):
+    return isinstance(x, sexpdata.Symbol) and x.value() == name
+
+
+def find_child(expr, name):
+    """Return first child list starting with symbol `name`"""
+    for item in expr:
+        if isinstance(item, list) and is_symbol(item[0], name):
+            return item
+    return None
+
+
+def find_children(expr, name):
+    """Return all child lists starting with symbol `name`"""
+    return [
+        item for item in expr if isinstance(item, list) and is_symbol(item[0], name)
+    ]
+
+
+def reference_value(symbol):
+    """Return a schematic symbol's ``Reference`` property value (e.g. ``SW1``)"""
+    for prop in find_children(symbol, "property"):
+        if prop[1] == "Reference":
+            return prop[2]
+    return None
+
+
+def footprint_by_reference(schematic_path) -> dict:
+    """Return ``{reference: Footprint property value}`` for every symbol in a
+    ``.kicad_sch`` file (e.g. ``{"LED1": "test_leds:LED_..."}``)."""
+    with open(schematic_path, "r") as f:
+        sch = sexpdata.load(f)
+    result = {}
+    for symbol in find_children(sch, "symbol"):
+        ref = reference_value(symbol)
+        if ref is None:
+            continue
+        for prop in find_children(symbol, "property"):
+            if prop[1] == "Footprint":
+                result[ref] = prop[2]
+    return result
+
+
+def parse_netlist_file(netlist_path: Path):
+    with open(netlist_path, "r") as f:
+        netlist_sexp = sexpdata.load(f)
+        nets = find_child(netlist_sexp, "nets")
+        nets_parsed = []
+        for net in find_children(nets, "net"):
+            netinfo = {
+                "code": None,
+                "name": None,
+                "class": None,
+                "nodes": [],
+            }
+
+            for item in net[1:]:
+                if is_symbol(item[0], "code"):
+                    netinfo["code"] = item[1]
+                elif is_symbol(item[0], "name"):
+                    netinfo["name"] = item[1]
+                elif is_symbol(item[0], "class"):
+                    netinfo["class"] = item[1]
+                elif is_symbol(item[0], "node"):
+                    node = {}
+                    for field in item[1:]:
+                        node[field[0].value()] = field[1]
+                    netinfo["nodes"].append(node)
+
+            nets_parsed.append(netinfo)
+        return nets_parsed
+
+
+def parse_netinfo_item(netinfo: pcbnew.NETINFO_ITEM):
+    netinfo_parsed = {
+        "code": netinfo.GetNetCode(),
+        "name": netinfo.GetNetname(),
+        "class": netinfo.GetNetClassName(),
+    }
+    return netinfo_parsed
+
+
+def assert_board_schematic_footprint_parity(request, tmpdir, pcb_file) -> None:
+    """Assert schematic-parity DRC finds no footprint/symbol mismatches.
+
+    Runs ``kicad-cli pcb drc --schematic-parity`` on ``pcb_file`` and checks that
+    every board footprint matches the symbol in the co-located schematic. This
+    guards that both builders emit the same footprint identifiers (library
+    nickname included).
+
+    The board and its schematic must already be saved and share the same base
+    name and directory. Writes the project file (to link board and schematic)
+    and an fp-lib-table registering the shared ``tests`` footprint library, both
+    of which DRC needs to resolve the board footprints.
+    """
+    prepare_project_file(request, pcb_file)
+    write_fp_lib_table(tmpdir, [("tests", get_footprints_dir(request))])
+
+    report = run_schematic_parity_drc(tmpdir, pcb_file)
+    parity = report.get("schematic_parity", [])
+    mismatches = [v for v in parity if v.get("type") == "footprint_symbol_mismatch"]
+    assert mismatches == [], f"Unexpected footprint/symbol mismatches: {mismatches}"
+
+
+class TestSchematicBuilderCli:
+    def _run_subprocess(
+        self,
+        package_path,
+        package_name,
+        flags: list[str] = [],
+        args: dict[str, str] = {},
+    ) -> subprocess.Popen:
+        kbplacer_args = ["python3", "-m", f"{package_name}", "--create-sch-file"]
+        for v in flags:
+            kbplacer_args.append(v)
+        for k, v in args.items():
+            kbplacer_args.append(k)
+            if v:
+                kbplacer_args.append(v)
+
+        env = os.environ.copy()
+        p = subprocess.Popen(
+            kbplacer_args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdin=subprocess.PIPE,
+            text=True,
+            cwd=package_path,
+            env=env,
+        )
+        return p
+
+    def example_isolation(self, request, tmpdir, example_data) -> str:
+        example, layout_file = example_data[0], example_data[1]
+        test_dir = request.fspath.dirname
+        source_dir = f"{test_dir}/../examples/{example}"
+        shutil.copy(f"{source_dir}/{layout_file}", tmpdir)
+        return f"{tmpdir}/{layout_file}"
+
+    @pytest.mark.parametrize(
+        "example_data",
+        [
+            ("2x2", "kle-annotated.json"),
+            ("3x2-sizes", "kle-annotated.json"),
+            ("2x2-with-alternative-layout", "via.json"),
+        ],
+    )
+    def test_schematic_build(
+        self, request, tmpdir, package_path, package_name, example_data
+    ) -> None:
+        layout_file = self.example_isolation(request, tmpdir, example_data)
+
+        pcb_file = Path(layout_file).with_suffix(".kicad_pcb")
+        schematic_file = Path(layout_file).with_suffix(".kicad_sch")
+
+        switch_footprint = str(get_footprints_dir(request)) + ":SW_Cherry_MX_PCB_1.00u"
+        diode_footprint = str(get_footprints_dir(request)) + ":D_SOD-323"
+        stabilizer_footprint = (
+            str(get_footprints_dir(request)) + ":Stabilizer_Cherry_MX_{:.2f}u"
+        )
+
+        p = self._run_subprocess(
+            package_path,
+            package_name,
+            args={
+                "--layout": layout_file,
+                "--pcb-file": str(pcb_file),
+                "--sch-file": str(schematic_file),
+                "--switch-footprint": switch_footprint,
+                "--diode-footprint": diode_footprint,
+                "--stabilizer-footprint": stabilizer_footprint,
+            },
+            flags=["--create-pcb-file"],
+        )
+        outs, errs = p.communicate()
+
+        logger.info(f"Process stdout: {outs}")
+        logger.info(f"Process stderr: {errs}")
+
+        if KICAD_VERSION < (9, 0, 0):
+            assert "Requires KiCad 9.0 or higher" in errs
+            assert p.returncode == 1
+            return
+
+        if sys.platform != "darwin":
+            # getting:
+            # 'assert ""traits"" failed in Get(): create wxApp before calling this'
+            # only on macos (otherwise it works just fine)
+            assert filter_kiacd10_errs(errs) == ""
+        assert p.returncode == 0
+
+        generate_schematic_image(tmpdir, schematic_file)
+        netlist = generate_netlist(tmpdir, schematic_file)
+        assert netlist.exists()
+        nets_parsed = parse_netlist_file(netlist)
+        for n in nets_parsed:
+            logger.debug(n)
+            assert "unconnected" not in n["name"]
+
+        # Test compatibility with created board.
+        # The kicad-cli currently does not support converting netlist to kicad_pcb file.
+        # We generate schematic and pcb files independently
+        # and hope that they would match...
+
+        board = pcbnew.LoadBoard(str(pcb_file))
+        board_nets = board.GetNetsByNetcode()
+        board_nets_parsed = []
+        for netcode, netinfo in board_nets.items():
+            netinfo_parsed = parse_netinfo_item(netinfo)
+            logger.debug(f"{netcode=} {netinfo_parsed=}")
+            board_nets_parsed.append(netinfo_parsed)
+
+        # Compare nets from schematic and board.
+        # Filter out netcode=0 and ignore 'nodes' field.
+        # KiCad 10 changed .kicad_pcb to store nets by name only (no numeric
+        # codes in the file), so codes are dynamically assigned on load and
+        # differ between board and schematic. For KiCad < 10, codes are stored
+        # in the file and should match.
+        def _normalize(nets):
+            if KICAD_VERSION >= (10, 0, 0):
+                return [(n["name"], n["class"]) for n in nets if int(n["code"]) != 0]
+            return [
+                (int(n["code"]), n["name"], n["class"])
+                for n in nets
+                if int(n["code"]) != 0
+            ]
+
+        nets_for_comparison = _normalize(nets_parsed)
+        board_nets_for_comparison = _normalize(board_nets_parsed)
+
+        # Convert to sets for order-independent comparison
+        nets_set = set(nets_for_comparison)
+        board_nets_set = set(board_nets_for_comparison)
+
+        assert len(nets_set) == len(board_nets_set), (
+            f"Different number of nets: schematic has {len(nets_set)}, "
+            f"board has {len(board_nets_set)}"
+        )
+        assert nets_set == board_nets_set, (
+            f"Nets mismatch:\n"
+            f"Only in schematic: {nets_set - board_nets_set}\n"
+            f"Only in board: {board_nets_set - nets_set}"
+        )
+
+        assert_board_schematic_footprint_parity(request, tmpdir, pcb_file)
+
+    def test_schematic_build_with_led_chain(
+        self, request, tmpdir, package_path, package_name
+    ) -> None:
+        layout_file = self.example_isolation(
+            request, tmpdir, ("2x2", "kle-annotated.json")
+        )
+
+        pcb_file = Path(layout_file).with_suffix(".kicad_pcb")
+        schematic_file = Path(layout_file).with_suffix(".kicad_sch")
+        project_file = Path(layout_file).with_suffix(".kicad_pro")
+        led_schematic_file = schematic_file.with_name(
+            schematic_file.stem + "-led-chain.kicad_sch"
+        )
+
+        switch_footprint = str(get_footprints_dir(request)) + ":SW_Cherry_MX_PCB_1.00u"
+        diode_footprint = str(get_footprints_dir(request)) + ":D_SOD-323"
+
+        p = self._run_subprocess(
+            package_path,
+            package_name,
+            args={
+                "--layout": layout_file,
+                "--pcb-file": str(pcb_file),
+                "--sch-file": str(schematic_file),
+                "--switch-footprint": switch_footprint,
+                "--diode-footprint": diode_footprint,
+            },
+            flags=["--create-pcb-file", "--create-led-sch-file"],
+        )
+        outs, errs = p.communicate()
+
+        logger.info(f"Process stdout: {outs}")
+        logger.info(f"Process stderr: {errs}")
+
+        if KICAD_VERSION < (10, 0, 0):
+            assert (
+                "Bundling multiple schematic sheets into one project"
+                " requires KiCad 10.0 or higher"
+            ) in errs
+            assert p.returncode == 1
+            return
+
+        if sys.platform != "darwin":
+            assert filter_kiacd10_errs(errs) == ""
+        assert p.returncode == 0
+
+        assert schematic_file.exists()
+        assert led_schematic_file.exists()
+        assert project_file.exists()
+
+        with open(project_file, "r") as f:
+            project = json.load(f)
+        assert [s[1] for s in project["sheets"]] == ["Key Matrix", "Led Chain"]
+        assert [s["filename"] for s in project["schematic"]["top_level_sheets"]] == [
+            schematic_file.name,
+            led_schematic_file.name,
+        ]
+
+        generate_schematic_image(tmpdir, schematic_file)
+        netlist = generate_netlist(tmpdir, schematic_file)
+        assert netlist.exists()
+
+        assert_board_schematic_footprint_parity(request, tmpdir, pcb_file)
+
+    def test_schematic_build_with_led_chain_pcb_elements(
+        self, request, tmpdir, package_path, package_name
+    ) -> None:
+        """`--create-led-pcb-elements` must add LED/capacitor footprints to
+        the board using the user-chosen `--led-footprint`/
+        `--led-capacitor-footprint`, matching both the footprint identity
+        and the net topology the LED-chain schematic sheet assigns to its own
+        LED/C symbols - the same two-pronged parity `test_schematic_build`
+        checks for the key-matrix case (full net-set comparison + DRC
+        footprint parity), applied here to the LED-chain sheet specifically.
+
+        Note: `kicad-cli pcb drc --schematic-parity` does not correctly
+        resolve footprints against a secondary bundled top-level sheet (the
+        Led Chain sheet here is not the project's primary/page-1 sheet) - it
+        reports every LED/C footprint as `extra_footprint` even when they do
+        match a schematic symbol, regardless of layout size (verified with
+        both a 4-key and a 12-key layout). So footprint-identity and net
+        parity for the LED chain are both checked directly here (FPID vs.
+        the schematic's `Footprint` property; board nets vs. the LED-chain
+        sheet's own exported netlist) instead of relying on that DRC check,
+        while `assert_board_schematic_footprint_parity` below still covers
+        the primary Key Matrix sheet's SW/D footprints, which the DRC check
+        does resolve correctly.
+        """
+        layout_file = self.example_isolation(
+            request, tmpdir, ("2x2", "kle-annotated.json")
+        )
+
+        pcb_file = Path(layout_file).with_suffix(".kicad_pcb")
+        schematic_file = Path(layout_file).with_suffix(".kicad_sch")
+        led_schematic_file = schematic_file.with_name(
+            schematic_file.stem + "-led-chain.kicad_sch"
+        )
+
+        fp_dir = str(get_footprints_dir(request))
+        switch_footprint = f"{fp_dir}:SW_Cherry_MX_PCB_1.00u"
+        diode_footprint = f"{fp_dir}:D_SOD-323"
+        led_footprint = f"{fp_dir}:LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount"
+        cap_footprint = f"{fp_dir}:C_0603_1608Metric"
+
+        p = self._run_subprocess(
+            package_path,
+            package_name,
+            args={
+                "--layout": layout_file,
+                "--pcb-file": str(pcb_file),
+                "--sch-file": str(schematic_file),
+                "--switch-footprint": switch_footprint,
+                "--diode-footprint": diode_footprint,
+                "--led-footprint": led_footprint,
+                "--led-capacitor-footprint": cap_footprint,
+            },
+            flags=[
+                "--create-pcb-file",
+                "--create-led-sch-file",
+                "--create-led-pcb-elements",
+            ],
+        )
+        outs, errs = p.communicate()
+
+        logger.info(f"Process stdout: {outs}")
+        logger.info(f"Process stderr: {errs}")
+
+        if KICAD_VERSION < (10, 0, 0):
+            assert (
+                "Bundling multiple schematic sheets into one project"
+                " requires KiCad 10.0 or higher"
+            ) in errs
+            assert p.returncode == 1
+            return
+
+        if sys.platform != "darwin":
+            assert filter_kiacd10_errs(errs) == ""
+        assert p.returncode == 0
+
+        assert schematic_file.exists()
+        assert led_schematic_file.exists()
+
+        # Board's LED/cap FPIDs must match the LED-chain sheet's own symbols,
+        # per unique physical position (4 keys -> LED1..LED4/C1..C4).
+        led_chain_footprints = footprint_by_reference(led_schematic_file)
+        board = pcbnew.LoadBoard(str(pcb_file))
+        board_footprints = {
+            fp.GetReference(): str(fp.GetFPID().GetUniStringLibId())
+            for fp in board.GetFootprints()
+            if fp.GetReference().startswith(("LED", "C"))
+        }
+        assert sorted(board_footprints) == [
+            "C1",
+            "C2",
+            "C3",
+            "C4",
+            "LED1",
+            "LED2",
+            "LED3",
+            "LED4",
+        ]
+        for ref, fpid in board_footprints.items():
+            assert led_chain_footprints.get(ref) == fpid, (
+                f"{ref}: board FPID '{fpid}' != schematic Footprint "
+                f"'{led_chain_footprints.get(ref)}'"
+            )
+
+        generate_schematic_image(tmpdir, led_schematic_file)
+        led_netlist = generate_netlist(tmpdir, led_schematic_file)
+        assert led_netlist.exists()
+        led_nets_parsed = parse_netlist_file(led_netlist)
+        for n in led_nets_parsed:
+            logger.debug(n)
+            assert "unconnected" not in n["name"]
+
+        # Full net-topology parity between the LED-chain schematic and the
+        # board, mirroring `test_schematic_build`'s key-matrix net comparison
+        # above. Each bundled top-level sheet is exported to netlist
+        # independently, so the LED-chain sheet's netlist only contains its
+        # own nets (VCC, GND, LEDIN/LEDOUT, DIN/DOUT chain links) - compare
+        # only those against the same-named nets on the board.
+        def _normalize(nets):
+            if KICAD_VERSION >= (10, 0, 0):
+                return {(n["name"], n["class"]) for n in nets if int(n["code"]) != 0}
+            return {
+                (int(n["code"]), n["name"], n["class"])
+                for n in nets
+                if int(n["code"]) != 0
+            }
+
+        led_net_prefixes = ("VCC", "GND", "LEDIN", "LEDOUT", "Net-(LED")
+        schematic_led_nets = _normalize(
+            [n for n in led_nets_parsed if n["name"].startswith(led_net_prefixes)]
+        )
+
+        board_nets_parsed = [
+            parse_netinfo_item(netinfo) for netinfo in board.GetNetsByNetcode().values()
+        ]
+        board_led_nets = _normalize(
+            [n for n in board_nets_parsed if n["name"].startswith(led_net_prefixes)]
+        )
+
+        assert schematic_led_nets == board_led_nets
+
+        generate_schematic_image(tmpdir, schematic_file)
+        netlist = generate_netlist(tmpdir, schematic_file)
+        assert netlist.exists()
+
+        # Covers the primary (Key Matrix) sheet's SW/D footprints only - see
+        # the docstring above for why the LED chain sheet isn't covered here.
+        assert_board_schematic_footprint_parity(request, tmpdir, pcb_file)
+
+    def test_schematic_build_with_led_chain_pcb_elements_skip_decoupling(
+        self, request, tmpdir, package_path, package_name
+    ) -> None:
+        """`--skip-led-decoupling` must omit capacitors from both the
+        LED-chain schematic sheet and the board's LED chain elements, while
+        the LED chain itself (LEDs, VCC/GND, LEDIN/LEDOUT, DIN/DOUT daisy
+        chain) still forms correctly - mirroring
+        `test_schematic_build_with_led_chain_pcb_elements` without the
+        `--led-capacitor-footprint` requirement.
+        """
+        layout_file = self.example_isolation(
+            request, tmpdir, ("2x2", "kle-annotated.json")
+        )
+
+        pcb_file = Path(layout_file).with_suffix(".kicad_pcb")
+        schematic_file = Path(layout_file).with_suffix(".kicad_sch")
+        led_schematic_file = schematic_file.with_name(
+            schematic_file.stem + "-led-chain.kicad_sch"
+        )
+
+        fp_dir = str(get_footprints_dir(request))
+        switch_footprint = f"{fp_dir}:SW_Cherry_MX_PCB_1.00u"
+        diode_footprint = f"{fp_dir}:D_SOD-323"
+        led_footprint = f"{fp_dir}:LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount"
+
+        p = self._run_subprocess(
+            package_path,
+            package_name,
+            args={
+                "--layout": layout_file,
+                "--pcb-file": str(pcb_file),
+                "--sch-file": str(schematic_file),
+                "--switch-footprint": switch_footprint,
+                "--diode-footprint": diode_footprint,
+                "--led-footprint": led_footprint,
+            },
+            flags=[
+                "--create-pcb-file",
+                "--create-led-sch-file",
+                "--create-led-pcb-elements",
+                "--skip-led-decoupling",
+            ],
+        )
+        outs, errs = p.communicate()
+
+        logger.info(f"Process stdout: {outs}")
+        logger.info(f"Process stderr: {errs}")
+
+        if KICAD_VERSION < (10, 0, 0):
+            assert (
+                "Bundling multiple schematic sheets into one project"
+                " requires KiCad 10.0 or higher"
+            ) in errs
+            assert p.returncode == 1
+            return
+
+        if sys.platform != "darwin":
+            assert filter_kiacd10_errs(errs) == ""
+        assert p.returncode == 0
+
+        assert schematic_file.exists()
+        assert led_schematic_file.exists()
+
+        # No capacitor symbols on the LED-chain sheet, LEDs still present.
+        led_chain_footprints = footprint_by_reference(led_schematic_file)
+        assert not any(ref.startswith("C") for ref in led_chain_footprints)
+        assert sorted(ref for ref in led_chain_footprints if ref.startswith("LED")) == [
+            "LED1",
+            "LED2",
+            "LED3",
+            "LED4",
+        ]
+
+        # No capacitor footprints on the board either.
+        board = pcbnew.LoadBoard(str(pcb_file))
+        board_refs = {fp.GetReference() for fp in board.GetFootprints()}
+        assert sorted(ref for ref in board_refs if ref.startswith("LED")) == [
+            "LED1",
+            "LED2",
+            "LED3",
+            "LED4",
+        ]
+        assert not any(ref.startswith("C") for ref in board_refs)
+
+        generate_schematic_image(tmpdir, led_schematic_file)
+        led_netlist = generate_netlist(tmpdir, led_schematic_file)
+        assert led_netlist.exists()
+        led_nets_parsed = parse_netlist_file(led_netlist)
+        for n in led_nets_parsed:
+            logger.debug(n)
+            assert "unconnected" not in n["name"]
+
+        generate_schematic_image(tmpdir, schematic_file)
+        netlist = generate_netlist(tmpdir, schematic_file)
+        assert netlist.exists()
+
+        # Covers the primary (Key Matrix) sheet's SW/D footprints only - see
+        # the docstring above for why the LED chain sheet isn't covered here.
+        assert_board_schematic_footprint_parity(request, tmpdir, pcb_file)
+
+    @pytest.mark.skipif(
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
+    )
+    def test_defined_footprints_variable_width(
+        self, request, tmpdir, package_path, package_name
+    ) -> None:
+        layout_file = self.example_isolation(
+            request,
+            tmpdir,
+            ("3x2-sizes", "kle-annotated.json"),
+        )
+        schematic_file = Path(layout_file).with_suffix(".kicad_sch")
+
+        switch_footprint = str(get_footprints_dir(request)) + ":switch_{:.2f}u"
+        diode_footprint = str(get_footprints_dir(request)) + ":D_SOD-323"
+
+        p = self._run_subprocess(
+            package_path,
+            package_name,
+            args={
+                "--layout": layout_file,
+                "--sch-file": str(schematic_file),
+                # schematic builder support footprints with variable width
+                "--switch-footprint": switch_footprint,
+                "--diode-footprint": diode_footprint,
+            },
+        )
+        _, errs = p.communicate()
+
+        if sys.platform != "darwin":
+            assert filter_kiacd10_errs(errs) == ""
+        assert p.returncode == 0
+
+        generate_schematic_image(tmpdir, schematic_file)
+        netlist = generate_netlist(tmpdir, schematic_file)
+        assert netlist.exists()
+        with open(netlist, "r") as f:
+            netlist_str = f.read()
+            assert netlist_str.count("switch_1.00u") == 8
+            assert netlist_str.count("switch_1.50u") == 2
+            assert netlist_str.count("switch_1.75u") == 2
+            assert netlist_str.count("D_SOD-323") == 12
+
+    def test_warn_if_output_already_exist(
+        self, request, tmpdir, package_path, package_name
+    ) -> None:
+        layout_file = self.example_isolation(
+            request, tmpdir, ("2x2", "kle-annotated.json")
+        )
+        schematic_file = Path(layout_file).with_suffix(".kicad_sch")
+
+        with open(schematic_file, "w") as f:
+            f.write("dummy")
+
+        p = self._run_subprocess(
+            package_path,
+            package_name,
+            args={
+                "--layout": layout_file,
+                "--sch-file": str(schematic_file),
+            },
+        )
+        _, errs = p.communicate()
+
+        assert f"File {schematic_file} already exist, aborting" in errs
+        assert p.returncode == 1
+
+    @pytest.mark.skipif(
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
+    )
+    def test_invalid_stabilizer_footprint(
+        self, request, tmpdir, package_path, package_name
+    ) -> None:
+        layout_file = self.example_isolation(
+            request, tmpdir, ("2x2", "kle-annotated.json")
+        )
+        schematic_file = Path(layout_file).with_suffix(".kicad_sch")
+
+        p = self._run_subprocess(
+            package_path,
+            package_name,
+            args={
+                "--layout": layout_file,
+                "--sch-file": str(schematic_file),
+                # valid footprint id but missing the size format placeholder
+                "--stabilizer-footprint": "SomeLib.pretty:Stabilizer_Cherry_MX_2u",
+            },
+        )
+        _, errs = p.communicate()
+
+        assert (
+            "Stabilizer footprint, if defined, must use size-templated definition"
+            in errs
+        )
+        assert p.returncode == 1
+
+    @pytest.mark.skipif(
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
+    )
+    def test_wrong_annotation(
+        self, request, tmpdir, package_path, package_name
+    ) -> None:
+        layout_file = self.example_isolation(request, tmpdir, ("2x2", "kle.json"))
+        schematic_file = Path(layout_file).with_suffix(".kicad_sch")
+
+        p = self._run_subprocess(
+            package_path,
+            package_name,
+            args={
+                "--layout": layout_file,
+                "--sch-file": str(schematic_file),
+            },
+        )
+        _, errs = p.communicate()
+
+        assert "Matrix coordinates label missing or invalid" in errs
+        assert p.returncode == 1
+
+
+class TestEncoderBoardSchematic:
+    # Layout: 2x2 matrix with rotary encoder at position (0,1)
+    # Row 0: key "0,0", encoder (sm='rot_ec11'), key "0,1"
+    # Row 1: key (sm=''), key "1,0", key "1,1"
+    # Encoder inherits sm from the dict preceding it in the KLE raw row
+    ENCODER_LAYOUT_1 = [
+        ["0,0", {"sm": "rot_ec11"}, "0,1"],
+        [{"sm": ""}, "1,0", "1,1"],
+    ]
+    # 2 encoders, both as alternative choice for a regular switch,
+    # with a space key forcing use of stabilizer to test if encoder
+    # symbols are placed correctly
+    ENCODER_LAYOUT_2 = [
+        [
+            "0,0\n\n\n0,0",
+            "0,1\n\n\n1,0",
+            {"x": 0.5, "sm": "rot_ec11"},
+            "0,0\n\n\n0,1\n\n\n\n\n\ne0",
+            "0,1\n\n\n1,1\n\n\n\n\n\ne1",
+        ],
+        [{"sm": "", "w": 2}, "1,0"],
+    ]
+
+    @pytest.mark.skipif(
+        KICAD_VERSION < (10, 0, 0), reason="Requires KiCad 10.0 or higher"
+    )
+    @pytest.mark.parametrize(
+        "layout,expected_encoder_count",
+        [
+            (ENCODER_LAYOUT_1, 1),
+            (ENCODER_LAYOUT_2, 2),
+        ],
+    )
+    def test_encoder_board(
+        self, request, tmpdir, layout, expected_encoder_count
+    ) -> None:
+        if not can_create_schematic():
+            pytest.skip("Requires optional schematic dependencies")
+
+        layout_file = Path(tmpdir) / "layout.json"
+        with open(layout_file, "w") as f:
+            json.dump(layout, f)
+
+        pcb_file = Path(tmpdir) / "test.kicad_pcb"
+        schematic_file = Path(tmpdir) / "test.kicad_sch"
+
+        fp_dir = str(get_footprints_dir(request))
+        switch_footprint = fp_dir + ":SW_Cherry_MX_PCB_1.00u"
+        diode_footprint = fp_dir + ":D_SOD-323"
+        encoder_footprint = (
+            fp_dir
+            + ":RotaryEncoder_Alps_EC11E-Switch_Vertical_H20mm_CircularMountingHoles"
+        )
+
+        # Create schematic
+        create_key_matrix_schematic(
+            layout_file,
+            schematic_file,
+            **default_schematic_kwargs(),
+            switch_footprint=switch_footprint,
+            diode_footprint=diode_footprint,
+            encoder_footprint=encoder_footprint,
+        )
+
+        # Create board
+        builder = BoardBuilder(
+            pcb_file,
+            switch_footprint=switch_footprint,
+            diode_footprint=diode_footprint,
+            encoder_footprint=encoder_footprint,
+        )
+        board = builder.create_board(layout_file)
+        board.Save(str(pcb_file))
+
+        # Verify encoder footprints are present in the board
+        encoder_fps = [
+            f for f in board.GetFootprints() if f.GetValue() == "RotaryEncoder_Switch"
+        ]
+        assert len(encoder_fps) == expected_encoder_count, (
+            f"Expected {expected_encoder_count} encoder footprints, "
+            f"got {len(encoder_fps)}"
+        )
+
+        # Generate netlist from schematic and compare with board nets
+        generate_schematic_image(tmpdir, schematic_file)
+        netlist = generate_netlist(tmpdir, schematic_file)
+        assert netlist.exists()
+        nets_parsed = parse_netlist_file(netlist)
+        for n in nets_parsed:
+            logger.debug(n)
+
+        board_nets = board.GetNetsByNetcode()
+        board_nets_parsed = []
+        for netcode, netinfo in board_nets.items():
+            netinfo_parsed = parse_netinfo_item(netinfo)
+            logger.debug(f"{netcode=} {netinfo_parsed=}")
+            board_nets_parsed.append(netinfo_parsed)
+
+        # Compare nets from schematic and board.
+        # Filter out unconnected nets (encoder A/B/C output pins are
+        # not part of the matrix and are left unconnected in the schematic).
+        def _normalize(nets):
+            if KICAD_VERSION >= (10, 0, 0):
+                # KiCad 10 prefixes locally-labeled schematic nets with '/'
+                # (hierarchical path notation); board nets have no such prefix.
+                return [
+                    (n["name"].lstrip("/"), n["class"])
+                    for n in nets
+                    if int(n["code"]) != 0 and "unconnected" not in n["name"]
+                ]
+            return [
+                (int(n["code"]), n["name"], n["class"])
+                for n in nets
+                if int(n["code"]) != 0 and "unconnected" not in n["name"]
+            ]
+
+        nets_set = set(_normalize(nets_parsed))
+        board_nets_set = set(_normalize(board_nets_parsed))
+
+        assert len(nets_set) == len(board_nets_set), (
+            f"Different number of nets: schematic has {len(nets_set)}, "
+            f"board has {len(board_nets_set)}"
+        )
+        assert nets_set == board_nets_set, (
+            f"Nets mismatch:\n"
+            f"Only in schematic: {nets_set - board_nets_set}\n"
+            f"Only in board: {board_nets_set - nets_set}"
+        )
+
+        assert_board_schematic_footprint_parity(request, tmpdir, pcb_file)
+
+    @pytest.mark.skipif(
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
+    )
+    def test_single_encoder_key(self, tmpdir) -> None:
+        # Regression test: a layout whose only key is a rotary encoder has no
+        # regular matrix keys, so no row/column labels are created and
+        # `labels_positions` ends up empty. Stabilizer/encoder placement used
+        # to call min() on that empty mapping and crash with
+        # `ValueError: min() iterable argument is empty`. Placement must now
+        # succeed and still emit the encoder symbol.
+        if not can_create_schematic():
+            pytest.skip("Requires optional schematic dependencies")
+
+        # `sm` is sticky in KLE and applies to the following key, making "0,0"
+        # a rotary encoder.
+        layout = [[{"sm": "rot_ec11"}, "0,0"]]
+        layout_file = Path(tmpdir) / "layout.json"
+        with open(layout_file, "w") as f:
+            json.dump(layout, f)
+
+        schematic_file = Path(tmpdir) / "test.kicad_sch"
+
+        # Must not raise.
+        create_key_matrix_schematic(
+            layout_file, schematic_file, **default_schematic_kwargs()
+        )
+        assert schematic_file.exists()
+
+        # Generate netlist from schematic
+        generate_schematic_image(tmpdir, schematic_file)
+
+        with open(schematic_file, "r") as f:
+            schematic_sexp = sexpdata.load(f)
+        encoder_symbols = [
+            s
+            for s in find_children(schematic_sexp, "symbol")
+            if (lib_id := find_child(s, "lib_id")) is not None
+            and lib_id[1] == "Device:RotaryEncoder_Switch"
+        ]
+        assert len(encoder_symbols) == 1
+
+
+class TestMatrixNetNameParity:
+    @pytest.mark.skipif(
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
+    )
+    def test_leading_zero_matrix_net_parity(self, request, tmpdir) -> None:
+        """Board nets and schematic labels must match for leading-zero labels.
+
+        A label like ``0,00`` denotes the same matrix column as ``0,0``. Both
+        builders route matrix coordinates through the shared ``matrix_net_name``
+        helper, so a digit-only ``00`` collapses onto the canonical ``COL0`` net
+        on the board *and* the matching ``COL0`` global label in the schematic
+        (never a phantom ``COL00``). This guards parity between the two builders.
+        """
+        if not can_create_schematic():
+            pytest.skip("Requires optional schematic dependencies")
+
+        # Both keys are in column 0; the first uses the leading-zero variant.
+        layout = [["0,00"], ["1,0"]]
+        layout_file = Path(tmpdir) / "layout.json"
+        with open(layout_file, "w") as f:
+            json.dump(layout, f)
+
+        pcb_file = Path(tmpdir) / "test.kicad_pcb"
+        schematic_file = Path(tmpdir) / "test.kicad_sch"
+
+        fp_dir = str(get_footprints_dir(request))
+        switch_footprint = fp_dir + ":SW_Cherry_MX_PCB_1.00u"
+        diode_footprint = fp_dir + ":D_SOD-323"
+
+        create_key_matrix_schematic(
+            layout_file,
+            schematic_file,
+            **default_schematic_kwargs(),
+            switch_footprint=switch_footprint,
+            diode_footprint=diode_footprint,
+        )
+
+        builder = BoardBuilder(
+            pcb_file,
+            switch_footprint=switch_footprint,
+            diode_footprint=diode_footprint,
+        )
+        board = builder.create_board(layout_file)
+        board.Save(str(pcb_file))
+
+        # Matrix net names present on the board.
+        board_matrix_nets = {
+            str(n.GetNetname())
+            for n in board.GetNetsByNetcode().values()
+            if str(n.GetNetname()).startswith(("COL", "ROW"))
+        }
+
+        # Matrix labels emitted into the schematic.
+        with open(schematic_file, "r") as f:
+            schematic_sexp = sexpdata.load(f)
+        schematic_matrix_labels = {
+            label[1]
+            for label in find_children(schematic_sexp, "global_label")
+            if isinstance(label[1], str) and label[1].startswith(("COL", "ROW"))
+        }
+
+        # The two builders must agree on the matrix net names exactly.
+        assert schematic_matrix_labels == board_matrix_nets == {"COL0", "ROW0", "ROW1"}
+        # No phantom COL00 net/label on either side.
+        assert "COL00" not in board_matrix_nets
+        assert "COL00" not in schematic_matrix_labels
+
+        assert_board_schematic_footprint_parity(request, tmpdir, pcb_file)
+
+
+class TestLedChainNetNameParity:
+    @pytest.mark.skipif(
+        KICAD_VERSION < (10, 0, 0), reason="Requires KiCad 10.0 or higher"
+    )
+    def test_lexicographic_net_parity(self, request, tmpdir) -> None:
+        """Board nets and the LED-chain schematic's auto-named nets must
+        match exactly, including KiCad's lexicographic (not numeric) rule for
+        naming anonymous nets - e.g. the link between LED9 and LED10 is named
+        "Net-(LED10-DIN)", not "Net-(LED9-DOUT)", because "LED10..." sorts
+        before "LED9..." as a string (the first differing character, '1' vs
+        '9', puts "LED10" first) even though 10 is numerically larger than 9.
+        A layout with fewer than 10 unique key positions can never exercise
+        this (single-digit reference numbers never invert order), so this
+        uses a 10-key single-row layout. Uses KiCad's own netlist generator
+        as the source of truth for the schematic side, rather than
+        re-deriving the naming rule a second time in the test.
+        """
+        if not can_create_schematic():
+            pytest.skip("Requires optional schematic dependencies")
+
+        layout = [[f"0,{i}" for i in range(10)]]
+        layout_file = Path(tmpdir) / "layout.json"
+        with open(layout_file, "w") as f:
+            json.dump(layout, f)
+
+        pcb_file = Path(tmpdir) / "test.kicad_pcb"
+        schematic_file = Path(tmpdir) / "test.kicad_sch"
+
+        fp_dir = str(get_footprints_dir(request))
+        if KICAD_VERSION >= (10, 0, 0):
+            led_footprint = f"{fp_dir}:LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount"
+        else:
+            led_footprint = f"{fp_dir}:LED_SK6812MINI_PLCC4_3.5x3.5mm_P1.75mm"
+        cap_footprint = f"{fp_dir}:C_0603_1608Metric"
+
+        create_led_chain_schematic(
+            layout_file,
+            schematic_file,
+            **default_schematic_kwargs(),
+            led_footprint=led_footprint,
+            cap_footprint=cap_footprint,
+        )
+
+        builder = BoardBuilder(
+            pcb_file,
+            switch_footprint=f"{fp_dir}:SW_Cherry_MX_PCB_1.00u",
+            diode_footprint=f"{fp_dir}:D_SOD-323",
+            led_footprint=led_footprint,
+            cap_footprint=cap_footprint,
+        )
+        board = builder.create_board(layout_file, create_leds=True)
+        board.Save(str(pcb_file))
+
+        led_net_prefixes = ("VCC", "GND", "LEDIN", "LEDOUT", "Net-(LED")
+
+        netlist = generate_netlist(tmpdir, schematic_file)
+        assert netlist.exists()
+        schematic_nets = {
+            n["name"]
+            for n in parse_netlist_file(netlist)
+            if n["name"] and n["name"].startswith(led_net_prefixes)
+        }
+
+        board_nets = {
+            str(n.GetNetname())
+            for n in board.GetNetsByNetcode().values()
+            if str(n.GetNetname()).startswith(led_net_prefixes)
+        }
+
+        assert schematic_nets == board_nets
+        # Directly encode the digit-count lexicographic quirk.
+        assert "Net-(LED10-DIN)" in schematic_nets
+        assert "Net-(LED9-DOUT)" not in schematic_nets
+
+
+class TestLedDecouplingSkip:
+    """`skip_led_decoupling` omits the decoupling-capacitor bank from the
+    generated LED-chain schematic entirely, while the LED chain itself
+    (LEDs, per-LED VCC/GND, LEDIN/LEDOUT, DIN/DOUT daisy chain) is
+    unaffected.
+    """
+
+    @pytest.mark.skipif(
+        KICAD_VERSION < (10, 0, 0), reason="Requires KiCad 10.0 or higher"
+    )
+    def test_omits_capacitors(self, request, tmpdir) -> None:
+        if not can_create_schematic():
+            pytest.skip("Requires optional schematic dependencies")
+
+        layout = [["0,0", "0,1"], ["1,0", "1,1"]]
+        layout_file = Path(tmpdir) / "layout.json"
+        with open(layout_file, "w") as f:
+            json.dump(layout, f)
+
+        schematic_file = Path(tmpdir) / "test.kicad_sch"
+
+        fp_dir = str(get_footprints_dir(request))
+        led_footprint = f"{fp_dir}:LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount"
+
+        # No cap_footprint given either - must not be required when skipped.
+        create_led_chain_schematic(
+            layout_file,
+            schematic_file,
+            **default_schematic_kwargs(),
+            led_footprint=led_footprint,
+            skip_led_decoupling=True,
+        )
+        assert schematic_file.exists()
+
+        generate_schematic_image(tmpdir, schematic_file)
+        netlist = generate_netlist(tmpdir, schematic_file)
+        assert netlist.exists()
+        for n in parse_netlist_file(netlist):
+            logger.debug(n)
+            assert "unconnected" not in n["name"]
+
+        with open(schematic_file, "r") as f:
+            schematic_sexp = sexpdata.load(f)
+
+        def _instances(lib_id_value):
+            return [
+                s
+                for s in find_children(schematic_sexp, "symbol")
+                if (lib_id := find_child(s, "lib_id")) is not None
+                and lib_id[1] == lib_id_value
+            ]
+
+        assert _instances("Device:C") == []
+        assert len(_instances("LED:SK6812MINI-E")) == 4
+
+    @pytest.mark.skipif(
+        KICAD_VERSION < (10, 0, 0), reason="Requires KiCad 10.0 or higher"
+    )
+    def test_smaller_page_than_with_decoupling(self, request, tmpdir) -> None:
+        """Without the capacitor bank reserving vertical space, the planned
+        page for a small layout should never be larger than with it."""
+        if not can_create_schematic():
+            pytest.skip("Requires optional schematic dependencies")
+
+        layout = [["0,0", "0,1"], ["1,0", "1,1"]]
+        layout_file = Path(tmpdir) / "layout.json"
+        with open(layout_file, "w") as f:
+            json.dump(layout, f)
+
+        fp_dir = str(get_footprints_dir(request))
+        led_footprint = f"{fp_dir}:LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount"
+        cap_footprint = f"{fp_dir}:C_0603_1608Metric"
+
+        with_caps_file = Path(tmpdir) / "with_caps.kicad_sch"
+        create_led_chain_schematic(
+            layout_file,
+            with_caps_file,
+            **default_schematic_kwargs(),
+            led_footprint=led_footprint,
+            cap_footprint=cap_footprint,
+        )
+
+        skip_caps_file = Path(tmpdir) / "skip_caps.kicad_sch"
+        create_led_chain_schematic(
+            layout_file,
+            skip_caps_file,
+            **default_schematic_kwargs(),
+            led_footprint=led_footprint,
+            skip_led_decoupling=True,
+        )
+
+        def _page_size(path):
+            with open(path, "r") as f:
+                sch = sexpdata.load(f)
+            paper = find_child(sch, "paper")
+            return paper[1]
+
+        page_order = [name for name, _, _ in PAPER_SIZES]
+        assert page_order.index(_page_size(skip_caps_file)) <= page_order.index(
+            _page_size(with_caps_file)
+        )
+
+
+class TestSingleKeySchematic:
+    @pytest.mark.skipif(
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
+    )
+    def test_single_regular_key(self, tmpdir) -> None:
+        # A layout with a single regular (non-encoder) switch is supported: the
+        # one key emits its own row/column labels, so `labels_positions` is not
+        # empty and placement has positions to work with. Verify the schematic
+        # is created with exactly one switch and one diode.
+        if not can_create_schematic():
+            pytest.skip("Requires optional schematic dependencies")
+
+        layout = [["0,0"]]
+        layout_file = Path(tmpdir) / "layout.json"
+        with open(layout_file, "w") as f:
+            json.dump(layout, f)
+
+        schematic_file = Path(tmpdir) / "test.kicad_sch"
+
+        # Must not raise.
+        create_key_matrix_schematic(
+            layout_file, schematic_file, **default_schematic_kwargs()
+        )
+        assert schematic_file.exists()
+
+        # Smoke-check that the produced schematic is renderable.
+        generate_schematic_image(tmpdir, schematic_file)
+
+        with open(schematic_file, "r") as f:
+            schematic_sexp = sexpdata.load(f)
+
+        def _instances(lib_id_value):
+            return [
+                s
+                for s in find_children(schematic_sexp, "symbol")
+                if (lib_id := find_child(s, "lib_id")) is not None
+                and lib_id[1] == lib_id_value
+            ]
+
+        assert len(_instances("Switch:SW_Push_45deg")) == 1
+        assert len(_instances("Device:D_Small")) == 1
+        # A single regular key needs neither encoders nor stabilizers.
+        assert len(_instances("Device:RotaryEncoder_Switch")) == 0
+        assert len(_instances("Mechanical:SW_stab")) == 0
+
+
+class TestSchematicWithoutFootprints:
+    @pytest.mark.skipif(
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
+    )
+    def test_schematic_only_no_footprints(self, tmpdir) -> None:
+        # Creating a schematic without any footprint assigned is a valid,
+        # supported use case: someone may want to generate the schematic first
+        # and assign footprints later. It must succeed and produce a valid
+        # schematic with the symbols' Footprint fields left empty.
+        if not can_create_schematic():
+            pytest.skip("Requires optional schematic dependencies")
+
+        layout = [["0,0", "0,1"], ["1,0", "1,1"]]
+        layout_file = Path(tmpdir) / "layout.json"
+        with open(layout_file, "w") as f:
+            json.dump(layout, f)
+
+        schematic_file = Path(tmpdir) / "test.kicad_sch"
+
+        # No footprint arguments passed - must not raise.
+        create_key_matrix_schematic(
+            layout_file, schematic_file, **default_schematic_kwargs()
+        )
+        assert schematic_file.exists()
+
+        # Netlist generation is a strong validity check: kicad-cli must be able
+        # to fully load and process the schematic.
+        generate_schematic_image(tmpdir, schematic_file)
+        netlist = generate_netlist(tmpdir, schematic_file)
+        assert netlist.exists()
+        nets = {n["name"].lstrip("/") for n in parse_netlist_file(netlist)}
+        assert {"COL0", "COL1", "ROW0", "ROW1"} <= nets
+
+        with open(schematic_file, "r") as f:
+            schematic_sexp = sexpdata.load(f)
+
+        symbols = find_children(schematic_sexp, "symbol")
+        switches = [
+            s
+            for s in symbols
+            if (lib_id := find_child(s, "lib_id")) is not None
+            and lib_id[1] == "Switch:SW_Push_45deg"
+        ]
+        diodes = [
+            s
+            for s in symbols
+            if (lib_id := find_child(s, "lib_id")) is not None
+            and lib_id[1] == "Device:D_Small"
+        ]
+        assert len(switches) == 4
+        assert len(diodes) == 4
+
+        # Every symbol's Footprint field must be empty since none were assigned.
+        def _footprint_value(symbol):
+            for prop in find_children(symbol, "property"):
+                if prop[1] == "Footprint":
+                    return prop[2]
+            return None
+
+        for symbol in switches + diodes:
+            assert _footprint_value(symbol) == ""
+
+
+class TestStartIndex:
+    """`create_key_matrix_schematic`'s `start_index` controls the first number used for
+    both switch (SW) and diode (D) references, mirroring `--start-index`
+    of the `key_placer` PCB placement path.
+    """
+
+    LAYOUT = [["0,0", "0,1"], ["1,0", "1,1"]]
+
+    def _build(self, tmpdir, **kwargs):
+        layout_file = Path(tmpdir) / "layout.json"
+        with open(layout_file, "w") as f:
+            json.dump(self.LAYOUT, f)
+
+        schematic_file = Path(tmpdir) / "test.kicad_sch"
+        create_key_matrix_schematic(
+            layout_file, schematic_file, **default_schematic_kwargs(), **kwargs
+        )
+
+        with open(schematic_file, "r") as f:
+            schematic_sexp = sexpdata.load(f)
+        return schematic_sexp
+
+    def _references(self, schematic_sexp, prefix):
+        return sorted(
+            reference_value(s)
+            for s in find_children(schematic_sexp, "symbol")
+            if (ref := reference_value(s)) is not None and ref.startswith(prefix)
+        )
+
+    @pytest.mark.skipif(
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
+    )
+    def test_default_start_index(self, tmpdir) -> None:
+        if not can_create_schematic():
+            pytest.skip("Requires optional schematic dependencies")
+
+        schematic_sexp = self._build(tmpdir)
+
+        assert self._references(schematic_sexp, "SW") == ["SW1", "SW2", "SW3", "SW4"]
+        assert self._references(schematic_sexp, "D") == ["D1", "D2", "D3", "D4"]
+
+    @pytest.mark.parametrize("start_index", [0, 5])
+    @pytest.mark.skipif(
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
+    )
+    def test_custom_start_index(self, tmpdir, start_index) -> None:
+        if not can_create_schematic():
+            pytest.skip("Requires optional schematic dependencies")
+
+        schematic_sexp = self._build(tmpdir, start_index=start_index)
+
+        expected = [f"SW{i}" for i in range(start_index, start_index + 4)]
+        assert self._references(schematic_sexp, "SW") == expected
+        expected = [f"D{i}" for i in range(start_index, start_index + 4)]
+        assert self._references(schematic_sexp, "D") == expected
+
+    @pytest.mark.skipif(
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
+    )
+    def test_negative_start_index_falls_back_to_one(self, tmpdir, caplog) -> None:
+        if not can_create_schematic():
+            pytest.skip("Requires optional schematic dependencies")
+
+        with caplog.at_level(logging.WARNING):
+            schematic_sexp = self._build(tmpdir, start_index=-5)
+
+        assert "Invalid switch start index: -5, defaults to 1" in caplog.text
+        assert self._references(schematic_sexp, "SW") == ["SW1", "SW2", "SW3", "SW4"]
+        assert self._references(schematic_sexp, "D") == ["D1", "D2", "D3", "D4"]
+
+
+class TestStartIndexCli:
+    def _run_subprocess(
+        self, package_path, package_name, args: dict[str, str]
+    ) -> subprocess.Popen:
+        kbplacer_args = ["python3", "-m", f"{package_name}", "--create-sch-file"]
+        for k, v in args.items():
+            kbplacer_args.append(k)
+            if v:
+                kbplacer_args.append(v)
+
+        p = subprocess.Popen(
+            kbplacer_args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdin=subprocess.PIPE,
+            text=True,
+            cwd=package_path,
+            env=os.environ.copy(),
+        )
+        return p
+
+    @pytest.mark.skipif(
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
+    )
+    def test_start_index_option(
+        self, request, tmpdir, package_path, package_name
+    ) -> None:
+        # End-to-end check of the full `--start-index` plumbing (CLI parsing ->
+        # PluginSettings -> run_schematic -> create_key_matrix_schematic),
+        # complementing the direct create_key_matrix_schematic-level checks in
+        # TestStartIndex.
+        test_dir = request.fspath.dirname
+        source_dir = f"{test_dir}/../examples/2x2"
+        shutil.copy(f"{source_dir}/kle-annotated.json", tmpdir)
+        layout_file = f"{tmpdir}/kle-annotated.json"
+        schematic_file = Path(layout_file).with_suffix(".kicad_sch")
+
+        p = self._run_subprocess(
+            package_path,
+            package_name,
+            args={
+                "--layout": layout_file,
+                "--sch-file": str(schematic_file),
+                "--start-index": "5",
+            },
+        )
+        _, errs = p.communicate()
+
+        if sys.platform != "darwin":
+            assert filter_kiacd10_errs(errs) == ""
+        assert p.returncode == 0
+
+        with open(schematic_file, "r") as f:
+            schematic_sexp = sexpdata.load(f)
+
+        switch_refs = sorted(
+            reference_value(s)
+            for s in find_children(schematic_sexp, "symbol")
+            if (ref := reference_value(s)) is not None and ref.startswith("SW")
+        )
+        diode_refs = sorted(
+            reference_value(s)
+            for s in find_children(schematic_sexp, "symbol")
+            if (ref := reference_value(s)) is not None and ref.startswith("D")
+        )
+        assert switch_refs == ["SW5", "SW6", "SW7", "SW8"]
+        assert diode_refs == ["D5", "D6", "D7", "D8"]

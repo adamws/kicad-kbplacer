@@ -1,0 +1,1682 @@
+# SPDX-FileCopyrightText: 2025 adamws <adamws@users.noreply.github.com>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+import logging
+import os
+from collections import defaultdict
+from typing import Dict, List, Tuple, Union
+
+from .board_modifier import KICAD_VERSION
+from .builders_commons import matrix_net_name, uses_stabilizer
+from .footprint_loader import (
+    FootprintIdentifier,
+    StabilizerFootprintLoader,
+    SwitchFootprintLoader,
+    is_valid_template,
+)
+from .kle_serial import (
+    Key,
+    MatrixAnnotatedKeyboard,
+    get_annotated_keyboard_from_file,
+)
+
+try:
+    from skip import Schematic
+except ImportError:
+    _has_schematic = False
+else:
+    _has_schematic = True
+
+
+logger = logging.getLogger(__name__)
+
+ORIGIN = (18, 18)
+UNIT = 1.27
+
+COLUMN_DISTANCE = 10
+ROW_DISTANCE = 16
+
+TEMPLATE = """\
+(kicad_sch
+    (version 20250114)
+    (generator "eeschema")
+    (generator_version "9.0")
+    (uuid "{own_uuid}")
+    (paper "{page_size}")
+    (title_block
+        (comment 1 "https://github.com/adamws/kicad-kbplacer")
+        (comment 2 "Auto-generated with kicad-kbplacer, requires validation before production!")
+    )
+    (lib_symbols
+        (symbol "Device:D_Small"
+            (pin_numbers
+                (hide yes)
+            )
+            (pin_names
+                (offset 0.254)
+                (hide yes)
+            )
+            (exclude_from_sim no)
+            (in_bom yes)
+            (on_board yes)
+            (property "Reference" "D"
+                (at -1.27 2.032 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (justify left)
+                )
+            )
+            (property "Value" "D_Small"
+                (at -3.81 -2.032 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (justify left)
+                )
+            )
+            (property "Footprint" ""
+                (at 0 0 90)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (hide yes)
+                )
+            )
+            (property "Datasheet" "~"
+                (at 0 0 90)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (hide yes)
+                )
+            )
+            (property "Description" "Diode, small symbol"
+                (at 0 0 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (hide yes)
+                )
+            )
+            (property "Sim.Device" "D"
+                (at 0 0 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (hide yes)
+                )
+            )
+            (property "Sim.Pins" "1=K 2=A"
+                (at 0 0 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (hide yes)
+                )
+            )
+            (property "ki_keywords" "diode"
+                (at 0 0 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (hide yes)
+                )
+            )
+            (property "ki_fp_filters" "TO-???* *_Diode_* *SingleDiode* D_*"
+                (at 0 0 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (hide yes)
+                )
+            )
+            (symbol "D_Small_0_1"
+                (polyline
+                    (pts
+                        (xy -0.762 0) (xy 0.762 0)
+                    )
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (polyline
+                    (pts
+                        (xy -0.762 -1.016) (xy -0.762 1.016)
+                    )
+                    (stroke
+                        (width 0.254)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (polyline
+                    (pts
+                        (xy 0.762 -1.016) (xy -0.762 0) (xy 0.762 1.016) (xy 0.762 -1.016)
+                    )
+                    (stroke
+                        (width 0.254)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+            )
+            (symbol "D_Small_1_1"
+                (pin passive line
+                    (at -2.54 0 0)
+                    (length 1.778)
+                    (name "K"
+                        (effects
+                            (font
+                                (size 1.27 1.27)
+                            )
+                        )
+                    )
+                    (number "1"
+                        (effects
+                            (font
+                                (size 1.27 1.27)
+                            )
+                        )
+                    )
+                )
+                (pin passive line
+                    (at 2.54 0 180)
+                    (length 1.778)
+                    (name "A"
+                        (effects
+                            (font
+                                (size 1.27 1.27)
+                            )
+                        )
+                    )
+                    (number "2"
+                        (effects
+                            (font
+                                (size 1.27 1.27)
+                            )
+                        )
+                    )
+                )
+            )
+            (embedded_fonts no)
+        )
+        (symbol "Device:RotaryEncoder_Switch"
+            (pin_names
+                (offset 0.254)
+                (hide yes)
+            )
+            (exclude_from_sim no)
+            (in_bom yes)
+            (on_board yes)
+            (property "Reference" "ROT"
+                (at 0 6.604 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                )
+            )
+            (property "Value" "RotaryEncoder_Switch"
+                (at 0 -6.604 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                )
+            )
+            (property "Footprint" ""
+                (at -3.81 4.064 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (hide yes)
+                )
+            )
+            (property "Datasheet" "~"
+                (at 0 6.604 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (hide yes)
+                )
+            )
+            (property "Description" "Rotary encoder, dual channel, incremental quadrate outputs, with switch"
+                (at 0 0 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (hide yes)
+                )
+            )
+            (property "ki_keywords" "rotary switch encoder switch push button"
+                (at 0 0 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (hide yes)
+                )
+            )
+            (property "ki_fp_filters" "RotaryEncoder*Switch*"
+                (at 0 0 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (hide yes)
+                )
+            )
+            (symbol "RotaryEncoder_Switch_0_1"
+                (rectangle
+                    (start -5.08 5.08)
+                    (end 5.08 -5.08)
+                    (stroke
+                        (width 0.254)
+                        (type default)
+                    )
+                    (fill
+                        (type background)
+                    )
+                )
+                (polyline
+                    (pts
+                        (xy -5.08 2.54) (xy -3.81 2.54) (xy -3.81 2.032)
+                    )
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (polyline
+                    (pts
+                        (xy -5.08 0) (xy -3.81 0) (xy -3.81 -1.016) (xy -3.302 -2.032)
+                    )
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (polyline
+                    (pts
+                        (xy -5.08 -2.54) (xy -3.81 -2.54) (xy -3.81 -2.032)
+                    )
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (polyline
+                    (pts
+                        (xy -4.318 0) (xy -3.81 0) (xy -3.81 1.016) (xy -3.302 2.032)
+                    )
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (circle
+                    (center -3.81 0)
+                    (radius 0.254)
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type outline)
+                    )
+                )
+                (polyline
+                    (pts
+                        (xy -0.635 -1.778) (xy -0.635 1.778)
+                    )
+                    (stroke
+                        (width 0.254)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (circle
+                    (center -0.381 0)
+                    (radius 1.905)
+                    (stroke
+                        (width 0.254)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (polyline
+                    (pts
+                        (xy -0.381 -1.778) (xy -0.381 1.778)
+                    )
+                    (stroke
+                        (width 0.254)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (arc
+                    (start -0.381 -2.794)
+                    (mid -3.0988 -0.0635)
+                    (end -0.381 2.667)
+                    (stroke
+                        (width 0.254)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (polyline
+                    (pts
+                        (xy -0.127 1.778) (xy -0.127 -1.778)
+                    )
+                    (stroke
+                        (width 0.254)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (polyline
+                    (pts
+                        (xy 0.254 2.921) (xy -0.508 2.667) (xy 0.127 2.286)
+                    )
+                    (stroke
+                        (width 0.254)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (polyline
+                    (pts
+                        (xy 0.254 -3.048) (xy -0.508 -2.794) (xy 0.127 -2.413)
+                    )
+                    (stroke
+                        (width 0.254)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (polyline
+                    (pts
+                        (xy 3.81 1.016) (xy 3.81 -1.016)
+                    )
+                    (stroke
+                        (width 0.254)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (polyline
+                    (pts
+                        (xy 3.81 0) (xy 3.429 0)
+                    )
+                    (stroke
+                        (width 0.254)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (circle
+                    (center 4.318 1.016)
+                    (radius 0.127)
+                    (stroke
+                        (width 0.254)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (circle
+                    (center 4.318 -1.016)
+                    (radius 0.127)
+                    (stroke
+                        (width 0.254)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (polyline
+                    (pts
+                        (xy 5.08 2.54) (xy 4.318 2.54) (xy 4.318 1.016)
+                    )
+                    (stroke
+                        (width 0.254)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (polyline
+                    (pts
+                        (xy 5.08 -2.54) (xy 4.318 -2.54) (xy 4.318 -1.016)
+                    )
+                    (stroke
+                        (width 0.254)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+            )
+            (symbol "RotaryEncoder_Switch_1_1"
+                (pin passive line
+                    (at -7.62 2.54 0)
+                    (length 2.54)
+                    (name "A"
+                        (effects
+                            (font
+                                (size 1.27 1.27)
+                            )
+                        )
+                    )
+                    (number "A"
+                        (effects
+                            (font
+                                (size 1.27 1.27)
+                            )
+                        )
+                    )
+                )
+                (pin passive line
+                    (at -7.62 0 0)
+                    (length 2.54)
+                    (name "C"
+                        (effects
+                            (font
+                                (size 1.27 1.27)
+                            )
+                        )
+                    )
+                    (number "C"
+                        (effects
+                            (font
+                                (size 1.27 1.27)
+                            )
+                        )
+                    )
+                )
+                (pin passive line
+                    (at -7.62 -2.54 0)
+                    (length 2.54)
+                    (name "B"
+                        (effects
+                            (font
+                                (size 1.27 1.27)
+                            )
+                        )
+                    )
+                    (number "B"
+                        (effects
+                            (font
+                                (size 1.27 1.27)
+                            )
+                        )
+                    )
+                )
+                (pin passive line
+                    (at 7.62 2.54 180)
+                    (length 2.54)
+                    (name "S1"
+                        (effects
+                            (font
+                                (size 1.27 1.27)
+                            )
+                        )
+                    )
+                    (number "S1"
+                        (effects
+                            (font
+                                (size 1.27 1.27)
+                            )
+                        )
+                    )
+                )
+                (pin passive line
+                    (at 7.62 -2.54 180)
+                    (length 2.54)
+                    (name "S2"
+                        (effects
+                            (font
+                                (size 1.27 1.27)
+                            )
+                        )
+                    )
+                    (number "S2"
+                        (effects
+                            (font
+                                (size 1.27 1.27)
+                            )
+                        )
+                    )
+                )
+            )
+            (embedded_fonts no)
+        )
+        (symbol "Mechanical:SW_stab"
+            (pin_names
+                (offset 1.016)
+            )
+            (exclude_from_sim no)
+            (in_bom yes)
+            (on_board yes)
+            (property "Reference" "S"
+                (at -5.08 6.35 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (justify left)
+                )
+            )
+            (property "Value" "SW_stab"
+                (at -5.08 3.81 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (justify left)
+                )
+            )
+            (property "Footprint" ""
+                (at 0 0 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (hide yes)
+                )
+            )
+            (property "Datasheet" ""
+                (at 0 0 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (hide yes)
+                )
+            )
+            (property "Description" "Switch stabilizer"
+                (at 0 0 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (hide yes)
+                )
+            )
+            (property "ki_keywords" "stabilizer stab"
+                (at 0 0 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (hide yes)
+                )
+            )
+            (symbol "SW_stab_0_1"
+                (rectangle
+                    (start -5.08 1.27)
+                    (end -2.54 -2.54)
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (rectangle
+                    (start -5.08 -1.524)
+                    (end -2.54 -2.54)
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (rectangle
+                    (start -4.826 2.794)
+                    (end -2.794 1.27)
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (rectangle
+                    (start -4.064 1.27)
+                    (end -3.556 2.794)
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (rectangle
+                    (start -4.064 -1.778)
+                    (end 4.064 -2.286)
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (rectangle
+                    (start -4.064 -2.286)
+                    (end -3.556 -1.016)
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (rectangle
+                    (start 2.54 1.27)
+                    (end 5.08 -2.54)
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (rectangle
+                    (start 2.54 -1.524)
+                    (end 5.08 -2.54)
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (rectangle
+                    (start 2.794 2.794)
+                    (end 4.826 1.27)
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (rectangle
+                    (start 3.556 1.27)
+                    (end 4.064 2.794)
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (rectangle
+                    (start 4.064 -2.286)
+                    (end 3.556 -1.016)
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+            )
+            (embedded_fonts no)
+        )
+        (symbol "Switch:SW_Push_45deg"
+            (pin_numbers
+                (hide yes)
+            )
+            (pin_names
+                (offset 1.016)
+                (hide yes)
+            )
+            (exclude_from_sim no)
+            (in_bom yes)
+            (on_board yes)
+            (property "Reference" "SW"
+                (at 3.048 1.016 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (justify left)
+                )
+            )
+            (property "Value" "SW_Push_45deg"
+                (at 0 -3.81 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                )
+            )
+            (property "Footprint" ""
+                (at 0 0 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (hide yes)
+                )
+            )
+            (property "Datasheet" "~"
+                (at 0 0 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (hide yes)
+                )
+            )
+            (property "Description" "Push button switch, normally open, two pins, 45° tilted"
+                (at 0 0 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (hide yes)
+                )
+            )
+            (property "ki_keywords" "switch normally-open pushbutton push-button"
+                (at 0 0 0)
+                (effects
+                    (font
+                        (size 1.27 1.27)
+                    )
+                    (hide yes)
+                )
+            )
+            (symbol "SW_Push_45deg_0_1"
+                (polyline
+                    (pts
+                        (xy -2.54 2.54) (xy -1.524 1.524) (xy -1.524 1.524)
+                    )
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (circle
+                    (center -1.1684 1.1684)
+                    (radius 0.508)
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (polyline
+                    (pts
+                        (xy -0.508 2.54) (xy 2.54 -0.508)
+                    )
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (polyline
+                    (pts
+                        (xy 1.016 1.016) (xy 2.032 2.032)
+                    )
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (circle
+                    (center 1.143 -1.1938)
+                    (radius 0.508)
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (polyline
+                    (pts
+                        (xy 1.524 -1.524) (xy 2.54 -2.54) (xy 2.54 -2.54) (xy 2.54 -2.54)
+                    )
+                    (stroke
+                        (width 0)
+                        (type default)
+                    )
+                    (fill
+                        (type none)
+                    )
+                )
+                (pin passive line
+                    (at -2.54 2.54 0)
+                    (length 0)
+                    (name "1"
+                        (effects
+                            (font
+                                (size 1.27 1.27)
+                            )
+                        )
+                    )
+                    (number "1"
+                        (effects
+                            (font
+                                (size 1.27 1.27)
+                            )
+                        )
+                    )
+                )
+                (pin passive line
+                    (at 2.54 -2.54 180)
+                    (length 0)
+                    (name "2"
+                        (effects
+                            (font
+                                (size 1.27 1.27)
+                            )
+                        )
+                    )
+                    (number "2"
+                        (effects
+                            (font
+                                (size 1.27 1.27)
+                            )
+                        )
+                    )
+                )
+            )
+            (embedded_fonts no)
+        )
+    )
+    (symbol
+        (lib_id "Switch:SW_Push_45deg")
+        (at 0 0 0)
+        (unit 1)
+        (exclude_from_sim no)
+        (in_bom yes)
+        (on_board yes)
+        (dnp no)
+        (uuid "19751ded-3cc5-4b31-aeeb-fd1357dc1d55")
+        (property "Reference" "SW1"
+            (at 0 -5.08 0)
+            (effects
+                (font
+                    (size 1.27 1.27)
+                )
+            )
+        )
+        (property "Value" "SW_Push"
+            (at 0 -3.81 0)
+            (effects
+                (font
+                    (size 1.27 1.27)
+                )
+                (hide yes)
+            )
+        )
+        (property "Footprint" ""
+            (at 0 0 0)
+            (effects
+                (font
+                    (size 1.27 1.27)
+                )
+                (hide yes)
+            )
+        )
+        (property "Datasheet" "~"
+            (at 0 0 0)
+            (effects
+                (font
+                    (size 1.27 1.27)
+                )
+                (hide yes)
+            )
+        )
+        (property "Description" ""
+            (at 0 0 0)
+            (effects
+                (font
+                    (size 1.27 1.27)
+                )
+            )
+        )
+        (pin "1"
+            (uuid "94c53fa6-dd8d-4e6d-9c1a-277431558d0a")
+        )
+        (pin "2"
+            (uuid "ef827767-19b4-4ee5-b4b6-65189b88f8ee")
+        )
+        (instances
+            (project "{project_name}"
+                (path "/{own_uuid}"
+                    (reference "SW1")
+                    (unit 1)
+                )
+            )
+        )
+    )
+    (symbol
+        (lib_id "Device:RotaryEncoder_Switch")
+        (at 0 31.115 0)
+        (unit 1)
+        (exclude_from_sim no)
+        (in_bom yes)
+        (on_board yes)
+        (dnp no)
+        (fields_autoplaced yes)
+        (uuid "4df224bd-91ea-4718-a205-24a2f13d779f")
+        (property "Reference" "ROT1"
+            (at 0 20.955 0)
+            (effects
+                (font
+                    (size 1.27 1.27)
+                )
+            )
+        )
+        (property "Value" "RotaryEncoder_Switch"
+            (at 0 23.495 0)
+            (effects
+                (font
+                    (size 1.27 1.27)
+                )
+            )
+        )
+        (property "Footprint" ""
+            (at -3.81 27.051 0)
+            (effects
+                (font
+                    (size 1.27 1.27)
+                )
+                (hide yes)
+            )
+        )
+        (property "Datasheet" "~"
+            (at 0 24.511 0)
+            (effects
+                (font
+                    (size 1.27 1.27)
+                )
+                (hide yes)
+            )
+        )
+        (property "Description" "Rotary encoder, dual channel, incremental quadrate outputs, with switch"
+            (at 0 31.115 0)
+            (effects
+                (font
+                    (size 1.27 1.27)
+                )
+                (hide yes)
+            )
+        )
+        (pin "B"
+            (uuid "f801416e-7373-40b7-9386-763a2e17c4a7")
+        )
+        (pin "C"
+            (uuid "9fa1e2b8-d36e-4a32-9f6d-a1ce5e47b8c9")
+        )
+        (pin "A"
+            (uuid "ec970412-809f-48fb-8ab6-07a7e3db2578")
+        )
+        (pin "S2"
+            (uuid "c1f94638-ea0e-4258-aafb-c4d335571d5c")
+        )
+        (pin "S1"
+            (uuid "57a6f7b1-72b8-4589-bac5-6c331ee37168")
+        )
+        (instances
+            (project "{project_name}"
+                (path "/{own_uuid}"
+                    (reference "ROT1")
+                    (unit 1)
+                )
+            )
+        )
+    )
+    (symbol
+        (lib_id "Mechanical:SW_stab")
+        (at 0 15.24 0)
+        (unit 1)
+        (exclude_from_sim no)
+        (in_bom yes)
+        (on_board yes)
+        (dnp no)
+        (fields_autoplaced yes)
+        (uuid "ef7e7ccd-5c7e-41a7-b1a3-1dcfd5e468ef")
+        (property "Reference" "ST1"
+            (at 6.35 13.8429 0)
+            (effects
+                (font
+                    (size 1.27 1.27)
+                )
+                (justify left)
+            )
+        )
+        (property "Value" "SW_stab"
+            (at 6.35 16.3829 0)
+            (effects
+                (font
+                    (size 1.27 1.27)
+                )
+                (justify left)
+            )
+        )
+        (property "Footprint" ""
+            (at 0 15.24 0)
+            (effects
+                (font
+                    (size 1.27 1.27)
+                )
+                (hide yes)
+            )
+        )
+        (property "Datasheet" ""
+            (at 0 15.24 0)
+            (effects
+                (font
+                    (size 1.27 1.27)
+                )
+                (hide yes)
+            )
+        )
+        (property "Description" "Switch stabilizer"
+            (at 0 15.24 0)
+            (effects
+                (font
+                    (size 1.27 1.27)
+                )
+                (hide yes)
+            )
+        )
+        (instances
+            (project "{project_name}"
+                (path "/{own_uuid}"
+                    (reference "ST1")
+                    (unit 1)
+                )
+            )
+        )
+    )
+    (symbol
+        (lib_id "Device:D_Small")
+        (at 2.54 6.35 90)
+        (unit 1)
+        (exclude_from_sim no)
+        (in_bom yes)
+        (on_board yes)
+        (dnp no)
+        (uuid "feb0fa1f-f7ed-4393-bef6-632a7fa048d6")
+        (property "Reference" "D1"
+            (at 3.81 5.08 90)
+            (effects
+                (font
+                    (size 1.27 1.27)
+                )
+                (justify right)
+            )
+        )
+        (property "Value" "D"
+            (at 3.81 7.62 90)
+            (effects
+                (font
+                    (size 1.27 1.27)
+                )
+                (justify right)
+                (hide yes)
+            )
+        )
+        (property "Footprint" ""
+            (at 2.54 6.35 90)
+            (effects
+                (font
+                    (size 1.27 1.27)
+                )
+                (hide yes)
+            )
+        )
+        (property "Datasheet" "~"
+            (at 2.54 6.35 90)
+            (effects
+                (font
+                    (size 1.27 1.27)
+                )
+                (hide yes)
+            )
+        )
+        (property "Description" ""
+            (at 2.54 6.35 0)
+            (effects
+                (font
+                    (size 1.27 1.27)
+                )
+            )
+        )
+        (property "Sim.Device" "D"
+            (at 2.54 6.35 0)
+            (effects
+                (font
+                    (size 1.27 1.27)
+                )
+                (hide yes)
+            )
+        )
+        (property "Sim.Pins" "1=K 2=A"
+            (at 2.54 6.35 0)
+            (effects
+                (font
+                    (size 1.27 1.27)
+                )
+                (hide yes)
+            )
+        )
+        (pin "1"
+            (uuid "004cc590-2791-46a0-9480-7962783605a4")
+        )
+        (pin "2"
+            (uuid "428af732-f843-4705-863e-a0095a5fb80a")
+        )
+        (instances
+            (project "{project_name}"
+                (path "/{own_uuid}"
+                    (reference "D1")
+                    (unit 1)
+                )
+            )
+        )
+    )
+    (sheet_instances
+        (path "/"
+            (page "{sheet_page}")
+        )
+    )
+    (embedded_fonts no)
+)
+"""
+
+
+def _x(x: int) -> float:
+    return (ORIGIN[0] * UNIT) + (x * UNIT)
+
+
+def _y(y: int) -> float:
+    return (ORIGIN[1] * UNIT) + (y * UNIT)
+
+
+def get_lowest_paper_size(size):
+    matrix_size_to_paper = {(8, 19): "A4", (11, 30): "A3", (17, 44): "A2"}
+    smallest_size = None
+    for key in sorted(matrix_size_to_paper):
+        if size[0] <= key[0] and size[1] <= key[1]:
+            smallest_size = matrix_size_to_paper[key]
+            break
+    if smallest_size is None:
+        smallest_size = "A1"
+    return smallest_size
+
+
+def can_create_schematic() -> bool:
+    return _has_schematic
+
+
+def create_key_matrix_schematic(
+    keyboard: Union[str, os.PathLike, MatrixAnnotatedKeyboard],
+    output_path,
+    *,
+    project_name: str,
+    own_uuid: str,
+    sheet_page: int = 1,
+    switch_footprint="",
+    diode_footprint="",
+    stabilizer_footprint="",
+    encoder_footprint="",
+    add_stabilizers: bool = True,
+    start_index: int = 1,
+) -> None:
+    if not can_create_schematic():
+        msg = "Requires optional schematic dependencies"
+        raise ImportError(msg)
+    if KICAD_VERSION < (9, 0, 0):
+        msg = "Requires KiCad 9.0 or higher"
+        raise RuntimeError(msg)
+
+    # A negative start index is the "unset" sentinel used by `ElementInfo`
+    # (see element_position.py); mirror the key placer and fall back to 1.
+    if start_index < 0:
+        logger.warning(f"Invalid switch start index: {start_index}, defaults to 1")
+        start_index = 1
+
+    if isinstance(keyboard, str) or isinstance(keyboard, os.PathLike):
+        _keyboard = get_annotated_keyboard_from_file(keyboard)
+    else:
+        _keyboard: MatrixAnnotatedKeyboard = keyboard
+
+    _keyboard.collapse()
+
+    row_prefix = _keyboard.row_prefix or ""
+    column_prefix = _keyboard.column_prefix or ""
+    row_label_prefix = row_prefix if row_prefix != "" else "ROW"
+    column_label_prefix = column_prefix if column_prefix != "" else "COL"
+
+    logger.debug(
+        f"Labels prefixes: for rows: '{row_label_prefix}', "
+        f"for columns: '{column_label_prefix}'"
+    )
+
+    keys = [k for k in _keyboard.keys_in_matrix_order()]
+    raw_positions = [MatrixAnnotatedKeyboard.get_matrix_position(k) for k in keys]
+    matrix = [
+        (int(pos[0][len(row_prefix) :]), int(pos[1][len(column_prefix) :]))
+        for pos in raw_positions
+    ]
+    logger.debug(f"Matrix: {matrix}")
+
+    # rows and columns does not necessarily contain each value from min to max,
+    # i.e. matrix can have columns numbers: 1, 2, 4, 5. Because whole
+    # element placing and wiring logic depends on fixed positions calculated
+    # from row/column values, the following `rows` and `columns` variables
+    # represents maximum size (using mentioned example, columns = 5 (and not 4).
+    # Even though the whole column 3 will be empty, it is easier to draw that.
+    # We also assume that both rows and columns starts from 0 and can't be negative.
+    rows = max(set([x[0] for x in matrix]))
+    columns = max(set([x[1] for x in matrix]))
+    logger.debug(f"Matrix size: {rows}x{columns}")
+
+    # Build reference map based on matrix position order (shared by switches
+    # and encoders). Numbering starts at `start_index` so the created switches
+    # (SW) and their diodes (D) can begin from a caller-specified value (e.g.
+    # 0 -> SW0/D0) instead of 1.
+    ref_map: Dict[Tuple[int, int], int] = {}
+    _ref = start_index
+    for _key, (_row, _col) in zip(keys, matrix):
+        pos = (_row, _col)
+        if pos not in ref_map:
+            ref_map[pos] = _ref
+            _ref += 1
+
+    # Separate rotary encoder keys (sm='rot_ec11') from regular switch keys.
+    # Net label names are derived from the raw matrix position via the shared
+    # `matrix_net_name` helper so that schematic labels match the net names
+    # produced by the board builder exactly (including leading-zero collapsing,
+    # e.g. "00" -> "COL0").
+    regular_keys = []
+    encoder_keys = []
+    for key, (row, column), raw_position in zip(keys, matrix, raw_positions):
+        row_label = matrix_net_name(row_label_prefix, raw_position[0])
+        column_label = matrix_net_name(column_label_prefix, raw_position[1])
+        entry = (key, row, column, row_label, column_label)
+        if key.sm == "rot_ec11":
+            encoder_keys.append(entry)
+        else:
+            regular_keys.append(entry)
+
+    # Precompute positions that have encoder alternatives,
+    # so the regular keys loop can add net labels on shared diode nets.
+    encoder_positions = {(row, col) for _, row, col, _, _ in encoder_keys}
+
+    with open(output_path, "w") as f:
+        size = (rows, columns)
+        f.write(
+            TEMPLATE.format(
+                page_size=get_lowest_paper_size(size),
+                own_uuid=own_uuid,
+                project_name=project_name,
+                sheet_page=sheet_page,
+            )
+        )
+
+    sch = Schematic(output_path)
+    base_switch = sch.symbol.reference_startswith("SW")[0]
+    switch_footprint_format = False
+    switch_loader = None
+    if switch_footprint:
+        switch_footprint_format = is_valid_template(switch_footprint)
+        if switch_footprint_format:
+            # Create loader for switch template footprints
+            switch_loader = SwitchFootprintLoader(switch_footprint)
+            # Format for schematic: LibraryName:FootprintName
+            base_switch.property.Footprint.value = (
+                switch_loader.get_footprint_for_schematic()
+            )
+        else:
+            # Non-template footprint, format for schematic
+            identifier = FootprintIdentifier.from_str(switch_footprint)
+            base_switch.property.Footprint.value = identifier.format_for_schematic()
+
+    base_stabilizer = sch.symbol.reference_startswith("ST")[0]
+    stabilizer_loader = None
+    if stabilizer_footprint:
+        if not is_valid_template(stabilizer_footprint):
+            msg = "Stabilizer footprint, if defined, must use size-templated definition"
+            raise RuntimeError(msg)
+        stabilizer_loader = StabilizerFootprintLoader(stabilizer_footprint)
+
+    base_diode = sch.symbol.reference_startswith("D")[0]
+    if diode_footprint:
+        # Format diode footprint for schematic: LibraryName:FootprintName
+        diode_identifier = FootprintIdentifier.from_str(diode_footprint)
+        base_diode.property.Footprint.value = diode_identifier.format_for_schematic()
+
+    base_encoder = sch.symbol.reference_startswith("ROT")[0]
+    if encoder_footprint:
+        encoder_identifier = FootprintIdentifier.from_str(encoder_footprint)
+        base_encoder.property.Footprint.value = (
+            encoder_identifier.format_for_schematic()
+        )
+
+    progress: Dict[Tuple[int, int], List[str]] = defaultdict(list)
+    diode_connection_positions = dict()
+
+    labels = set()
+    labels_positions = dict()
+
+    switches_with_stabs: List[Tuple[str, Key]] = []
+
+    for key, row, column, row_label, column_label in regular_keys:
+        position = (row, column)
+        logger.debug(f"row: {row} column: {column}")
+
+        used_slots = len(progress[position])
+        # clamp to maximum value (use same slot for all 3+ alternative keys)
+        # schematic readability will suffer but such layouts are uncommon anyway
+        used_slots = min(used_slots, 3)
+
+        switch = base_switch.clone()
+        if switch_footprint_format and switch_loader:
+            # Use SwitchFootprintLoader for automatic width discovery and fallback
+            # Format for schematic: LibraryName:FootprintName
+            footprint_for_schematic = switch_loader.get_footprint_for_schematic(key=key)
+            switch.property.Footprint.value = footprint_for_schematic
+        if used_slots == 0:
+            switch_reference = f"SW{ref_map[position]}"
+        else:
+            default_switch = progress[position][0]
+            switch_reference = f"{default_switch}_{used_slots}"
+        switch.setAllReferences(switch_reference)
+
+        if add_stabilizers and uses_stabilizer(key):
+            switches_with_stabs.append((switch_reference, key))
+
+        switch_x = _x(COLUMN_DISTANCE * int(column) + 5)
+        switch_y = _y(ROW_DISTANCE * int(row) + used_slots)
+        switch.move(switch_x, switch_y)
+        if used_slots != 0:
+            junc = sch.junction.new()
+            junc.move(switch.pin.n2.location.x, switch.pin.n2.location.y)
+            # must add explicit wire from junction to diode connection point
+            # kicad would be able to open and fix the schematic automatically
+            # if we don't do it, but we want to avoid using eeschema in our workflow
+            wire = sch.wire.new()
+            wire.start_at(junc.at)
+            wire.end_at(diode_connection_positions[position])
+        wire = sch.wire.new()
+        wire.start_at(switch.pin.n1)
+        wire.delta_x = -1 * UNIT
+        wire.delta_y = 0
+        if column_label not in labels and used_slots == 0:
+            column_wire = sch.wire.new()
+            column_wire.start_at(wire.end)
+            column_wire.delta_x = 0
+            column_wire.delta_y = (ROW_DISTANCE * (rows - row) + 15) * UNIT
+
+            label = sch.global_label.new()
+            label.move(column_wire.end.value[0], column_wire.end.value[1], 270)
+            label.value = column_label
+            labels.add(column_label)
+            labels_positions[column_label] = label.at
+        else:
+            junc = sch.junction.new()
+            junc.move(wire.end)
+            # must add explicit wire from junction back to label
+            # kicad would be able to open and fix the schematic automatically
+            # if we don't do it, but we want to avoid using eeschema in our workflow
+            wire = sch.wire.new()
+            wire.start_at(junc.at)
+            wire.end_at(labels_positions[column_label])
+
+        if used_slots == 0:
+            diode = base_diode.clone()
+            diode.setAllReferences(f"D{ref_map[position]}")
+            diode_x = switch_x + 2 * UNIT
+            diode_y = switch_y + 7 * UNIT
+            diode.move(diode_x, diode_y)
+            wire = sch.wire.new()
+            wire.start_at(switch.pin.n2)
+            wire.end_at(diode.pin.K)
+            # store the diode cathode pin location for alternative keys to connect
+            diode_connection_positions[position] = diode.pin.K.location
+            # if this position also has encoder alternatives, add a net label
+            # on a short stub so the encoder can reference the same net
+            # without drawing a long wire back to this point.
+            if position in encoder_positions:
+                net_label = sch.label.new()
+                net_label.move(diode.pin.K.location.x, diode.pin.K.location.y, 0)
+                net_label.value = f"Net-(D{ref_map[position]}-A)"
+            wire = sch.wire.new()
+            wire.start_at(diode.pin.A)
+            wire.delta_x = 0
+            wire.delta_y = 1 * UNIT
+            if row_label not in labels:
+                row_wire = sch.wire.new()
+                row_wire.start_at(wire.end)
+                row_wire.delta_x = (COLUMN_DISTANCE * (columns - column) + 5) * UNIT
+                row_wire.delta_y = 0
+
+                label = sch.global_label.new()
+                label.move(row_wire.end.value[0], row_wire.end.value[1], 0)
+                label.effects.justify.value = "left"
+                label.value = row_label
+                labels.add(row_label)
+                labels_positions[row_label] = label.at
+            else:
+                junc = sch.junction.new()
+                junc.move(wire.end)
+                # explicit wire from junction to label (same as for columns)
+                wire = sch.wire.new()
+                wire.start_at(junc.at)
+                wire.end_at(labels_positions[row_label])
+
+        progress[position].append(switch_reference)
+
+    # Placing stabilizers after we are done with key matrix because it makes it easier to position.
+    # Get leftmost label and start placing stabilizer symbols below it.
+    # `labels_positions` is only populated by regular matrix keys. It can be
+    # empty when the layout has no regular keys (e.g. a single rotary encoder
+    # key), in which case `min()` would raise. Fall back to a default origin so
+    # stabilizer/encoder placement still works instead of crashing.
+    if labels_positions:
+        stabilizer_position = min(labels_positions.values(), key=lambda p: p.value[0])
+        stabilizer_x = stabilizer_position.value[0]
+        stabilizer_y = stabilizer_position.value[1] + 20
+    else:
+        stabilizer_x = _x(4)
+        stabilizer_y = _y(15) + 20
+    for reference, key in switches_with_stabs:
+        logger.debug(
+            f"Processing stabilizer for {reference} (size {key.width}x{key.height})"
+        )
+        stabilizer_reference = reference.replace("SW", "ST")
+        stabilizer = base_stabilizer.clone()
+        stabilizer.setAllReferences(stabilizer_reference)
+        if stabilizer_loader:
+            footprint = stabilizer_loader.get_footprint_for_schematic(key=key)
+            if footprint:
+                stabilizer.property.Footprint.value = footprint
+        stabilizer.move(stabilizer_x, stabilizer_y)
+        stabilizer_x += 20
+
+    # Placing encoders after stabilizers.
+    # Encoder keys (sm='rot_ec11') are processed separately from the main matrix
+    # because the rotary encoder symbol is too large to fit in the grid layout.
+    # Encoders are placed below stabilizers, each with its own row/column labels.
+    if encoder_keys:
+        enc_x = stabilizer_x
+        enc_y = stabilizer_y + (20 if len(switches_with_stabs) != 0 else 0)
+
+        for key, row, column, row_label, column_label in encoder_keys:
+            position = (row, column)
+            used_slots = len(progress[position])
+            # clamp to maximum value (same treatment as alternative switches)
+            used_slots = min(used_slots, 3)
+            if used_slots == 0:
+                encoder_ref = f"SW{ref_map[position]}"
+            else:
+                default_ref = progress[position][0]
+                encoder_ref = f"{default_ref}_{used_slots}"
+            encoder = base_encoder.clone()
+            encoder.setAllReferences(encoder_ref)
+            encoder.move(enc_x, enc_y)
+
+            # Wire S1 → column label
+            s1_loc = encoder.pin.S1.location
+            s2_loc = encoder.pin.S2.location
+            target_x = s1_loc.value[0] + 1 * UNIT
+            target_y = s1_loc.value[1]
+
+            label = sch.global_label.new()
+            label.move(target_x, target_y, 0)
+            label.effects.justify.value = "left"
+            label.value = column_label
+
+            wire = sch.wire.new()
+            wire.start_at(encoder.pin.S1)
+            wire.end_at(label.at)
+
+            # Diode between S2 and row label.
+            # If this position already has a diode from a regular key
+            # (alternative encoder), draw the wire to the existing diode
+            # connection and add a net label at the encoder for readability.
+            if position in diode_connection_positions:
+                wire2 = sch.wire.new()
+                wire2.start_at(encoder.pin.S2)
+                wire2.delta_x = 1 * UNIT
+                wire2.delta_y = 0  # keep it horizontal
+                label = sch.label.new()
+                label.move(s2_loc.value[0] + 1 * UNIT, s2_loc.value[1], 0)
+                label.value = f"Net-(D{ref_map[position]}-A)"
+            else:
+                diode = base_diode.clone()
+                diode.setAllReferences(f"D{ref_map[position]}")
+                diode.move(enc_x + 6 * UNIT, enc_y + 7 * UNIT)
+
+                wire2 = sch.wire.new()
+                wire2.start_at(encoder.pin.S2)
+                wire2.end_at(diode.pin.K)
+
+                wire3 = sch.wire.new()
+                wire3.start_at(diode.pin.A)
+                wire3.delta_x = 0
+                wire3.delta_y = 1 * UNIT
+
+                row_wire = sch.wire.new()
+                row_wire.start_at(wire3.end)
+                row_wire.delta_x = 1 * UNIT
+                row_wire.delta_y = 0
+
+                label = sch.global_label.new()
+                label.move(row_wire.end.value[0], row_wire.end.value[1], 0)
+                label.effects.justify.value = "left"
+                label.value = row_label
+
+            progress[position].append(encoder_ref)
+            enc_x += 40
+
+    base_switch.delete()
+    base_stabilizer.delete()
+    base_diode.delete()
+    base_encoder.delete()
+
+    sch.write(output_path)
+
+
+if __name__ == "__main__":
+    import uuid
+
+    with open("schematic_builder.kicad_sch", "w") as f:
+        size = (10, 10)
+        f.write(
+            TEMPLATE.format(
+                page_size=get_lowest_paper_size(size),
+                own_uuid=str(uuid.uuid4()),
+                project_name="schematic_builder",
+                sheet_page=1,
+            )
+        )

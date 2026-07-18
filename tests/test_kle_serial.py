@@ -1,9 +1,15 @@
+# SPDX-FileCopyrightText: 2025 adamws <adamws@users.noreply.github.com>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 from __future__ import annotations
 
 import json
 import locale
 import logging
 import os
+import random
+import re
 import shutil
 import subprocess
 import sys
@@ -13,13 +19,22 @@ from pathlib import Path
 from typing import Tuple
 
 import pytest
-import pyurlon
 import yaml
 
 from kbplacer.kle_serial import (
+    KEY_MAX_LABELS,
+    KLE_NG_SHARE_PREFIX,
+    Key,
     Keyboard,
+    KeyboardTag,
     MatrixAnnotatedKeyboard,
+    apply_via_encoder_switch_mount,
+    get_explicit_spacing_from_file,
+    get_keyboard,
     get_keyboard_from_file,
+    keyboard_from_url,
+    keyboard_to_url,
+    layout_classification,
     parse_ergogen_points,
     parse_kle,
     parse_qmk,
@@ -37,14 +52,8 @@ def __minify(string: str) -> str:
     return string
 
 
-def keyboard_to_url(tmpdir, keyboard: Keyboard) -> None:
-    kle_raw = json.loads("[" + keyboard.to_kle() + "]")
-    if isinstance(kle_raw[0], dict):
-        for k, v in kle_raw[0].items():
-            kle_raw[0][k] = v.replace("_", "-")
-    kle_url = pyurlon.stringify(kle_raw)
-    kle_url = kle_url.replace("$", "_")
-    kle_url = "http://www.keyboard-layout-editor.com/##" + kle_url
+def keyboard_url_to_report(tmpdir, keyboard: Keyboard) -> None:
+    kle_url = keyboard_to_url(keyboard)
     add_url_to_report(tmpdir, kle_url)
 
 
@@ -76,6 +85,36 @@ def test_labels(layout, expected) -> None:
     assert [json.loads(result.to_kle())] == layout
 
 
+@pytest.mark.parametrize("metadata", [None, {}, {"unexpected_field": "should_ignore"}])
+def test_default_metadata(metadata) -> None:
+    if metadata:
+        result = parse_kle([metadata, ["x"]])
+    else:
+        result = parse_kle([["x"]])
+    assert result.meta.author == ""
+    assert result.meta.backcolor == "#eeeeee"
+    assert result.meta.background == None
+    assert result.meta.name == ""
+    assert result.meta.notes == ""
+    assert result.meta.radii == ""
+    assert result.meta.switchBrand == ""
+    assert result.meta.switchMount == ""
+    assert result.meta.switchType == ""
+    assert result.meta.spacing_x == 19.05
+    assert result.meta.spacing_y == 19.05
+    assert [json.loads(result.to_kle())] == [["x"]]
+    result2 = Keyboard.from_json(json.loads(result.to_json()))
+    assert result == result2
+
+
+def test_unexpectd_from_json_metadata() -> None:
+    result = parse_kle([["x"]])
+    keyboard_dict = json.loads(result.to_json())
+    keyboard_dict["meta"]["unexpected_field"] = "should_ignore"
+    result2 = Keyboard.from_json(keyboard_dict)
+    assert result == result2
+
+
 @pytest.mark.parametrize(
     # fmt: off
     "layout,expected",
@@ -90,7 +129,7 @@ def test_labels(layout, expected) -> None:
 )
 def test_via_labels(layout, expected) -> None:
     keyboard = parse_kle(layout)
-    annotated_keyboard = MatrixAnnotatedKeyboard(keyboard.meta, keyboard.keys)
+    annotated_keyboard = MatrixAnnotatedKeyboard.from_keyboard(keyboard)
     assert (
         MatrixAnnotatedKeyboard.get_matrix_position(annotated_keyboard.keys[0])
         == expected
@@ -108,10 +147,12 @@ def test_via_labels(layout, expected) -> None:
 )
 def test_illegal_via_labels(layout) -> None:
     with pytest.raises(
-        RuntimeError, match=r"Matrix coordinates label missing or invalid"
+        RuntimeError,
+        match="Keyboard object not convertible to matrix annotated keyboard: "
+        "Matrix coordinates label missing or invalid",
     ):
         keyboard = parse_kle(layout)
-        annotated_keyboard = MatrixAnnotatedKeyboard(keyboard.meta, keyboard.keys)
+        annotated_keyboard = MatrixAnnotatedKeyboard.from_keyboard(keyboard)
         MatrixAnnotatedKeyboard.get_matrix_position(annotated_keyboard.keys[0])
 
 
@@ -199,13 +240,107 @@ def test_if_produces_valid_json() -> None:
     assert (
         result.to_json() == '{"meta": '
         '{"author": "", "backcolor": "#eeeeee", "background": null, "name": "", '
-        '"notes": "", "radii": "", "switchBrand": "", "switchMount": "", "switchType": ""}, '
+        '"notes": "", "radii": "", "switchBrand": "", "switchMount": "", "switchType": "", '
+        '"spacing_x": 19.05, "spacing_y": 19.05}, '
         '"keys": [{"color": "#cccccc", "labels": ["x"], "textColor": [], "textSize": [], '
         '"default": {"textColor": "#000000", "textSize": 3}, "x": 0, "y": 0, "width": 1, '
         '"height": 1, "x2": 0, "y2": 0, "width2": 1, "height2": 1, "rotation_x": 0, '
         '"rotation_y": 0, "rotation_angle": 0, "decal": false, "ghost": false, "stepped": false, '
-        '"nub": false, "profile": "", "sm": "", "sb": "", "st": ""}]}'
+        '"nub": false, "profile": "", "sm": "", "sb": "", "st": "", '
+        '"switchRotation": 0, "stabRotation": 0}]}'
     )
+
+
+def test_internal_kle_without_new_rotation_fields_uses_defaults() -> None:
+    """Internal KLE JSON that predates switchRotation/stabRotation should load
+    with both fields defaulting to 0."""
+    data = {
+        "meta": {},
+        "keys": [
+            {
+                "color": "#cccccc",
+                "labels": ["A"],
+                "textColor": [],
+                "textSize": [],
+                "default": {"textColor": "#000000", "textSize": 3},
+                "x": 0,
+                "y": 0,
+                "width": 1,
+                "height": 1,
+                "x2": 0,
+                "y2": 0,
+                "width2": 1,
+                "height2": 1,
+                "rotation_x": 0,
+                "rotation_y": 0,
+                "rotation_angle": 0,
+                "decal": False,
+                "ghost": False,
+                "stepped": False,
+                "nub": False,
+                "profile": "",
+                "sm": "",
+                "sb": "",
+                "st": "",
+                # switchRotation and stabRotation intentionally absent
+            }
+        ],
+    }
+    keyboard = Keyboard.from_json(data)
+    assert len(keyboard.keys) == 1
+    assert keyboard.keys[0].switchRotation == 0
+    assert keyboard.keys[0].stabRotation == 0
+
+
+@pytest.mark.parametrize(
+    "layout,expected_switch_rotations,expected_stab_rotations",
+    [
+        # default values
+        ([[" A"]], [0], [0]),
+        # single key with _r
+        ([[{"_r": 90}, "A"]], [90], [0]),
+        # single key with _rs
+        ([[{"_rs": 180}, "A"]], [0], [180]),
+        # _r propagates across keys, reset with _r: 0
+        ([[{"_r": 90}, "A", "B", {"_r": 0}, "C"]], [90, 90, 0], [0, 0, 0]),
+        # _rs propagates across keys
+        ([[{"_rs": 45}, "A", "B"]], [0, 0], [45, 45]),
+        # combined _r and _rs with propagation
+        (
+            [[{"_r": 90, "_rs": -180}, "A", {"_r": 270}, "B"]],
+            [90, 270],
+            [-180, -180],
+        ),
+    ],
+)
+def test_switch_and_stab_rotation(
+    layout, expected_switch_rotations, expected_stab_rotations
+) -> None:
+    keyboard = parse_kle(layout)
+    assert len(keyboard.keys) == len(expected_switch_rotations)
+    for key, exp_sw, exp_st in zip(
+        keyboard.keys, expected_switch_rotations, expected_stab_rotations
+    ):
+        assert key.switchRotation == exp_sw
+        assert key.stabRotation == exp_st
+
+
+@pytest.mark.parametrize(
+    "layout",
+    [
+        [[{"_r": 90}, "A"]],
+        [[{"_rs": 45}, "A"]],
+        [[{"_r": 30, "_rs": -90}, "A", "B"]],
+    ],
+)
+def test_switch_and_stab_rotation_roundtrip(layout) -> None:
+    """Verify that _r/_rs survive a to_kle() -> parse_kle() roundtrip."""
+    original = parse_kle(layout)
+    kle_str = "[" + original.to_kle() + "]"
+    restored = parse_kle(json.loads(kle_str))
+    for orig_key, rest_key in zip(original.keys, restored.keys):
+        assert orig_key.switchRotation == rest_key.switchRotation
+        assert orig_key.stabRotation == rest_key.stabRotation
 
 
 def __get_invalid_parse_parameters():
@@ -217,6 +352,7 @@ def __get_invalid_parse_parameters():
     test_params.append(pytest.param(["", ""], id="list-of-unexpected-type"))
     test_params.append(pytest.param([{}, {}], id="list-with-wrong-dict-position"))
     test_params.append(pytest.param([[], {}], id="list-with-wrong-dict-position-2"))
+    test_params.append(pytest.param([[True]], id="unexpected-type"))
     return test_params
 
 
@@ -262,6 +398,7 @@ def __get_parameters():
         "iso-105",
         "kinesis-advantage",
         "symbolics-spacecadet",
+        "three-keys-middle-non-default-smsbst-right-ghosted",
     ]
     for f in kle_presets:
         param = pytest.param(
@@ -284,14 +421,17 @@ def __get_parameters():
 
 
 @pytest.mark.parametrize("layout_file,reference_file", __get_parameters())
-def test_with_kle_references(layout_file, reference_file, request) -> None:
+@pytest.mark.parametrize("get_function", [parse_kle, get_keyboard])
+def test_with_kle_references(
+    layout_file, reference_file, get_function, request
+) -> None:
     test_dir = request.fspath.dirname
 
     reference = get_reference(Path(test_dir) / reference_file)
 
     with open(Path(test_dir) / layout_file, "r") as f:
         layout = json.load(f)
-        result = parse_kle(layout)
+        result = get_function(layout)
         assert result == reference
 
         f.seek(0)
@@ -301,7 +441,8 @@ def test_with_kle_references(layout_file, reference_file, request) -> None:
 
 
 @pytest.mark.parametrize("example", ["2x2", "1x2-with-2U-bottom", "1x1-rotated"])
-def test_with_ergogen(tmpdir, example, request) -> None:
+@pytest.mark.parametrize("get_function", [parse_ergogen_points, get_keyboard])
+def test_with_ergogen(tmpdir, example, get_function, request) -> None:
     test_dir = request.fspath.dirname
 
     reference = get_reference(
@@ -311,14 +452,14 @@ def test_with_ergogen(tmpdir, example, request) -> None:
     # very simple example layout
     with open(Path(test_dir) / f"data/ergogen-layouts/{example}.json", "r") as f:
         layout = json.load(f)
-        result = parse_ergogen_points(layout)
-        keyboard_to_url(tmpdir, result)
+        result = get_function(layout)
+        keyboard_url_to_report(tmpdir, result)
         assert result == reference
 
 
 def _layout_collapse(layout) -> MatrixAnnotatedKeyboard:
     tmp = parse_kle(layout)
-    keyboard = MatrixAnnotatedKeyboard(meta=tmp.meta, keys=tmp.keys)
+    keyboard = MatrixAnnotatedKeyboard.from_keyboard(tmp)
     keyboard.collapse()
     return keyboard
 
@@ -338,9 +479,7 @@ def test_iso_enter_layout_collapse() -> None:
     # fmt: on
     result = _layout_collapse(layout)
     expected_keyboard = parse_kle(expected)
-    expected_keyboard = MatrixAnnotatedKeyboard(
-        meta=expected_keyboard.meta, keys=expected_keyboard.keys
-    )
+    expected_keyboard = MatrixAnnotatedKeyboard.from_keyboard(expected_keyboard)
     expected_keyboard.collapsed = True
     assert result == expected_keyboard
 
@@ -360,9 +499,7 @@ def test_bottom_row_collapse_no_extra_keys() -> None:
     # fmt: on
     result = _layout_collapse(layout)
     expected_keyboard = parse_kle(expected)
-    expected_keyboard = MatrixAnnotatedKeyboard(
-        meta=expected_keyboard.meta, keys=expected_keyboard.keys
-    )
+    expected_keyboard = MatrixAnnotatedKeyboard.from_keyboard(expected_keyboard)
     expected_keyboard.collapsed = True
     assert result == expected_keyboard
     assert len(result.alternative_keys) == 0
@@ -380,9 +517,7 @@ def test_bottom_row_decal_handling() -> None:
     # fmt: on
     result = _layout_collapse(layout)
     expected_keyboard = parse_kle(expected)
-    expected_keyboard = MatrixAnnotatedKeyboard(
-        meta=expected_keyboard.meta, keys=expected_keyboard.keys
-    )
+    expected_keyboard = MatrixAnnotatedKeyboard.from_keyboard(expected_keyboard)
     expected_keyboard.collapsed = True
     assert result == expected_keyboard
     assert len(result.alternative_keys) == 1
@@ -403,9 +538,7 @@ def test_collapse_ignores_decal_keys_in_default_key_group() -> None:
     # fmt: on
     result = _layout_collapse(layout)
     expected_keyboard = parse_kle(expected)
-    expected_keyboard = MatrixAnnotatedKeyboard(
-        meta=expected_keyboard.meta, keys=expected_keyboard.keys
-    )
+    expected_keyboard = MatrixAnnotatedKeyboard.from_keyboard(expected_keyboard)
     expected_keyboard.collapsed = True
     assert result == expected_keyboard
     assert len(result.alternative_keys) == 1
@@ -427,9 +560,7 @@ def test_collapse_detects_duplicated_keys() -> None:
     # fmt: on
     result = _layout_collapse(layout)
     expected_keyboard = parse_kle(expected)
-    expected_keyboard = MatrixAnnotatedKeyboard(
-        meta=expected_keyboard.meta, keys=expected_keyboard.keys
-    )
+    expected_keyboard = MatrixAnnotatedKeyboard.from_keyboard(expected_keyboard)
     expected_keyboard.collapsed = True
     assert result == expected_keyboard
     assert len(result.alternative_keys) == 2
@@ -443,8 +574,9 @@ def test_duplicate_matrix_position_in_default_group_not_allowed() -> None:
     ]
     # fmt: on
     with pytest.raises(
-        ValueError,
-        match=r"Duplicate matrix position for default layout keys not allowed",
+        RuntimeError,
+        match="Keyboard object not convertible to matrix annotated keyboard: "
+        "Duplicate matrix position for default layout keys not allowed",
     ):
         _ = _layout_collapse(layout)
 
@@ -463,18 +595,23 @@ def test_illegal_layout_option_label() -> None:
 
 
 @pytest.mark.parametrize("example", ["0_sixty", "crkbd", "wt60_a", "wt60_d"])
+@pytest.mark.parametrize("get_function", [parse_via, get_keyboard])
 @pytest.mark.parametrize("collapses", [1, 2])
-def test_with_via_layouts(tmpdir, request, example, collapses) -> None:
+def test_with_via_layouts(tmpdir, request, example, get_function, collapses) -> None:
     test_dir = request.fspath.dirname
 
     def _reference_keyboard(filename: str) -> MatrixAnnotatedKeyboard:
         reference = get_reference(Path(test_dir) / "data/via-layouts" / filename)
-        return MatrixAnnotatedKeyboard(reference.meta, reference.keys)
+        return MatrixAnnotatedKeyboard.from_keyboard(reference)
 
     with open(Path(test_dir) / f"data/via-layouts/{example}.json", "r") as f:
         layout = json.load(f)
-        result = parse_via(layout)
-        keyboard_to_url(tmpdir, result)
+        result = get_function(layout)
+        assert isinstance(result, MatrixAnnotatedKeyboard)
+        # calling MatrixAnnotatedKeyboard.from_keyboard on
+        # MatrixAnnotatedKeyboard must be noop:
+        assert MatrixAnnotatedKeyboard.from_keyboard(result) == result
+        keyboard_url_to_report(tmpdir, result)
         assert result == _reference_keyboard(f"{example}-internal.json")
         # calling this multiple times should not matter
         for _ in range(0, collapses):
@@ -483,23 +620,32 @@ def test_with_via_layouts(tmpdir, request, example, collapses) -> None:
         reference_collapsed = _reference_keyboard(f"{example}-internal-collapsed.json")
         assert result.keys == reference_collapsed.keys
         assert result.alternative_keys == reference_collapsed.alternative_keys
-        # convert back to `Keyboard` dataclass preserving expected key order:
-        result = Keyboard(meta=result.meta, keys=result.keys_in_matrix_order())
-        reference_collapsed_as_keyboard = Keyboard(
-            meta=reference_collapsed.meta,
-            keys=reference_collapsed.keys_in_matrix_order(),
+        # check iterator
+        keys_without_alternative = list(result.key_iterator(ignore_alternative=True))
+        assert all(
+            elem not in keys_without_alternative for elem in result.alternative_keys
         )
-        assert result.keys == reference_collapsed_as_keyboard.keys
+        keys_with_alternative = list(result.key_iterator(ignore_alternative=False))
+        assert result.keys == keys_without_alternative
+        assert result.keys + result.alternative_keys == keys_with_alternative
+
+        # convert back to `Keyboard` dataclass preserving expected key order:
+        result = result.to_keyboard()
+        reference_collapsed = reference_collapsed.to_keyboard()
+        assert result.keys == reference_collapsed.keys
 
 
 @pytest.mark.parametrize("example", ["0_sixty", "crkbd", "wt60_a", "wt60_d"])
-def test_with_qmk_layouts(tmpdir, request, example) -> None:
+@pytest.mark.parametrize("get_function", [parse_qmk, get_keyboard])
+def test_with_qmk_layouts(tmpdir, request, example, get_function) -> None:
     test_dir = request.fspath.dirname
 
     with open(Path(test_dir) / f"data/qmk-layouts/{example}.json", "r") as f:
         layout = json.load(f)
-        result = parse_qmk(layout).to_keyboard()
-        keyboard_to_url(tmpdir, result)
+        result = get_function(layout)
+        assert isinstance(result, MatrixAnnotatedKeyboard)
+        result = result.to_keyboard()
+        keyboard_url_to_report(tmpdir, result)
         # qmk layouts are already 'collapsed', i.e. keys are at final positions
         # and there are no duplicates
         reference = get_reference(
@@ -508,16 +654,65 @@ def test_with_qmk_layouts(tmpdir, request, example) -> None:
         assert result.keys == reference.keys
 
         # qmk layout should be convertible to `MatrixAnnotatedKeyboard` type
-        result = MatrixAnnotatedKeyboard(result.meta, result.keys)
+        result = MatrixAnnotatedKeyboard.from_keyboard(result)
         # there is no automatic detection if layout is already collapsed (prior to calling `collapse`
         # for the first time, this would require implementing rotated polygons collision detection
         # which is too much work for now for this one edge case
         result.collapsed = True
         result.collapse()
 
-        reference_collapsed = MatrixAnnotatedKeyboard(reference.meta, reference.keys)
+        reference_collapsed = MatrixAnnotatedKeyboard.from_keyboard(reference)
         assert result.keys == reference_collapsed.keys
         assert result.alternative_keys == reference_collapsed.alternative_keys
+
+
+class TestQmkCorruptedData:
+    @pytest.fixture()
+    def qmk(self, request):
+        test_dir = request.fspath.dirname
+        example = "0_sixty"
+
+        with open(Path(test_dir) / f"data/qmk-layouts/{example}.json", "r") as f:
+            layout = json.load(f)
+            yield layout
+
+    def test_missing_layouts_value(self, qmk) -> None:
+        del qmk["layouts"]
+        with pytest.raises(
+            RuntimeError, match="Invalid QMK data, required 'layouts' value not found"
+        ):
+            _ = parse_qmk(qmk)
+
+    def test_missing_layout_value(self, qmk) -> None:
+        key_to_delete_from = random.choice(list(qmk["layouts"].keys()))
+        del qmk["layouts"][key_to_delete_from]["layout"]
+        with pytest.raises(
+            RuntimeError, match="Invalid QMK data, required 'layout' value not found"
+        ):
+            _ = parse_qmk(qmk)
+
+    def test_invalid_layouts_type(self, qmk) -> None:
+        layout_to_corrupt = random.choice(list(qmk["layouts"].keys()))
+        qmk["layouts"][layout_to_corrupt]["layout"][
+            0
+        ] = "expected dict, this is a string"
+        with pytest.raises(
+            RuntimeError,
+            match="Unexpected data appeared while parsing QMK layout: '.*'",
+        ):
+            _ = parse_qmk(qmk)
+
+    @pytest.mark.parametrize("new_value", ["string", [0, 1, 3], [], [0], {}])
+    def test_invalid_matrix(self, qmk, new_value) -> None:
+        layout_to_corrupt = random.choice(list(qmk["layouts"].keys()))
+        qmk["layouts"][layout_to_corrupt]["layout"][0]["matrix"] = new_value
+        with pytest.raises(
+            RuntimeError,
+            match=re.escape(
+                f"Unexpected key matrix position appeared while parsing QMK layout: '{new_value}'"
+            ),
+        ):
+            _ = parse_qmk(qmk)
 
 
 @pytest.mark.parametrize(
@@ -560,7 +755,7 @@ def test_keys_in_matrix_order(layout, expected_order) -> None:
     tmp = parse_kle(layout)
     layout_order = copy(tmp.keys)
 
-    keyboard = MatrixAnnotatedKeyboard(meta=tmp.meta, keys=tmp.keys)
+    keyboard = MatrixAnnotatedKeyboard.from_keyboard(tmp)
     keys = keyboard.keys_in_matrix_order()
 
     for k, index in zip(keys, expected_order):
@@ -568,19 +763,19 @@ def test_keys_in_matrix_order(layout, expected_order) -> None:
 
 
 @pytest.mark.parametrize(
-    "layout",
+    "layout,reason",
     [
         # fmt: off
-        [["R4,C"]],
-        [["4,0","R,C0","4,2"]],
+        ([["R4,C"]], "Unexpected format of matrix coordinates label part"),
+        ([["0,0","R0,1"]], "Matrix position prefix must be common across rows and columns"),
         # fmt: on
     ],
 )
-def test_keys_in_matrix_order_illegal_labels(layout) -> None:
+def test_keys_in_matrix_order_illegal_labels(layout, reason) -> None:
     tmp = parse_kle(layout)
-    keyboard = MatrixAnnotatedKeyboard(meta=tmp.meta, keys=tmp.keys)
-    with pytest.raises(ValueError, match=r"No numeric part for row or column found in"):
-        keyboard.keys_in_matrix_order()
+    error = "Keyboard object not convertible to matrix annotated keyboard: "
+    with pytest.raises(RuntimeError, match=error + reason):
+        _ = MatrixAnnotatedKeyboard.from_keyboard(tmp)
 
 
 class TestKleSerialCli:
@@ -640,11 +835,11 @@ class TestKleSerialCli:
             package_path,
             package_name,
             {
-                "-in": raw,
-                "-inform": "KLE_RAW",
-                "-out": str(internal_tmp),
-                "-outform": "KLE_INTERNAL",
-                "-text": "",
+                "--in": raw,
+                "--inform": "KLE_RAW",
+                "--out": str(internal_tmp),
+                "--outform": "KLE_INTERNAL",
+                "--text": "",
             },
         )
         p.communicate()
@@ -657,11 +852,11 @@ class TestKleSerialCli:
             package_path,
             package_name,
             {
-                "-in": str(internal_tmp),
-                "-inform": "KLE_INTERNAL",
-                "-out": str(raw_tmp),
-                "-outform": "KLE_RAW",
-                "-text": "",
+                "--in": str(internal_tmp),
+                "--inform": "KLE_INTERNAL",
+                "--out": str(raw_tmp),
+                "--outform": "KLE_RAW",
+                "--text": "",
             },
         )
         p.communicate()
@@ -705,14 +900,14 @@ class TestKleSerialCli:
         tmp_file = Path(layout_in).with_suffix(".json.tmp")
 
         args = {
-            "-in": layout_in,
-            "-inform": inform,
-            "-out": str(tmp_file),
-            "-outform": outform,
-            "-text": "",
+            "--in": layout_in,
+            "--inform": inform,
+            "--out": str(tmp_file),
+            "--outform": outform,
+            "--text": "",
         }
         if collapse:
-            args["-collapse"] = ""
+            args["--collapse"] = ""
 
         p = self._run_subprocess(package_path, package_name, args)
         p.communicate()
@@ -757,14 +952,14 @@ class TestKleSerialCli:
         tmp_file = Path(layout_file).with_suffix(".json.tmp")
 
         args = {
-            "-in": layout_file,
-            "-inform": "ERGOGEN_INTERNAL",
-            "-out": str(tmp_file),
-            "-outform": "KLE_RAW",
-            "-text": "",
+            "--in": layout_file,
+            "--inform": "ERGOGEN_INTERNAL",
+            "--out": str(tmp_file),
+            "--outform": "KLE_RAW",
+            "--text": "",
         }
         if ergogen_filter:
-            args["-ergogen-filter"] = ergogen_filter
+            args["--ergogen-filter"] = ergogen_filter
         p = self._run_subprocess(package_path, package_name, args)
         p.communicate()
         assert p.returncode == 0
@@ -785,11 +980,11 @@ class TestKleSerialCli:
         layout_file = f"{tmpdir}/{example}-points.yaml"
         tmp_file = Path(layout_file).with_suffix(".json.tmp")
         args = {
-            "-in": layout_file,
-            "-inform": "ERGOGEN_INTERNAL",
-            "-out": str(tmp_file),
-            "-outform": "KLE_RAW",
-            "-text": "",
+            "--in": layout_file,
+            "--inform": "ERGOGEN_INTERNAL",
+            "--out": str(tmp_file),
+            "--outform": "KLE_RAW",
+            "--text": "",
         }
         p = self._run_subprocess(package_path, package_name, args)
         p.communicate()
@@ -809,11 +1004,11 @@ class TestKleSerialCli:
             package_path,
             package_name,
             {
-                "-in": f"{tmpdir}/in.json",
-                "-inform": form,
-                "-out": f"{tmpdir}/out.json",
-                "-outform": form,
-                "-text": "",
+                "--in": f"{tmpdir}/in.json",
+                "--inform": form,
+                "--out": f"{tmpdir}/out.json",
+                "--outform": form,
+                "--text": "",
             },
         )
         outs, _ = p.communicate()
@@ -833,3 +1028,199 @@ def test_utf8_label(request) -> None:
     keyboard = get_keyboard_from_file(layout_path)
     assert len(keyboard.keys) == 1
     assert keyboard.keys[0].labels == ["😊"]
+
+
+def test_illegal_key_label_position() -> None:
+    k = Key()
+    with pytest.raises(RuntimeError, match="Illegal key label index"):
+        k.set_label(KEY_MAX_LABELS, "Enter")
+
+
+def __get_layout_classification_parameters():
+    test_params = []
+    kle_presets = [
+        # some standard layouts from keyboard-layout-editor.com
+        (
+            "ansi-104-big-ass-enter",
+            [KeyboardTag.ROW_STAGGERED, KeyboardTag.WITH_UNRECOGNIZED_KEY_SHAPE],
+        ),
+        ("ansi-104", [KeyboardTag.ROW_STAGGERED]),
+        ("atreus", [KeyboardTag.OTHER]),
+        ("ergodox", [KeyboardTag.OTHER]),
+        ("iso-105", [KeyboardTag.ROW_STAGGERED, KeyboardTag.ISO]),
+        ("kinesis-advantage", [KeyboardTag.OTHER]),
+        ("planck", [KeyboardTag.ORTHOLINEAR]),
+        # and column stagger example:
+        ("jiran", [KeyboardTag.COLUMN_STAGGERED]),
+    ]
+    for f, expected in kle_presets:
+        param = pytest.param(
+            f"./data/kle-layouts/{f}.json",
+            expected,
+            id=f,
+        )
+        test_params.append(param)
+
+    return test_params
+
+
+@pytest.mark.parametrize(
+    "layout_file,expected_tags", __get_layout_classification_parameters()
+)
+def test_layout_classification(layout_file, expected_tags, request) -> None:
+    test_dir = request.fspath.dirname
+
+    with open(Path(test_dir) / layout_file, "r") as f:
+        layout = json.load(f)
+        result = get_keyboard(layout)
+        tags = layout_classification(result)
+        assert tags == expected_tags
+
+
+@pytest.mark.parametrize(
+    "layout_file,expected_spacing",
+    [
+        # Layouts with custom explicit spacing
+        ("./data/kle-layouts/test-custom-spacing.json", (20.5, 21.0)),
+        ("./data/kle-layouts/test-custom-spacing-internal.json", (20.5, 21.0)),
+        # Layout without spacing fields (should return None)
+        ("./data/kle-layouts/test-no-spacing-internal.json", None),
+        # Layout with default spacing (19.05, 19.05) - should return it since it's explicit
+        ("./data/kle-layouts/ansi-104-internal.json", (19.05, 19.05)),
+        # Layout with invalid spacing definition (should fallback to None)
+        ("./data/kle-layouts/test-no-spacing-illegal.json", None),
+    ],
+)
+def test_get_explicit_spacing_from_file(layout_file, expected_spacing, request) -> None:
+    test_dir = request.fspath.dirname
+    layout_path = Path(test_dir) / layout_file
+
+    result = get_explicit_spacing_from_file(layout_path)
+    assert result == expected_spacing
+
+
+def test_keyboard_url_roundtrip_inline() -> None:
+    """Simple inline roundtrip: Keyboard -> URL -> Keyboard."""
+    layout = [["A", "B"]]
+    keyboard = parse_kle(layout)
+    url = keyboard_to_url(keyboard)
+    assert url.startswith(KLE_NG_SHARE_PREFIX)
+    result = keyboard_from_url(url)
+    assert result == keyboard
+
+
+@pytest.mark.parametrize("layout_file,reference_file", __get_parameters())
+def test_keyboard_url_roundtrip(layout_file, reference_file, request) -> None:
+    """Roundtrip known reference layouts through URL encoding."""
+    test_dir = request.fspath.dirname
+    reference = get_reference(Path(test_dir) / reference_file)
+    url = keyboard_to_url(reference)
+    result = keyboard_from_url(url)
+    assert result == reference
+
+
+class TestApplyViaEncoderSwitchMount:
+    def _make_via_keyboard(
+        self, *, num_regular: int = 2, encoder_labels: list
+    ) -> Keyboard:
+        """Build a keyboard with `num_regular` normal keys and one key per
+        encoder label.  Encoders use alignment=7 so the label lands at index 4."""
+        rows = [["0," + str(i) for i in range(num_regular)]]
+        for label in encoder_labels:
+            rows.append([{"a": 7}, label])
+        return parse_kle(rows)
+
+    def test_encoder_keys_get_sm_set(self) -> None:
+        keyboard = self._make_via_keyboard(encoder_labels=["e0", "e1"])
+        apply_via_encoder_switch_mount(keyboard)
+        regular_keys = keyboard.keys[:2]
+        encoder_keys = keyboard.keys[2:]
+        assert all(k.sm == "" for k in regular_keys)
+        assert all(k.sm == "rot_ec11" for k in encoder_keys)
+
+    def test_no_encoders_no_change(self) -> None:
+        keyboard = self._make_via_keyboard(encoder_labels=[])
+        original_sm = [k.sm for k in keyboard.keys]
+        apply_via_encoder_switch_mount(keyboard)
+        assert [k.sm for k in keyboard.keys] == original_sm
+
+    @pytest.mark.parametrize("label", ["e0", "e1", "e10", "e99"])
+    def test_encoder_label_patterns_match(self, label: str) -> None:
+        keyboard = self._make_via_keyboard(encoder_labels=[label])
+        apply_via_encoder_switch_mount(keyboard)
+        assert keyboard.keys[-1].sm == "rot_ec11"
+
+    @pytest.mark.parametrize("label", ["0,0", "enc0", "e", "e0x", "E0"])
+    def test_non_encoder_label_patterns_no_match(self, label: str) -> None:
+        # Place label at index 4 (a=7 alignment) but it must NOT trigger conversion
+        keyboard = parse_kle([[{"a": 7}, label]])
+        apply_via_encoder_switch_mount(keyboard)
+        assert keyboard.keys[0].sm == ""
+
+    def test_existing_sm_not_overwritten_for_non_encoder(self) -> None:
+        keyboard = parse_kle([[{"sm": "myswitch"}, "A"]])
+        apply_via_encoder_switch_mount(keyboard)
+        assert keyboard.keys[0].sm == "myswitch"
+
+    def test_encoder_sm_overwritten(self) -> None:
+        # Even if an encoder already has sm set, conversion updates it
+        keyboard = self._make_via_keyboard(encoder_labels=["e0"])
+        keyboard.keys[-1].sm = "old_value"
+        apply_via_encoder_switch_mount(keyboard)
+        assert keyboard.keys[-1].sm == "rot_ec11"
+
+
+class TestConvertViaEncodersCli(TestKleSerialCli):
+    def test_convert_via_encoders_flag_sets_sm(
+        self, request, tmpdir, package_path, package_name
+    ) -> None:
+        test_dir = request.fspath.dirname
+        layout_file = f"{test_dir}/data/via-layouts/2x2-with-encoders.json"
+        out_file = f"{tmpdir}/result.json"
+
+        p = self._run_subprocess(
+            package_path,
+            package_name,
+            {
+                "--in": layout_file,
+                "--inform": "KLE_VIA",
+                "--out": out_file,
+                "--outform": "KLE_INTERNAL",
+                "--convert-via-encoders": "",
+            },
+        )
+        p.communicate()
+        assert p.returncode == 0
+
+        with open(out_file, "r") as f:
+            result = json.load(f)
+
+        keys = result["keys"]
+        # 2x2 regular keys + 2 encoders
+        assert len(keys) == 6
+        regular_keys = keys[:4]
+        encoder_keys = keys[4:]
+        assert all(k["sm"] == "" for k in regular_keys)
+        assert all(k["sm"] == "rot_ec11" for k in encoder_keys)
+
+    @pytest.mark.parametrize(
+        "inform",
+        ["KLE_RAW", "KLE_INTERNAL", "ERGOGEN_INTERNAL", "QMK"],
+    )
+    def test_convert_via_encoders_requires_kle_via(
+        self, request, tmpdir, package_path, package_name, inform
+    ) -> None:
+        # --convert-via-encoders with any non-KLE_VIA inform must exit non-zero
+        p = self._run_subprocess(
+            package_path,
+            package_name,
+            {
+                "--in": f"{tmpdir}/dummy.json",
+                "--inform": inform,
+                "--outform": "KLE_INTERNAL",
+                "--convert-via-encoders": "",
+            },
+        )
+        _, stderr = p.communicate()
+        assert p.returncode != 0
+        assert "--convert-via-encoders can only be used with --inform KLE_VIA" in stderr

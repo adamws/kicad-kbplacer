@@ -1,18 +1,39 @@
+# SPDX-FileCopyrightText: 2025 adamws <adamws@users.noreply.github.com>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 from __future__ import annotations
 
 import argparse
 import copy
+import inspect
 import json
 import logging
+import os
 import pprint
 import re
 import sys
+import webbrowser
 from collections import defaultdict
-from dataclasses import asdict, dataclass, field, fields
+from dataclasses import asdict, dataclass, field
+from enum import Enum, auto
 from itertools import chain
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
 
+from .lzstring import LZString
+
+try:
+    import yaml
+
+    WITH_YAML_SUPPORT = True
+except ImportError:
+    yaml = None
+    WITH_YAML_SUPPORT = False
+
 logger = logging.getLogger(__name__)
+lz = LZString()
+
+KLE_NG_SHARE_PREFIX = "https://editor.keyboard-tools.xyz/#share="
 
 DEFAULT_KEY_COLOR = "#cccccc"
 DEFAULT_TEXT_COLOR = "#000000"
@@ -80,6 +101,8 @@ class Key:
     sm: str = ""  # switch mount
     sb: str = ""  # switch brand
     st: str = ""  # switch type
+    switchRotation: float = 0  # noqa: N815
+    stabRotation: float = 0  # noqa: N815
 
     def __post_init__(self: Key) -> None:
         if isinstance(self.default, dict):
@@ -104,6 +127,12 @@ class Key:
         self.labels[index] = value
 
 
+def is_iso_enter(key: Key) -> bool:
+    if key.width == 1.25 and key.height == 2 and key.width2 == 1.5 and key.height2 == 1:
+        return True
+    return False
+
+
 @dataclass
 class Background:
     name: str = ""
@@ -112,6 +141,7 @@ class Background:
 
 @dataclass
 class KeyboardMetadata:
+    # metadata fields defined by original keyboard-layout-editor:
     author: str = ""
     backcolor: str = "#eeeeee"
     background: Optional[Background] = None
@@ -121,10 +151,19 @@ class KeyboardMetadata:
     switchBrand: str = ""  # noqa: N815
     switchMount: str = ""  # noqa: N815
     switchType: str = ""  # noqa: N815
+    # metadata fields added by kle-ng:
+    spacing_x: float = 19.05
+    spacing_y: float = 19.05
 
     def __post_init__(self: KeyboardMetadata) -> None:
         if isinstance(self.background, dict):
             self.background = Background(**self.background)
+
+    @classmethod
+    def from_json(cls: Type[KeyboardMetadata], data: dict) -> KeyboardMetadata:
+        return cls(
+            **{k: v for k, v in data.items() if k in inspect.signature(cls).parameters}
+        )
 
 
 @dataclass
@@ -135,7 +174,7 @@ class Keyboard:
     @classmethod
     def from_json(cls: Type[Keyboard], data: dict) -> Keyboard:
         if isinstance(data["meta"], dict):
-            data["meta"] = KeyboardMetadata(**data["meta"])
+            data["meta"] = KeyboardMetadata.from_json(data["meta"])
         if isinstance(data["keys"], list):
             keys: List[Key] = [Key(**key) for key in data["keys"]]
             data["keys"] = keys
@@ -239,6 +278,12 @@ class Keyboard:
             current.sm = add_prop("sm", key.sm, current.sm)
             current.sb = add_prop("sb", key.sb, current.sb)
             current.st = add_prop("st", key.st, current.st)
+            current.switchRotation = add_prop(
+                "_r", key.switchRotation, current.switchRotation
+            )
+            current.stabRotation = add_prop(
+                "_rs", key.stabRotation, current.stabRotation
+            )
 
             current_alignment = add_prop("a", alignment, current_alignment)
             current.default.textSize = add_prop(
@@ -311,24 +356,56 @@ class MatrixAnnotatedKeyboard(Keyboard):
     alternative_keys: List[Key] = field(default_factory=list)
     collapsed: bool = field(init=False)
 
+    # MatrixAnnotatedKeyboard is derived from via [1] specification
+    # but with the addition of optional non-numeric row/column prefixes.
+    # Prefixes in labels are allowed but must be common for all labels
+    # (which is checked in __post_init__ method).
+    # For example, both of these are allowed:
+    # [["0,0","0,1"]]  - via style annotations
+    # [["R0,C0","R0,C1"]]  - custom annotatations with common prefixes
+    # but this is not:
+    # [["R0,C0","Row0,Col1"]]
+    #
+    # [1] https://www.caniusevia.com/docs/layouts#switch-matrix-co-ordinates
+    row_prefix: Optional[str] = field(init=False)
+    column_prefix: Optional[str] = field(init=False)
+
     def __post_init__(self: MatrixAnnotatedKeyboard) -> None:
         positions = []
-        for key in list(self.keys):
+        row_prefixes = []
+        column_prefixes = []
+        new_keys = []
+        for key in self.keys:
             if not key.decal:
                 # check if required labels defined correctly
-                position = MatrixAnnotatedKeyboard.get_matrix_position(key)
-                option = MatrixAnnotatedKeyboard.get_layout_option(key)
+                position = self.get_matrix_position(key)
+
+                row_prefix, _ = self._parse_matrix_position_part(position[0])
+                column_prefix, _ = self._parse_matrix_position_part(position[1])
+                row_prefixes.append(row_prefix)
+                column_prefixes.append(column_prefix)
+
+                option = self.get_layout_option(key)
                 if option == 0:
                     positions.append(position)
             if self.__is_alternative(key):
                 self.alternative_keys.append(copy.deepcopy(key))
-                self.keys.remove(key)
+            else:
+                new_keys.append(key)
+        self.keys = new_keys
+        # check if all row & column prefixes are equal
+        for lst in [row_prefixes, column_prefixes]:
+            if not all(x == lst[0] for x in lst):
+                msg = "Matrix position prefix must be common across rows and columns"
+                raise ValueError(msg)
         # check if there are no duplicated matrix position in default key group
         if len(positions) != len(set(positions)):
             msg = "Duplicate matrix position for default layout keys not allowed"
             raise ValueError(msg)
 
         self.collapsed = False
+        self.row_prefix = row_prefixes[0]
+        self.column_prefix = column_prefixes[0]
 
     def __is_alternative(self, key: Key) -> bool:
         if label := key.get_label(self.LAYOUT_OPTION_LABEL):
@@ -361,19 +438,18 @@ class MatrixAnnotatedKeyboard(Keyboard):
                 keys[option[0]][option[1]].append(key)
         return keys
 
-    @staticmethod
-    def _key_matrix_position(key: Key) -> Tuple[int, int, int]:
+    def _key_matrix_position(self, key: Key) -> Tuple[int, int, int]:
         matrix_position = MatrixAnnotatedKeyboard.get_matrix_position(key)
-        row_match = re.search(r"\d+", matrix_position[0])
-        column_match = re.search(r"\d+", matrix_position[1])
 
-        if row_match is None or column_match is None:
-            msg = f"No numeric part for row or column found in '{matrix_position}'"
-            raise ValueError(msg)
+        row_prefix = self.row_prefix or ""
+        column_prefix = self.column_prefix or ""
+
+        row = int(matrix_position[0][len(row_prefix) :])
+        column = int(matrix_position[1][len(column_prefix) :])
 
         return (
-            int(row_match.group()),
-            int(column_match.group()),
+            row,
+            column,
             MatrixAnnotatedKeyboard.get_layout_option(key),
         )
 
@@ -400,6 +476,7 @@ class MatrixAnnotatedKeyboard(Keyboard):
                 key.labels[self.MATRIX_COORDINATES_LABEL],
                 *_key_center(key),
                 key.decal,
+                key.sm,
             )
             return props
 
@@ -434,7 +511,7 @@ class MatrixAnnotatedKeyboard(Keyboard):
 
     def sort_keys(self) -> None:
         for l in [self.keys, self.alternative_keys]:
-            l.sort(key=lambda k: MatrixAnnotatedKeyboard._key_matrix_position(k))
+            l.sort(key=lambda k: self._key_matrix_position(k))
 
     def keys_in_matrix_order(self) -> List[Key]:
         """Returns keys in matrix row/column order. If multiple keys occupy same
@@ -446,9 +523,7 @@ class MatrixAnnotatedKeyboard(Keyboard):
                 continue
             items.append(key)
 
-        return sorted(
-            items, key=lambda k: MatrixAnnotatedKeyboard._key_matrix_position(k)
-        )
+        return sorted(items, key=lambda k: self._key_matrix_position(k))
 
     @staticmethod
     def get_matrix_position(key: Key) -> Tuple[str, str]:
@@ -463,6 +538,17 @@ class MatrixAnnotatedKeyboard(Keyboard):
             raise RuntimeError(msg) from e
 
     @staticmethod
+    def _parse_matrix_position_part(annotation: str) -> Tuple[Optional[str], int]:
+        pattern = r"^([A-Za-z]*)(\d+)$"
+
+        match = re.match(pattern, annotation)
+        if match:
+            prefix, digits = match.groups()
+            return prefix if prefix else None, int(digits)
+        msg = "Unexpected format of matrix coordinates label part"
+        raise ValueError(msg)
+
+    @staticmethod
     def get_layout_option(key: Key) -> int:
         if layout_option_label := key.get_label(
             MatrixAnnotatedKeyboard.LAYOUT_OPTION_LABEL
@@ -472,6 +558,20 @@ class MatrixAnnotatedKeyboard(Keyboard):
 
     def to_keyboard(self) -> Keyboard:
         return Keyboard(meta=self.meta, keys=self.keys_in_matrix_order())
+
+    @classmethod
+    def from_keyboard(cls, keyboard: Keyboard) -> MatrixAnnotatedKeyboard:
+        if not isinstance(keyboard, MatrixAnnotatedKeyboard):
+            try:
+                converted = MatrixAnnotatedKeyboard(keyboard.meta, keyboard.keys)
+                return converted
+            except Exception as e:
+                msg = (
+                    "Keyboard object not convertible to "
+                    f"matrix annotated keyboard: {e}"
+                )
+                raise RuntimeError(msg) from e
+        return keyboard
 
 
 def reorder_items(items: List[Any], align: int) -> List[Any]:
@@ -529,10 +629,18 @@ def cleanup_key(key: Key) -> None:
 def parse_qmk(layout) -> MatrixAnnotatedKeyboard:
     metadata: KeyboardMetadata = KeyboardMetadata()
 
+    if "layouts" not in layout:
+        msg = "Invalid QMK data, required 'layouts' value not found"
+        raise RuntimeError(msg)
+
     layouts = layout["layouts"]
     keys: Dict[Tuple[int, int], List[Key]] = defaultdict(list)
 
     for i, layout in enumerate(layouts.values()):
+        if "layout" not in layout:
+            msg = "Invalid QMK data, required 'layout' value not found"
+            raise RuntimeError(msg)
+
         for item in layout["layout"]:
             if not isinstance(item, dict):
                 msg = f"Unexpected data appeared while parsing QMK layout: '{item}'"
@@ -558,7 +666,7 @@ def parse_qmk(layout) -> MatrixAnnotatedKeyboard:
             # labels (which qmk layout also can define), use approach from via
             # layouts, i.e. encode matrix position in first label
             matrix_position = item["matrix"]
-            if not isinstance(matrix_position, list):
+            if not isinstance(matrix_position, list) or len(matrix_position) != 2:
                 msg = (
                     "Unexpected key matrix position appeared while parsing QMK "
                     f"layout: '{matrix_position}'"
@@ -741,6 +849,10 @@ def parse_kle(layout) -> Keyboard:
                         current.sb = item["sb"]
                     if "st" in item:
                         current.st = item["st"]
+                    if "_r" in item:
+                        current.switchRotation = item["_r"]
+                    if "_rs" in item:
+                        current.stabRotation = item["_rs"]
                 else:
                     msg = "Unexpected item type"
                     raise RuntimeError(msg)
@@ -749,9 +861,7 @@ def parse_kle(layout) -> Keyboard:
             current.y = round(current.y + 1, 6)
             current.x = current.rotation_x
         elif isinstance(row, dict) and r == 0:
-            field_set = {f.name for f in fields(KeyboardMetadata) if f.init}
-            row_filtered = {k: v for k, v in row.items() if k in field_set}
-            metadata = KeyboardMetadata(**row_filtered)
+            metadata = KeyboardMetadata.from_json(row)
         else:
             msg = "Unexpected"
             raise RuntimeError(msg)
@@ -766,6 +876,8 @@ def parse_ergogen_points(layout: dict, *, zone_filter: str = "") -> Keyboard:
     if not layout:
         msg = "Expected non-empty object"
         raise RuntimeError(msg)
+
+    warning_logged = False
 
     metadata: KeyboardMetadata = KeyboardMetadata()
     keys = []
@@ -831,6 +943,15 @@ def parse_ergogen_points(layout: dict, *, zone_filter: str = "") -> Keyboard:
         column = meta.get("column_net", "")
         if row and column:
             key.labels.append(f"{row},{column}")
+        elif not warning_logged:
+            ergogen_guide_url = "https://adamws.github.io/keyboard-pcb-design-with-ergogen-and-kbplacer/"
+            msg = (
+                "Ergogen layout without matrix annotations will likely produce "
+                "unexpected result. For best results add `row_net` and `column_net` "
+                f"metadata. For details see: {ergogen_guide_url}"
+            )
+            logger.warning(msg)
+            warning_logged = True
 
         keys.append(key)
 
@@ -844,12 +965,10 @@ def parse_ergogen_points(layout: dict, *, zone_filter: str = "") -> Keyboard:
         key.y = key.y - key.height / 2
     # move out of negative positions
     min_x = min(keys, key=lambda k: k.x).x
-    if min_x >= 0:
-        min_x = 0
+    min_x = min(0, min_x)
 
     min_y = min(keys, key=lambda k: k.y).y
-    if min_y >= 0:
-        min_y = 0
+    min_y = min(0, min_y)
 
     for key in keys:
         key.x = key.x - min_x
@@ -862,6 +981,31 @@ def parse_ergogen_points(layout: dict, *, zone_filter: str = "") -> Keyboard:
     keys = sorted(keys, key=lambda k: [k.y, k.x])
 
     return Keyboard(meta=metadata, keys=keys)
+
+
+def _load_layout_from_file_or_stream(input_path: Union[str, os.PathLike]):
+    if input_path == "-":
+        if WITH_YAML_SUPPORT and yaml is not None:
+            try:
+                return yaml.safe_load(sys.stdin)
+            except Exception:
+                pass
+        return json.load(sys.stdin)
+    else:
+        # Layout downloaded from keyboard-layout-editor/kle-ng is most likely using utf-8.
+        # Use it explicitly in case the platform locale sets different encoding.
+        with open(input_path, "r", encoding="utf-8") as f:
+            if str(input_path).endswith(("yaml", "yml")):
+                if WITH_YAML_SUPPORT and yaml is not None:
+                    try:
+                        return yaml.safe_load(f)
+                    except yaml.error.YAMLError as e:
+                        msg = "Failed to parse yaml file"
+                        raise RuntimeError(msg) from e
+                else:
+                    msg = "Could not load yaml file, make sure that `PyYAML` installed"
+                    raise RuntimeError(msg)
+            return json.load(f)
 
 
 def get_keyboard(layout: dict) -> Keyboard:
@@ -889,49 +1033,215 @@ def get_keyboard(layout: dict) -> Keyboard:
     raise RuntimeError(msg)
 
 
-def get_keyboard_from_file(layout_path: str) -> Keyboard:
-    # Layout downloaded from keyboard-layout-editor is most likely using utf-8.
-    # Use it explicitly in case the platform locale sets different encoding.
-    with open(layout_path, "r", encoding="utf-8") as f:
-        layout = json.load(f)
+def get_keyboard_from_file(layout_path: Union[str, os.PathLike]) -> Keyboard:
+    layout = _load_layout_from_file_or_stream(layout_path)
     logger.info(f"User layout: {layout}")
+    return get_keyboard(layout)
+
+
+def get_annotated_keyboard_from_file(
+    layout_path: Union[str, os.PathLike],
+) -> MatrixAnnotatedKeyboard:
+    keyboard = get_keyboard_from_file(layout_path)
+    return MatrixAnnotatedKeyboard.from_keyboard(keyboard)
+
+
+def get_explicit_spacing_from_file(
+    layout_path: Union[str, os.PathLike],
+) -> Optional[Tuple[float, float]]:
+    """Get spacing_x and spacing_y from layout file if explicitly defined.
+
+    Returns None if spacing is not explicitly set in the file.
+    This avoids using default values that would overwrite user settings.
+
+    Args:
+        layout_path: Path to the layout file
+
+    Returns:
+        Tuple of (spacing_x, spacing_y) if explicitly defined, None otherwise
+    """
+    try:
+        layout = _load_layout_from_file_or_stream(layout_path)
+
+        # Check if it's a list (KLE_RAW format)
+        if isinstance(layout, list) and len(layout) > 0:
+            # First element should be metadata dict
+            meta = layout[0]
+            if isinstance(meta, dict):
+                if "spacing_x" in meta and "spacing_y" in meta:
+                    return (float(meta["spacing_x"]), float(meta["spacing_y"]))
+
+        # Check if it's a dict with "meta" key (KLE_INTERNAL format)
+        elif isinstance(layout, dict) and "meta" in layout:
+            meta = layout["meta"]
+            if isinstance(meta, dict):
+                if "spacing_x" in meta and "spacing_y" in meta:
+                    return (float(meta["spacing_x"]), float(meta["spacing_y"]))
+
+        return None
+    except Exception as e:
+        logger.debug(f"Could not load explicit spacing from layout: {e}")
+        return None
+
+
+class KeyboardTag(Enum):
+    ORTHOLINEAR = auto()
+    ROW_STAGGERED = auto()
+    COLUMN_STAGGERED = auto()
+    OTHER = auto()
+    ISO = auto()
+    WITH_UNRECOGNIZED_KEY_SHAPE = auto()
+
+
+def layout_classification(keyboard: Keyboard) -> List[KeyboardTag]:
+    """Get the list of tags based on layout characteristics"""
+    tags = []
+
+    def is_standard_shape(key: Key) -> bool:
+        if key.width2 == key.width and key.height2 == key.height:
+            return True
+        return False
+
+    if isinstance(keyboard, MatrixAnnotatedKeyboard):
+        keys = keyboard.keys_in_matrix_order()
+    else:
+        keys = keyboard.keys
+
+    reference_key = keys[0]
+
+    x_ortholinear_keys = 0
+    y_ortholinear_keys = 0
+    rotated_keys = 0
+    encoders = 0
+    iso_enters = 0
+    unrecognized_shape_keys = 0
+
+    for k in keys:
+        if float(k.x - reference_key.x).is_integer():
+            x_ortholinear_keys += 1
+        if float(k.y - reference_key.y).is_integer():
+            y_ortholinear_keys += 1
+        if k.rotation_angle != 0:
+            rotated_keys += 1
+        if not is_standard_shape(k):
+            if is_iso_enter(k):
+                iso_enters += 1
+            else:
+                unrecognized_shape_keys += 1
+
+    logger.debug(
+        f"Layout with: {x_ortholinear_keys=}, {y_ortholinear_keys=}, {rotated_keys=}, "
+        f"{encoders=}, {iso_enters=} and {unrecognized_shape_keys=}"
+    )
+
+    all_keys = len(keyboard.keys) - encoders
+    if (
+        x_ortholinear_keys == all_keys
+        and y_ortholinear_keys == all_keys
+        and rotated_keys == 0
+    ):
+        tags.append(KeyboardTag.ORTHOLINEAR)
+    elif rotated_keys != 0:
+        tags.append(KeyboardTag.OTHER)
+    elif x_ortholinear_keys == all_keys:
+        tags.append(KeyboardTag.COLUMN_STAGGERED)
+    else:
+        tags.append(KeyboardTag.ROW_STAGGERED)
+
+    if iso_enters != 0:
+        tags.append(KeyboardTag.ISO)
+
+    if unrecognized_shape_keys != 0:
+        tags.append(KeyboardTag.WITH_UNRECOGNIZED_KEY_SHAPE)
+
+    logger.debug(f"Layout tagged: {tags}")
+    return tags
+
+
+_VIA_ENCODER_LABEL_PATTERN = re.compile(r"^e\d+$")
+_VIA_ENCODER_LABEL_INDEX = 4  # center label (position used by VIA encoder convention)
+
+
+def apply_via_encoder_switch_mount(keyboard: Keyboard, clear: bool = False) -> None:
+    """Set sm='rot_ec11' on keys that carry a VIA encoder label (e0, e1, ...) at
+    the center label position (index 4, used when alignment a=7)
+    and optionally clear that label"""
+    for key in keyboard.keys:
+        label = key.get_label(_VIA_ENCODER_LABEL_INDEX)
+        if label is not None and _VIA_ENCODER_LABEL_PATTERN.match(label):
+            key.sm = "rot_ec11"
+        if clear:
+            key.set_label(_VIA_ENCODER_LABEL_INDEX, "")
+
+
+def keyboard_to_url(keyboard: Keyboard) -> str:
+    kle_raw = "[" + keyboard.to_kle() + "]"
+    encoded = lz.compressToEncodedURIComponent(kle_raw)
+    return KLE_NG_SHARE_PREFIX + encoded
+
+
+def keyboard_from_url(url: str) -> Keyboard:
+    encoded = url.removeprefix("https://editor.keyboard-tools.xyz/#share=")
+    kle_raw = lz.decompressFromEncodedURIComponent(encoded)
+    layout = json.loads(kle_raw)
     return get_keyboard(layout)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="KLE format converter")
-    parser.add_argument("-in", required=True, help="Layout file")
+    parser.add_argument("-i", "--in", required=True, help="Layout file")
     parser.add_argument(
-        "-inform",
+        "--inform",
         required=False,
         default="KLE_RAW",
         choices=["KLE_RAW", "KLE_VIA", "KLE_INTERNAL", "ERGOGEN_INTERNAL", "QMK"],
         help="Specifies the input format",
     )
-    parser.add_argument("-out", required=False, help="Result file")
+    parser.add_argument("-o", "--out", required=False, help="Result file")
     parser.add_argument(
-        "-outform",
+        "--outform",
         required=False,
         default="KLE_INTERNAL",
         choices=["KLE_RAW", "KLE_INTERNAL"],
         help="Specifies the output format",
     )
     parser.add_argument(
-        "-text", required=False, action="store_true", help="Print result"
+        "--text", required=False, action="store_true", help="Print result"
     )
     parser.add_argument(
-        "-ergogen-filter",
+        "--ergogen-filter",
         required=False,
         type=str,
         help="Ergogen zone filter regular expression, applicable only when -inform ERGOGEN_INTERNAL",
     )
     parser.add_argument(
-        "-collapse",
+        "--collapse",
         action="store_true",
         help=(
             "Collapse via-like annotated layout, "
             "applicable only when -inform equal KLE_RAW, KLE_VIA or KLE_INTERNAL"
         ),
+    )
+    parser.add_argument(
+        "--open-editor",
+        action="store_true",
+        help="Opens layout in kle-ng web editor",
+    )
+    parser.add_argument(
+        "--convert-via-encoders",
+        action="store_true",
+        help=(
+            "Detect VIA encoder keys (center label matching e0, e1, …) and set "
+            "sm='rot_ec11' on them. Only valid with --inform KLE_VIA"
+        ),
+    )
+    parser.add_argument(
+        "--log-level",
+        required=False,
+        default="WARNING",
+        choices=logging._nameToLevel.keys(),
+        type=str,
+        help="Provide logging level, default=%(default)s",
     )
 
     args = parser.parse_args()
@@ -942,6 +1252,16 @@ if __name__ == "__main__":
     print_result = args.text
     ergogen_filter = args.ergogen_filter
     collapse = args.collapse
+    open_editor = args.open_editor
+    convert_via_encoders = args.convert_via_encoders
+
+    # set up logger
+    logging.basicConfig(
+        level=args.log_level, format="%(asctime)s: %(message)s", datefmt="%H:%M:%S"
+    )
+
+    if convert_via_encoders and input_format != "KLE_VIA":
+        parser.error("--convert-via-encoders can only be used with --inform KLE_VIA")
 
     if input_format == output_format and not collapse:
         print("Output format equal input format, nothing to do...")
@@ -963,46 +1283,37 @@ if __name__ == "__main__":
             pprint.pprint(result)
         return result
 
-    with open(input_path, "r", encoding="utf-8") as input_file:
-        if input_path.endswith("yaml") or input_path.endswith("yml"):
-            try:
-                import yaml
+    layout = _load_layout_from_file_or_stream(input_path)
+    result = ""
+    if input_format == "KLE_RAW":
+        keyboard = parse_kle(layout)
+    elif input_format == "KLE_VIA":
+        # 'parse_via' creates MatrixAnnotatedKeyboard which is our
+        # internal representation and it is not the same thing
+        # as KLE_INTERNAL format, so it is not used here
+        keyboard = parse_kle(layout["layouts"]["keymap"])
+        if convert_via_encoders:
+            apply_via_encoder_switch_mount(keyboard)
+    elif input_format == "KLE_INTERNAL":
+        keyboard = Keyboard.from_json(layout)
+    elif input_format == "ERGOGEN_INTERNAL":
+        keyboard = parse_ergogen_points(layout, zone_filter=ergogen_filter)
+    else:  # QMK
+        keyboard = parse_qmk(layout).to_keyboard()
 
-                layout = yaml.safe_load(input_file)
-            except Exception as e:
-                msg = (
-                    "Could not load yaml file, make sure that `PyYAML` installed "
-                    "and yaml file format correct"
-                )
-                raise RuntimeError(msg) from e
-        else:
-            layout = json.load(input_file)
+    if collapse:
+        keyboard = MatrixAnnotatedKeyboard(meta=keyboard.meta, keys=keyboard.keys)
+        keyboard.collapse()
+        keyboard = keyboard.to_keyboard()
 
-        result = ""
-        if input_format == "KLE_RAW":
-            keyboard = parse_kle(layout)
-        elif input_format == "KLE_VIA":
-            # 'parse_via' creates MatrixAnnotatedKeyboard which is our
-            # internal representation and it is not the same thing
-            # as KLE_INTERNAL format, so it is not used here
-            keyboard = parse_kle(layout["layouts"]["keymap"])
-        elif input_format == "KLE_INTERNAL":
-            keyboard = Keyboard.from_json(layout)
-        elif input_format == "ERGOGEN_INTERNAL":
-            keyboard = parse_ergogen_points(layout, zone_filter=ergogen_filter)
-        else:  # QMK
-            keyboard = parse_qmk(layout).to_keyboard()
+    if open_editor:
+        webbrowser.open(keyboard_to_url(keyboard))
 
-        if collapse:
-            keyboard = MatrixAnnotatedKeyboard(meta=keyboard.meta, keys=keyboard.keys)
-            keyboard.collapse()
-            keyboard = keyboard.to_keyboard()
+    if output_format == "KLE_INTERNAL":
+        result = _keyboard_to_kle_internal(keyboard)
+    else:  # KLE_RAW
+        result = _keyboard_to_kle_raw(keyboard)
 
-        if output_format == "KLE_INTERNAL":
-            result = _keyboard_to_kle_internal(keyboard)
-        else:  # KLE_RAW
-            result = _keyboard_to_kle_raw(keyboard)
-
-        if output_path:
-            with open(output_path, "w", encoding="utf-8") as output_file:
-                json.dump(result, output_file, indent=2)
+    if output_path:
+        with open(output_path, "w", encoding="utf-8") as output_file:
+            json.dump(result, output_file, indent=2)

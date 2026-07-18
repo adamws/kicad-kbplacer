@@ -1,8 +1,11 @@
+# SPDX-FileCopyrightText: 2025 adamws <adamws@users.noreply.github.com>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 from __future__ import annotations
 
 import argparse
 import itertools
-import json
 import logging
 import math
 import shutil
@@ -11,11 +14,16 @@ from pathlib import Path
 from typing import Iterator
 
 import drawsvg as dw
-import yaml
 from colormath.color_conversions import convert_color
 from colormath.color_objects import LabColor, sRGBColor
 
-from kbplacer.kle_serial import Key, Keyboard, MatrixAnnotatedKeyboard, get_keyboard
+from kbplacer.kle_serial import (
+    Key,
+    Keyboard,
+    MatrixAnnotatedKeyboard,
+    apply_via_encoder_switch_mount,
+    get_keyboard_from_file,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +45,7 @@ LABEL_X_POSITION = [
     (lambda width: width * KEY_WIDTH_PX - KEYTOP_GAP_LEFT_PX - 1, "end"),
 ]
 LABEL_Y_POSITION = [
-    (lambda _: KEYTOP_GAP_TOP_PX + 1, "hanging"),
+    (lambda _: KEYTOP_GAP_TOP_PX + 3, "hanging"),
     (lambda height: height * KEY_HEIGHT_PX / 2, "middle"),
     (lambda height: height * KEY_HEIGHT_PX - KEYTOP_GAP_BOTTOM_PX - 2, "auto"),
     (lambda height: height * KEY_HEIGHT_PX - 2, "auto"),
@@ -65,19 +73,83 @@ def rotate(origin, point, angle):
     return qx, qy
 
 
-def build_key(key: Key):
-    group = dw.Group()
-    not_rectangle = key.width != key.width2 or key.height != key.height2
+ENCODER_LABEL_X_POSITION = [
+    (lambda _: KEYTOP_GAP_LEFT_PX + 5, "start"),
+    (lambda width: width * KEY_WIDTH_PX / 2, "middle"),
+    (lambda width: width * KEY_WIDTH_PX - KEYTOP_GAP_LEFT_PX - 5, "end"),
+]
+ENCODER_LABEL_Y_POSITION = [
+    (lambda _: KEYTOP_GAP_TOP_PX + 7, "hanging"),
+    (lambda height: height * KEY_HEIGHT_PX / 2, "middle"),
+    (lambda height: height * KEY_HEIGHT_PX - KEYTOP_GAP_BOTTOM_PX - 2, "auto"),
+    (lambda height: height * KEY_HEIGHT_PX - 2, "auto"),
+]
 
-    # some layouts used to fail due to: 'input #ccccccc is not in #RRGGBB format',
-    # truncate too long strings, if color is still illegal then use default
+
+def _get_colors(key: Key) -> tuple[str, str]:
     dark_color = key.color[0:7]
     try:
         sRGBColor.new_from_rgb_hex(dark_color)
     except Exception:
         logger.warning(f"Illegal color ('{dark_color}') value found, using default")
         dark_color = "#cccccc"
-    light_color = lighten_color(dark_color)
+    return dark_color, lighten_color(dark_color)
+
+
+def _build_encoder(key: Key) -> dw.Group:
+    group = dw.Group()
+    dark_color, light_color = _get_colors(key)
+
+    w = key.width * KEY_WIDTH_PX
+    h = key.height * KEY_HEIGHT_PX
+    cx = w / 2
+    cy = h / 2
+    outer_r = min(w, h) / 2
+
+    if not key.decal:
+        group.append(
+            dw.Circle(
+                cx,
+                cy,
+                outer_r - KEY_STROKE_WIDTH / 2,
+                fill="none",
+                stroke="black",
+                stroke_width=KEY_STROKE_WIDTH,
+            )
+        )
+        group.append(dw.Circle(cx, cy, outer_r - KEY_STROKE_WIDTH, fill=dark_color))
+        keytop_r = (outer_r - KEY_STROKE_WIDTH) * 0.85
+        group.append(dw.Circle(cx, cy, keytop_r, fill=light_color))
+
+    for i, label in enumerate(key.labels):
+        if label:
+            lines = label.split("<br>")
+            position_x = ENCODER_LABEL_X_POSITION[i % 3]
+            position_y = ENCODER_LABEL_Y_POSITION[int(i / 3)]
+            label_size = LABEL_SIZES[int(i / 3)]
+            group.append(
+                dw.Text(
+                    lines,
+                    font_size=label_size,
+                    x=position_x[0](key.width),
+                    y=position_y[0](key.height),
+                    text_anchor=position_x[1],
+                    dominant_baseline=position_y[1],
+                )
+            )
+    return group
+
+
+def build_key(key: Key):
+    if key.sm == "rot_ec11":
+        return _build_encoder(key)
+
+    group = dw.Group()
+    not_rectangle = key.width != key.width2 or key.height != key.height2
+
+    # some layouts used to fail due to: 'input #ccccccc is not in #RRGGBB format',
+    # truncate too long strings, if color is still illegal then use default
+    dark_color, light_color = _get_colors(key)
 
     def border(x, y, w, h) -> dw.Rectangle:  # pyright: ignore
         return dw.Rectangle(
@@ -137,53 +209,41 @@ def build_key(key: Key):
     return group
 
 
-def calcualte_canvas_size(key_iterator: Iterator) -> tuple[int, int]:
+def calcualte_canvas_corners(key_iterator: Iterator) -> tuple[int, int, int, int]:
+    """
+    Find top-left and bottom-right corners for given keys
+
+    :return: Corners [x1 y1 x2 y2] tuple
+    """
+    min_x = 2**32
+    min_y = 2**32
     max_x = 0
     max_y = 0
     for k in key_iterator:
-        angle = k.rotation_angle
-        if angle != 0:
-            # when rotated, check each corner
-            x1 = KEY_WIDTH_PX * k.x
-            x2 = KEY_WIDTH_PX * k.x + KEY_WIDTH_PX * k.width
-            y1 = KEY_HEIGHT_PX * k.y
-            y2 = KEY_HEIGHT_PX * k.y + KEY_HEIGHT_PX * k.height
+        x1 = KEY_WIDTH_PX * k.x
+        x2 = KEY_WIDTH_PX * k.x + KEY_WIDTH_PX * k.width
+        y1 = KEY_HEIGHT_PX * k.y
+        y2 = KEY_HEIGHT_PX * k.y + KEY_HEIGHT_PX * k.height
 
-            for x, y in [(x1, y1), (x2, y1), (x1, y2), (x2, y2)]:
+        for x, y in [(x1, y1), (x2, y1), (x1, y2), (x2, y2)]:
+            angle = k.rotation_angle
+            if angle != 0:
                 rot_x = KEY_WIDTH_PX * k.rotation_x
                 rot_y = KEY_HEIGHT_PX * k.rotation_y
                 x, y = rotate((rot_x, rot_y), (x, y), angle)
-                x, y = int(x), int(y)
-                if x >= max_x:
-                    max_x = x
-                if y >= max_y:
-                    max_y = y
+            x, y = int(x), int(y)
+            min_x = min(x, min_x)
+            max_x = max(x, max_x)
+            min_y = min(y, min_y)
+            max_y = max(y, max_y)
 
-        else:
-            # when not rotated, it is safe to check only bottom right corner:
-            x = KEY_WIDTH_PX * k.x + KEY_WIDTH_PX * k.width
-            y = KEY_HEIGHT_PX * k.y + KEY_HEIGHT_PX * k.height
-            if x >= max_x:
-                max_x = x
-            if y >= max_y:
-                max_y = y
-    return max_x + 2 * ORIGIN_X, max_y + 2 * ORIGIN_Y
+    return min_x, min_y, max_x + 2 * ORIGIN_X, max_y + 2 * ORIGIN_Y
 
 
-def create_images(input_path: str, output_path):
-    if input_path != "-":
-        with open(input_path, "r", encoding="utf-8") as f:
-            if input_path.endswith("yaml") or input_path.endswith("yml"):
-                layout = yaml.safe_load(f)
-            else:
-                layout = json.load(f)
-    else:
-        try:
-            layout = yaml.safe_load(sys.stdin)
-        except Exception:
-            layout = json.load(sys.stdin)
-
-    _keyboard: Keyboard = get_keyboard(layout)
+def create_images(input_path: str, output_path, *, convert_via_encoders: bool = False):
+    _keyboard: Keyboard = get_keyboard_from_file(input_path)
+    if convert_via_encoders:
+        apply_via_encoder_switch_mount(_keyboard, True)
 
     def _get_iterator():
         if isinstance(_keyboard, MatrixAnnotatedKeyboard):
@@ -191,14 +251,16 @@ def create_images(input_path: str, output_path):
         else:
             return iter(_keyboard.keys)
 
-    width, height = calcualte_canvas_size(_get_iterator())
-    d = dw.Drawing(width, height)
+    x1, y1, x2, y2 = calcualte_canvas_corners(_get_iterator())
+    width = x2 - x1
+    height = y2 - y1
+    d = dw.Drawing(width, height, origin=(x1, y1))
 
     for k in _get_iterator():
         width = k.width
         height = k.height
         x = KEY_WIDTH_PX * k.x
-        y = KEY_WIDTH_PX * k.y
+        y = KEY_HEIGHT_PX * k.y
 
         key = build_key(k)
 
@@ -207,7 +269,7 @@ def create_images(input_path: str, output_path):
         if angle != 0:
             rot_x = KEY_WIDTH_PX * k.rotation_x
             rot_y = KEY_HEIGHT_PX * k.rotation_y
-            args["transform"] = f"rotate({angle} {rot_x} {rot_y})"
+            args["transform"] = f"rotate({angle} {rot_x + ORIGIN_X} {rot_y + ORIGIN_Y})"
         d.append(dw.Use(key, x + ORIGIN_X, y + ORIGIN_Y, **args))
 
     d.save_svg(output_path)
@@ -216,14 +278,27 @@ def create_images(input_path: str, output_path):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Layout file to images")
     parser.add_argument(
-        "-in", nargs="?", type=str, default="-", help="Input path or '-' for stdin"
+        "-i",
+        "--in",
+        nargs="?",
+        type=str,
+        default="-",
+        help="Input path or '-' for stdin",
     )
-    parser.add_argument("-out", required=True, help="Output path")
+    parser.add_argument("-o", "--out", required=True, help="Output path")
     parser.add_argument(
         "-f",
         "--force",
         action="store_true",
         help="Override output if already exists",
+    )
+    parser.add_argument(
+        "--convert-via-encoders",
+        action="store_true",
+        help=(
+            "Detect VIA encoder keys (center label matching e0, e1, ...) and render "
+            "them as encoders"
+        ),
     )
     parser.add_argument(
         "--log-level",
@@ -238,6 +313,7 @@ if __name__ == "__main__":
     input_path = getattr(args, "in")
     output_path = getattr(args, "out")
     force = args.force
+    convert_via_encoders = args.convert_via_encoders
 
     # set up logger
     logging.basicConfig(
@@ -250,4 +326,4 @@ if __name__ == "__main__":
         logger.error(f"Output file '{output_path}' already exists, exiting...")
         sys.exit(1)
 
-    create_images(input_path, output_path)
+    create_images(input_path, output_path, convert_via_encoders=convert_via_encoders)

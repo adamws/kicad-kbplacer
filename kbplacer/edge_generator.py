@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 adamws <adamws@users.noreply.github.com>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 from __future__ import annotations
 
 import logging
@@ -73,6 +77,8 @@ def build_board_outline_around_footprints(
     shape_line = pcbnew.SHAPE_LINE_CHAIN()
     for r in result:
         shape_line.Append(r[0], r[1])
+
+    shape_line.SetClosed(True)
 
     outline = pcbnew.SHAPE_POLY_SET()
     outline.AddOutline(shape_line)

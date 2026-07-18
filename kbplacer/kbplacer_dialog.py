@@ -1,14 +1,20 @@
+# SPDX-FileCopyrightText: 2025 adamws <adamws@users.noreply.github.com>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 from __future__ import annotations
 
 import gettext
 import json
 import logging
 import os
+import re
 import string
 import sys
+import webbrowser
 from dataclasses import asdict, dataclass, field
 from enum import Flag
-from typing import List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 
 import wx
 from wx.lib.embeddedimage import PyEmbeddedImage
@@ -16,6 +22,12 @@ from wx.lib.embeddedimage import PyEmbeddedImage
 from .defaults import DEFAULT_DIODE_POSITION, ZERO_POSITION
 from .element_position import ElementInfo, ElementPosition, PositionOption, Side
 from .help_dialog import HelpDialog
+from .kle_serial import (
+    KLE_NG_SHARE_PREFIX,
+    get_explicit_spacing_from_file,
+    get_keyboard_from_file,
+    keyboard_to_url,
+)
 
 logger = logging.getLogger(__name__)
 TEXT_CTRL_EXTRA_SPACE = 25
@@ -55,7 +67,7 @@ class WindowState:
     key_distance: Tuple[float, float] = (19.05, 19.05)
     key_info: ElementInfo = field(
         default_factory=lambda: ElementInfo(
-            "SW{}", PositionOption.DEFAULT, ZERO_POSITION, ""
+            "SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", start_index=1
         )
     )
     enable_diode_placement: bool = True
@@ -63,18 +75,21 @@ class WindowState:
     optimize_diodes_orientation: bool = False
     diode_info: ElementInfo = field(
         default_factory=lambda: ElementInfo(
-            "D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, ""
+            "D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, "", start_index=-1
         )
     )
     additional_elements: List[ElementInfo] = field(
         default_factory=lambda: [
-            ElementInfo("ST{}", PositionOption.CUSTOM, ZERO_POSITION, "")
+            ElementInfo(
+                "ST{}", PositionOption.CUSTOM, ZERO_POSITION, "", start_index=-1
+            )
         ]
     )
     route_rows_and_columns: bool = True
     template_path: str = ""
     generate_outline: bool = False
     outline_delta: float = 0.0
+    layout_offset: Optional[Tuple[float, float]] = None
 
     def __str__(self) -> str:
         return json.dumps(asdict(self), indent=None)
@@ -89,11 +104,16 @@ class WindowState:
         additional_elements = [
             ElementInfo.from_dict(i) for i in data.pop("additional_elements")
         ]
+        layout_offset_raw = data.pop("layout_offset", None)
+        layout_offset = (
+            tuple(layout_offset_raw) if layout_offset_raw is not None else None
+        )
         return cls(
             key_distance=key_distance,
             key_info=key_info,
             diode_info=diode_info,
             additional_elements=additional_elements,
+            layout_offset=layout_offset,
             **data,
         )
 
@@ -132,6 +152,104 @@ def get_file_picker(*args, **kwargs) -> wx.FilePickerCtrl:
 
     file_picker.Bind(wx.EVT_FILEPICKER_CHANGED, _update_position)
     return file_picker
+
+
+class LayoutPickerValidator(wx.Validator):
+    def __init__(self) -> None:
+        wx.Validator.__init__(self)
+
+    def Clone(self) -> LayoutPickerValidator:
+        return LayoutPickerValidator()
+
+    def Validate(self, _) -> bool:
+        text_ctrl = self.GetWindow()
+        text = text_ctrl.GetValue().strip()
+        if not text:
+            return True  # empty is always allowed
+        if text.startswith(KLE_NG_SHARE_PREFIX):
+            return True
+        if os.path.isfile(text):
+            return True
+        wx.MessageBox(
+            f"Invalid layout value.\nMust be an existing file path or a kle-ng share "
+            f"link starting with: {KLE_NG_SHARE_PREFIX}",
+            "Error",
+        )
+        text_ctrl.SetFocus()
+        return False
+
+    def TransferToWindow(self) -> bool:
+        return True
+
+    def TransferFromWindow(self) -> bool:
+        return True
+
+
+class LayoutPicker(wx.Panel):
+    # wx.FilePickerCtrl on some platforms (notably wxGTK) drops pasted text:
+    # the internal path state only updates when a file is chosen via the
+    # dialog, so paths and kle-ng share links pasted into the text control
+    # are silently lost. This widget uses a plain TextCtrl plus a browse
+    # button so any string can be entered.
+
+    def __init__(
+        self,
+        parent: wx.Window,
+        wildcard: str = "",
+        hint: str = "",
+        validator: wx.Validator = wx.DefaultValidator,
+        on_change: Optional[Callable[[str], None]] = None,
+    ) -> None:
+        super().__init__(parent)
+        self._wildcard = wildcard
+        self._on_change = on_change
+
+        self.text_ctrl = wx.TextCtrl(
+            self, style=wx.TE_PROCESS_ENTER, validator=validator
+        )
+        self.text_ctrl.SetHint(hint)
+        browse_button = wx.Button(self, label=wx_("Browse"))
+        browse_button.Bind(wx.EVT_BUTTON, self._on_browse)
+        self.text_ctrl.Bind(wx.EVT_TEXT_ENTER, self._on_commit)
+        self.text_ctrl.Bind(wx.EVT_KILL_FOCUS, self._on_kill_focus)
+
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(self.text_ctrl, 1, wx.EXPAND)
+        sizer.Add(browse_button, 0, wx.LEFT, 2)
+        self.SetSizer(sizer)
+
+    def _on_browse(self, event: wx.CommandEvent) -> None:
+        del event
+        with wx.FileDialog(
+            self,
+            wildcard=self._wildcard,
+            style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
+        ) as dlg:
+            if dlg.ShowModal() == wx.ID_OK:
+                self.SetPath(dlg.GetPath())
+                self.text_ctrl.SetInsertionPointEnd()
+                self._notify_change()
+
+    def _on_commit(self, event: wx.CommandEvent) -> None:
+        self._notify_change()
+        event.Skip()
+
+    def _on_kill_focus(self, event: wx.FocusEvent) -> None:
+        self._notify_change()
+        event.Skip()
+
+    def _notify_change(self) -> None:
+        if self._on_change is not None:
+            self._on_change(self.GetPath())
+
+    def GetPath(self) -> str:
+        return self.text_ctrl.GetValue()
+
+    def SetPath(self, path: str) -> None:
+        self.text_ctrl.SetValue(path)
+
+    def GetTextCtrl(self) -> wx.TextCtrl:
+        return self.text_ctrl
 
 
 class FloatValidator(wx.Validator):
@@ -194,6 +312,95 @@ class FloatValidator(wx.Validator):
                 event.Skip()
 
 
+class IntValidator(wx.Validator):
+    def __init__(self) -> None:
+        wx.Validator.__init__(self)
+        self.Bind(wx.EVT_CHAR, self.OnChar)
+
+    def Clone(self) -> IntValidator:
+        return IntValidator()
+
+    def Validate(self, _) -> bool:
+        text_ctrl = self.GetWindow()
+        if not text_ctrl.IsEnabled():
+            return True
+
+        text = text_ctrl.GetValue()
+        try:
+            int(text)
+            return True
+        except ValueError:
+            name = text_ctrl.GetName()
+            wx.MessageBox(
+                f"Invalid '{name}' value: '{text}' is not an integer!", "Error"
+            )
+            text_ctrl.SetFocus()
+            return False
+
+    def TransferToWindow(self) -> bool:
+        return True
+
+    def TransferFromWindow(self) -> bool:
+        return True
+
+    def OnChar(self, event: wx.KeyEvent) -> None:
+        keycode = int(event.GetKeyCode())
+        if keycode in [
+            wx.WXK_BACK,
+            wx.WXK_DELETE,
+            wx.WXK_LEFT,
+            wx.WXK_RIGHT,
+            wx.WXK_NUMPAD_LEFT,
+            wx.WXK_NUMPAD_RIGHT,
+            wx.WXK_TAB,
+        ]:
+            event.Skip()
+        else:
+            key = chr(keycode)
+            # allow only digits and optional leading '-'
+            text_ctrl = self.GetWindow()
+            text = text_ctrl.GetValue()
+            current_position = text_ctrl.GetInsertionPoint()
+            if key in string.digits or (
+                key == "-" and "-" not in text and current_position == 0
+            ):
+                event.Skip()
+
+
+class AnnotationValidator(wx.Validator):
+    # probably not as strict as KiCad footprints annotations,
+    # we just check if there is exactly one '{}' placeholder which
+    # must be a part of some non-whitespace content
+    PATTERN = r"^(?!\s*\{\}\s*$)(?:[^{}]*\{\}[^{}]*)$"
+
+    def __init__(self) -> None:
+        wx.Validator.__init__(self)
+
+    def Clone(self) -> AnnotationValidator:
+        return AnnotationValidator()
+
+    def Validate(self, _) -> bool:
+        text_ctrl = self.GetWindow()
+        text = text_ctrl.GetValue()
+        if not re.fullmatch(AnnotationValidator.PATTERN, text):
+            name = text_ctrl.GetName()
+            wx.MessageBox(
+                f"Invalid '{name}' value. Annotation must have exactly one "
+                "'{}' placeholder, and it must be a part of non-whitespace "
+                f"content. Received: '{text}'",
+                "Error",
+            )
+            text_ctrl.SetFocus()
+            return False
+        return True
+
+    def TransferToWindow(self) -> bool:
+        return True
+
+    def TransferFromWindow(self) -> bool:
+        return True
+
+
 class LabeledTextCtrl(wx.Panel):
     def __init__(
         self,
@@ -202,6 +409,8 @@ class LabeledTextCtrl(wx.Panel):
         value: str,
         width: int = -1,
         validator: wx.Validator = wx.DefaultValidator,
+        *,
+        tooltip: str = "",
     ) -> None:
         super().__init__(parent)
 
@@ -221,6 +430,9 @@ class LabeledTextCtrl(wx.Panel):
             validator=validator,
             name=label.strip(":"),
         )
+        if tooltip:
+            self.label.SetToolTip(tooltip)
+            self.text.SetToolTip(tooltip)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.label, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5)
@@ -542,6 +754,7 @@ class ElementSettingsWidget(wx.Panel):
             label=wx_("Footprint Annotation") + ":",
             value=element_info.annotation_format,
             width=3,
+            validator=AnnotationValidator(),
         )
         self.position_widget = ElementPositionChoiceWidget(
             self,
@@ -590,6 +803,7 @@ class KbplacerDialog(wx.Dialog):
             layout_path=initial_state.layout_path,
             key_distance=initial_state.key_distance,
             element_info=initial_state.key_info,
+            start_index=initial_state.key_info.start_index,
         )
 
         switch_diodes_section = self.get_switch_diodes_section(
@@ -608,7 +822,10 @@ class KbplacerDialog(wx.Dialog):
             template_path=initial_state.template_path,
             generate_outline=initial_state.generate_outline,
             outline_delta=initial_state.outline_delta,
+            layout_offset=initial_state.layout_offset,
         )
+
+        buttons_section = self.get_buttons_section()
 
         box = wx.BoxSizer(wx.VERTICAL)
 
@@ -616,6 +833,7 @@ class KbplacerDialog(wx.Dialog):
         box.Add(switch_diodes_section, 0, wx.EXPAND | wx.ALL, 5)
         box.Add(additional_elements_section, 0, wx.EXPAND | wx.ALL, 5)
         box.Add(misc_section, 0, wx.EXPAND | wx.ALL, 5)
+        box.Add(buttons_section, 0, wx.EXPAND | wx.ALL, 5)
 
         buttons = self.CreateButtonSizer(wx.OK | wx.CANCEL | wx.HELP)
 
@@ -633,36 +851,74 @@ class KbplacerDialog(wx.Dialog):
         element_info: ElementInfo = ElementInfo(
             "SW{}", PositionOption.DEFAULT, ZERO_POSITION, ""
         ),
+        start_index: int = 1,
     ) -> wx.Sizer:
-        layout_label = wx.StaticText(self, -1, self._("Keyboard layout file:"))
-        layout_picker = get_file_picker(
-            self,
-            -1,
-            wildcard="JSON files (*.json)|*.json|All files (*)|*",
-            style=wx.FLP_USE_TEXTCTRL,
-        )
-        layout_picker.SetMinSize((400, -1))
-        if layout_path:
-            layout_picker.SetPath(layout_path)
-            layout_picker.GetTextCtrl().SetInsertionPointEnd()
-
+        layout_label = wx.StaticText(self, -1, self._("Keyboard Layout:"))
+        layout_label.SetToolTip(self._("Layout file or kle-ng share link"))
         key_distance_x = LabeledTextCtrl(
             self,
             wx_("Step X:"),
             value=str(key_distance[0]),
             width=5,
             validator=FloatValidator(),
+            tooltip=self._(
+                "How many millimeters 1U spans between switches horizontally"
+            ),
         )
+
         key_distance_y = LabeledTextCtrl(
             self,
             wx_("Step Y:"),
             value=str(key_distance[1]),
             width=5,
             validator=FloatValidator(),
+            tooltip=self._("How many millimeters 1U spans between switches vertically"),
         )
 
+        def on_layout_file_changed(layout_file: str) -> None:
+            """Update key_distance fields from layout metadata when file is selected."""
+            if not layout_file:
+                return
+
+            try:
+                # Only update if spacing is explicitly defined in the file
+                # to avoid overwriting user-set values with defaults
+                spacing = get_explicit_spacing_from_file(layout_file)
+                if spacing is not None:
+                    key_distance_x.text.SetValue(str(spacing[0]))
+                    key_distance_y.text.SetValue(str(spacing[1]))
+                    logger.info(
+                        f"Loaded explicit spacing from layout: {spacing[0]} x {spacing[1]} mm"
+                    )
+            except Exception as e:
+                logger.debug(f"Could not load layout metadata: {e}")
+
+        layout_picker = LayoutPicker(
+            self,
+            wildcard="JSON files (*.json)|*.json|All files (*)|*",
+            hint=self._("Layout filepath or kle-ng share URL"),
+            validator=LayoutPickerValidator(),
+            on_change=on_layout_file_changed,
+        )
+        layout_picker.SetMinSize((400, -1))
+        if layout_path:
+            layout_picker.SetPath(layout_path)
+            layout_picker.GetTextCtrl().SetInsertionPointEnd()
+
         key_annotation = LabeledTextCtrl(
-            self, wx_("Footprint Annotation") + ":", element_info.annotation_format
+            self,
+            wx_("Footprint Annotation") + ":",
+            element_info.annotation_format,
+            validator=AnnotationValidator(),
+        )
+
+        key_start_index = LabeledTextCtrl(
+            self,
+            self._("Start index") + ":",
+            value=str(start_index),
+            width=3,
+            validator=IntValidator(),
+            tooltip=self._("Starting index used to match footprint annotations"),
         )
 
         key_position = ElementPositionWidget(self, ZERO_POSITION, disable_offsets=True)
@@ -681,6 +937,7 @@ class KbplacerDialog(wx.Dialog):
 
         row2 = wx.BoxSizer(wx.HORIZONTAL)
         row2.Add(key_annotation, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        row2.Add(key_start_index, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         row2.Add(key_position, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer.Add(row2, 0, wx.EXPAND | wx.ALL, 5)
 
@@ -689,6 +946,7 @@ class KbplacerDialog(wx.Dialog):
         self.__key_distance_y = key_distance_y.text
         self.__key_annotation_format = key_annotation.text
         self.__key_position = key_position
+        self.__key_start_index = key_start_index.text
 
         return sizer
 
@@ -714,6 +972,11 @@ class KbplacerDialog(wx.Dialog):
             self, label=self._("Automatically adjust orientation")
         )
         optimize_diodes_orientation_checkbox.SetValue(optimize_diodes_orientation)
+        optimize_diodes_orientation_checkbox.SetToolTip(
+            self._(
+                "Find optimal diode orientation for minimal distance between switch and diode common net pads"
+            )
+        )
 
         diode_settings = ElementSettingsWidget(
             self,
@@ -830,6 +1093,7 @@ class KbplacerDialog(wx.Dialog):
         template_path: str = "",
         generate_outline: bool = False,
         outline_delta: float = 0.0,
+        layout_offset: Optional[Tuple[float, float]] = None,
     ) -> wx.Sizer:
         row_and_columns_tracks_checkbox = wx.CheckBox(
             self, label=self._("Route rows and columns")
@@ -870,10 +1134,56 @@ class KbplacerDialog(wx.Dialog):
             validator=FloatValidator(),
         )
 
+        offset_enabled = layout_offset is not None
+        layout_offset_checkbox = wx.CheckBox(self, label=self._("Layout offset"))
+        layout_offset_checkbox.SetValue(offset_enabled)
+
+        offset_x_value = str(layout_offset[0]) if layout_offset is not None else "0"
+        offset_y_value = str(layout_offset[1]) if layout_offset is not None else "0"
+        layout_offset_x = LabeledTextCtrl(
+            self,
+            "X:",
+            value=offset_x_value,
+            width=5,
+            validator=FloatValidator(),
+            tooltip=self._("X placement offset for the keyboard layout in mm"),
+        )
+        layout_offset_y = LabeledTextCtrl(
+            self,
+            "Y:",
+            value=offset_y_value,
+            width=5,
+            validator=FloatValidator(),
+            tooltip=self._("Y placement offset for the keyboard layout in mm"),
+        )
+        if offset_enabled:
+            layout_offset_x.Enable()
+            layout_offset_y.Enable()
+        else:
+            layout_offset_x.Disable()
+            layout_offset_y.Disable()
+
+        def on_layout_offset_checkbox(event) -> None:
+            enabled = layout_offset_checkbox.GetValue()
+            if enabled:
+                layout_offset_x.Enable()
+                layout_offset_y.Enable()
+            else:
+                layout_offset_x.Disable()
+                layout_offset_y.Disable()
+
+        layout_offset_checkbox.Bind(wx.EVT_CHECKBOX, on_layout_offset_checkbox)
+
         row2 = wx.BoxSizer(wx.HORIZONTAL)
         row2.Add(generate_outline_checkbox, 0, wx.EXPAND | wx.ALL, 5)
         row2.Add(wx.StaticLine(self, style=wx.LI_VERTICAL), 0, wx.EXPAND | wx.ALL, 5)
         row2.Add(outline_delta_ctrl, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        row2.Add(wx.StaticLine(self, style=wx.LI_VERTICAL), 0, wx.EXPAND | wx.ALL, 5)
+        row2.Add(
+            layout_offset_checkbox, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5
+        )
+        row2.Add(layout_offset_x, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        row2.Add(layout_offset_y, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
 
         box = wx.StaticBox(self, label=self._("Other settings"))
         sizer = wx.StaticBoxSizer(box, wx.VERTICAL)
@@ -884,8 +1194,40 @@ class KbplacerDialog(wx.Dialog):
         self.__template_picker = template_picker
         self.__generate_outline_checkbox = generate_outline_checkbox
         self.__outline_delta_ctrl = outline_delta_ctrl
+        self.__layout_offset_enabled = layout_offset_checkbox
+        self.__layout_offset_x = layout_offset_x.text
+        self.__layout_offset_y = layout_offset_y.text
 
         self.__enable_outline_delta(generate_outline)
+
+        return sizer
+
+    def get_buttons_section(
+        self,
+    ) -> wx.Sizer:
+        row = wx.BoxSizer(wx.HORIZONTAL)
+
+        def kle_ng_callback(_) -> None:
+            layout_path_or_url = self.get_layout_path_or_url()
+            if layout_path_or_url:
+                if layout_path_or_url.startswith("https://editor.keyboard-tools.xyz"):
+                    url = layout_path_or_url
+                else:
+                    url = keyboard_to_url(get_keyboard_from_file(layout_path_or_url))
+            else:
+                url = "https://editor.keyboard-tools.xyz"
+            webbrowser.open(url)
+
+        kle_ng_button = wx.Button(
+            self, label=self._("Open in Keyboard Layout Editor NG")
+        )
+        kle_ng_button.Bind(wx.EVT_BUTTON, kle_ng_callback)
+
+        row.Add(kle_ng_button, 0, wx.EXPAND | wx.ALL, 0)
+
+        box = wx.StaticBox(self, label=self._("Actions"))
+        sizer = wx.StaticBoxSizer(box, wx.VERTICAL)
+        sizer.Add(row, 0, wx.EXPAND | wx.ALL, 5)
 
         return sizer
 
@@ -905,7 +1247,7 @@ class KbplacerDialog(wx.Dialog):
         help_dialog.ShowModal()
         help_dialog.Destroy()
 
-    def get_layout_path(self) -> str:
+    def get_layout_path_or_url(self) -> str:
         return self.__layout_picker.GetPath()
 
     def get_key_annotation_format(self) -> str:
@@ -928,12 +1270,19 @@ class KbplacerDialog(wx.Dialog):
     def get_template_path(self) -> str:
         return self.__template_picker.GetPath()
 
+    def __get_start_index(self) -> int:
+        try:
+            return int(self.__key_start_index.GetValue())
+        except Exception:
+            return 1
+
     def get_key_info(self) -> ElementInfo:
         return ElementInfo(
             self.get_key_annotation_format(),
             PositionOption.DEFAULT,
             self.__key_position.GetValue(),
             "",
+            start_index=self.__get_start_index(),
         )
 
     def enable_diode_placement(self) -> bool:
@@ -951,9 +1300,16 @@ class KbplacerDialog(wx.Dialog):
     def get_outline_delta(self) -> float:
         return float(self.__outline_delta_ctrl.text.GetValue())
 
+    def get_layout_offset(self) -> Optional[Tuple[float, float]]:
+        if not self.__layout_offset_enabled.GetValue():
+            return None
+        x = float(self.__layout_offset_x.GetValue())
+        y = float(self.__layout_offset_y.GetValue())
+        return (x, y)
+
     def get_window_state(self) -> WindowState:
         return WindowState(
-            layout_path=self.get_layout_path(),
+            layout_path=self.get_layout_path_or_url(),
             key_distance=self.get_key_distance(),
             key_info=self.get_key_info(),
             enable_diode_placement=self.enable_diode_placement(),
@@ -965,6 +1321,7 @@ class KbplacerDialog(wx.Dialog):
             template_path=self.get_template_path(),
             generate_outline=self.generate_outline(),
             outline_delta=self.get_outline_delta(),
+            layout_offset=self.get_layout_offset(),
         )
 
 
@@ -986,8 +1343,8 @@ def load_window_state_from_log(filepath: str) -> WindowState:
 # used for tests
 if __name__ == "__main__":
     import argparse
-    import threading
 
+    from .dialog_helper import show_with_test_support
     from .kbplacer_plugin import run_from_gui
 
     parser = argparse.ArgumentParser(description="dialog test")
@@ -1004,8 +1361,7 @@ if __name__ == "__main__":
         help="Run with loaded state without displaying dialog window",
     )
     parser.add_argument(
-        "-b",
-        "--board",
+        "--pcb-file",
         required=False,
         default="",
         help=".kicad_pcb file to be used with --run-without-dialog option",
@@ -1014,27 +1370,9 @@ if __name__ == "__main__":
 
     initial_state = load_window_state_from_log(args.initial_state_file)
     if not args.run_without_dialog:
-        app = wx.App()
-        dlg = KbplacerDialog(None, "kbplacer", initial_state=initial_state)
-
-        if "PYTEST_CURRENT_TEST" in os.environ:
-            print(f"Using {wx.version()}")
-
-            # use stdin for gracefully closing GUI when running
-            # from pytest. This is required when measuring
-            # coverage and process kill would cause measurement to be lost
-            def listen_for_exit() -> None:
-                input("Press any key to exit: ")
-                dlg.Close()
-                wx.Exit()
-
-            input_thread = threading.Thread(target=listen_for_exit)
-            input_thread.start()
-
-            dlg.Show()
-            app.MainLoop()
-        else:
-            dlg.ShowModal()
+        dlg = show_with_test_support(
+            KbplacerDialog, None, "kbplacer", initial_state=initial_state
+        )
 
         with open(f"{args.output_dir}/window_state.json", "w") as f:
             f.write(f"{dlg.get_window_state()}")
@@ -1043,6 +1381,6 @@ if __name__ == "__main__":
     else:
         import pcbnew
 
-        board = run_from_gui(args.board, initial_state)
+        board = run_from_gui(args.pcb_file, initial_state)
         pcbnew.Refresh()
-        pcbnew.SaveBoard(args.board, board)
+        pcbnew.SaveBoard(args.pcb_file, board)

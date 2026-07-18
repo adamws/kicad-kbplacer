@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 adamws <adamws@users.noreply.github.com>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 import inspect
 import logging
 from logging import NullHandler
@@ -7,7 +11,7 @@ try:
 except ImportError:
     __version__ = "not-found"
 
-__license__ = "GPL-3.0-only"
+__license__ = "GPL-3.0-or-later"
 __version__ = __version__
 
 logging.getLogger(__name__).addHandler(NullHandler())

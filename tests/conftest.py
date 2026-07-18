@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 adamws <adamws@users.noreply.github.com>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 import base64
 import ctypes
 import glob
@@ -10,12 +14,19 @@ import shutil
 import subprocess
 import sys
 import time
+import uuid
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Tuple, Union
 
-import pcbnew
 import pytest
+from PIL import ImageGrab
+from pyvirtualdisplay.smartdisplay import DisplayTimeoutError, SmartDisplay
+
+if sys.platform == "win32":
+    from ctypes.wintypes import DWORD, HWND, RECT
+
+import pcbnew
 import svgpathtools
 
 Numeric = Union[int, float]
@@ -24,7 +35,12 @@ Box = Tuple[Numeric, Numeric, Numeric, Numeric]
 
 version_match = re.search(r"(\d+)\.(\d+)\.(\d+)", pcbnew.Version())
 KICAD_VERSION = tuple(map(int, version_match.groups())) if version_match else ()
+MIN_KICAD_VERSION = 6
 logger = logging.getLogger(__name__)
+
+# The `skip` package (used by the schematic builder) is very chatty at DEBUG/INFO
+# and floods the HTML test report. Only surface its warnings and above.
+logging.getLogger("skip").setLevel(logging.WARNING)
 
 
 def pytest_collection_modifyitems(items) -> None:
@@ -50,7 +66,7 @@ def pytest_addoption(parser) -> None:
     parser.addoption(
         "--test-plugin-installation",
         action="store_true",
-        help="Run tests using ~/.local/share/kicad/8.0/3rdparty/plugins instance instead of local one",
+        help="Run tests using ~/.local/share/kicad/[major].0/3rdparty/plugins instance instead of local one",
         default=False,
     )
     parser.addoption(
@@ -66,13 +82,24 @@ def pytest_addoption(parser) -> None:
         help="Run example tests with cProfile",
         default=False,
     )
+    parser.addoption(
+        "--benchmark-rounds",
+        type=int,
+        default=50,
+        help="Number of rounds for performance benchmark tests (default: 50)",
+    )
+
+
+def get_kicad_major() -> int:
+    return KICAD_VERSION[0] if KICAD_VERSION else 0
 
 
 @pytest.fixture(scope="session")
 def package_path(request):
     if request.config.getoption("--test-plugin-installation"):
         home_directory = Path.home()
-        return f"{home_directory}/.local/share/kicad/8.0/3rdparty/plugins"
+        major = get_kicad_major()
+        return f"{home_directory}/.local/share/kicad/{major}.0/3rdparty/plugins"
     return Path(os.path.realpath(__file__)).parents[1]
 
 
@@ -128,12 +155,24 @@ def get_footprints_dir(request):
 
 def get_references_dir(request, example_name, route_option, diode_option):
     test_dir = Path(request.module.__file__).parent
-    major = KICAD_VERSION[0] if KICAD_VERSION else 0
-    references_dir = test_dir / f"data/examples-references/kicad{major}"
-    if not references_dir.exists():
-        msg = f"Reference directory '{references_dir}' does not exists"
-        raise RuntimeError(msg)
-    return references_dir / f"{example_name}/{route_option}-{diode_option}"
+    major = get_kicad_major()
+
+    def get_references_dir_for_kicad(major):
+        references_dir = test_dir / f"data/examples-references/kicad{major}"
+        if not references_dir.exists():
+            msg = f"Reference directory '{references_dir}' does not exists"
+            raise RuntimeError(msg)
+        return references_dir / f"{example_name}/{route_option}-{diode_option}"
+
+    # if reference for given major version does not exist, try to use previous one
+    while major >= MIN_KICAD_VERSION:
+        references_dir = get_references_dir_for_kicad(major)
+        if references_dir.exists():
+            return references_dir
+        major -= 1
+
+    # could not find reference files
+    return None
 
 
 def request_to_references_dir(request):
@@ -235,7 +274,8 @@ def generate_render(
     plot_options.SetNegative(False)
     plot_options.SetPlotReference(True)
     plot_options.SetPlotValue(True)
-    plot_options.SetPlotInvisibleText(False)
+    if KICAD_VERSION < (9, 0, 1):
+        plot_options.SetPlotInvisibleText(False)
     if KICAD_VERSION >= (7, 0, 0):
         plot_options.SetDrillMarksType(pcbnew.DRILL_MARKS_NO_DRILL_SHAPE)
         plot_options.SetSvgPrecision(aPrecision=1)
@@ -307,6 +347,12 @@ def generate_render(
     new_tree.write(f"{destination_dir}/report/{pcb_name}.svg")
 
 
+def save_and_render(board: pcbnew.BOARD, tmpdir, request) -> None:
+    pcb_path = f"{tmpdir}/test.kicad_pcb"
+    board.Save(pcb_path)
+    generate_render(request, pcb_path)
+
+
 def ignore_selected_drc_rules(board_path: Union[str, os.PathLike]) -> None:
     project_file = Path(board_path).with_suffix(".kicad_pro")
     assert project_file.exists(), "Could not ignore DRC rules without .kicad_pro file"
@@ -350,9 +396,102 @@ def generate_drc(tmpdir, board_path: Union[str, os.PathLike]) -> None:
         logger.debug(f.read())
 
 
+def default_schematic_kwargs(**overrides) -> dict:
+    """Default `project_name`/`own_uuid`/`sheet_page` kwargs for tests that call
+    `create_key_matrix_schematic`/`create_led_chain_schematic` directly and don't
+    care about multi-sheet bundling specifics.
+    """
+    kwargs = {
+        "project_name": "test",
+        "own_uuid": str(uuid.uuid4()),
+        "sheet_page": 1,
+    }
+    kwargs.update(overrides)
+    return kwargs
+
+
+def write_fp_lib_table(tmpdir, libs) -> None:
+    """Write a project-local ``fp-lib-table`` registering footprint libraries.
+
+    ``libs`` is an iterable of ``(nickname, uri)`` pairs, where ``nickname`` is
+    the library nickname used in footprint FPIDs (e.g. ``tests`` for
+    ``tests:D_SOD-323``). Registering the libraries is required for
+    ``kicad-cli pcb drc --schematic-parity`` to resolve board footprints and
+    compare them against the schematic symbols.
+    """
+    with open(f"{tmpdir}/fp-lib-table", "w") as f:
+        f.write("(fp_lib_table\n")
+        for name, uri in libs:
+            f.write(
+                f'  (lib (name {name})(type KiCad)(uri {uri})(options "")(descr ""))\n'
+            )
+        f.write(")")
+
+
+def run_schematic_parity_drc(tmpdir, board_path: Union[str, os.PathLike]) -> dict:
+    """Run schematic-parity DRC via kicad-cli and return the parsed JSON report.
+
+    The board and its schematic must share the same base name and directory, and
+    the footprint libraries referenced by the board FPIDs must be registered in a
+    project-local ``fp-lib-table`` (see :func:`write_fp_lib_table`).
+    """
+    if KICAD_VERSION < (9, 0, 0):
+        msg = "Schematic parity DRC not supported"
+        raise RuntimeError(msg)
+
+    board_path = Path(board_path)
+    report_path = tmpdir / f"{board_path.stem}-parity-drc.json"
+
+    subprocess.run(
+        f"{kicad_cli()} pcb drc --schematic-parity --format json "
+        f"--output {report_path} {board_path}",
+        shell=True,
+        check=False,
+    )
+
+    with open(report_path, "r") as f:
+        report = json.load(f)
+    logger.debug(report)
+    return report
+
+
+def generate_netlist(tmpdir, schematic_path: Union[str, os.PathLike]) -> Path:
+    if KICAD_VERSION < (9, 0, 0):
+        msg = "Schematic to netlist conversion not supported"
+        raise RuntimeError(msg)
+
+    board_path = Path(schematic_path)
+    board_name = board_path.stem
+    netlist_path = tmpdir / f"{board_name}.net"
+
+    subprocess.run(
+        f"{kicad_cli()} sch export netlist --output {netlist_path} {schematic_path}",
+        shell=True,
+        check=False,
+    )
+    return netlist_path
+
+
+def generate_schematic_image(tmpdir, schematic_path: Union[str, os.PathLike]) -> None:
+    if KICAD_VERSION < (9, 0, 0):
+        msg = "Schematic to SVG conversion not supported"
+        raise RuntimeError(msg)
+
+    svg_output_dir = tmpdir / "report"
+
+    subprocess.run(
+        f"{kicad_cli()} sch export svg -e --output {svg_output_dir} {schematic_path}",
+        shell=True,
+        check=False,
+    )
+
+
 def prepare_project_file(request, board_path: Union[str, os.PathLike]) -> None:
     test_dir = Path(request.module.__file__).parent
-    major = KICAD_VERSION[0] if KICAD_VERSION else 0
+    major = get_kicad_major()
+    if major == 9 or major == 10:
+        # reuse previous project files for kicad 9 and 10
+        major = 8
     templates_dir = test_dir / f"data/examples-references/kicad{major}/kicad-defaults"
 
     destination = Path(board_path).parent
@@ -411,6 +550,12 @@ def add_led_footprint(board, request, ref_count) -> pcbnew.FOOTPRINT:
     # NOTE: should use different footprint but that is
     # not that important for testing
     return _add_footprint(board, request, "D_SOD-323", f"LED{ref_count}")
+
+
+def add_stabilizer_footprint(
+    board, request, ref_count, footprint: str = "Stabilizer_Cherry_MX_2.00u"
+) -> pcbnew.FOOTPRINT:
+    return _add_footprint(board, request, footprint, f"ST{ref_count}")
 
 
 def get_track(board, start: pcbnew.VECTOR2I, end: pcbnew.VECTOR2I, layer):
@@ -485,3 +630,163 @@ def pytest_runtest_makereport(item, call):
                 with open(url, "r") as f:
                     extras.append(pytest_html.extras.url(f.read()))
         report.extras = extras
+
+
+class LinuxVirtualScreenManager:
+    def __enter__(self):
+        self.display = SmartDisplay(backend="xvfb", size=(960, 960))
+        self.display.start()
+        return self
+
+    def __exit__(self, *exc):
+        self.display.stop()
+        return False
+
+    def screenshot(self, window_name, path):
+        try:
+            img = self.display.waitgrab(timeout=5)
+            img.save(path)
+            return True
+        except DisplayTimeoutError as err:
+            logger.error(err)
+            return False
+
+
+def find_window(name):
+    if sys.platform != "win32":
+        return None
+    user32 = ctypes.windll.user32
+    return user32.FindWindowW(None, name)
+
+
+def get_window_position(window_handle) -> Union[None, Tuple[int, int, int, int]]:
+    if sys.platform != "win32":
+        return None
+    dwmapi = ctypes.windll.dwmapi
+    # based on https://stackoverflow.com/a/67137723
+    rect = RECT()
+    DMWA_EXTENDED_FRAME_BOUNDS = 9
+    dwmapi.DwmGetWindowAttribute(
+        HWND(window_handle),
+        DWORD(DMWA_EXTENDED_FRAME_BOUNDS),
+        ctypes.byref(rect),
+        ctypes.sizeof(rect),
+    )
+    return (rect.left, rect.top, rect.right, rect.bottom)
+
+
+class HostScreenManager:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def screenshot(self, window_name, path):
+        try:
+            time.sleep(1)
+            window_handle = find_window(window_name)
+            window_rect = get_window_position(window_handle)
+            img = ImageGrab.grab()
+            if window_rect:
+                img_width, img_height = img.size
+                x1, y1, x2, y2 = window_rect
+
+                # Clamp coordinates within image bounds
+                x1, y1 = max(0, x1), max(0, y1)
+                x2, y2 = min(img_width, x2), min(img_height, y2)
+
+                if x1 < x2 and y1 < y2:
+                    img = img.crop((x1, y1, x2, y2))
+                else:
+                    logger.warning(
+                        f"Can't crop image of size {img_width}x{img_height} "
+                        f"to rectangle ({x1},{y1},{x2},{y2})"
+                    )
+            img.save(path)
+            return True
+        except Exception as err:
+            logger.error(err)
+            return False
+
+
+def is_xvfb_avaiable() -> bool:
+    try:
+        p = subprocess.Popen(
+            ["Xvfb", "-help"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=False,
+        )
+        _, _ = p.communicate()
+        exit_code = p.returncode
+        return exit_code == 0
+    except FileNotFoundError:
+        logger.warning("Xvfb was not found")
+    return False
+
+
+def get_screen_manager():
+    if sys.platform == "linux":
+        if is_xvfb_avaiable():
+            return LinuxVirtualScreenManager()
+        else:
+            return HostScreenManager()
+    elif sys.platform == "win32":
+        return HostScreenManager()
+    else:
+        pytest.skip(f"Platform '{sys.platform}' is not supported")
+
+
+@pytest.fixture
+def screen_manager():
+    return get_screen_manager()
+
+
+def filter_kiacd10_errs(errs):
+    if KICAD_VERSION < (10, 0, 0):
+        return errs
+    # on KiCad 10.0.0 release there are:
+    # 'assert "m_choices.GetCount() > 0" failed in PROPERTY_ENUM(): No enum choices'
+    # error prints, ignore them
+    if isinstance(errs, bytes):
+        errs = errs.decode("utf-8", errors="ignore")
+    pattern = re.compile(r"No enum choices defined")
+    filtered_errs = "\n".join(
+        line for line in errs.splitlines() if not pattern.search(line)
+    )
+    return filtered_errs
+
+
+def filter_known_errs(errs):
+    """Filter known-harmless assertion prints that vary by platform/version."""
+    if isinstance(errs, bytes):
+        errs = errs.decode("utf-8", errors="ignore")
+    patterns = []
+    if KICAD_VERSION >= (10, 0, 0):
+        # 'assert "m_choices.GetCount() > 0" failed in PROPERTY_ENUM(): No enum choices'
+        patterns.append(re.compile(r"No enum choices defined"))
+    if sys.platform == "darwin":
+        # 'assert ""traits"" failed in Get(): create wxApp before calling this'
+        patterns.append(re.compile(r"create wxApp before calling this"))
+    if not patterns:
+        return errs
+    return "\n".join(
+        line for line in errs.splitlines() if not any(p.search(line) for p in patterns)
+    )
+
+
+def assert_no_kicad_assertion_errors(output: str) -> None:
+    """Assert that the subprocess output contains no KiCad C++ assertion failures.
+
+    KiCad assertion failures have the form:
+      path/to/file.cpp(lineno): assert "condition" failed in Function(): message
+
+    On Linux these are non-fatal (execution continues) but on Windows they
+    raise an error popup, so they must be treated as hard failures.
+    Known-harmless assertions are filtered before checking.
+    """
+    filtered = filter_known_errs(output)
+    pattern = re.compile(r': assert ".*" failed in ')
+    failed = [line for line in filtered.splitlines() if pattern.search(line)]
+    assert not failed, "KiCad assertion failures detected:\n" + "\n".join(failed)

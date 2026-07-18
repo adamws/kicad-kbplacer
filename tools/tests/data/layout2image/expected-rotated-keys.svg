@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="339" height="119" viewBox="341 292 339 119">
+<defs>
+<g id="d0">
+<rect x="0" y="0" width="52" height="52" rx="5" fill="none" stroke="black" stroke-width="2" />
+<rect x="1.0" y="1.0" width="50.0" height="50.0" rx="4.0" fill="#777777" />
+<rect x="6" y="4" width="40" height="40" rx="5" fill="#919191" />
+<text x="7" y="7" font-size="12" text-anchor="start" dominant-baseline="hanging"><tspan x="7" dy="0em">4,6</tspan></text>
+</g>
+<g id="d1">
+<rect x="0" y="0" width="52" height="52" rx="5" fill="none" stroke="black" stroke-width="2" />
+<rect x="1.0" y="1.0" width="50.0" height="50.0" rx="4.0" fill="#777777" />
+<rect x="6" y="4" width="40" height="40" rx="5" fill="#919191" />
+<text x="7" y="7" font-size="12" text-anchor="start" dominant-baseline="hanging"><tspan x="7" dy="0em">4,7</tspan></text>
+</g>
+<g id="d2">
+<rect x="0" y="0" width="52" height="52" rx="5" fill="none" stroke="black" stroke-width="2" />
+<rect x="1.0" y="1.0" width="50.0" height="50.0" rx="4.0" fill="#777777" />
+<rect x="6" y="4" width="40" height="40" rx="5" fill="#919191" />
+<text x="7" y="7" font-size="12" text-anchor="start" dominant-baseline="hanging"><tspan x="7" dy="0em">4,8</tspan></text>
+</g>
+<g id="d3">
+<rect x="0" y="0" width="52" height="52" rx="5" fill="none" stroke="black" stroke-width="2" />
+<rect x="1.0" y="1.0" width="50.0" height="50.0" rx="4.0" fill="#777777" />
+<rect x="6" y="4" width="40" height="40" rx="5" fill="#919191" />
+<text x="7" y="7" font-size="12" text-anchor="start" dominant-baseline="hanging"><tspan x="7" dy="0em">4,9</tspan></text>
+</g>
+</defs>
+<use xlink:href="#d0" x="368.0" y="295.2" transform="rotate(30 362.8 303.0)" />
+<use xlink:href="#d1" x="440.8" y="321.2" transform="rotate(45 420 316)" />
+<use xlink:href="#d2" x="529.1999999999999" y="321.2" transform="rotate(-45 602.0 316)" />
+<use xlink:href="#d3" x="602.0" y="295.2" transform="rotate(-30 654.0 303.0)" />
+</svg>

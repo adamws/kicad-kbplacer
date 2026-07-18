@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 adamws <adamws@users.noreply.github.com>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 from __future__ import annotations
 
 import copy
@@ -5,7 +9,7 @@ import itertools
 import logging
 import os
 import re
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 from typing import (
     Any,
@@ -27,6 +31,8 @@ from .board_modifier import (
     KICAD_VERSION,
     BoardModifier,
     calculate_distance_matrix,
+    duplicate_footprint,
+    duplicate_track,
     get_closest_pads_on_same_net,
     get_common_nets,
     get_distance,
@@ -45,13 +51,28 @@ from .board_modifier import (
     set_side,
 )
 from .element_position import ElementInfo, ElementPosition, PositionOption
-from .kle_serial import Key, Keyboard, MatrixAnnotatedKeyboard, get_keyboard_from_file
+from .kle_serial import (
+    Key,
+    Keyboard,
+    KeyboardTag,
+    MatrixAnnotatedKeyboard,
+    get_keyboard_from_file,
+    is_iso_enter,
+    keyboard_from_url,
+    layout_classification,
+)
 from .plugin_error import PluginError
 
 logger = logging.getLogger(__name__)
+ANNOTATION_GUIDE_URL = (
+    "https://github.com/adamws/kicad-kbplacer/blob/master/docs/annotation_guide.md"
+)
 
 
 class KeyMatrix:
+    SUPPORTED_ROW_NAMES = ["ROW{}", "R{}", "/ROW{}", "/R{}"]
+    SUPPORTED_COLUMN_NAMES = ["COLUMN{}", "COL{}", "C{}", "/COLUMN{}", "/COL{}", "/C{}"]
+
     def __init__(self, board: pcbnew.BOARD, key_format: str, diode_format: str) -> None:
         self.key_format = key_format
         self.diode_format = diode_format
@@ -104,27 +125,36 @@ class KeyMatrix:
                     self._diodes_by_switch[switch_reference].append(f)
                     # remove common switch-diode net and add diode-unique net instead,
                     # this way we should get key-matrix nets:
-                    switches_nets[switch_reference].discard(*common_nets)
+                    for net in common_nets:
+                        switches_nets[switch_reference].discard(net)
                     switches_nets[switch_reference].update(
                         diodes_unique_nets[reference]
                     )
 
+        self._invalid_switches: Dict[str, Set[str]] = {}
         for k, v in switches_nets.items():
-            if len(list(v)) == 2:
+            if len(v) == 2:
                 self._switches_references_by_net[frozenset(v)].append(k)
             else:
-                logger.warning(
-                    "Unexpected switch net position detected, "
-                    "each switch should have two unique nets unambiguously defining "
-                    "position in key matrix, switch-by-matrix association can't be used"
-                )
-                self._switches_references_by_net = {}
-                break
+                self._invalid_switches[k] = set(v)
+        if self._invalid_switches:
+            details = ", ".join(
+                f"{ref} (nets: {sorted(nets) if nets else 'none'})"
+                for ref, nets in sorted(self._invalid_switches.items())
+            )
+            logger.warning(
+                "Unexpected switch net position detected. Each switch should have "
+                "exactly two unique nets unambiguously defining its position in the "
+                "key matrix (one ROW and one COL). The following switches do not: "
+                f"{details}. Their pads may be unconnected or wired incorrectly, so "
+                "switch-by-matrix association can't be used."
+            )
+            self._switches_references_by_net = {}
         logger.debug(f"Switches by nets: {self._switches_references_by_net}")
-        diodes_by_switch = {
+        self._diodes_references_by_switch = {
             k: [f.GetReference() for f in v] for k, v in self._diodes_by_switch.items()
         }
-        logger.debug(f"Diodes by switch: {diodes_by_switch}")
+        logger.debug(f"Diodes by switch: {self._diodes_references_by_switch}")
 
     def first_switch_reference(self) -> str:
         return min(self._switches)
@@ -156,10 +186,29 @@ class KeyMatrix:
     def is_matrix_ok(self) -> bool:
         return len(self._switches_references_by_net) != 0
 
+    def invalid_switches(self) -> Dict[str, Set[str]]:
+        """Switches which do not have exactly two matrix nets, keyed by
+        reference with their detected nets. Populated when matrix association
+        fails so callers can report the offending footprints."""
+        return self._invalid_switches
+
+    def is_likely_direct_pin(self) -> bool:
+        # assume that matrix netlist is direct-pin if:
+        # 1) none of the switch has diode connected to it
+        # 2) all of the switches are connected to GND on the one side
+        no_diodes = all(
+            len(lst) == 0 for lst in self._diodes_references_by_switch.values()
+        )
+        all_use_gnd = all(
+            any(net in key for net in ["GND", "Gnd", "gnd"])
+            for key in self._switches_references_by_net.keys()
+        )
+        return no_diodes and all_use_gnd
+
     def __guess_format(self, guesses: List[str]) -> str:
         for guess in guesses:
             pattern = re.compile(guess.format("(\\d)+"))
-            for net in list(self.matrix_nets()):
+            for net in self.matrix_nets():
                 if re.match(pattern, net):
                     return guess
         # out of luck, getting switches by row,column annotation won't work
@@ -168,13 +217,13 @@ class KeyMatrix:
     @property
     def row_format(self) -> str:
         if not self._row_format:
-            self._row_format = self.__guess_format(["ROW{}", "R{}"])
+            self._row_format = self.__guess_format(KeyMatrix.SUPPORTED_ROW_NAMES)
         return self._row_format
 
     @property
     def column_format(self) -> str:
         if not self._column_format:
-            self._column_format = self.__guess_format(["COLUMN{}", "COL{}", "C{}"])
+            self._column_format = self.__guess_format(KeyMatrix.SUPPORTED_COLUMN_NAMES)
         return self._column_format
 
     def switches_references_by_coordinates(self, row: int, column: int) -> List[str]:
@@ -206,11 +255,11 @@ class KeyMatrix:
 
     def matrix_rows(self) -> Set[str]:
         pattern = re.compile(self.row_format.format("(\\d)+"))
-        return set(filter(lambda net: re.match(pattern, net), self.matrix_nets()))
+        return {net for net in self.matrix_nets() if re.match(pattern, net)}
 
     def matrix_columns(self) -> Set[str]:
         pattern = re.compile(self.column_format.format("(\\d)+"))
-        return set(filter(lambda net: re.match(pattern, net), self.matrix_nets()))
+        return {net for net in self.matrix_nets() if re.match(pattern, net)}
 
 
 class KeyboardSwitchIterator:
@@ -220,10 +269,13 @@ class KeyboardSwitchIterator:
         self,
         keyboard: Keyboard,
         key_matrix: KeyMatrix,
+        start_index: int = 1,
     ) -> None:
         self._keyboard = keyboard
         self._key_matrix = key_matrix
-        self._explicit_annotations = self.__check_explicit_annotations(keyboard)
+        self.explicit_annotations = self.__check_explicit_annotations(keyboard)
+        self._keys = iter(self._keyboard.keys)
+        self._current_key = start_index
 
     def __check_explicit_annotations(self, keyboard: Keyboard) -> bool:
         number_of_explicit_annotations = sum(
@@ -233,12 +285,10 @@ class KeyboardSwitchIterator:
         return number_of_explicit_annotations == len(keyboard.keys)
 
     def __iter__(self):
-        self._keys = iter(self._keyboard.keys)
-        self._current_key = 1
         return self
 
     def __get_footprint(self, key: Key) -> pcbnew.FOOTPRINT:
-        if self._explicit_annotations:
+        if self.explicit_annotations:
             label = key.labels[self.EXPLICIT_ANNOTATION_LABEL]
             try:
                 sw = self._key_matrix.switch_by_format_value(label)
@@ -280,36 +330,61 @@ class MatrixAnnotatedKeyboardSwitchIterator:
     ) -> None:
         self._keyboard = keyboard
         self._key_matrix = key_matrix
+        self._keys = self._keyboard.key_iterator(ignore_alternative=False)
+        self._seen: Counter[Tuple[str, str]] = Counter()
 
     def __iter__(self):
-        self._keys = self._keyboard.key_iterator(ignore_alternative=False)
-        self._seen: List[Tuple[str, str]] = []
         return self
 
     def __get_footprint(self, key: Key) -> Optional[pcbnew.FOOTPRINT]:
         matrix_coordinates = MatrixAnnotatedKeyboard.get_matrix_position(key)
+        layout_option = self._seen[matrix_coordinates]
+
         if all(c.isdigit() for c in matrix_coordinates):
             switches = self._key_matrix.switches_references_by_coordinates(
                 *map(int, matrix_coordinates)
             )
+            net_names_inferred = True
         else:
+            # supporting via-like annotation where net names are explicitly
+            # stated in layout file
             switches = self._key_matrix.switches_references_by_netnames(
                 *matrix_coordinates
             )
+            net_names_inferred = False
         switches = sorted(switches)
         logger.debug(f"Got {switches} for {matrix_coordinates} position")
+        if len(switches) == 0:
+            msg = (
+                f"Could not find switches connected to {matrix_coordinates} matrix position "
+                "which is used in provided layout.\n"
+                "Either required footprint is missing or it can't be found due to unexpected "
+                "net names.\n"
+            )
+            if net_names_inferred:
+                names = KeyMatrix.SUPPORTED_ROW_NAMES + KeyMatrix.SUPPORTED_COLUMN_NAMES
+                msg += (
+                    "When using via-annotated layouts it must be possible to associate "
+                    "footprints with following net names:\n" + ", ".join(names)
+                )
+            raise PluginError(msg)
+
         # assume that alternative keys have same annotation with
         # some sort of suffix so after sorting
         # the option index would get us correct footprint
         try:
             # due to layout collapsing the choices might be missing,
             # instead of using choice value use number of already seen switches
-            switch = switches[self._seen.count(matrix_coordinates)]
+            switch = switches[layout_option]
             fp = self._key_matrix.switch_by_reference(switch)
-            self._seen.append(matrix_coordinates)
+            self._seen[matrix_coordinates] += 1
             return fp
         except Exception:
-            logger.warning("Could not find alternative layout footprint")
+            logger.warning(
+                "Could not find {} layout footprint".format(
+                    "default" if layout_option == 0 else "alternative"
+                )
+            )
             return None
 
     def __next__(self):
@@ -327,23 +402,44 @@ class MatrixAnnotatedKeyboardSwitchIterator:
 def get_key_iterator(
     keyboard: Keyboard,
     key_matrix: KeyMatrix,
+    start_index: int = 1,
 ) -> Iterator:
     if isinstance(keyboard, MatrixAnnotatedKeyboard):
         if not key_matrix.is_matrix_ok():
+            invalid = key_matrix.invalid_switches()
+            if invalid:
+                details = ", ".join(
+                    f"{ref} (nets: {sorted(nets) if nets else 'none'})"
+                    for ref, nets in sorted(invalid.items())
+                )
+                reason = (
+                    "The following switch footprints do not have exactly two "
+                    f"matrix nets (one ROW, one COL): {details}.\n"
+                    "Their pads appear unconnected or incorrectly wired.\n"
+                )
+            else:
+                reason = "Either net names are unrecognized or netlist is invalid.\n"
             msg = (
                 "Detected layout file with via-annotated matrix positions "
                 "while not all footprints on PCB can be unambiguously associated "
                 "with row/column position.\n"
-                "Either net names are unrecognized, netlist is invalid or "
-                "or using direct-pin switch connections.\n"
-                "Fix netlist problems or use layout file with 'explicit annotation'.\n"
-                "For details see https://github.com/adamws/kicad-kbplacer/"
-                "blob/master/docs/annotation_guide.md"
+                f"{reason}"
+                "Fix netlist problems or use layout file which uses 'explicit annotation'.\n"
+                f"For details see {ANNOTATION_GUIDE_URL}"
+            )
+            raise PluginError(msg)
+        if key_matrix.is_likely_direct_pin():
+            msg = (
+                "Detected layout file with via-annotated matrix positions "
+                "while key connections appear to be direct-pin (no matrix with diodes found).\n"
+                "This means that footprints on PCB can't be reliably matched to layout.\n"
+                "Please use layout file which uses 'explicit annotation'.\n"
+                f"For details see {ANNOTATION_GUIDE_URL}"
             )
             raise PluginError(msg)
         _iter = MatrixAnnotatedKeyboardSwitchIterator(keyboard, key_matrix)
     else:
-        _iter = KeyboardSwitchIterator(keyboard, key_matrix)
+        _iter = KeyboardSwitchIterator(keyboard, key_matrix, start_index)
     return iter(_iter)
 
 
@@ -351,16 +447,9 @@ class KeyPlacer(BoardModifier):
     def __init__(
         self,
         board: pcbnew.BOARD,
-        key_distance: Tuple[float, float] = (19.05, 19.05),
     ) -> None:
         super().__init__(board)
-
-        self.__key_distance_x = cast(int, pcbnew.FromMM(key_distance[0]))
-        self.__key_distance_y = cast(int, pcbnew.FromMM(key_distance[1]))
-
-        logger.debug(
-            f"Set key 1U distance: {self.__key_distance_x}/{self.__key_distance_y}"
-        )
+        self._stab_rotation_by_switch: dict = {}
 
     def apply_switch_connection_template(
         self,
@@ -387,7 +476,7 @@ class KeyPlacer(BoardModifier):
             # we should be safe with `Cast_to_PCB_TRACK` (not doing any via
             # specific operations here)
             track = pcbnew.Cast_to_PCB_TRACK(item)
-            new_track = track.Duplicate()
+            new_track = duplicate_track(track)
             if KICAD_VERSION < (7, 0, 0):
                 new_track.Move(pcbnew.wxPoint(switch_position.x, switch_position.y))
             else:
@@ -455,23 +544,23 @@ class KeyPlacer(BoardModifier):
 
     def remove_dangling_tracks(self) -> None:
         logger.info("Removing dangling tracks")
-        connectivity = self.get_connectivity()
 
-        any_removed = False
-
-        def _is_dangling(track: pcbnew.PCB_TRACK) -> bool:
+        def _is_dangling(
+            connectivity: pcbnew.CONNECTIVITY_DATA, track: pcbnew.PCB_TRACK
+        ) -> bool:
             if KICAD_VERSION >= (7, 0, 7):
                 return connectivity.TestTrackEndpointDangling(track, False)
             return connectivity.TestTrackEndpointDangling(track)
 
-        for track in self.board.GetTracks():
-            if _is_dangling(track):
-                logger.info(f"Removing {track.m_Uuid.AsString()}")
-                self.board.RemoveNative(track)
-                any_removed = True
-
-        if any_removed:
-            self.remove_dangling_tracks()
+        any_removed = True
+        while any_removed:
+            any_removed = False
+            connectivity = self.get_connectivity()
+            for track in self.board.GetTracks():
+                if _is_dangling(connectivity, track):
+                    logger.info(f"Removing {track.m_Uuid.AsString()}")
+                    self.board.RemoveNative(track)
+                    any_removed = True
 
     def save_connection_template(
         self,
@@ -489,14 +578,14 @@ class KeyPlacer(BoardModifier):
         # and delete project file
         os.remove(Path(destination_path).with_suffix(".kicad_pro"))
 
-        switch_copy = pcbnew.Cast_to_FOOTPRINT(switch.Duplicate())
+        switch_copy = duplicate_footprint(switch)
         reset_rotation(switch_copy)
         set_position(switch_copy, pcbnew.VECTOR2I(0, 0))
 
         origin = get_position(switch)
         diode_copies = []
         for d in diodes:
-            diode_copy = pcbnew.Cast_to_FOOTPRINT(d.Duplicate())
+            diode_copy = duplicate_footprint(d)
             if angle := get_orientation(switch):
                 rotate(diode_copy, origin, angle)
             set_position(
@@ -539,20 +628,27 @@ class KeyPlacer(BoardModifier):
         for item in connections:
             # using `Duplicate` here to not alter net assignments of original tracks
             # (which needs to be empty in order to work as template)
-            board.Add(item.Duplicate())
+            board.Add(duplicate_track(item))
         pcbnew.SaveBoard(destination_path, board, aSkipSettings=True)
 
     def get_connection_template(
-        self, key_format: str, diode_format: str, destination_path: str, route: bool
+        self,
+        key_info: ElementInfo,
+        diode_format: str,
+        destination_path: str,
+        route: bool,
     ) -> List[pcbnew.PCB_TRACK]:
         """Returns list of tracks (including vias) connecting first element
-        with reference `key_format` to itself or any other element
+        with reference `key_info.annotation_format` to itself or any other element
         and optionally save it to new `pcbnew` template file.
-        The coordinates of returned elements are normalized to center of `key_format`
-        element. If `key_format` element is rotated, resulting coordinates are rotated
+        The coordinates of returned elements are normalized to center of `key_info.annotation_format`
+        element. If `key_info.annotation_format` element is rotated, resulting coordinates are rotated
         back so the template is always in natural (0) orientation.
         """
-        switch = get_footprint(self.board, key_format.format(1))
+        key_format = key_info.annotation_format
+        start_index = key_info.start_index
+
+        switch = get_footprint(self.board, key_format.format(start_index))
 
         logger.info(
             "Looking for connection template between "
@@ -575,14 +671,14 @@ class KeyPlacer(BoardModifier):
             _get_connected_tracks(p)
 
         for item in _tracks.values():
-            item_copy = item.Duplicate()
+            item_copy = duplicate_track(item)
             item_copy.SetNetCode(0)
             if angle := get_orientation(switch):
                 rotate(item_copy, origin, angle)
             if KICAD_VERSION < (7, 0, 0):
                 item_copy.Move(pcbnew.wxPoint(-origin.x, -origin.y))
             else:
-                item_copy.Move(origin * -1)
+                item_copy.Move(pcbnew.VECTOR2I(-origin.x, -origin.y))
 
             if route:
                 self.board.RemoveNative(item)
@@ -624,6 +720,9 @@ class KeyPlacer(BoardModifier):
         self,
         keyboard: Keyboard,
         key_matrix: KeyMatrix,
+        key_distance_x: int,
+        key_distance_y: int,
+        start_index: int,
     ) -> pcbnew.VECTOR2I:
         """Calculates value of offset vector to be applied to key coordinates
         in order to align first key center with defined x/y grid
@@ -644,22 +743,83 @@ class KeyPlacer(BoardModifier):
 
         offset_x = 0
         offset_y = 0
-        key_iterator: Iterator = get_key_iterator(keyboard, key_matrix)
+        key_iterator: Iterator = get_key_iterator(keyboard, key_matrix, start_index)
         first_key, _ = next(key_iterator)
         if first_key:
-            offset_x = _offset(self.__key_distance_x, first_key.x, first_key.width)
-            offset_y = _offset(self.__key_distance_y, first_key.y, first_key.height)
+            offset_x = _offset(key_distance_x, first_key.x, first_key.width)
+            offset_y = _offset(key_distance_y, first_key.y, first_key.height)
         return pcbnew.VECTOR2I(offset_x, offset_y)
+
+    def _resolve_key_distance(
+        self,
+        keyboard: Keyboard,
+        key_distance: Optional[Tuple[float, float]] = None,
+    ) -> Tuple[float, float]:
+        """Determine key distance based on priority: argument > metadata > default.
+
+        If key_distance was provided as argument, use it (higher priority),
+        otherwise use metadata spacing
+
+        :param keyboard: Keyboard object with metadata
+        :param key_distance: Optional key distance override in millimeters
+        :return: Tuple of (spacing_x, spacing_y) in millimeters
+        """
+        if key_distance is not None:
+            return key_distance
+        return (keyboard.meta.spacing_x, keyboard.meta.spacing_y)
 
     def place_switches(
         self,
         keyboard: Keyboard,
         key_matrix: KeyMatrix,
-        key_position: Optional[ElementPosition],
+        key_info: ElementInfo,
+        key_distance: Optional[Tuple[float, float]] = None,
+        layout_offset: Optional[Tuple[float, float]] = None,
+        encoder_adjustment: Optional[Tuple[float, float]] = None,
     ) -> None:
-        offset = self._calculate_reference_coordinate(keyboard, key_matrix)
+        key_position = key_info.position
+        start_index = key_info.start_index
+
+        # Determine final key_distance and update internal values
+        final_key_distance = self._resolve_key_distance(keyboard, key_distance)
+        logger.debug(f"Using key 1U distance: {final_key_distance} mm")
+        key_distance_x = cast(int, pcbnew.FromMM(final_key_distance[0]))
+        key_distance_y = cast(int, pcbnew.FromMM(final_key_distance[1]))
+        if layout_offset is not None:
+            # Use the topmost/leftmost key (by KLE coordinates) as the reference,
+            # consistent with other KLE tooling. This is independent of matrix
+            # annotation order which may differ for annotated layouts.
+            ref_key = min(keyboard.keys, key=lambda k: (k.y, k.x))
+            ref_center_x = int(key_distance_x * (ref_key.x + ref_key.width / 2))
+            ref_center_y = int(key_distance_y * (ref_key.y + ref_key.height / 2))
+            offset = pcbnew.VECTOR2I(
+                int(pcbnew.FromMM(layout_offset[0])) - ref_center_x,
+                int(pcbnew.FromMM(layout_offset[1])) - ref_center_y,
+            )
+        else:
+            offset = self._calculate_reference_coordinate(
+                keyboard, key_matrix, key_distance_x, key_distance_y, start_index
+            )
         logger.debug(f"Layout offset: {offset}")
-        key_iterator: Iterator = get_key_iterator(keyboard, key_matrix)
+        key_iterator: Iterator = get_key_iterator(keyboard, key_matrix, start_index)
+
+        if (
+            isinstance(key_iterator, KeyboardSwitchIterator)
+            and not key_iterator.explicit_annotations
+        ):
+            layout_tags = layout_classification(keyboard)
+            if (
+                KeyboardTag.COLUMN_STAGGERED in layout_tags
+                or KeyboardTag.OTHER in layout_tags
+            ):
+                msg = (
+                    "Layout of this kind with missing key matrix annotations may "
+                    "produce unexpected footprint order. "
+                    f"For details see: {ANNOTATION_GUIDE_URL}"
+                )
+                logger.warning(msg)
+
+        self._stab_rotation_by_switch: dict = {}
         for key, switch_footprint in key_iterator:
             reset_rotation(switch_footprint)
             if key_position:
@@ -668,23 +828,48 @@ class KeyPlacer(BoardModifier):
 
             position = (
                 pcbnew.VECTOR2I(
-                    int(self.__key_distance_x * (key.x + key.width / 2)),
-                    int(self.__key_distance_y * (key.y + key.height / 2)),
+                    int(key_distance_x * (key.x + key.width / 2)),
+                    int(key_distance_y * (key.y + key.height / 2)),
                 )
                 + offset
             )
+            if encoder_adjustment and key.sm == "rot_ec11":
+                position = position + pcbnew.VECTOR2I_MM(
+                    encoder_adjustment[0], encoder_adjustment[1]
+                )
             set_position(switch_footprint, position)
 
             angle = key.rotation_angle
             if angle != 0:
                 rotation_reference = (
                     pcbnew.VECTOR2I(
-                        int(self.__key_distance_x * key.rotation_x),
-                        int(self.__key_distance_y * key.rotation_y),
+                        int(key_distance_x * key.rotation_x),
+                        int(key_distance_y * key.rotation_y),
                     )
                     + offset
                 )
                 rotate(switch_footprint, rotation_reference, angle)
+
+            if key.switchRotation != 0 and key.switchRotation % 90 == 0:
+                switch_center = get_position(switch_footprint)
+                rotate(switch_footprint, switch_center, key.switchRotation)
+            elif key.switchRotation != 0:
+                logger.error(
+                    "Not supporting individual switch rotation other than multiple of 90 degrees. "
+                    f"Got switch rotation of {key.switchRotation}, ignoring."
+                )
+
+            # Vertical keys (taller than wide, e.g. a 2U numpad key or ISO Enter)
+            # need their stabilizer rotated 90 degrees so the bar runs along the
+            # key's long axis. +90 in KLE convention (clockwise positive) maps
+            # to KiCad orientation -90.
+            auto_stab_rotation = (
+                90 if (is_iso_enter(key) or key.height > key.width) else 0
+            )
+            self._stab_rotation_by_switch[switch_footprint.GetReference()] = (
+                key.stabRotation,
+                auto_stab_rotation,
+            )
 
     def place_element(
         self,
@@ -765,6 +950,26 @@ class KeyPlacer(BoardModifier):
                         "diode optimization skipped"
                     )
 
+    def rotate_stabilizer(self, switch_reference: str, stabilizer: pcbnew.FOOTPRINT):
+        user_rotation, auto_rotation = self._stab_rotation_by_switch.get(
+            switch_reference, (0, 0)
+        )
+        stab_center = get_position(stabilizer)
+
+        # Automatic rotation for vertical keys (height > width / ISO Enter).
+        # Always a multiple of 90, applied unconditionally.
+        if auto_rotation:
+            rotate(stabilizer, stab_center, auto_rotation)
+
+        # Per-key user override, must be a multiple of 90 degrees.
+        if user_rotation != 0 and user_rotation % 90 == 0:
+            rotate(stabilizer, stab_center, user_rotation)
+        elif user_rotation != 0:
+            logger.error(
+                "Not supporting individual stabilizer rotation other than multiple of 90 degrees."
+                f"Got stabilizer rotation of {user_rotation}, ignoring."
+            )
+
     def place_switch_elements(
         self,
         elements: List[ElementInfo],
@@ -790,6 +995,17 @@ class KeyPlacer(BoardModifier):
                         switch_position,
                         switch_orientation,
                     )
+                    # Apply stab_rotation to stabilizer elements only.
+                    # Heuristic: a reference starting with "ST" (e.g. ST{},
+                    # ST20_1) or a footprint name containing "stabilizer"
+                    # (case-insensitive) identifies a stabilizer footprint.
+                    footprint_name = str(footprint.GetFPID().GetLibItemName())
+                    is_stabilizer = (
+                        footprint.GetReference().startswith("ST")
+                        or "stabilizer" in footprint_name.lower()
+                    )
+                    if is_stabilizer:
+                        self.rotate_stabilizer(reference, footprint)
 
     def route_switches_with_diodes(
         self,
@@ -857,8 +1073,13 @@ class KeyPlacer(BoardModifier):
             PositionOption.PRESET,
         ]:
             source = self._get_relative_position_source(element)
-            element1 = get_footprint(source, key_info.annotation_format.format(1))
-            element2 = get_footprint(source, element.annotation_format.format(1))
+            # Extract start_index from key_info
+            element1 = get_footprint(
+                source, key_info.annotation_format.format(key_info.start_index)
+            )
+            element2 = get_footprint(
+                source, element.annotation_format.format(key_info.start_index)
+            )
             element.position = self.get_current_relative_element_position(
                 element1, element2
             )
@@ -903,14 +1124,14 @@ class KeyPlacer(BoardModifier):
         return infos
 
     def _get_template_connection(
-        self, key_format: str, diode_info: ElementInfo, route: bool
+        self, key_info: ElementInfo, diode_info: ElementInfo, route: bool
     ) -> List[pcbnew.PCB_TRACK]:
         if diode_info.position_option in [
             PositionOption.RELATIVE,
             PositionOption.UNCHANGED,
         ]:
             return self.get_connection_template(
-                key_format,
+                key_info,  # Pass full ElementInfo instead of individual fields
                 diode_info.annotation_format,
                 diode_info.template_path,
                 route,
@@ -920,7 +1141,7 @@ class KeyPlacer(BoardModifier):
                 f"Loading diode connection preset from {diode_info.template_path}"
             )
             return self.load_connection_preset(
-                key_format,
+                key_info.annotation_format,
                 diode_info.annotation_format,
                 self._normalize_template_path(diode_info.template_path),
             )
@@ -936,7 +1157,15 @@ class KeyPlacer(BoardModifier):
         route_rows_and_columns: bool = False,
         additional_elements: List[ElementInfo] = [],
         optimize_diodes_orientation: bool = False,
+        key_distance: Optional[Tuple[float, float]] = None,
+        layout_offset: Optional[Tuple[float, float]] = None,
+        encoder_adjustment: Optional[Tuple[float, float]] = None,
     ) -> None:
+        if key_info.start_index < 0:
+            logger.warning(
+                f"Invalid switch start index: {key_info.start_index}, defaults to 1"
+            )
+            key_info.start_index = 1
         # stage 1 - prepare
         key_matrix = KeyMatrix(
             self.board, key_info.annotation_format, diode_info.annotation_format
@@ -952,7 +1181,9 @@ class KeyPlacer(BoardModifier):
             msg = (
                 f"The '{diode_info.position_option}' position not supported for "
                 f"multiple diodes per switch layouts, use '{PositionOption.RELATIVE}' "
-                f"or '{PositionOption.PRESET}' position option"
+                f"or '{PositionOption.PRESET}' position option.\n"
+                f"When using '{diode_info.position_option}' ensure that each switch "
+                "has exactly one diode connected to it."
             )
             raise PluginError(msg)
 
@@ -968,7 +1199,7 @@ class KeyPlacer(BoardModifier):
         # it is important to get template connection
         # and relative positions before moving any elements
         template_connection = self._get_template_connection(
-            key_info.annotation_format, diode_info, route_switches_with_diodes
+            key_info, diode_info, route_switches_with_diodes
         )
 
         diode_infos = self._prepare_diode_infos(key_matrix, diode_info)
@@ -977,7 +1208,11 @@ class KeyPlacer(BoardModifier):
 
         # stage 2 - place elements
         if layout_path:
-            keyboard = get_keyboard_from_file(layout_path)
+            if layout_path.startswith("https://editor.keyboard-tools.xyz"):
+                keyboard = keyboard_from_url(layout_path)
+            else:
+                keyboard = get_keyboard_from_file(layout_path)
+
             if not isinstance(keyboard, MatrixAnnotatedKeyboard):
                 # if not MatrixAnnotatedKeyboard already,
                 # check if it is possible to convert
@@ -991,7 +1226,14 @@ class KeyPlacer(BoardModifier):
             if isinstance(keyboard, MatrixAnnotatedKeyboard):
                 # can be called only once:
                 keyboard.collapse()
-            self.place_switches(keyboard, key_matrix, key_info.position)
+            self.place_switches(
+                keyboard,
+                key_matrix,
+                key_info,
+                key_distance,
+                layout_offset,
+                encoder_adjustment=encoder_adjustment,
+            )
 
         logger.info(f"Diode info: {diode_infos}")
         if diode_info.position_option != PositionOption.UNCHANGED:

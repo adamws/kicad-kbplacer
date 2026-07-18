@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 adamws <adamws@users.noreply.github.com>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 from __future__ import annotations
 
 import logging
@@ -12,6 +16,7 @@ from .error_dialog import ErrorDialog
 from .kbplacer_dialog import KbplacerDialog, load_window_state_from_log
 from .kbplacer_plugin import run_from_gui
 from .plugin_error import PluginError
+from .warning_dialog import get_warnings_from_log
 
 logger = logging.getLogger(__name__)
 
@@ -36,44 +41,47 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
             raise RuntimeError(msg)
 
         self.board = pcbnew.GetBoard()
-        board_file = self.board.GetFileName()
-        if not board_file:
+        board_filename = self.board.GetFileName()
+        if not board_filename:
             msg = "Could not locate .kicad_pcb file, open or create it first"
             raise PluginError(msg)
 
-        self.board_path = os.path.abspath(board_file)
+        self.pcb_file_path = os.path.abspath(board_filename)
         # go to the project folder - so that log will be in proper place
-        os.chdir(os.path.dirname(self.board_path))
+        os.chdir(os.path.dirname(self.pcb_file_path))
 
         # Remove all handlers associated with the root logger object.
         for handler in logging.root.handlers[:]:
             logging.root.removeHandler(handler)
 
-        log_file = "kbplacer.log"
+        self.log_file = "kbplacer.log"
 
         # if log file already exist (from previous plugin run),
         # try to get window state from it, must be done before setting up new logger
-        self.window_state = load_window_state_from_log(log_file)
+        self.window_state = load_window_state_from_log(self.log_file)
+
+        if self.window_state.key_info.start_index < 0:
+            self.window_state.key_info.start_index = 1
 
         # set up logger
         logging.basicConfig(
             level=logging.DEBUG,
-            filename=log_file,
+            filename=self.log_file,
             filemode="w",
-            format="[%(filename)s:%(lineno)d]: %(message)s",
+            format="%(levelname)s: %(filename)s:%(lineno)d: %(message)s",
         )
         logger.info(f"Plugin version: {__version__}")
         logger.info(f"Python version: {repr(sys.version)}")
         logger.info(f"KiCad version: {version} with {wx.version()}")
 
     def __run(self) -> None:
-        self.initialize()
         self.window = wx.GetActiveWindow()
+        self.initialize()
         dlg = KbplacerDialog(self.window, "kbplacer", initial_state=self.window_state)
         if dlg.ShowModal() == wx.ID_OK:
             gui_state = dlg.get_window_state()
             logger.info(f"GUI state: {gui_state}")
-            run_from_gui(self.board_path, gui_state)
+            run_from_gui(self.pcb_file_path, gui_state)
         else:
             # field validators are not executed on cancel so getting window
             # state might raise an exception. Since we are cancelling,
@@ -90,6 +98,8 @@ class KbplacerPluginAction(pcbnew.ActionPlugin):
     def Run(self) -> None:
         try:
             self.__run()
+            if warning := get_warnings_from_log(self.window, self.log_file):
+                warning.ShowModal()
         except Exception as e:
             error = ErrorDialog(self.window, e)
             error.ShowModal()

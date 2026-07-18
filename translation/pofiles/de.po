@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2024-07-20 12:36+0200\n"
+"POT-Creation-Date: 2026-06-04 13:39+0200\n"
 "PO-Revision-Date: 2024-07-28 22:09+0000\n"
 "Last-Translator: Ettore Atalan <atalanttore@googlemail.com>\n"
 "Language-Team: German <https://hosted.weblate.org/projects/kicad-kbplacer/"
@@ -16,11 +16,11 @@ msgstr ""
 
 msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
-"based on popular layout description from "
+"based on layout description from "
 msgstr ""
 "Plugin für die mechanische Tastatur-Design. Es bietet automatische "
 "Tastenplatzierung \n"
-"basierend auf der populären Layout-Beschreibung von "
+"basierend auf der Layout-Beschreibung von "
 
 msgid "Project website - "
 msgstr "Projektwebsite - "
@@ -34,8 +34,26 @@ msgstr "Speichern nach:"
 msgid "Load from:"
 msgstr "Laden von:"
 
-msgid "Keyboard layout file:"
-msgstr "Tastaturlayoutdatei:"
+msgid "Keyboard Layout:"
+msgstr "Tastaturlayout:"
+
+msgid "Layout file or kle-ng share link"
+msgstr ""
+
+msgid "How many millimeters 1U spans between switches horizontally"
+msgstr ""
+
+msgid "How many millimeters 1U spans between switches vertically"
+msgstr ""
+
+msgid "Layout filepath or kle-ng share URL"
+msgstr ""
+
+msgid "Start index"
+msgstr ""
+
+msgid "Starting index used to match footprint annotations"
+msgstr ""
 
 msgid "Switch settings"
 msgstr "Schaltereinstellungen"
@@ -45,6 +63,11 @@ msgstr ""
 
 msgid "Automatically adjust orientation"
 msgstr "Ausrichtung automatisch anpassen"
+
+msgid ""
+"Find optimal diode orientation for minimal distance between switch and diode "
+"common net pads"
+msgstr ""
 
 msgid "Switch diodes settings"
 msgstr "Schalterdiodeneinstellungen"
@@ -64,5 +87,20 @@ msgstr ""
 msgid "Outline delta:"
 msgstr ""
 
+msgid "Layout offset"
+msgstr ""
+
+msgid "X placement offset for the keyboard layout in mm"
+msgstr ""
+
+msgid "Y placement offset for the keyboard layout in mm"
+msgstr ""
+
 msgid "Other settings"
 msgstr "Andere Einstellungen"
+
+msgid "Open in Keyboard Layout Editor NG"
+msgstr ""
+
+msgid "Actions"
+msgstr ""

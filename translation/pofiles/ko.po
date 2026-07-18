@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2024-07-20 12:36+0200\n"
+"POT-Creation-Date: 2026-06-04 13:39+0200\n"
 "PO-Revision-Date: 2024-08-20 08:09+0000\n"
 "Last-Translator: simmon <simmon@nplob.com>\n"
 "Language-Team: Korean <https://hosted.weblate.org/projects/kicad-kbplacer/"
@@ -16,10 +16,10 @@ msgstr ""
 
 msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
-"based on popular layout description from "
+"based on layout description from "
 msgstr ""
-"기계식 키보드 설계용 플러그인입니다. 인기있는 \n"
-"특정 레이아웃 설명을 기반으로 자동 키 배치가 있습니다 "
+"기계식 키보드 설계용 플러그인입니다. \n"
+"레이아웃 설명을 기반으로 자동 키 배치가 있습니다 "
 
 msgid "Project website - "
 msgstr "프로젝트 웹 사이트 - "
@@ -33,8 +33,26 @@ msgstr "저장하기:"
 msgid "Load from:"
 msgstr "불러오기:"
 
-msgid "Keyboard layout file:"
-msgstr "키보드 레이아웃 파일:"
+msgid "Keyboard Layout:"
+msgstr "키보드 레이아웃:"
+
+msgid "Layout file or kle-ng share link"
+msgstr ""
+
+msgid "How many millimeters 1U spans between switches horizontally"
+msgstr ""
+
+msgid "How many millimeters 1U spans between switches vertically"
+msgstr ""
+
+msgid "Layout filepath or kle-ng share URL"
+msgstr ""
+
+msgid "Start index"
+msgstr ""
+
+msgid "Starting index used to match footprint annotations"
+msgstr ""
 
 msgid "Switch settings"
 msgstr "설정 스위치"
@@ -44,6 +62,11 @@ msgstr "전환 경로"
 
 msgid "Automatically adjust orientation"
 msgstr "방향을 자동으로 조정합니다"
+
+msgid ""
+"Find optimal diode orientation for minimal distance between switch and diode "
+"common net pads"
+msgstr ""
 
 msgid "Switch diodes settings"
 msgstr "다이오드 설정 전환"
@@ -63,5 +86,20 @@ msgstr "보드 외곽선 만들기"
 msgid "Outline delta:"
 msgstr "외곽선 델타:"
 
+msgid "Layout offset"
+msgstr ""
+
+msgid "X placement offset for the keyboard layout in mm"
+msgstr ""
+
+msgid "Y placement offset for the keyboard layout in mm"
+msgstr ""
+
 msgid "Other settings"
 msgstr "기타 설정"
+
+msgid "Open in Keyboard Layout Editor NG"
+msgstr ""
+
+msgid "Actions"
+msgstr ""

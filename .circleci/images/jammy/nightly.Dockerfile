@@ -36,3 +36,4 @@ RUN add-apt-repository --yes ppa:kicad/kicad-dev-nightly \
 
 ENV LD_LIBRARY_PATH "/usr/lib/kicad-nightly/lib/x86_64-linux-gnu"
 ENV PYTHONPATH "${PYTHONPATH}:/usr/lib/kicad-nightly/lib/python3/dist-packages"
+ENV PATH "${PATH}:/usr/lib/kicad-nightly/bin"

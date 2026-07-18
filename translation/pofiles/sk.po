@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2024-07-20 12:36+0200\n"
+"POT-Creation-Date: 2026-06-04 13:39+0200\n"
 "PO-Revision-Date: 2024-09-25 22:16+0000\n"
 "Last-Translator: Milan Šalka <salka.milan@googlemail.com>\n"
 "Language-Team: Slovak <https://hosted.weblate.org/projects/kicad-kbplacer/"
@@ -16,7 +16,7 @@ msgstr ""
 
 msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
-"based on popular layout description from "
+"based on layout description from "
 msgstr ""
 "Plugin pre mechanický dizajn klávesnice. Obsahuje automatické umiestnenie "
 "kľúča\n"
@@ -34,8 +34,26 @@ msgstr "Uložiť na:"
 msgid "Load from:"
 msgstr "Načítať z:"
 
-msgid "Keyboard layout file:"
-msgstr "Súbor rozloženie klávesnice:"
+msgid "Keyboard Layout:"
+msgstr "Rozloženie klávesnice:"
+
+msgid "Layout file or kle-ng share link"
+msgstr ""
+
+msgid "How many millimeters 1U spans between switches horizontally"
+msgstr ""
+
+msgid "How many millimeters 1U spans between switches vertically"
+msgstr ""
+
+msgid "Layout filepath or kle-ng share URL"
+msgstr ""
+
+msgid "Start index"
+msgstr ""
+
+msgid "Starting index used to match footprint annotations"
+msgstr ""
 
 msgid "Switch settings"
 msgstr "Nastavenie prepínača"
@@ -45,6 +63,11 @@ msgstr "Trasa spínačmi"
 
 msgid "Automatically adjust orientation"
 msgstr "Automatické nastavenie orientácie"
+
+msgid ""
+"Find optimal diode orientation for minimal distance between switch and diode "
+"common net pads"
+msgstr ""
 
 msgid "Switch diodes settings"
 msgstr "Nastavenie spínačov"
@@ -64,5 +87,20 @@ msgstr "Zostavte si tabuľu"
 msgid "Outline delta:"
 msgstr "Outline delta:"
 
+msgid "Layout offset"
+msgstr ""
+
+msgid "X placement offset for the keyboard layout in mm"
+msgstr ""
+
+msgid "Y placement offset for the keyboard layout in mm"
+msgstr ""
+
 msgid "Other settings"
 msgstr "Ďalšie nastavenia"
+
+msgid "Open in Keyboard Layout Editor NG"
+msgstr ""
+
+msgid "Actions"
+msgstr ""

@@ -1,7 +1,13 @@
+# SPDX-FileCopyrightText: 2025 adamws <adamws@users.noreply.github.com>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 import logging
+import shutil
 import sys
 from argparse import ArgumentTypeError
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Dict, List
 from unittest.mock import MagicMock, Mock, patch
 
@@ -22,10 +28,12 @@ class ExitTest(Exception):
 def get_default(board_path: str) -> PluginSettings:
     """Returns default run settings when using all default CLI values"""
     return PluginSettings(
-        board_path=board_path,
+        pcb_file_path=board_path,
         layout_path="",
-        key_info=ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, ""),
-        key_distance=(19.05, 19.05),
+        key_info=ElementInfo(
+            "SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", start_index=1
+        ),
+        key_distance=None,  # None when not specified, will use metadata or default (19.05, 19.05)
         diode_info=ElementInfo(
             "D{}", PositionOption.DEFAULT, DEFAULT_DIODE_POSITION, ""
         ),
@@ -38,9 +46,17 @@ def get_default(board_path: str) -> PluginSettings:
         generate_outline=False,
         outline_delta=0.0,
         template_path="",
-        create_from_annotated_layout=False,
+        create_pcb_file=False,
+        create_sch_file=False,
+        sch_file_path="",
         switch_footprint="",
         diode_footprint="",
+        stabilizer_footprint="",
+        encoder_footprint="",
+        layout_offset=None,
+        create_led_sch_file=False,
+        led_sch_file_path="",
+        project_path="",
     )
 
 
@@ -95,13 +111,13 @@ def expects_settings(default_difference: Dict):
         #   - valid when only annotation specified
         (
             ["--switch", "S{}"],
-            expects_settings({"key_info": ElementInfo("S{}", PositionOption.DEFAULT, ZERO_POSITION, "")}),
+            expects_settings({"key_info": ElementInfo("S{}", PositionOption.DEFAULT, ZERO_POSITION, "", start_index=1)}),
         ),
         #   - valid with orientation and side
         (
             ["--switch", "S{} 90 BACK"],
             expects_settings({"key_info": ElementInfo("S{}", PositionOption.DEFAULT,
-                                          ElementPosition(0, 0, 90, Side.BACK), "")}),
+                                          ElementPosition(0, 0, 90, Side.BACK), "", start_index=1)}),
         ),
         # invalid switch option values
         #   - too many tokens
@@ -262,6 +278,25 @@ def expects_settings(default_difference: Dict):
                 match=r"--key-distance must be exactly two numeric values separated by a space."
             ),
         ),
+        # valid layout-offset option values
+        #   - integers
+        (
+            ["--layout-offset", "10 20"],
+            expects_settings({"layout_offset": (10, 20)}),
+        ),
+        #   - floats
+        (
+            ["--layout-offset", "10.5 20.0"],
+            expects_settings({"layout_offset": (10.5, 20.0)}),
+        ),
+        # invalid layout-offset option values
+        #   - too many tokens
+        (
+            ["--layout-offset", "10 20 30"],
+            pytest.raises(ArgumentTypeError,
+                match=r"--layout-offset must be exactly two numeric values separated by a space."
+            ),
+        ),
         # some more complex scenarios combining multiple options:
         (
             ["--key-distance", "18 18.05", "--diode", "DIODE{} CUSTOM 1.5 -2.05 180.0 FRONT",
@@ -274,6 +309,152 @@ def expects_settings(default_difference: Dict):
                               "route_rows_and_columns": True,
                               }),
         ),
+        # valid footprint identifier option values
+        #   - valid switch footprint
+        (
+            ["--switch-footprint", "/usr/share/kicad/footprints/Button_Switch_Keyboard.pretty:SW_Cherry_MX_1.00u_PCB"],
+            expects_settings({"switch_footprint": "/usr/share/kicad/footprints/Button_Switch_Keyboard.pretty:SW_Cherry_MX_1.00u_PCB"}),
+        ),
+        #   - valid diode footprint
+        (
+            ["--diode-footprint", "/usr/share/kicad/footprints/Diode_SMD.pretty:D_SOD-123F"],
+            expects_settings({"diode_footprint": "/usr/share/kicad/footprints/Diode_SMD.pretty:D_SOD-123F"}),
+        ),
+        #   - valid with relative path
+        (
+            ["--switch-footprint", "footprints/MyLib.pretty:MyFootprint"],
+            expects_settings({"switch_footprint": "footprints/MyLib.pretty:MyFootprint"}),
+        ),
+        #   - both footprints specified
+        (
+            ["--switch-footprint", "/path/to/switches.pretty:SW_MX",
+             "--diode-footprint", "/path/to/diodes.pretty:D_SOD123"],
+            expects_settings({"switch_footprint": "/path/to/switches.pretty:SW_MX",
+                              "diode_footprint": "/path/to/diodes.pretty:D_SOD123"}),
+        ),
+        # invalid footprint identifier option values
+        #   - missing colon
+        (
+            ["--switch-footprint", "/path/to/library.pretty/FootprintName"],
+            pytest.raises(ArgumentTypeError,
+                match=r"invalid footprint identifier, it must contain at least one ':' separator"
+            ),
+        ),
+        #   - multiple colons
+        (
+            ["--switch-footprint", "/path/to/library.pretty:Footprint{:.2f}"],
+            expects_settings({"switch_footprint": "/path/to/library.pretty:Footprint{:.2f}"})
+        ),
+        #   - library path doesn't end with .pretty
+        (
+            ["--switch-footprint", "/path/to/library:FootprintName"],
+            pytest.raises(ArgumentTypeError,
+                match=r"invalid footprint identifier, library path must end with '.pretty'"
+            ),
+        ),
+        #   - library path has .pretty in the middle but not at the end
+        (
+            ["--switch-footprint", "/path/to/library.pretty/subdir:FootprintName"],
+            pytest.raises(ArgumentTypeError,
+                match=r"invalid footprint identifier, library path must end with '.pretty'"
+            ),
+        ),
+        #   - empty footprint name
+        (
+            ["--diode-footprint", "/path/to/library.pretty:"],
+            pytest.raises(ArgumentTypeError,
+                match=r"invalid footprint identifier, footprint name cannot be empty"
+            ),
+        ),
+        # Windows-style paths
+        #   - valid Windows path with drive letter C:\
+        (
+            ["--switch-footprint", r"C:\kicad\footprints\Button_Switch_Keyboard.pretty:SW_Cherry_MX"],
+            expects_settings({"switch_footprint": r"C:\kicad\footprints\Button_Switch_Keyboard.pretty:SW_Cherry_MX"}),
+        ),
+        #   - valid Windows path with different drive letter
+        (
+            ["--diode-footprint", r"D:\libraries\Diode_SMD.pretty:D_SOD-123F"],
+            expects_settings({"diode_footprint": r"D:\libraries\Diode_SMD.pretty:D_SOD-123F"}),
+        ),
+        #   - valid Windows path with footprint name containing colons
+        (
+            ["--switch-footprint", r"C:\path\to\library.pretty:Footprint{:.2f}"],
+            expects_settings({"switch_footprint": r"C:\path\to\library.pretty:Footprint{:.2f}"}),
+        ),
+        #   - valid Windows path with multiple directory levels
+        (
+            ["--switch-footprint", r"C:\Users\Username\Documents\kicad\footprints\MyLib.pretty:MyFootprint"],
+            expects_settings({"switch_footprint": r"C:\Users\Username\Documents\kicad\footprints\MyLib.pretty:MyFootprint"}),
+        ),
+        #   - invalid Windows path missing second colon separator
+        (
+            ["--switch-footprint", r"C:\kicad\footprints\library.pretty"],
+            pytest.raises(ArgumentTypeError,
+                match=r"invalid footprint identifier, Windows path must contain ':' separator after library path"
+            ),
+        ),
+        #   - Windows path with empty footprint name
+        (
+            ["--diode-footprint", r"C:\path\to\library.pretty:"],
+            pytest.raises(ArgumentTypeError,
+                match=r"invalid footprint identifier, footprint name cannot be empty"
+            ),
+        ),
+        #   - Windows path without .pretty extension
+        (
+            ["--switch-footprint", r"C:\kicad\footprints\library:FootprintName"],
+            pytest.raises(ArgumentTypeError,
+                match=r"invalid footprint identifier, library path must end with '.pretty'"
+            ),
+        ),
+        # valid encoder footprint
+        (
+            ["--encoder-footprint", "/usr/share/kicad/footprints/Encoder.pretty:EC11"],
+            expects_settings({"encoder_footprint": "/usr/share/kicad/footprints/Encoder.pretty:EC11"}),
+        ),
+        #   - encoder footprint with relative path
+        (
+            ["--encoder-footprint", "footprints/MyEncoders.pretty:EC11"],
+            expects_settings({"encoder_footprint": "footprints/MyEncoders.pretty:EC11"}),
+        ),
+        # invalid encoder footprint option values
+        #   - missing colon
+        (
+            ["--encoder-footprint", "/path/to/library.pretty/EC11"],
+            pytest.raises(ArgumentTypeError,
+                match=r"invalid footprint identifier, it must contain at least one ':' separator"
+            ),
+        ),
+        #   - library path missing .pretty
+        (
+            ["--encoder-footprint", "/path/to/library:EC11"],
+            pytest.raises(ArgumentTypeError,
+                match=r"invalid footprint identifier, library path must end with '.pretty'"
+            ),
+        ),
+        # valid --start-index option values
+        (
+            ["--start-index", "0"],
+            expects_settings({"key_info": ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", start_index=0)}),
+        ),
+        (
+            ["--start-index", "10"],
+            expects_settings({"key_info": ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", start_index=10)}),
+        ),
+        # --start-index combined with custom switch annotation
+        (
+            ["--switch", "K{} 90 BACK", "--start-index", "5"],
+            expects_settings({
+                "key_info": ElementInfo(
+                    "K{}",
+                    PositionOption.DEFAULT,
+                    ElementPosition(0, 0, 90, Side.BACK),
+                    "",
+                    start_index=5
+                ),
+            }),
+        ),
         # fmt: on
     ],
 )
@@ -281,15 +462,15 @@ def test_cli_arguments(
     monkeypatch, cli_isolation, fake_board, extra_args, expectation
 ) -> None:
     run_mock = Mock()
-    monkeypatch.setattr("kbplacer.__main__.run", run_mock)
+    monkeypatch.setattr("kbplacer.__main__.run_board", run_mock)
 
-    args = ["--board", fake_board] + extra_args
+    args = ["--pcb-file", fake_board] + extra_args
     with cli_isolation(args):
         with expectation as s:
             app()
 
         if isinstance(s, PluginSettings):
-            s.board_path = fake_board
+            s.pcb_file_path = fake_board
             run_mock.assert_called_once_with(s)
         else:
             run_mock.assert_not_called()
@@ -299,12 +480,169 @@ def test_board_creation_when_exist(
     caplog, monkeypatch, cli_isolation, fake_board
 ) -> None:
     run_mock = Mock()
-    monkeypatch.setattr("kbplacer.__main__.run", run_mock)
+    monkeypatch.setattr("kbplacer.__main__.run_board", run_mock)
 
-    args = ["--board", fake_board, "--create-from-annotated-layout"]
+    args = ["--pcb-file", fake_board, "--create-pcb-file"]
     with cli_isolation(args):
         with pytest.raises(ExitTest):
             app()
 
     run_mock.assert_not_called()
     assert caplog.records[0].message == f"File {fake_board} already exist, aborting"
+
+
+def test_schematic_creation_when_exist(
+    caplog, monkeypatch, cli_isolation, fake_board
+) -> None:
+    run_mock = Mock()
+    monkeypatch.setattr("kbplacer.__main__.run_schematic", run_mock)
+
+    fake_schematic = Path(fake_board).with_suffix(".kicad_sch")
+    args = ["--pcb-file", fake_board, "--create-sch-file"]
+    with cli_isolation(args):
+        shutil.copy(fake_board, fake_schematic)
+        with pytest.raises(ExitTest):
+            app()
+
+    run_mock.assert_not_called()
+    assert caplog.records[0].message == f"File {fake_schematic} already exist, aborting"
+
+
+def test_led_schematic_creation_when_exist(
+    caplog, monkeypatch, cli_isolation, fake_board
+) -> None:
+    run_mock = Mock()
+    monkeypatch.setattr("kbplacer.__main__.run_schematic", run_mock)
+
+    fake_led_schematic = Path(fake_board).with_name(
+        Path(fake_board).stem + "-led-chain.kicad_sch"
+    )
+    args = ["--pcb-file", fake_board, "--create-sch-file", "--create-led-sch-file"]
+    with cli_isolation(args):
+        shutil.copy(fake_board, fake_led_schematic)
+        with pytest.raises(ExitTest):
+            app()
+
+    run_mock.assert_not_called()
+    assert (
+        caplog.records[0].message
+        == f"File {fake_led_schematic} already exist, aborting"
+    )
+
+
+def test_project_file_creation_when_exist(
+    caplog, monkeypatch, cli_isolation, fake_board
+) -> None:
+    run_mock = Mock()
+    monkeypatch.setattr("kbplacer.__main__.run_schematic", run_mock)
+
+    fake_project = Path(fake_board).with_suffix(".kicad_pro")
+    args = ["--pcb-file", fake_board, "--create-sch-file"]
+    with cli_isolation(args):
+        shutil.copy(fake_board, fake_project)
+        with pytest.raises(ExitTest):
+            app()
+
+    run_mock.assert_not_called()
+    assert caplog.records[0].message == f"File {fake_project} already exist, aborting"
+
+
+def test_led_only_flags_populate_settings(
+    monkeypatch, cli_isolation, fake_board
+) -> None:
+    run_mock = Mock()
+    monkeypatch.setattr("kbplacer.__main__.run_schematic", run_mock)
+    monkeypatch.setattr("kbplacer.__main__.run_board", Mock())
+
+    args = [
+        "--pcb-file",
+        fake_board,
+        "--create-led-sch-file",
+    ]
+    with cli_isolation(args):
+        app()
+
+    run_mock.assert_called_once()
+    settings = run_mock.call_args[0][0]
+    assert settings.create_sch_file is False
+    assert settings.create_led_sch_file is True
+    # LED chain is the only requested type, so it becomes primary and gets the
+    # project-basename-matching filename (no "-led-chain" suffix).
+    assert settings.led_sch_file_path == str(Path(fake_board).with_suffix(".kicad_sch"))
+    assert settings.project_path == str(Path(fake_board).with_suffix(".kicad_pro"))
+
+
+def test_key_matrix_and_led_flags_populate_settings(
+    monkeypatch, cli_isolation, fake_board
+) -> None:
+    run_mock = Mock()
+    monkeypatch.setattr("kbplacer.__main__.run_schematic", run_mock)
+    monkeypatch.setattr("kbplacer.__main__.run_board", Mock())
+
+    args = [
+        "--pcb-file",
+        fake_board,
+        "--create-sch-file",
+        "--create-led-sch-file",
+    ]
+    with cli_isolation(args):
+        app()
+
+    run_mock.assert_called_once()
+    settings = run_mock.call_args[0][0]
+    # Key matrix outranks LED chain, so it keeps the project-basename-matching
+    # filename; LED chain gets pushed to the suffixed name.
+    assert settings.sch_file_path == str(Path(fake_board).with_suffix(".kicad_sch"))
+    assert settings.led_sch_file_path == str(
+        Path(fake_board).with_name(Path(fake_board).stem + "-led-chain.kicad_sch")
+    )
+    assert settings.project_path == str(Path(fake_board).with_suffix(".kicad_pro"))
+
+
+def test_multi_sheet_bundling_requires_kicad_10(
+    monkeypatch, cli_isolation, fake_board
+) -> None:
+    monkeypatch.setattr("kbplacer.schematic_project.KICAD_VERSION", (9, 0, 0))
+
+    args = ["--pcb-file", fake_board, "--create-sch-file", "--create-led-sch-file"]
+    with cli_isolation(args):
+        with pytest.raises(RuntimeError, match="KiCad 10.0"):
+            app()
+
+
+def test_max_keys_validation_passes(monkeypatch, cli_isolation, fake_board) -> None:
+    """Test that max-keys validation passes when key count is within limit"""
+    run_mock = Mock()
+    monkeypatch.setattr("kbplacer.__main__.run_board", run_mock)
+
+    # Use 2x2 layout which has 4 keys
+    layout_path = "tests/data/ergogen-layouts/2x2.json"
+    args = ["--pcb-file", fake_board, "--layout", layout_path, "--max-keys", "4"]
+    with cli_isolation(args):
+        app()
+
+    # Should succeed and call run_board
+    run_mock.assert_called_once()
+
+
+def test_max_keys_validation_fails(
+    caplog, monkeypatch, cli_isolation, fake_board
+) -> None:
+    """Test that max-keys validation fails when key count exceeds limit"""
+    run_mock = Mock()
+    monkeypatch.setattr("kbplacer.__main__.run_board", run_mock)
+
+    # Use 2x2 layout which has 4 keys
+    layout_path = "tests/data/ergogen-layouts/2x2.json"
+    args = ["--pcb-file", fake_board, "--layout", layout_path, "--max-keys", "3"]
+    with cli_isolation(args):
+        with pytest.raises(ExitTest):
+            app()
+
+    run_mock.assert_not_called()
+    # Find the error record
+    error_records = [r for r in caplog.records if r.levelname == "ERROR"]
+    assert len(error_records) > 0
+    assert (
+        "Layout has 4 keys, which exceeds the maximum of 3" in error_records[0].message
+    )

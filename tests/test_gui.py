@@ -1,22 +1,30 @@
+# SPDX-FileCopyrightText: 2025 adamws <adamws@users.noreply.github.com>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 import copy
-import ctypes
 import json
 import logging
 import os
+import re
 import subprocess
-import sys
-import time
 from dataclasses import asdict
 
 import pytest
-from PIL import ImageGrab
-from pyvirtualdisplay.smartdisplay import DisplayTimeoutError, SmartDisplay
+import wx  # problems if this imported from more than one test
 
 from kbplacer.element_position import ElementInfo, ElementPosition, PositionOption, Side
-from kbplacer.kbplacer_dialog import WindowState, load_window_state_from_log
+from kbplacer.kbplacer_dialog import (
+    AnnotationValidator,
+    FloatValidator,
+    IntValidator,
+    LayoutPickerValidator,
+    WindowState,
+    load_window_state_from_log,
+)
+from kbplacer.warning_dialog import WarningDialog
 
-if sys.platform == "win32":
-    from ctypes.wintypes import DWORD, HWND, RECT
+from .conftest import get_screen_manager
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +45,7 @@ CUSTOM_WINDOW_STATE_EXAMPLE1 = WindowState(
             side=Side.BACK,
         ),
         template_path="",
+        start_index=1,
     ),
     enable_diode_placement=False,
     route_switches_with_diodes=False,
@@ -50,6 +59,7 @@ CUSTOM_WINDOW_STATE_EXAMPLE1 = WindowState(
             side=Side.FRONT,
         ),
         template_path="",
+        start_index=-1,
     ),
     additional_elements=[
         ElementInfo(
@@ -62,12 +72,14 @@ CUSTOM_WINDOW_STATE_EXAMPLE1 = WindowState(
                 side=Side.FRONT,
             ),
             template_path="",
+            start_index=-1,
         ),
         ElementInfo(
             annotation_format="LED{}",
             position_option=PositionOption.RELATIVE,
             position=None,
             template_path="/home/user/led_template.kicad_pcb",
+            start_index=-1,
         ),
     ],
     route_rows_and_columns=False,
@@ -75,71 +87,6 @@ CUSTOM_WINDOW_STATE_EXAMPLE1 = WindowState(
     generate_outline=True,
     outline_delta=1.5,
 )
-
-
-class LinuxVirtualScreenManager:
-    def __enter__(self):
-        self.display = SmartDisplay(backend="xvfb", size=(960, 640))
-        self.display.start()
-        return self
-
-    def __exit__(self, *exc):
-        self.display.stop()
-        return False
-
-    def screenshot(self, window_name, path):
-        try:
-            img = self.display.waitgrab(timeout=5)
-            img.save(path)
-            return True
-        except DisplayTimeoutError as err:
-            logger.error(err)
-            return False
-
-
-class HostScreenManager:
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *exc):
-        return False
-
-    def screenshot(self, window_name, path):
-        try:
-            time.sleep(1)
-            window_handle = find_window(window_name)
-            window_rect = get_window_position(window_handle)
-            img = ImageGrab.grab()
-            if window_rect:
-                img = img.crop(window_rect)
-            img.save(path)
-            return True
-        except Exception as err:
-            logger.error(err)
-            return False
-
-
-def find_window(name):
-    if sys.platform != "win32":
-        return None
-    user32 = ctypes.windll.user32
-    return user32.FindWindowW(None, name)
-
-
-def get_window_position(window_handle):
-    if sys.platform != "win32":
-        return None
-    dwmapi = ctypes.windll.dwmapi
-    # based on https://stackoverflow.com/a/67137723
-    rect = RECT()
-    DMWA_EXTENDED_FRAME_BOUNDS = 9
-    dwmapi.DwmGetWindowAttribute(
-        HWND(window_handle),
-        DWORD(DMWA_EXTENDED_FRAME_BOUNDS),
-        ctypes.byref(rect),
-        ctypes.sizeof(rect),
-    )
-    return (rect.left, rect.top, rect.right, rect.bottom)
 
 
 def run_process(args, package_path):
@@ -153,35 +100,6 @@ def run_process(args, package_path):
         cwd=package_path,
         env=env,
     )
-
-
-def is_xvfb_avaiable() -> bool:
-    try:
-        p = subprocess.Popen(
-            ["Xvfb", "-help"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            shell=False,
-        )
-        _, _ = p.communicate()
-        exit_code = p.returncode
-        return exit_code == 0
-    except FileNotFoundError:
-        logger.warning("Xvfb was not found")
-    return False
-
-
-@pytest.fixture
-def screen_manager():
-    if sys.platform == "linux":
-        if is_xvfb_avaiable():
-            return LinuxVirtualScreenManager()
-        else:
-            return HostScreenManager()
-    elif sys.platform == "win32":
-        return HostScreenManager()
-    else:
-        pytest.skip(f"Platform '{sys.platform}' is not supported")
 
 
 def run_gui_test(tmpdir, screen_manager, window_name, gui_callback) -> None:
@@ -253,13 +171,41 @@ def test_help_dialog(tmpdir, package_path, package_name, screen_manager) -> None
     run_gui_test(tmpdir, screen_manager, "kbplacer help", _callback)
 
 
-def test_error_dialog(tmpdir, package_path, package_name, screen_manager) -> None:
+def test_error_dialog_with_generic_error(
+    tmpdir, package_path, package_name, screen_manager
+) -> None:
     def _callback():
         return run_process(
             ["python3", "-m", f"{package_name}.error_dialog"], package_path
         )
 
     run_gui_test(tmpdir, screen_manager, "kbplacer error", _callback)
+
+
+def test_error_dialog_with_plugin_error(
+    tmpdir, package_path, package_name, screen_manager
+) -> None:
+    def _callback():
+        return run_process(
+            ["python3", "-m", f"{package_name}.error_dialog", "--plugin-error"],
+            package_path,
+        )
+
+    run_gui_test(tmpdir, screen_manager, "kbplacer error", _callback)
+
+
+def test_warning_dialog(tmpdir, package_path, package_name, screen_manager) -> None:
+    def _callback():
+        return run_process(
+            ["python3", "-m", f"{package_name}.warning_dialog"], package_path
+        )
+
+    run_gui_test(tmpdir, screen_manager, "kbplacer warning", _callback)
+
+
+def test_warning_dialog_raises_on_no_warnings() -> None:
+    with pytest.raises(RuntimeError):
+        WarningDialog(None, [])
 
 
 def merge_dicts(dict1, dict2):
@@ -295,13 +241,15 @@ def get_state_data(state: dict, name: str):
                     "orientation": 90,
                     "side": "Back"
                 },
-                "template_path": ""
+                "template_path": "",
+                "start_index": 1
             }
         }, "non-default-key-annotation-and-position"),
         get_state_data({"diode_info": {
                 "position_option": "Preset",
                 "position": None,
-                "template_path": "/example/preset/path.kicad_pcb"
+                "template_path": "/example/preset/path.kicad_pcb",
+                "start_index": -1
             }
         }, "diode-position-preset"),
         get_state_data({"key_distance": (18, 18.01)}, "non-default-key-distance"),
@@ -379,3 +327,202 @@ def test_load_window_state_from_missing_log(caplog) -> None:
     assert state == DEFAULT_WINDOW_STATE
     assert len(caplog.records) == 1
     assert caplog.records[0].message == STATE_DEFAULT_LOG
+
+
+@pytest.fixture(scope="class")
+def validator_screen_manager():
+    with get_screen_manager():
+        app = wx.App()
+        yield
+        app.Destroy()
+
+
+@pytest.mark.usefixtures("validator_screen_manager")
+class TestValidators:
+
+    VALID_INTS = [
+        "0",
+        "42",
+        "-42",
+        "+42",
+        "999999",
+    ]
+    INVALID_INT_INPUTS = [
+        "abc",
+        "12a",
+        "1.5",
+        "++1",
+        "--1",
+        "",
+        " ",
+        ".",
+        "-",
+        "+",
+    ]
+    VALID_FLOATS = [
+        "0.0",
+        "123.456",
+        "-1.23",
+        "+0.5",
+        ".75",
+        "-.999",
+        "+.001",
+        "1e3",  # scientific notation (supported)
+        "-2e-2",
+    ]
+    INVALID_FLOAT_INPUTS = [
+        "abc",  # non-numeric
+        "12a",  # mixed
+        "++1",  # double sign
+        "--1",
+        "1..2",  # multiple dots
+        "1.2.3",
+        "0x123",  # hex-like
+        "1e3.5",  # malformed scientific notation
+        "",  # empty string
+        " ",  # whitespace
+        ".",  # standalone dot
+        "-",  # standalone minus
+        "+",  # standalone plus
+    ]
+    VALID_ANNOTATIONS = [
+        "SW{}",
+        "{}SW",
+        "SW {}",
+        "SW_{}",
+        "SW_{}_a",
+    ]
+    INVALID_ANNOTATIONS = [
+        "SW",
+        "SW{",
+        "SW{}{}",
+        "{}",
+        "  {}",
+    ]
+
+    @pytest.fixture
+    def frame(self):
+        frame = wx.Frame(None)
+        yield frame
+        frame.Destroy()
+
+    @pytest.fixture
+    def float_ctrl(self, frame):
+        ctrl = wx.TextCtrl(frame, validator=FloatValidator(), name="TestFloat")
+        frame.Show()
+        return ctrl
+
+    @pytest.fixture
+    def annotation_ctrl(self, frame):
+        ctrl = wx.TextCtrl(
+            frame, validator=AnnotationValidator(), name="TestAnnotation"
+        )
+        frame.Show()
+        return ctrl
+
+    def valid(self, ctrl, monkeypatch, text):
+        call_count = {"count": 0}
+
+        def fake_messagebox(msg, caption, *args, **kwargs):
+            call_count["count"] += 1
+            return wx.OK
+
+        monkeypatch.setattr(wx, "MessageBox", fake_messagebox)
+
+        ctrl.SetValue(text)
+        assert ctrl.GetValidator().Validate(ctrl.GetParent() or ctrl)
+        assert call_count["count"] == 0
+
+    @pytest.mark.parametrize("text", VALID_INTS)
+    def test_valid_int(self, int_ctrl, monkeypatch, text):
+        self.valid(int_ctrl, monkeypatch, text)
+
+    @pytest.mark.parametrize("text", INVALID_INT_INPUTS)
+    def test_invalid_int(self, int_ctrl, monkeypatch, text):
+        expected_err = r"Invalid 'TestInt' value: '.*' is not an integer!"
+        self.invalid(int_ctrl, monkeypatch, text, expected_err)
+
+    @pytest.mark.parametrize("text", VALID_FLOATS + VALID_INTS)
+    def test_valid_float(self, float_ctrl, monkeypatch, text):
+        self.valid(float_ctrl, monkeypatch, text)
+
+    @pytest.mark.parametrize("text", VALID_ANNOTATIONS)
+    def test_valid_annotation(self, annotation_ctrl, monkeypatch, text):
+        self.valid(annotation_ctrl, monkeypatch, text)
+
+    def invalid(self, ctrl, monkeypatch, text, expected_err):
+        captured = {}
+
+        def fake_messagebox(msg, caption, *args, **kwargs):
+            captured["msg"] = msg
+            captured["caption"] = caption
+            return wx.OK
+
+        monkeypatch.setattr(wx, "MessageBox", fake_messagebox)
+
+        ctrl.SetValue(text)
+        assert not ctrl.GetValidator().Validate(ctrl.GetParent() or ctrl)
+        assert captured["caption"] == "Error"
+        assert re.match(expected_err, captured["msg"])
+
+    @pytest.mark.parametrize("text", INVALID_FLOAT_INPUTS)
+    def test_invalid_float(self, float_ctrl, monkeypatch, text):
+        expected_err = r"Invalid 'TestFloat' value: '.*' is not a number!"
+        self.invalid(float_ctrl, monkeypatch, text, expected_err)
+
+    @pytest.mark.parametrize("text", INVALID_ANNOTATIONS)
+    def test_invalid_annotation(self, annotation_ctrl, monkeypatch, text):
+        expected_err = (
+            r"Invalid 'TestAnnotation' value. Annotation must have exactly one "
+            "'{}' placeholder, and it must be a part of non-whitespace content. "
+            "Received: '.*'"
+        )
+        self.invalid(annotation_ctrl, monkeypatch, text, expected_err)
+
+    @pytest.fixture
+    def int_ctrl(self, frame):
+        ctrl = wx.TextCtrl(frame, validator=IntValidator(), name="TestInt")
+        frame.Show()
+        return ctrl
+
+    @pytest.fixture
+    def layout_picker_ctrl(self, frame):
+        ctrl = wx.TextCtrl(frame, validator=LayoutPickerValidator())
+        frame.Show()
+        return ctrl
+
+    def test_layout_picker_valid_empty(self, layout_picker_ctrl):
+        layout_picker_ctrl.SetValue("")
+        assert layout_picker_ctrl.GetValidator().Validate(
+            layout_picker_ctrl.GetParent()
+        )
+
+    def test_layout_picker_valid_share_url(self, layout_picker_ctrl):
+        layout_picker_ctrl.SetValue(
+            "https://editor.keyboard-tools.xyz/#share=encoded_data_here"
+        )
+        assert layout_picker_ctrl.GetValidator().Validate(
+            layout_picker_ctrl.GetParent()
+        )
+
+    def test_layout_picker_valid_existing_file(self, layout_picker_ctrl):
+        layout_picker_ctrl.SetValue(__file__)
+        assert layout_picker_ctrl.GetValidator().Validate(
+            layout_picker_ctrl.GetParent()
+        )
+
+    def test_layout_picker_invalid_value(self, layout_picker_ctrl, monkeypatch):
+        captured = {}
+
+        def fake_messagebox(msg, caption, *args, **kwargs):
+            captured["msg"] = msg
+            captured["caption"] = caption
+            return wx.OK
+
+        monkeypatch.setattr(wx, "MessageBox", fake_messagebox)
+
+        layout_picker_ctrl.SetValue("not-a-file-or-url")
+        assert not layout_picker_ctrl.GetValidator().Validate(
+            layout_picker_ctrl.GetParent()
+        )
+        assert captured["caption"] == "Error"

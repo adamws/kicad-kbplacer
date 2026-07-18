@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 adamws <adamws@users.noreply.github.com>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 from __future__ import annotations
 
 import difflib
@@ -20,6 +24,8 @@ from xmldiff import actions, main
 from .conftest import (
     KICAD_VERSION,
     add_track,
+    assert_no_kicad_assertion_errors,
+    filter_kiacd10_errs,
     generate_drc,
     generate_render,
     get_footprints_dir,
@@ -27,6 +33,7 @@ from .conftest import (
     pointMM,
     prepare_project_file,
     rotate,
+    write_fp_lib_table,
 )
 
 logger = logging.getLogger(__name__)
@@ -57,7 +64,7 @@ def kbplacer_process(
         kbplacer_args += [
             "-m",
             package_name,
-            "-b",
+            "--pcb-file",
             pcb_path,
         ]
         if layout_file:
@@ -80,10 +87,16 @@ def kbplacer_process(
         p = subprocess.Popen(
             kbplacer_args,
             cwd=package_path,
+            stderr=subprocess.PIPE,
+            text=True,
         )
-        p.communicate()
+        _, stderr = p.communicate()
         if p.returncode != 0:
-            raise Exception("Switch placement failed")
+            msg = "Switch placement failed"
+            if stderr:
+                msg += ": " + stderr
+            raise Exception(msg)
+        assert_no_kicad_assertion_errors(stderr or "")
 
     return _process
 
@@ -102,7 +115,7 @@ def kbplacer_gui_process(
             "python3",
             "-m",
             f"{package_name}.kbplacer_dialog",
-            "-b",
+            "--pcb-file",
             pcb_path,
             "--run-without-dialog",
             "--initial-state-file",
@@ -118,9 +131,13 @@ def kbplacer_gui_process(
             stdin=subprocess.PIPE,
             text=True,
         )
-        p.communicate()
+        _, stderr = p.communicate()
         if p.returncode != 0:
-            raise Exception("Switch placement failed")
+            msg = "Switch placement failed"
+            if stderr:
+                msg += ": " + stderr
+            raise Exception(msg)
+        assert_no_kicad_assertion_errors(stderr or "")
 
     return _process
 
@@ -198,6 +215,7 @@ def assert_kicad_svg(expected: Path, actual: Path) -> None:
 
 def assert_example(tmpdir, references_dir: Path) -> None:
     reference_files = get_reference_files(references_dir)
+    logger.debug(f"references: {reference_files}")
     assert len(reference_files) == 4, "Reference files not found"
     for path in reference_files:
         assert_kicad_svg(path, Path(f"{tmpdir}/{PROJECT_NAME}-layers/{path.name}"))
@@ -302,6 +320,15 @@ def __get_parameters():
     )
     test_params.append(param)
 
+    param = pytest.param(
+        "1x4-rotations-90-step",
+        ("Tracks", True),
+        ("DefaultDiode", None),
+        "kle-new.json",
+        id="1x4-rotations-90-step-rotation-property;Tracks;DiodeOption2;RAW",
+    )
+    test_params.append(param)
+
     return test_params
 
 
@@ -327,13 +354,7 @@ def prepare_fp_lib_table(request, tmpdir) -> None:
     libs = [
         ("examples", Path(f"{test_dir}/../examples/examples.pretty").absolute()),
     ]
-    with open(f"{tmpdir}/fp-lib-table", "w") as f:
-        f.write("(fp_lib_table\n")
-        for name, uri in libs:
-            f.write(
-                f'  (lib (name {name})(type KiCad)(uri {uri})(options "")(descr ""))\n'
-            )
-        f.write(")")
+    write_fp_lib_table(tmpdir, libs)
 
 
 def prepare_project(request, tmpdir, example: str, layout_file: str) -> None:
@@ -438,11 +459,29 @@ def test_with_examples_annotated_layout_shuffled_references(
         kbplacer_process(True, None, layout_path, pcb_path)
 
 
-@pytest.mark.parametrize("example", ["2x2-japanese-duplex-matrix", "2x2"])
+def __get_optimize_diodes_orientation_parameters():
+    examples = ["2x2-japanese-duplex-matrix", "2x2"]
+    test_params = []
+    for example in examples:
+        param = pytest.param(
+            example,
+            ("Tracks", True),
+            ("DefaultDiode", None),
+            "kle.json",
+            id=f"{example};Tracks;DefaultDiode;RAW",
+        )
+        test_params.append(param)
+    return test_params
+
+
+@pytest.mark.parametrize(
+    "example,route,diode_position,layout_option",
+    __get_optimize_diodes_orientation_parameters(),
+)
 def test_with_examples_optimize_diodes_orientation(
-    example, example_isolation, kbplacer_process
+    example, route, diode_position, layout_option, example_isolation, kbplacer_process
 ) -> None:
-    with example_isolation(example, "kle.json", "Tracks", "DefaultDiode") as e:
+    with example_isolation(example, layout_option, route[0], diode_position[0]) as e:
         layout_path, pcb_path = e
         kbplacer_process(
             True,
@@ -492,8 +531,8 @@ def test_empty_run(
 ) -> None:
     test_dir = request.fspath.dirname
     # FIXME: there is no way to define empty 'additional-elements' with CLI
-    # so using example where there are not stabilizer footprints which would
-    # be moved this following 'empty run'
+    # so must use example where there are no stabilizer footprints which would
+    # be moved by this 'empty run'
     example = "2x2"
 
     reference = f"{test_dir}/../examples/{example}/keyboard-before.kicad_pcb"
@@ -689,7 +728,7 @@ def test_board_creation(
             diode_position[1],
             layout_path,
             pcb_path,
-            flags=["--create-from-annotated-layout"],
+            flags=["--create-pcb-file"],
             args={
                 "--switch-footprint": f"{get_footprints_dir(request)}:SW_Cherry_MX_PCB_1.00u",
                 "--diode-footprint": f"{get_footprints_dir(request)}:D_SOD-323F",
@@ -781,4 +820,5 @@ def test_version(request, package_name, package_path) -> None:
     logger.info(f"Version: {p.stdout}")
     if request.config.getoption("--test-plugin-installation"):
         assert re.match(r"^0\.\d+(\.dev\d+)?(.*)?$", p.stdout)
+    p.stderr = filter_kiacd10_errs(p.stderr)
     assert p.stderr == ""
