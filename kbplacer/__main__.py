@@ -17,7 +17,11 @@ from .element_position import ElementInfo, ElementPosition, PositionOption, Side
 from .footprint_loader import FootprintIdentifier
 from .kbplacer_plugin import PluginSettings, run_board, run_schematic
 from .kle_serial import get_keyboard_from_file
-from .schematic_project import plan_sheet_filenames
+from .schematic_project import (
+    hierarchical_root_filename,
+    plan_sheet_filenames,
+    resolve_bundle_strategy,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -415,7 +419,7 @@ def app() -> None:
             "Creates the LED-chain schematic sheet (LEDs, decoupling capacitors\n"
             "unless `--skip-led-decoupling`, per-LED VCC/GND, and the DIN/DOUT\n"
             "daisy chain), bundled into the same KiCad project as `--create-sch-file`.\n"
-            "Requires KiCad 10.0 or higher, whether used alone or together with\n"
+            "Requires KiCad 9.0 or higher, whether used alone or together with\n"
             "`--create-sch-file`."
         ),
     )
@@ -427,6 +431,22 @@ def app() -> None:
             ".kicad_sch file to be created if `--create-led-sch-file` option used\n"
             "and no other schematic type is requested (its basename becomes the\n"
             "project's basename in that case). Ignored otherwise."
+        ),
+    )
+    parser.add_argument(
+        "--bundle-strategy",
+        required=False,
+        default=None,
+        choices=["flat", "hierarchical"],
+        help=(
+            "How multiple requested schematic sheets are tied together into one\n"
+            "KiCad project. `flat`: every sheet is its own top-level sheet, linked\n"
+            "purely through the `.kicad_pro` (KiCad 10.0+ only, when more than one\n"
+            "sheet is requested). `hierarchical`: a root `.kicad_sch` containing\n"
+            "references to each requested sheet, in the traditional KiCad\n"
+            "hierarchical-sheet style (KiCad 9.0+). Defaults to auto-selecting\n"
+            "`flat` on KiCad 10.0+ and `hierarchical` below that. Ignored when a\n"
+            "single sheet type is requested (nothing to bundle)."
         ),
     )
     parser.add_argument(
@@ -489,7 +509,7 @@ def app() -> None:
             "(pad 1=GND, 2=DIN, 3=VCC, 4=DOUT).\n"
             "Required when `--create-led-pcb-elements` is used; also applied\n"
             "to the LED-chain schematic's Footprint field when\n"
-            "`--create-led-sch-file` is used (that path requires KiCad 10.0\n"
+            "`--create-led-sch-file` is used (that path requires KiCad 9.0\n"
             "or higher, see `--create-led-sch-file`; `--create-led-pcb-elements`\n"
             "has no such requirement)."
         ),
@@ -505,7 +525,7 @@ def app() -> None:
             "Required when `--create-led-pcb-elements` is used, unless\n"
             "`--skip-led-decoupling` is also given; also applied to the\n"
             "LED-chain schematic's Footprint field when `--create-led-sch-file`\n"
-            "is used (that path requires KiCad 10.0 or higher, see\n"
+            "is used (that path requires KiCad 9.0 or higher, see\n"
             "`--create-led-sch-file`; `--create-led-pcb-elements` has no such\n"
             "requirement)."
         ),
@@ -639,8 +659,11 @@ def app() -> None:
         project_dir = basename_path.parent
         project_path = str(project_dir / f"{project_basename}.kicad_pro")
 
+        resolved_strategy = resolve_bundle_strategy(args.bundle_strategy)
         planned_filenames = dict(
-            plan_sheet_filenames(project_basename, requested_sheet_types)
+            plan_sheet_filenames(
+                project_basename, requested_sheet_types, strategy=resolved_strategy
+            )
         )
         sch_path = (
             str(project_dir / planned_filenames["key_matrix"])
@@ -653,9 +676,15 @@ def app() -> None:
             else ""
         )
 
-        for output_path in [
+        existence_checks = [
             project_dir / filename for filename in planned_filenames.values()
-        ] + [Path(project_path)]:
+        ] + [Path(project_path)]
+        if resolved_strategy == "hierarchical" and len(requested_sheet_types) > 1:
+            existence_checks.append(
+                project_dir / hierarchical_root_filename(project_basename)
+            )
+
+        for output_path in existence_checks:
             if output_path.is_file():
                 logger.error(f"File {output_path} already exist, aborting")
                 sys.exit(1)
@@ -711,6 +740,7 @@ def app() -> None:
         cap_footprint=args.led_capacitor_footprint,
         create_led_pcb_elements=args.create_led_pcb_elements,
         skip_led_decoupling=args.skip_led_decoupling,
+        bundle_strategy=args.bundle_strategy,
     )
 
     if args.create_sch_file or args.create_led_sch_file:

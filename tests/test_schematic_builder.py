@@ -308,7 +308,12 @@ class TestSchematicBuilderCli:
                 "--switch-footprint": switch_footprint,
                 "--diode-footprint": diode_footprint,
             },
-            flags=["--create-pcb-file", "--create-led-sch-file"],
+            flags=[
+                "--create-pcb-file",
+                "--create-led-sch-file",
+                "--bundle-strategy",
+                "flat",
+            ],
         )
         outs, errs = p.communicate()
 
@@ -401,6 +406,8 @@ class TestSchematicBuilderCli:
                 "--create-pcb-file",
                 "--create-led-sch-file",
                 "--create-led-pcb-elements",
+                "--bundle-strategy",
+                "flat",
             ],
         )
         outs, errs = p.communicate()
@@ -534,6 +541,8 @@ class TestSchematicBuilderCli:
                 "--create-led-sch-file",
                 "--create-led-pcb-elements",
                 "--skip-led-decoupling",
+                "--bundle-strategy",
+                "flat",
             ],
         )
         outs, errs = p.communicate()
@@ -957,7 +966,7 @@ class TestMatrixNetNameParity:
 
 class TestLedChainNetNameParity:
     @pytest.mark.skipif(
-        KICAD_VERSION < (10, 0, 0), reason="Requires KiCad 10.0 or higher"
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
     )
     def test_lexicographic_net_parity(self, request, tmpdir) -> None:
         """Board nets and the LED-chain schematic's auto-named nets must
@@ -1038,7 +1047,7 @@ class TestLedDecouplingSkip:
     """
 
     @pytest.mark.skipif(
-        KICAD_VERSION < (10, 0, 0), reason="Requires KiCad 10.0 or higher"
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
     )
     def test_omits_capacitors(self, request, tmpdir) -> None:
         if not can_create_schematic():
@@ -1086,7 +1095,7 @@ class TestLedDecouplingSkip:
         assert len(_instances("LED:SK6812MINI-E")) == 4
 
     @pytest.mark.skipif(
-        KICAD_VERSION < (10, 0, 0), reason="Requires KiCad 10.0 or higher"
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
     )
     def test_smaller_page_than_with_decoupling(self, request, tmpdir) -> None:
         """Without the capacitor bank reserving vertical space, the planned
@@ -1131,6 +1140,124 @@ class TestLedDecouplingSkip:
         assert page_order.index(_page_size(skip_caps_file)) <= page_order.index(
             _page_size(with_caps_file)
         )
+
+
+def _instance_paths(schematic_sexp) -> set:
+    """Every `path` value used by top-level placed `(symbol ...)` instances
+    (not the `lib_symbols` cache, which nests its own `(symbol ...)` entries
+    one level deeper and is unaffected by `instance_path`)."""
+    paths = set()
+    for symbol in find_children(schematic_sexp, "symbol"):
+        instances = find_child(symbol, "instances")
+        if instances is None:
+            continue
+        project = find_child(instances, "project")
+        if project is None:
+            continue
+        path_node = find_child(project, "path")
+        if path_node is not None:
+            paths.add(path_node[1])
+    return paths
+
+
+class TestHierarchicalInstancePath:
+    """`instance_path` is how the hierarchical bundling strategy
+    (`schematic_project.py`) tells a child sheet builder it's nested under a
+    root sheet: symbol instance paths become two levels deep
+    (`/<root_uuid>/<sheet_uuid>`) instead of the flat/default single-level
+    `/<own_uuid>`, and the child's own `sheet_instances` block - which would
+    otherwise claim a page number independently - is omitted, since the
+    root's `(sheet ...)` block is what records the child's page instead.
+    """
+
+    @pytest.mark.skipif(
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
+    )
+    def test_key_matrix_nested_instance_path(self, tmpdir) -> None:
+        if not can_create_schematic():
+            pytest.skip("Requires optional schematic dependencies")
+
+        layout = [["0,0", "0,1"], ["1,0", "1,1"]]
+        layout_file = Path(tmpdir) / "layout.json"
+        with open(layout_file, "w") as f:
+            json.dump(layout, f)
+
+        schematic_file = Path(tmpdir) / "test.kicad_sch"
+        nested_path = (
+            "/11111111-1111-1111-1111-111111111111/22222222-2222-2222-2222-222222222222"
+        )
+
+        create_key_matrix_schematic(
+            layout_file,
+            schematic_file,
+            **default_schematic_kwargs(),
+            instance_path=nested_path,
+        )
+        assert schematic_file.exists()
+
+        with open(schematic_file, "r") as f:
+            schematic_sexp = sexpdata.load(f)
+
+        assert find_child(schematic_sexp, "sheet_instances") is None
+        assert _instance_paths(schematic_sexp) == {nested_path}
+
+    @pytest.mark.skipif(
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
+    )
+    def test_led_chain_nested_instance_path(self, request, tmpdir) -> None:
+        if not can_create_schematic():
+            pytest.skip("Requires optional schematic dependencies")
+
+        layout = [["0,0", "0,1"], ["1,0", "1,1"]]
+        layout_file = Path(tmpdir) / "layout.json"
+        with open(layout_file, "w") as f:
+            json.dump(layout, f)
+
+        schematic_file = Path(tmpdir) / "test.kicad_sch"
+        nested_path = (
+            "/11111111-1111-1111-1111-111111111111/33333333-3333-3333-3333-333333333333"
+        )
+
+        fp_dir = str(get_footprints_dir(request))
+        create_led_chain_schematic(
+            layout_file,
+            schematic_file,
+            **default_schematic_kwargs(),
+            led_footprint=f"{fp_dir}:LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount",
+            cap_footprint=f"{fp_dir}:C_0603_1608Metric",
+            instance_path=nested_path,
+        )
+        assert schematic_file.exists()
+
+        with open(schematic_file, "r") as f:
+            schematic_sexp = sexpdata.load(f)
+
+        assert find_child(schematic_sexp, "sheet_instances") is None
+        assert _instance_paths(schematic_sexp) == {nested_path}
+
+    @pytest.mark.skipif(
+        KICAD_VERSION < (9, 0, 0), reason="Requires KiCad 9.0 or higher"
+    )
+    def test_default_instance_path_unaffected(self, tmpdir) -> None:
+        # Regression guard: omitting `instance_path` (the flat/single-sheet
+        # default) must still produce a single-level path derived from
+        # `own_uuid`, plus the file's own `sheet_instances` block.
+        layout = [["0,0", "0,1"], ["1,0", "1,1"]]
+        layout_file = Path(tmpdir) / "layout.json"
+        with open(layout_file, "w") as f:
+            json.dump(layout, f)
+
+        schematic_file = Path(tmpdir) / "test.kicad_sch"
+        kwargs = default_schematic_kwargs()
+
+        create_key_matrix_schematic(layout_file, schematic_file, **kwargs)
+        assert schematic_file.exists()
+
+        with open(schematic_file, "r") as f:
+            schematic_sexp = sexpdata.load(f)
+
+        assert find_child(schematic_sexp, "sheet_instances") is not None
+        assert _instance_paths(schematic_sexp) == {f"/{kwargs['own_uuid']}"}
 
 
 class TestSingleKeySchematic:

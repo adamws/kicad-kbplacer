@@ -584,12 +584,15 @@ def test_key_matrix_and_led_flags_populate_settings(
         fake_board,
         "--create-sch-file",
         "--create-led-sch-file",
+        "--bundle-strategy",
+        "flat",
     ]
     with cli_isolation(args):
         app()
 
     run_mock.assert_called_once()
     settings = run_mock.call_args[0][0]
+    assert settings.bundle_strategy == "flat"
     # Key matrix outranks LED chain, so it keeps the project-basename-matching
     # filename; LED chain gets pushed to the suffixed name.
     assert settings.sch_file_path == str(Path(fake_board).with_suffix(".kicad_sch"))
@@ -599,15 +602,116 @@ def test_key_matrix_and_led_flags_populate_settings(
     assert settings.project_path == str(Path(fake_board).with_suffix(".kicad_pro"))
 
 
-def test_multi_sheet_bundling_requires_kicad_10(
+def test_key_matrix_and_led_flags_populate_settings_hierarchical(
+    monkeypatch, cli_isolation, fake_board
+) -> None:
+    run_mock = Mock()
+    monkeypatch.setattr("kbplacer.__main__.run_schematic", run_mock)
+    monkeypatch.setattr("kbplacer.__main__.run_board", Mock())
+
+    args = [
+        "--pcb-file",
+        fake_board,
+        "--create-sch-file",
+        "--create-led-sch-file",
+        "--bundle-strategy",
+        "hierarchical",
+    ]
+    with cli_isolation(args):
+        app()
+
+    run_mock.assert_called_once()
+    settings = run_mock.call_args[0][0]
+    assert settings.bundle_strategy == "hierarchical"
+    # Neither sheet type is the root under hierarchical bundling with more
+    # than one type requested - both get suffixed filenames.
+    assert settings.sch_file_path == str(
+        Path(fake_board).with_name(Path(fake_board).stem + "-key-matrix.kicad_sch")
+    )
+    assert settings.led_sch_file_path == str(
+        Path(fake_board).with_name(Path(fake_board).stem + "-led-chain.kicad_sch")
+    )
+    assert settings.project_path == str(Path(fake_board).with_suffix(".kicad_pro"))
+
+
+def test_bundle_strategy_defaults_to_none(
+    monkeypatch, cli_isolation, fake_board
+) -> None:
+    run_mock = Mock()
+    monkeypatch.setattr("kbplacer.__main__.run_schematic", run_mock)
+    monkeypatch.setattr("kbplacer.__main__.run_board", Mock())
+
+    args = ["--pcb-file", fake_board, "--create-sch-file"]
+    with cli_isolation(args):
+        app()
+
+    run_mock.assert_called_once()
+    settings = run_mock.call_args[0][0]
+    assert settings.bundle_strategy is None
+
+
+def test_flat_strategy_requires_kicad_10(
     monkeypatch, cli_isolation, fake_board
 ) -> None:
     monkeypatch.setattr("kbplacer.schematic_project.KICAD_VERSION", (9, 0, 0))
 
-    args = ["--pcb-file", fake_board, "--create-sch-file", "--create-led-sch-file"]
+    args = [
+        "--pcb-file",
+        fake_board,
+        "--create-sch-file",
+        "--create-led-sch-file",
+        "--bundle-strategy",
+        "flat",
+    ]
     with cli_isolation(args):
         with pytest.raises(RuntimeError, match="KiCad 10.0"):
             app()
+
+
+def test_default_strategy_succeeds_below_kicad_10(
+    monkeypatch, cli_isolation, fake_board
+) -> None:
+    # No `--bundle-strategy`: below KiCad 10 this must auto-resolve to
+    # "hierarchical" and succeed, instead of hitting the flat-only gate.
+    monkeypatch.setattr("kbplacer.schematic_project.KICAD_VERSION", (9, 0, 0))
+    run_mock = Mock()
+    monkeypatch.setattr("kbplacer.__main__.run_schematic", run_mock)
+    monkeypatch.setattr("kbplacer.__main__.run_board", Mock())
+
+    args = ["--pcb-file", fake_board, "--create-sch-file", "--create-led-sch-file"]
+    with cli_isolation(args):
+        app()
+
+    run_mock.assert_called_once()
+    settings = run_mock.call_args[0][0]
+    assert settings.bundle_strategy is None
+
+
+def test_hierarchical_root_existence_check(
+    caplog, monkeypatch, cli_isolation, fake_board
+) -> None:
+    run_mock = Mock()
+    monkeypatch.setattr("kbplacer.__main__.run_schematic", run_mock)
+
+    fake_root_schematic = Path(fake_board).with_suffix(".kicad_sch")
+    args = [
+        "--pcb-file",
+        fake_board,
+        "--create-sch-file",
+        "--create-led-sch-file",
+        "--bundle-strategy",
+        "hierarchical",
+    ]
+    with cli_isolation(args):
+        shutil.copy(fake_board, fake_root_schematic)
+        with pytest.raises(ExitTest):
+            app()
+
+    run_mock.assert_not_called()
+    assert (
+        caplog.records[0].message
+        == f"File {fake_root_schematic} already exist, aborting"
+    )
 
 
 def test_max_keys_validation_passes(monkeypatch, cli_isolation, fake_board) -> None:

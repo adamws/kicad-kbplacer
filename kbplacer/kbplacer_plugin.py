@@ -50,6 +50,7 @@ class PluginSettings:
     cap_footprint: str = ""
     create_led_pcb_elements: bool = False
     skip_led_decoupling: bool = False
+    bundle_strategy: Optional[str] = None
 
 
 def run_schematic(settings: PluginSettings):
@@ -85,7 +86,12 @@ def run_schematic(settings: PluginSettings):
         )
 
     if requests:
-        create_schematic_project(settings.project_path, settings.layout_path, requests)
+        create_schematic_project(
+            settings.project_path,
+            settings.layout_path,
+            requests,
+            strategy=settings.bundle_strategy,
+        )
 
 
 def run_board(settings: PluginSettings) -> pcbnew.BOARD:

@@ -61,6 +61,37 @@ def test_multi_sheet_project_ordering(tmpdir) -> None:
     ]
 
 
+def test_hierarchical_top_level_sheets_override(tmpdir) -> None:
+    # A hierarchical-strategy project: `sheets` lists root + every child, but
+    # only the root is a genuine KiCad top-level sheet.
+    project_path = Path(tmpdir) / "keyboard.kicad_pro"
+    root_uuid = str(uuid.uuid4())
+    key_matrix_uuid = str(uuid.uuid4())
+    led_uuid = str(uuid.uuid4())
+
+    create_project_file(
+        project_path,
+        sheets=[
+            (root_uuid, "keyboard.kicad_sch", "Root"),
+            (key_matrix_uuid, "keyboard-key-matrix.kicad_sch", "Key Matrix"),
+            (led_uuid, "keyboard-led-chain.kicad_sch", "Led Chain"),
+        ],
+        top_level_sheets=[(root_uuid, "keyboard.kicad_sch", "Root")],
+    )
+
+    with open(project_path, "r") as f:
+        project = json.load(f)
+
+    assert project["sheets"] == [
+        [root_uuid, "Root"],
+        [key_matrix_uuid, "Key Matrix"],
+        [led_uuid, "Led Chain"],
+    ]
+    assert project["schematic"]["top_level_sheets"] == [
+        {"filename": "keyboard.kicad_sch", "name": "Root", "uuid": root_uuid}
+    ]
+
+
 def test_writes_valid_json_with_no_sheets(tmpdir) -> None:
     # Not a realistic call (the orchestrator always passes at least one sheet),
     # but `create_project_file` itself should not assume a non-empty list.

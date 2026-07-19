@@ -537,6 +537,7 @@ workflows:
           matrix:
             parameters:
               version:
+                - 9.0.9-noble
                 - 10.0.4-noble
       - create-pcm-package:
           requires: &required-tests

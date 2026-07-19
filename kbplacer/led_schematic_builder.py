@@ -4,7 +4,7 @@
 
 import logging
 import os
-from typing import List, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 from .board_modifier import KICAD_VERSION
 from .footprint_loader import FootprintIdentifier
@@ -71,9 +71,9 @@ BOTTOM_MARGIN_Y = 20.0
 
 TEMPLATE = """\
 (kicad_sch
-    (version 20260306)
+    (version 20250114)
     (generator "eeschema")
-    (generator_version "10.0")
+    (generator_version "9.0")
     (uuid "{own_uuid}")
     (paper "{page_size}")
     (title_block
@@ -91,12 +91,8 @@ TEMPLATE = """\
             (exclude_from_sim no)
             (in_bom yes)
             (on_board yes)
-            (in_pos_files yes)
-            (duplicate_pin_numbers_are_jumpers no)
             (property "Reference" "C"
                 (at 0.635 2.54 0)
-                (show_name no)
-                (do_not_autoplace no)
                 (effects
                     (font
                         (size 1.27 1.27)
@@ -106,8 +102,6 @@ TEMPLATE = """\
             )
             (property "Value" "C"
                 (at 0.635 -2.54 0)
-                (show_name no)
-                (do_not_autoplace no)
                 (effects
                     (font
                         (size 1.27 1.27)
@@ -117,8 +111,6 @@ TEMPLATE = """\
             )
             (property "Footprint" ""
                 (at 0.9652 -3.81 0)
-                (show_name no)
-                (do_not_autoplace no)
                 (hide yes)
                 (effects
                     (font
@@ -128,8 +120,6 @@ TEMPLATE = """\
             )
             (property "Datasheet" ""
                 (at 0 0 0)
-                (show_name no)
-                (do_not_autoplace no)
                 (hide yes)
                 (effects
                     (font
@@ -139,8 +129,6 @@ TEMPLATE = """\
             )
             (property "Description" "Unpolarized capacitor"
                 (at 0 0 0)
-                (show_name no)
-                (do_not_autoplace no)
                 (hide yes)
                 (effects
                     (font
@@ -150,8 +138,6 @@ TEMPLATE = """\
             )
             (property "ki_keywords" "cap capacitor"
                 (at 0 0 0)
-                (show_name no)
-                (do_not_autoplace no)
                 (hide yes)
                 (effects
                     (font
@@ -161,8 +147,6 @@ TEMPLATE = """\
             )
             (property "ki_fp_filters" "C_*"
                 (at 0 0 0)
-                (show_name no)
-                (do_not_autoplace no)
                 (hide yes)
                 (effects
                     (font
@@ -243,12 +227,8 @@ TEMPLATE = """\
             (exclude_from_sim no)
             (in_bom yes)
             (on_board yes)
-            (in_pos_files yes)
-            (duplicate_pin_numbers_are_jumpers no)
             (property "Reference" "D"
                 (at 5.08 5.715 0)
-                (show_name no)
-                (do_not_autoplace no)
                 (effects
                     (font
                         (size 1.27 1.27)
@@ -258,8 +238,6 @@ TEMPLATE = """\
             )
             (property "Value" "SK6812MINI-E"
                 (at 1.27 -5.715 0)
-                (show_name no)
-                (do_not_autoplace no)
                 (effects
                     (font
                         (size 1.27 1.27)
@@ -269,8 +247,6 @@ TEMPLATE = """\
             )
             (property "Footprint" "LED_SMD:LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount"
                 (at 1.27 -7.62 0)
-                (show_name no)
-                (do_not_autoplace no)
                 (hide yes)
                 (effects
                     (font
@@ -281,8 +257,6 @@ TEMPLATE = """\
             )
             (property "Datasheet" "https://www.lcsc.com/datasheet/C5149201.pdf"
                 (at 2.54 -9.525 0)
-                (show_name no)
-                (do_not_autoplace no)
                 (hide yes)
                 (effects
                     (font
@@ -293,8 +267,6 @@ TEMPLATE = """\
             )
             (property "Description" "RGB LED with integrated controller"
                 (at 0 0 0)
-                (show_name no)
-                (do_not_autoplace no)
                 (hide yes)
                 (effects
                     (font
@@ -304,8 +276,6 @@ TEMPLATE = """\
             )
             (property "ki_keywords" "RGB LED NeoPixel addressable"
                 (at 0 0 0)
-                (show_name no)
-                (do_not_autoplace no)
                 (hide yes)
                 (effects
                     (font
@@ -315,8 +285,6 @@ TEMPLATE = """\
             )
             (property "ki_fp_filters" "LED?SK6812MINI?E?3.2x2.8mm?P1.5mm*"
                 (at 0 0 0)
-                (show_name no)
-                (do_not_autoplace no)
                 (hide yes)
                 (effects
                     (font
@@ -508,7 +476,7 @@ TEMPLATE = """\
             (embedded_fonts no)
         )
         (symbol "power:GND"
-            (power global)
+            (power)
             (pin_numbers
                 (hide yes)
             )
@@ -519,12 +487,8 @@ TEMPLATE = """\
             (exclude_from_sim no)
             (in_bom yes)
             (on_board yes)
-            (in_pos_files yes)
-            (duplicate_pin_numbers_are_jumpers no)
             (property "Reference" "#PWR"
                 (at 0 -6.35 0)
-                (show_name no)
-                (do_not_autoplace no)
                 (hide yes)
                 (effects
                     (font
@@ -534,8 +498,6 @@ TEMPLATE = """\
             )
             (property "Value" "GND"
                 (at 0 -3.81 0)
-                (show_name no)
-                (do_not_autoplace no)
                 (effects
                     (font
                         (size 1.27 1.27)
@@ -544,8 +506,6 @@ TEMPLATE = """\
             )
             (property "Footprint" ""
                 (at 0 0 0)
-                (show_name no)
-                (do_not_autoplace no)
                 (hide yes)
                 (effects
                     (font
@@ -555,8 +515,6 @@ TEMPLATE = """\
             )
             (property "Datasheet" ""
                 (at 0 0 0)
-                (show_name no)
-                (do_not_autoplace no)
                 (hide yes)
                 (effects
                     (font
@@ -566,8 +524,6 @@ TEMPLATE = """\
             )
             (property "Description" "Power symbol creates a global label with name \\"GND\\" , ground"
                 (at 0 0 0)
-                (show_name no)
-                (do_not_autoplace no)
                 (hide yes)
                 (effects
                     (font
@@ -577,8 +533,6 @@ TEMPLATE = """\
             )
             (property "ki_keywords" "global power"
                 (at 0 0 0)
-                (show_name no)
-                (do_not_autoplace no)
                 (hide yes)
                 (effects
                     (font
@@ -623,7 +577,7 @@ TEMPLATE = """\
             (embedded_fonts no)
         )
         (symbol "power:VCC"
-            (power global)
+            (power)
             (pin_numbers
                 (hide yes)
             )
@@ -634,12 +588,8 @@ TEMPLATE = """\
             (exclude_from_sim no)
             (in_bom yes)
             (on_board yes)
-            (in_pos_files yes)
-            (duplicate_pin_numbers_are_jumpers no)
             (property "Reference" "#PWR"
                 (at 0 -3.81 0)
-                (show_name no)
-                (do_not_autoplace no)
                 (hide yes)
                 (effects
                     (font
@@ -649,8 +599,6 @@ TEMPLATE = """\
             )
             (property "Value" "VCC"
                 (at 0 3.556 0)
-                (show_name no)
-                (do_not_autoplace no)
                 (effects
                     (font
                         (size 1.27 1.27)
@@ -659,8 +607,6 @@ TEMPLATE = """\
             )
             (property "Footprint" ""
                 (at 0 0 0)
-                (show_name no)
-                (do_not_autoplace no)
                 (hide yes)
                 (effects
                     (font
@@ -670,8 +616,6 @@ TEMPLATE = """\
             )
             (property "Datasheet" ""
                 (at 0 0 0)
-                (show_name no)
-                (do_not_autoplace no)
                 (hide yes)
                 (effects
                     (font
@@ -681,8 +625,6 @@ TEMPLATE = """\
             )
             (property "Description" "Power symbol creates a global label with name \\"VCC\\""
                 (at 0 0 0)
-                (show_name no)
-                (do_not_autoplace no)
                 (hide yes)
                 (effects
                     (font
@@ -692,8 +634,6 @@ TEMPLATE = """\
             )
             (property "ki_keywords" "global power"
                 (at 0 0 0)
-                (show_name no)
-                (do_not_autoplace no)
                 (hide yes)
                 (effects
                     (font
@@ -778,17 +718,13 @@ TEMPLATE = """\
         (lib_id "LED:SK6812MINI-E")
         (at 0 0 0)
         (unit 1)
-        (body_style 1)
         (exclude_from_sim no)
         (in_bom yes)
         (on_board yes)
-        (in_pos_files yes)
         (dnp no)
         (uuid "5e5f1cf7-5172-4f72-b83c-5dbd3da3dcd1")
         (property "Reference" "LED0"
             (at 5.588 -2.54 0)
-            (show_name no)
-            (do_not_autoplace no)
             (effects
                 (font
                     (size 1.27 1.27)
@@ -798,8 +734,6 @@ TEMPLATE = """\
         )
         (property "Value" "SK6812MINI-E"
             (at 8.89 3.175 0)
-            (show_name no)
-            (do_not_autoplace no)
             (hide yes)
             (effects
                 (font
@@ -810,8 +744,6 @@ TEMPLATE = """\
         )
         (property "Footprint" "LED_SMD:LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount"
             (at 0 0 0)
-            (show_name no)
-            (do_not_autoplace no)
             (hide yes)
             (effects
                 (font
@@ -821,8 +753,6 @@ TEMPLATE = """\
         )
         (property "Datasheet" "https://www.lcsc.com/datasheet/C5149201.pdf"
             (at 0 0 0)
-            (show_name no)
-            (do_not_autoplace no)
             (hide yes)
             (effects
                 (font
@@ -832,8 +762,6 @@ TEMPLATE = """\
         )
         (property "Description" "RGB LED with integrated controller"
             (at 0 0 0)
-            (show_name no)
-            (do_not_autoplace no)
             (hide yes)
             (effects
                 (font
@@ -855,7 +783,7 @@ TEMPLATE = """\
         )
         (instances
             (project "{project_name}"
-                (path "/{own_uuid}"
+                (path "{instance_path}"
                     (reference "LED0")
                     (unit 1)
                 )
@@ -866,17 +794,13 @@ TEMPLATE = """\
         (lib_id "Device:C")
         (at 0 20 0)
         (unit 1)
-        (body_style 1)
         (exclude_from_sim no)
         (in_bom yes)
         (on_board yes)
-        (in_pos_files yes)
         (dnp no)
         (uuid "21ac7c7a-0244-422b-90ac-e14ae0b8f9f8")
         (property "Reference" "C0"
             (at 3.175 18.8 0)
-            (show_name no)
-            (do_not_autoplace no)
             (effects
                 (font
                     (size 1.27 1.27)
@@ -886,8 +810,6 @@ TEMPLATE = """\
         )
         (property "Value" "C"
             (at 3.175 21.34 0)
-            (show_name no)
-            (do_not_autoplace no)
             (effects
                 (font
                     (size 1.27 1.27)
@@ -897,8 +819,6 @@ TEMPLATE = """\
         )
         (property "Footprint" ""
             (at 0 25 0)
-            (show_name no)
-            (do_not_autoplace no)
             (hide yes)
             (effects
                 (font
@@ -908,8 +828,6 @@ TEMPLATE = """\
         )
         (property "Datasheet" ""
             (at 0 20 0)
-            (show_name no)
-            (do_not_autoplace no)
             (hide yes)
             (effects
                 (font
@@ -919,8 +837,6 @@ TEMPLATE = """\
         )
         (property "Description" "Unpolarized capacitor"
             (at 0 20 0)
-            (show_name no)
-            (do_not_autoplace no)
             (hide yes)
             (effects
                 (font
@@ -936,7 +852,7 @@ TEMPLATE = """\
         )
         (instances
             (project "{project_name}"
-                (path "/{own_uuid}"
+                (path "{instance_path}"
                     (reference "C0")
                     (unit 1)
                 )
@@ -947,17 +863,13 @@ TEMPLATE = """\
         (lib_id "power:GND")
         (at 20 20 0)
         (unit 1)
-        (body_style 1)
         (exclude_from_sim no)
         (in_bom yes)
         (on_board yes)
-        (in_pos_files yes)
         (dnp no)
         (uuid "5b3b82c0-ecf1-447c-af2d-b0fde89153ef")
         (property "Reference" "#PWRG0"
             (at 20 26.35 0)
-            (show_name no)
-            (do_not_autoplace no)
             (hide yes)
             (effects
                 (font
@@ -967,8 +879,6 @@ TEMPLATE = """\
         )
         (property "Value" "GND"
             (at 20 24.445 0)
-            (show_name no)
-            (do_not_autoplace no)
             (effects
                 (font
                     (size 1.27 1.27)
@@ -977,8 +887,6 @@ TEMPLATE = """\
         )
         (property "Footprint" ""
             (at 20 20 0)
-            (show_name no)
-            (do_not_autoplace no)
             (hide yes)
             (effects
                 (font
@@ -988,8 +896,6 @@ TEMPLATE = """\
         )
         (property "Datasheet" ""
             (at 20 20 0)
-            (show_name no)
-            (do_not_autoplace no)
             (hide yes)
             (effects
                 (font
@@ -999,8 +905,6 @@ TEMPLATE = """\
         )
         (property "Description" "Power symbol creates a global label with name \\"GND\\" , ground"
             (at 20 20 0)
-            (show_name no)
-            (do_not_autoplace no)
             (hide yes)
             (effects
                 (font
@@ -1013,7 +917,7 @@ TEMPLATE = """\
         )
         (instances
             (project "{project_name}"
-                (path "/{own_uuid}"
+                (path "{instance_path}"
                     (reference "#PWRG0")
                     (unit 1)
                 )
@@ -1024,17 +928,13 @@ TEMPLATE = """\
         (lib_id "power:VCC")
         (at 20 40 0)
         (unit 1)
-        (body_style 1)
         (exclude_from_sim no)
         (in_bom yes)
         (on_board yes)
-        (in_pos_files yes)
         (dnp no)
         (uuid "74da7e5f-09c7-48f3-9dc0-66210a80fb94")
         (property "Reference" "#PWRV0"
             (at 20 44.19 0)
-            (show_name no)
-            (do_not_autoplace no)
             (hide yes)
             (effects
                 (font
@@ -1044,8 +944,6 @@ TEMPLATE = """\
         )
         (property "Value" "VCC"
             (at 20 35.44 0)
-            (show_name no)
-            (do_not_autoplace no)
             (effects
                 (font
                     (size 1.27 1.27)
@@ -1054,8 +952,6 @@ TEMPLATE = """\
         )
         (property "Footprint" ""
             (at 20 40 0)
-            (show_name no)
-            (do_not_autoplace no)
             (hide yes)
             (effects
                 (font
@@ -1065,8 +961,6 @@ TEMPLATE = """\
         )
         (property "Datasheet" ""
             (at 20 40 0)
-            (show_name no)
-            (do_not_autoplace no)
             (hide yes)
             (effects
                 (font
@@ -1076,8 +970,6 @@ TEMPLATE = """\
         )
         (property "Description" "Power symbol creates a global label with name \\"VCC\\""
             (at 20 40 0)
-            (show_name no)
-            (do_not_autoplace no)
             (hide yes)
             (effects
                 (font
@@ -1090,20 +982,23 @@ TEMPLATE = """\
         )
         (instances
             (project "{project_name}"
-                (path "/{own_uuid}"
+                (path "{instance_path}"
                     (reference "#PWRV0")
                     (unit 1)
                 )
             )
         )
     )
+{sheet_instances_block}    (embedded_fonts no)
+)
+"""
+
+SHEET_INSTANCES_BLOCK = """\
     (sheet_instances
         (path "/"
             (page "{sheet_page}")
         )
     )
-    (embedded_fonts no)
-)
 """
 
 
@@ -1195,6 +1090,7 @@ def create_led_chain_schematic(
     project_name: str,
     own_uuid: str,
     sheet_page: int = 1,
+    instance_path: Optional[str] = None,
     led_footprint: str = "",
     cap_footprint: str = "",
     start_index: int = 1,
@@ -1211,8 +1107,8 @@ def create_led_chain_schematic(
     if not can_create_led_chain_schematic():
         msg = "Requires optional schematic dependencies"
         raise ImportError(msg)
-    if KICAD_VERSION < (10, 0, 0):
-        msg = "Requires KiCad 10.0 or higher"
+    if KICAD_VERSION < (9, 0, 0):
+        msg = "Requires KiCad 9.0 or higher"
         raise RuntimeError(msg)
 
     # A negative start index is the "unset" sentinel used by `ElementInfo`
@@ -1249,12 +1145,19 @@ def create_led_chain_schematic(
         )
 
     with open(output_path, "w") as f:
+        if instance_path is None:
+            resolved_instance_path = f"/{own_uuid}"
+            sheet_instances_block = SHEET_INSTANCES_BLOCK.format(sheet_page=sheet_page)
+        else:
+            resolved_instance_path = instance_path
+            sheet_instances_block = ""
         f.write(
             TEMPLATE.format(
                 page_size=page_size,
                 own_uuid=own_uuid,
                 project_name=project_name,
-                sheet_page=sheet_page,
+                instance_path=resolved_instance_path,
+                sheet_instances_block=sheet_instances_block,
             )
         )
 
@@ -1500,11 +1403,13 @@ if __name__ == "__main__":
 
     with open("led_schematic_builder.kicad_sch", "w") as f:
         size = (10, 10)
+        demo_own_uuid = str(uuid.uuid4())
         f.write(
             TEMPLATE.format(
                 page_size="A4",
-                own_uuid=str(uuid.uuid4()),
+                own_uuid=demo_own_uuid,
                 project_name="led_schematic_builder",
-                sheet_page=1,
+                instance_path=f"/{demo_own_uuid}",
+                sheet_instances_block=SHEET_INSTANCES_BLOCK.format(sheet_page=1),
             )
         )

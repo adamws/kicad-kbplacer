@@ -5,7 +5,7 @@
 import logging
 import os
 from collections import defaultdict
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from .board_modifier import KICAD_VERSION
 from .builders_commons import matrix_net_name, uses_stabilizer
@@ -1028,7 +1028,7 @@ TEMPLATE = """\
         )
         (instances
             (project "{project_name}"
-                (path "/{own_uuid}"
+                (path "{instance_path}"
                     (reference "SW1")
                     (unit 1)
                 )
@@ -1105,7 +1105,7 @@ TEMPLATE = """\
         )
         (instances
             (project "{project_name}"
-                (path "/{own_uuid}"
+                (path "{instance_path}"
                     (reference "ROT1")
                     (unit 1)
                 )
@@ -1169,7 +1169,7 @@ TEMPLATE = """\
         )
         (instances
             (project "{project_name}"
-                (path "/{own_uuid}"
+                (path "{instance_path}"
                     (reference "ST1")
                     (unit 1)
                 )
@@ -1256,20 +1256,23 @@ TEMPLATE = """\
         )
         (instances
             (project "{project_name}"
-                (path "/{own_uuid}"
+                (path "{instance_path}"
                     (reference "D1")
                     (unit 1)
                 )
             )
         )
     )
+{sheet_instances_block}    (embedded_fonts no)
+)
+"""
+
+SHEET_INSTANCES_BLOCK = """\
     (sheet_instances
         (path "/"
             (page "{sheet_page}")
         )
     )
-    (embedded_fonts no)
-)
 """
 
 
@@ -1304,6 +1307,7 @@ def create_key_matrix_schematic(
     project_name: str,
     own_uuid: str,
     sheet_page: int = 1,
+    instance_path: Optional[str] = None,
     switch_footprint="",
     diode_footprint="",
     stabilizer_footprint="",
@@ -1394,12 +1398,19 @@ def create_key_matrix_schematic(
 
     with open(output_path, "w") as f:
         size = (rows, columns)
+        if instance_path is None:
+            resolved_instance_path = f"/{own_uuid}"
+            sheet_instances_block = SHEET_INSTANCES_BLOCK.format(sheet_page=sheet_page)
+        else:
+            resolved_instance_path = instance_path
+            sheet_instances_block = ""
         f.write(
             TEMPLATE.format(
                 page_size=get_lowest_paper_size(size),
                 own_uuid=own_uuid,
                 project_name=project_name,
-                sheet_page=sheet_page,
+                instance_path=resolved_instance_path,
+                sheet_instances_block=sheet_instances_block,
             )
         )
 
@@ -1672,11 +1683,13 @@ if __name__ == "__main__":
 
     with open("schematic_builder.kicad_sch", "w") as f:
         size = (10, 10)
+        demo_own_uuid = str(uuid.uuid4())
         f.write(
             TEMPLATE.format(
                 page_size=get_lowest_paper_size(size),
-                own_uuid=str(uuid.uuid4()),
+                own_uuid=demo_own_uuid,
                 project_name="schematic_builder",
-                sheet_page=1,
+                instance_path=f"/{demo_own_uuid}",
+                sheet_instances_block=SHEET_INSTANCES_BLOCK.format(sheet_page=1),
             )
         )
