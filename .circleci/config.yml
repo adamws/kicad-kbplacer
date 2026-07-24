@@ -290,6 +290,9 @@ jobs:
             elif [ "<<parameters.kicad-version>>" = "10.0.4" ]; then
               revision=a6e42d6bc7099fc4bfc0e921cf1d2090996d5082
               filepath=Casks/k/kicad.rb
+            elif [ "<<parameters.kicad-version>>" = "10.0.5" ]; then
+              revision=c8b9de53a6523a874c3e86263da7940fcef40bd2
+              filepath=Casks/k/kicad.rb
             else
               echo "Unsupported KiCad version!"
             fi
@@ -525,20 +528,20 @@ workflows:
               kicad-version:
                 - 8.0.9
                 - 9.0.8
-                - 10.0.4
+                - 10.0.5
       - run-tools-sanity-checks:
           matrix:
             parameters:
               version:
                 - 8.0.9-jammy
                 - 9.0.9-noble
-                - 10.0.4-noble
+                - 10.0.5-noble
       - run-schematic-generation-sanity-checks:
           matrix:
             parameters:
               version:
                 - 9.0.9-noble
-                - 10.0.4-noble
+                - 10.0.5-noble
       - create-pcm-package:
           requires: &required-tests
             - test-linux
