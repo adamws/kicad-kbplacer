@@ -1035,7 +1035,6 @@ def get_keyboard(layout: dict) -> Keyboard:
 
 def get_keyboard_from_file(layout_path: Union[str, os.PathLike]) -> Keyboard:
     layout = _load_layout_from_file_or_stream(layout_path)
-    logger.info(f"User layout: {layout}")
     return get_keyboard(layout)
 
 

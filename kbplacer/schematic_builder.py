@@ -1340,7 +1340,7 @@ def create_key_matrix_schematic(
     row_label_prefix = row_prefix if row_prefix != "" else "ROW"
     column_label_prefix = column_prefix if column_prefix != "" else "COL"
 
-    logger.debug(
+    logger.info(
         f"Labels prefixes: for rows: '{row_label_prefix}', "
         f"for columns: '{column_label_prefix}'"
     )
@@ -1362,7 +1362,7 @@ def create_key_matrix_schematic(
     # We also assume that both rows and columns starts from 0 and can't be negative.
     rows = max(set([x[0] for x in matrix]))
     columns = max(set([x[1] for x in matrix]))
-    logger.debug(f"Matrix size: {rows}x{columns}")
+    logger.info(f"Matrix size: {rows}x{columns}")
 
     # Build reference map based on matrix position order (shared by switches
     # and encoders). Numbering starts at `start_index` so the created switches

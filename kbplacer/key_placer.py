@@ -782,7 +782,7 @@ class KeyPlacer(BoardModifier):
 
         # Determine final key_distance and update internal values
         final_key_distance = self._resolve_key_distance(keyboard, key_distance)
-        logger.debug(f"Using key 1U distance: {final_key_distance} mm")
+        logger.info(f"Using key 1U distance: {final_key_distance} mm")
         key_distance_x = cast(int, pcbnew.FromMM(final_key_distance[0]))
         key_distance_y = cast(int, pcbnew.FromMM(final_key_distance[1]))
         if layout_offset is not None:
@@ -800,7 +800,7 @@ class KeyPlacer(BoardModifier):
             offset = self._calculate_reference_coordinate(
                 keyboard, key_matrix, key_distance_x, key_distance_y, start_index
             )
-        logger.debug(f"Layout offset: {offset}")
+        logger.info(f"Layout offset: {offset}")
         key_iterator: Iterator = get_key_iterator(keyboard, key_matrix, start_index)
 
         if (
@@ -928,7 +928,7 @@ class KeyPlacer(BoardModifier):
             switch,
         ) in key_matrix.switches_by_reference_ordered():
             diodes = key_matrix.diodes_by_switch_reference(reference)
-            logger.debug(f"Optimizing orientation of {switch.GetReference()} diodes")
+            logger.info(f"Optimizing orientation of {switch.GetReference()} diodes")
             for diode in diodes:
                 if pads := get_closest_pads_on_same_net(diode, switch):
                     distance1 = get_distance(*pads)
@@ -941,7 +941,7 @@ class KeyPlacer(BoardModifier):
                     if distance1 < distance2 or diff < 10000:
                         rotate(diode, position, 180)
                     else:
-                        logger.debug(
+                        logger.info(
                             f"Rotated {diode.GetReference()} to minimize distance"
                         )
                 else:
@@ -976,7 +976,7 @@ class KeyPlacer(BoardModifier):
         key_matrix: KeyMatrix,
     ) -> None:
         for reference, switch_footprint in key_matrix.switches_by_reference():
-            logger.debug(f"Placing additional elements for {reference}")
+            logger.info(f"Placing additional elements for {reference}")
             switch_position = get_position(switch_footprint)
             switch_orientation = get_orientation(switch_footprint)
             match = re.match(key_matrix.key_pattern, reference)
@@ -1032,7 +1032,7 @@ class KeyPlacer(BoardModifier):
         matrix_net_names = key_matrix.matrix_nets()
         matrix_pads = {net: pads[net] for net in matrix_net_names}
         for net, pads in matrix_pads.items():
-            logger.debug(f"Routing {net} pads")
+            logger.info(f"Routing {net} pads")
             distances = calculate_distance_matrix(cast(List[pcbnew.BOARD_ITEM], pads))
             result = prim_mst(distances)
             for i, j in result:

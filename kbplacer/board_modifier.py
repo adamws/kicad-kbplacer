@@ -496,12 +496,11 @@ class BoardModifier:
         )
         if not self.test_track_collision(track):
             self.board.Add(track)
-            logger.info("Track added")
             if KICAD_VERSION < (7, 0, 0):
                 return pcbnew.VECTOR2I(stop.x, stop.y)
             return stop
         else:
-            logger.debug("Could not add track segment due to detected collision")
+            logger.info("Could not add track segment due to detected collision")
             return None
 
     def _build_track_segment(
@@ -672,7 +671,7 @@ class BoardModifier:
             )
             return False
 
-        logger.debug(
+        logger.info(
             f"Routing pad '{_pad_str(pad1)}' at {pos1} "
             f"with pad '{_pad_str(pad2)}' at {pos2} "
             f"using coordinate system rotated by {angle} degree(s)"
