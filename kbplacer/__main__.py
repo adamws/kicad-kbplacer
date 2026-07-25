@@ -16,7 +16,7 @@ from .defaults import DEFAULT_DIODE_POSITION, ZERO_POSITION
 from .element_position import ElementInfo, ElementPosition, PositionOption, Side
 from .footprint_loader import FootprintIdentifier
 from .kbplacer_plugin import PluginSettings, run_board, run_schematic
-from .kle_serial import get_keyboard_from_file
+from .kle_serial import get_keyboard_from_file, keyboard_to_url
 from .schematic_project import (
     hierarchical_root_filename,
     plan_sheet_filenames,
@@ -693,20 +693,25 @@ def app() -> None:
         led_sch_path = ""
         project_path = ""
 
-    # Validate max-keys if specified
-    if args.max_keys is not None and layout_path:
-        try:
-            keyboard = get_keyboard_from_file(layout_path)
-            num_keys = len(keyboard.keys)
-        except Exception as e:
-            logger.error(f"Failed to validate layout: {e}")
-            sys.exit(1)
+    if layout_path:
+        keyboard = get_keyboard_from_file(layout_path)
+        keyboard_url = keyboard_to_url(keyboard)
 
-        if num_keys > args.max_keys:
-            logger.error(
-                f"Layout has {num_keys} keys, which exceeds the maximum of {args.max_keys}"
-            )
-            sys.exit(1)
+        logger.info(f"User layout: {keyboard_url}")
+
+        # Validate max-keys if specified
+        if args.max_keys is not None:
+            try:
+                num_keys = len(keyboard.keys)
+            except Exception as e:
+                logger.error(f"Failed to validate layout: {e}")
+                sys.exit(1)
+
+            if num_keys > args.max_keys:
+                logger.error(
+                    f"Layout has {num_keys} keys, which exceeds the maximum of {args.max_keys}"
+                )
+                sys.exit(1)
 
     args.switch.start_index = args.start_index
 
