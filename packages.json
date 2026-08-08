@@ -1,0 +1,38 @@
+{
+    "packages": [
+        {
+            "$schema": "https://go.kicad.org/pcm/schemas/v2",
+            "name": "Keyboard footprints placer",
+            "description": "Plugin for mechanical keyboard design",
+            "description_full": "Plugin for mechanical keyboard design.\nIt features automatic key placement and routing based on various layout descriptions like <a href='editor.keyboard-tools.xyz'>kle-ng</a>, <a href='www.github.com/ergogen/ergogen'>ergogen</a> and <a href='www.caniusevia.com'>via</a>.\nTo learn more visit project's homepage.",
+            "identifier": "com.github.adamws.kicad-kbplacer",
+            "type": "plugin",
+            "author": {
+                "name": "adamws",
+                "contact": {
+                    "web": "https://adamws.github.io"
+                }
+            },
+            "license": "GPL-3.0",
+            "resources": {
+                "Homepage": "https://github.com/adamws/kicad-kbplacer",
+                "Bug Tracker": "https://github.com/adamws/kicad-kbplacer/issues",
+                "Sponsor": "https://ko-fi.com/adamws"
+            },
+            "tags": [
+                "keyboard"
+            ],
+            "versions": [
+                {
+                    "version": "0.19",
+                    "status": "development",
+                    "kicad_version": "6.0",
+                    "download_sha256": "e21cdcad93d9451e5fc1a9d9b3f8bf33425cc4ad6f2b7109276f7a6a207c10d0",
+                    "download_size": 437986,
+                    "install_size": 432332,
+                    "download_url": "https://adamws.github.io/kicad-kbplacer/kbplacer-0.19.dev31+g24746a25b.zip"
+                }
+            ]
+        }
+    ]
+}
