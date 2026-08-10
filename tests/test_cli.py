@@ -17,6 +17,7 @@ from kbplacer.__main__ import app
 from kbplacer.defaults import DEFAULT_DIODE_POSITION, ZERO_POSITION
 from kbplacer.element_position import ElementInfo, ElementPosition, PositionOption, Side
 from kbplacer.kbplacer_plugin import PluginSettings
+from kbplacer.kle_serial import get_keyboard_from_file, keyboard_to_url
 
 logger = logging.getLogger(__name__)
 
@@ -711,6 +712,43 @@ def test_hierarchical_root_existence_check(
     assert (
         caplog.records[0].message
         == f"File {fake_root_schematic} already exist, aborting"
+    )
+
+
+def test_layout_from_kle_ng_share_url(monkeypatch, cli_isolation, fake_board) -> None:
+    """kle-ng share links must be accepted by `--layout`, not treated as paths"""
+    run_mock = Mock()
+    monkeypatch.setattr("kbplacer.__main__.run_board", run_mock)
+
+    layout_path = "tests/data/ergogen-layouts/2x2.json"
+    url = keyboard_to_url(get_keyboard_from_file(layout_path))
+    args = ["--pcb-file", fake_board, "--layout", url]
+    with cli_isolation(args):
+        app()
+
+    run_mock.assert_called_once()
+    # url is passed through unchanged, it is resolved again downstream
+    assert run_mock.call_args[0][0].layout_path == url
+
+
+def test_max_keys_validation_from_kle_ng_share_url(
+    caplog, monkeypatch, cli_isolation, fake_board
+) -> None:
+    """`--max-keys` must count keys of a share link layout, same as for a file"""
+    run_mock = Mock()
+    monkeypatch.setattr("kbplacer.__main__.run_board", run_mock)
+
+    # Use 2x2 layout which has 4 keys
+    url = keyboard_to_url(get_keyboard_from_file("tests/data/ergogen-layouts/2x2.json"))
+    args = ["--pcb-file", fake_board, "--layout", url, "--max-keys", "3"]
+    with cli_isolation(args):
+        with pytest.raises(ExitTest):
+            app()
+
+    run_mock.assert_not_called()
+    error_records = [r for r in caplog.records if r.levelname == "ERROR"]
+    assert (
+        "Layout has 4 keys, which exceeds the maximum of 3" in error_records[0].message
     )
 
 

@@ -29,9 +29,12 @@ from kbplacer.kle_serial import (
     KeyboardTag,
     MatrixAnnotatedKeyboard,
     apply_via_encoder_switch_mount,
+    get_annotated_keyboard_from_path_or_url,
     get_explicit_spacing_from_file,
     get_keyboard,
     get_keyboard_from_file,
+    get_keyboard_from_path_or_url,
+    is_kle_ng_share_url,
     keyboard_from_url,
     keyboard_to_url,
     layout_classification,
@@ -1117,6 +1120,53 @@ def test_keyboard_url_roundtrip(layout_file, reference_file, request) -> None:
     url = keyboard_to_url(reference)
     result = keyboard_from_url(url)
     assert result == reference
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        (KLE_NG_SHARE_PREFIX + "abc", True),
+        ("https://editor.keyboard-tools.xyz/", False),
+        ("layout.json", False),
+        ("", False),
+        (Path("layout.json"), False),
+    ],
+)
+def test_is_kle_ng_share_url(value, expected) -> None:
+    assert is_kle_ng_share_url(value) == expected
+
+
+def test_get_keyboard_from_path_or_url_with_file(tmpdir) -> None:
+    layout_path = Path(tmpdir) / "layout.json"
+    layout_path.write_text(json.dumps([["A", "B"]]), encoding="utf-8")
+
+    assert get_keyboard_from_path_or_url(layout_path) == get_keyboard_from_file(
+        layout_path
+    )
+
+
+def test_get_keyboard_from_path_or_url_with_share_url() -> None:
+    keyboard = parse_kle([["A", "B"]])
+    url = keyboard_to_url(keyboard)
+
+    assert get_keyboard_from_path_or_url(url) == keyboard
+
+
+def test_get_keyboard_from_path_or_url_with_missing_file(tmpdir) -> None:
+    with pytest.raises(FileNotFoundError):
+        get_keyboard_from_path_or_url(str(Path(tmpdir) / "does-not-exist.json"))
+
+
+def test_get_annotated_keyboard_from_path_or_url_with_share_url(request) -> None:
+    test_dir = request.fspath.dirname
+    layout_path = Path(test_dir) / "data/via-layouts/wt60_a.json"
+    reference = get_annotated_keyboard_from_path_or_url(layout_path)
+    url = keyboard_to_url(get_keyboard_from_file(layout_path))
+
+    result = get_annotated_keyboard_from_path_or_url(url)
+
+    assert isinstance(result, MatrixAnnotatedKeyboard)
+    assert len(result.keys) == len(reference.keys)
 
 
 class TestApplyViaEncoderSwitchMount:

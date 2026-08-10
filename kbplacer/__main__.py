@@ -16,7 +16,7 @@ from .defaults import DEFAULT_DIODE_POSITION, ZERO_POSITION
 from .element_position import ElementInfo, ElementPosition, PositionOption, Side
 from .footprint_loader import FootprintIdentifier
 from .kbplacer_plugin import PluginSettings, run_board, run_schematic
-from .kle_serial import get_keyboard_from_file, keyboard_to_url
+from .kle_serial import get_keyboard_from_path_or_url, keyboard_to_url
 from .schematic_project import (
     hierarchical_root_filename,
     plan_sheet_filenames,
@@ -244,7 +244,15 @@ def app() -> None:
         help=".kicad_pcb file to be processed or created",
     )
     parser.add_argument(
-        "-l", "--layout", required=False, default="", help="json layout definition file"
+        "-l",
+        "--layout",
+        required=False,
+        default="",
+        help=(
+            "Layout definition: json (or yaml, when `PyYAML` installed) file path,\n"
+            "`-` to read from stdin, or a kle-ng share link starting with\n"
+            "https://editor.keyboard-tools.xyz/#share="
+        ),
     )
     parser.add_argument(
         "--route-switches-with-diodes",
@@ -694,7 +702,7 @@ def app() -> None:
         project_path = ""
 
     if layout_path:
-        keyboard = get_keyboard_from_file(layout_path)
+        keyboard = get_keyboard_from_path_or_url(layout_path)
         keyboard_url = keyboard_to_url(keyboard)
 
         logger.info(f"User layout: {keyboard_url}")

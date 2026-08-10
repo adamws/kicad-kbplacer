@@ -56,9 +56,8 @@ from .kle_serial import (
     Keyboard,
     KeyboardTag,
     MatrixAnnotatedKeyboard,
-    get_keyboard_from_file,
+    get_keyboard_from_path_or_url,
     is_iso_enter,
-    keyboard_from_url,
     layout_classification,
 )
 from .plugin_error import PluginError
@@ -1208,10 +1207,7 @@ class KeyPlacer(BoardModifier):
 
         # stage 2 - place elements
         if layout_path:
-            if layout_path.startswith("https://editor.keyboard-tools.xyz"):
-                keyboard = keyboard_from_url(layout_path)
-            else:
-                keyboard = get_keyboard_from_file(layout_path)
+            keyboard = get_keyboard_from_path_or_url(layout_path)
 
             if not isinstance(keyboard, MatrixAnnotatedKeyboard):
                 # if not MatrixAnnotatedKeyboard already,

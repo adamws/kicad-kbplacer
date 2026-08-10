@@ -18,7 +18,7 @@ from .footprint_loader import (
 from .kle_serial import (
     Key,
     MatrixAnnotatedKeyboard,
-    get_annotated_keyboard_from_file,
+    get_annotated_keyboard_from_path_or_url,
 )
 
 try:
@@ -1329,7 +1329,7 @@ def create_key_matrix_schematic(
         start_index = 1
 
     if isinstance(keyboard, str) or isinstance(keyboard, os.PathLike):
-        _keyboard = get_annotated_keyboard_from_file(keyboard)
+        _keyboard = get_annotated_keyboard_from_path_or_url(keyboard)
     else:
         _keyboard: MatrixAnnotatedKeyboard = keyboard
 

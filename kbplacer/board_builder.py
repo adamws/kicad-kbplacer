@@ -20,7 +20,11 @@ from .footprint_loader import (
     SwitchFootprintLoader,
     load_footprint,
 )
-from .kle_serial import Key, MatrixAnnotatedKeyboard, get_annotated_keyboard_from_file
+from .kle_serial import (
+    Key,
+    MatrixAnnotatedKeyboard,
+    get_annotated_keyboard_from_path_or_url,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -281,7 +285,7 @@ class BoardBuilder:
             raise RuntimeError(msg)
 
         if isinstance(keyboard, str) or isinstance(keyboard, os.PathLike):
-            _keyboard = get_annotated_keyboard_from_file(keyboard)
+            _keyboard = get_annotated_keyboard_from_path_or_url(keyboard)
         else:
             _keyboard: MatrixAnnotatedKeyboard = keyboard
 

@@ -8,7 +8,10 @@ from typing import List, Optional, Tuple, Union
 
 from .board_modifier import KICAD_VERSION
 from .footprint_loader import FootprintIdentifier
-from .kle_serial import MatrixAnnotatedKeyboard, get_annotated_keyboard_from_file
+from .kle_serial import (
+    MatrixAnnotatedKeyboard,
+    get_annotated_keyboard_from_path_or_url,
+)
 from .schematic_builder import can_create_schematic
 
 try:
@@ -1118,7 +1121,7 @@ def create_led_chain_schematic(
         start_index = 1
 
     if isinstance(keyboard, (str, os.PathLike)):
-        _keyboard = get_annotated_keyboard_from_file(keyboard)
+        _keyboard = get_annotated_keyboard_from_path_or_url(keyboard)
     else:
         _keyboard = keyboard
 

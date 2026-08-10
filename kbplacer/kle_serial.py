@@ -1045,6 +1045,24 @@ def get_annotated_keyboard_from_file(
     return MatrixAnnotatedKeyboard.from_keyboard(keyboard)
 
 
+def is_kle_ng_share_url(layout: Union[str, os.PathLike]) -> bool:
+    return isinstance(layout, str) and layout.startswith(KLE_NG_SHARE_PREFIX)
+
+
+def get_keyboard_from_path_or_url(layout: Union[str, os.PathLike]) -> Keyboard:
+    """Load keyboard from a layout file path or a kle-ng share link."""
+    if is_kle_ng_share_url(layout):
+        return keyboard_from_url(str(layout))
+    return get_keyboard_from_file(layout)
+
+
+def get_annotated_keyboard_from_path_or_url(
+    layout: Union[str, os.PathLike],
+) -> MatrixAnnotatedKeyboard:
+    keyboard = get_keyboard_from_path_or_url(layout)
+    return MatrixAnnotatedKeyboard.from_keyboard(keyboard)
+
+
 def get_explicit_spacing_from_file(
     layout_path: Union[str, os.PathLike],
 ) -> Optional[Tuple[float, float]]:
