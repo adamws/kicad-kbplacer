@@ -537,7 +537,7 @@ def app() -> None:
         help=(
             "Do not create per-LED decoupling capacitors when building the\n"
             "LED-chain schematic (`--create-led-sch-file`, which requires\n"
-            "KiCad 10.0 or higher) or PCB elements (`--create-led-pcb-elements`,\n"
+            "KiCad 9.0 or higher) or PCB elements (`--create-led-pcb-elements`,\n"
             "which has no such requirement). Decoupling is recommended but\n"
             "often skipped in practice."
         ),
