@@ -1,5 +1,5 @@
 image_prefix := "admwscki/kicad-kbplacer-primary"
-default_version := "10.0.5-noble"
+default_version := "10.0.6-noble"
 
 # list available recipes
 default:
@@ -18,7 +18,7 @@ test version=default_version *args="":
 test-all:
     #!/usr/bin/env bash
     overall=0
-    for version in 6.0.11-lunar 7.0.6-lunar 7.0.11-mantic 8.0.9-jammy 9.0.9-noble 10.0.5-noble; do
+    for version in 6.0.11-lunar 7.0.6-lunar 7.0.11-mantic 8.0.9-jammy 9.0.9-noble 10.0.6-noble; do
         echo "=== KiCad $version ==="
         docker run --rm \
             -v "{{justfile_directory()}}:/workspace" -w /workspace \
@@ -90,9 +90,9 @@ tools-layout2openscad version=default_version *args="--help":
 # To pass extra kbplacer args you MUST spell out VERSION and LAYOUT before the `--`
 # (`--` only lets the following dash-prefixed tokens bind positionally, it does NOT skip
 # earlier params). Examples:
-#   just schematic                                        # defaults: 10.0.4-noble, wt60_a
-#   just schematic 10.0.4-noble 0_sixty                   # pick version + layout
-#   just schematic 10.0.4-noble wt60_a --start-index 5    # append args to kbplacer
+#   just schematic                                        # defaults: 10.0.6-noble, wt60_a
+#   just schematic 10.0.6-noble 0_sixty                   # pick version + layout
+#   just schematic 10.0.6-noble wt60_a --start-index 5    # append args to kbplacer
 # build a schematic from a representative layout and export each sheet to PDF for inspection
 schematic version=default_version layout="wt60_a" *args="":
     #!/usr/bin/env bash
