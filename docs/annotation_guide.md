@@ -101,5 +101,10 @@ Note that keys for nets `2,3`, `4,1` and `4,3` are doubled. The alternative keys
 are automatically 'collapsed' into proper physical place so there is no need to adjust
 any position on above layout.
 
+A layout option group does not have to define choice `0`. When it does not, it means
+that annotated keys do not exist in the default layout and appear only when their
+option gets selected. Such group is anchored on its lowest defined choice, i.e. its
+keys are used at positions they were drawn at.
+
 Because layout provides mapping between switch (on layout) and its footprint, the schematic
 annotations can be sorted by X position (or not sorted at all).
