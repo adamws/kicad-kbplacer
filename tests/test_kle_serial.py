@@ -569,6 +569,69 @@ def test_collapse_detects_duplicated_keys() -> None:
     assert len(result.alternative_keys) == 2
 
 
+def test_collapse_layout_option_without_default_choice() -> None:
+    # layout option group which does not define choice 0. Such annotation means
+    # that given key does not exist in default layout and appears only when
+    # its option is selected. There is nothing to collapse onto, the key must
+    # be kept where it was drawn.
+    # fmt: off
+    layout = [
+        ["0,0","0,1",{"x":0.5,"w":2},"0,2\n\n\n0,1"]
+    ]
+    expected = [
+        ["0,0","0,1",{"x":0.5,"w":2},"0,2\n\n\n0,1"]
+    ]
+    # fmt: on
+    result = _layout_collapse(layout)
+    expected_keyboard = parse_kle(expected)
+    expected_keyboard = MatrixAnnotatedKeyboard.from_keyboard(expected_keyboard)
+    expected_keyboard.collapsed = True
+    assert result == expected_keyboard
+    assert len(result.alternative_keys) == 1
+
+
+def test_collapse_layout_option_without_default_choice_multiple_choices() -> None:
+    # when option group does not define choice 0, the lowest defined choice
+    # is used as an anchor and the remaining choices are collapsed onto it
+    # fmt: off
+    layout = [
+        ["0,0",{"w":2},"0,1\n\n\n0,1"],
+        [{"y":0.5},"0,1\n\n\n0,2","0,2\n\n\n0,2"]
+    ]
+    expected = [
+        ["0,0",{"w":2},"0,1\n\n\n0,1",{"x":-2},"0,1\n\n\n0,2","0,2\n\n\n0,2"]
+    ]
+    # fmt: on
+    result = _layout_collapse(layout)
+    expected_keyboard = parse_kle(expected)
+    expected_keyboard = MatrixAnnotatedKeyboard.from_keyboard(expected_keyboard)
+    expected_keyboard.collapsed = True
+    assert result == expected_keyboard
+    assert len(result.alternative_keys) == 3
+
+
+def test_collapse_layout_with_single_optional_key(request) -> None:
+    # regression test of a user reported layout which used to crash with
+    # `ValueError: min() iterable argument is empty` because its only
+    # layout option annotation (`0,12` key) belongs to choice 1 of a group
+    # which does not define choice 0
+    test_dir = request.fspath.dirname
+    layout_dir = f"{test_dir}/data/kle-layouts"
+    with open(f"{layout_dir}/optional-key-without-default-choice.json", "r") as f:
+        layout = json.load(f)
+
+    result = _layout_collapse(layout)
+
+    assert len(result.keys) == 65
+    assert len(result.alternative_keys) == 1
+    alternative = result.alternative_keys[0]
+    label_index = MatrixAnnotatedKeyboard.MATRIX_COORDINATES_LABEL
+    assert alternative.labels[label_index] == "0,12"
+    assert (alternative.x, alternative.y) == (16.16, 0.25)
+    # optional key must not be lost, it needs a switch in generated schematic
+    assert len(result.keys_in_matrix_order()) == 66
+
+
 def test_duplicate_matrix_position_in_default_group_not_allowed() -> None:
     # fmt: off
     layout = [

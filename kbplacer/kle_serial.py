@@ -487,8 +487,19 @@ class MatrixAnnotatedKeyboard(Keyboard):
             seen[_key_props(k)] = True
 
         layout_keys = self._get_layout_options()
-        for choices in layout_keys.values():
-            anchor = min(choices[0], key=lambda key: (key.x, key.y))
+        for option, choices in layout_keys.items():
+            # A layout option group normally defines choice 0 (the default one).
+            # A group without it encodes a key which is absent in the default
+            # layout and appears only in some alternative choice. Anchor such a
+            # group on its lowest defined choice so its keys stay where they
+            # were drawn (`choices` is a defaultdict, use `get` to not insert).
+            anchor_choice = 0 if choices.get(0) else min(choices)
+            if anchor_choice != 0:
+                logger.warning(
+                    f"Layout option {option} has no choice 0 keys, "
+                    f"using choice {anchor_choice} as anchor"
+                )
+            anchor = min(choices[anchor_choice], key=lambda key: (key.x, key.y))
             for choice, keys in choices.items():
                 if choice != 0:
                     group_anchor = min(keys, key=lambda key: (key.x, key.y))
