@@ -159,6 +159,12 @@ def expects_settings(default_difference: Dict):
             expects_settings({"diode_info": ElementInfo("D{}", PositionOption.PRESET, None,
                                                         "/path/to/load.kicad_pcb")}),
         ),
+        #   - valid JSON preset with path
+        (
+            ["--diode", "D{} PRESET /path/to/preset.json"],
+            expects_settings({"diode_info": ElementInfo("D{}", PositionOption.PRESET, None,
+                                                        "/path/to/preset.json")}),
+        ),
         #   - valid custom position setting
         (
             ["--diode", "DIODE{} CUSTOM 1.5 -2.05 180.0 FRONT"],

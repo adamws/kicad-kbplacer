@@ -15,6 +15,7 @@ from typing import (
     Any,
     Dict,
     FrozenSet,
+    Hashable,
     Iterable,
     Iterator,
     List,
@@ -50,6 +51,13 @@ from .board_modifier import (
     set_rotation,
     set_side,
 )
+from .connection_preset import (
+    ConnectionPreset,
+    is_json_preset,
+    normalize_template_tracks,
+    preset_diode_positions,
+    preset_items_to_tracks,
+)
 from .element_position import ElementInfo, ElementPosition, PositionOption
 from .kle_serial import (
     Key,
@@ -61,6 +69,7 @@ from .kle_serial import (
     layout_classification,
 )
 from .plugin_error import PluginError
+from .preset_format import load_switch_preset
 
 logger = logging.getLogger(__name__)
 ANNOTATION_GUIDE_URL = (
@@ -442,6 +451,70 @@ def get_key_iterator(
     return iter(_iter)
 
 
+PadGroup = List[Tuple[str, pcbnew.PAD]]
+
+
+def _group_connected_pads(
+    switch: pcbnew.FOOTPRINT,
+    diodes: List[pcbnew.FOOTPRINT],
+    tracks: List[pcbnew.PCB_TRACK],
+) -> List[PadGroup]:
+    """Groups pads of `switch` and `diodes` connected with each other by `tracks`.
+    Tracks are connected when their endpoints match exactly (as template
+    replication produces them), vias connect both copper layers.
+
+    :return: Groups of at least two (footprint reference, pad) pairs.
+    """
+    parent: Dict[Hashable, Hashable] = {}
+
+    def _find(x: Hashable) -> Hashable:
+        parent.setdefault(x, x)
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def _union(a: Hashable, b: Hashable) -> None:
+        parent[_find(a)] = _find(b)
+
+    # track endpoints keyed by (x, y, layer)
+    anchors: Dict[Tuple[int, int, int], pcbnew.VECTOR2I] = {}
+    for t in tracks:
+        if t.Type() == pcbnew.PCB_VIA_T:
+            position = t.GetPosition()
+            keys = [
+                (position.x, position.y, layer) for layer in (pcbnew.F_Cu, pcbnew.B_Cu)
+            ]
+            for key in keys:
+                anchors[key] = position
+        else:
+            start, end = t.GetStart(), t.GetEnd()
+            keys = [(start.x, start.y, t.GetLayer()), (end.x, end.y, t.GetLayer())]
+            anchors[keys[0]] = start
+            anchors[keys[1]] = end
+        _union(keys[0], keys[1])
+
+    pads = [(f.GetReference(), p) for f in [switch, *diodes] for p in f.Pads()]
+    for i, (_, pad) in enumerate(pads):
+        _find(i)
+        for key, point in anchors.items():
+            if pad.IsOnLayer(key[2]) and pad.HitTest(point):
+                _union(i, key)
+
+    groups: Dict[Hashable, PadGroup] = defaultdict(list)
+    for i, item in enumerate(pads):
+        groups[_find(i)].append(item)
+    return [g for g in groups.values() if len(g) > 1]
+
+
+def _group_connects(
+    group: PadGroup, switch_reference: str, diode_reference: str, nets: Set[int]
+) -> bool:
+    switch_nets = {p.GetNetCode() for r, p in group if r == switch_reference}
+    diode_nets = {p.GetNetCode() for r, p in group if r == diode_reference}
+    return bool(nets & switch_nets & diode_nets)
+
+
 class KeyPlacer(BoardModifier):
     def __init__(
         self,
@@ -449,13 +522,14 @@ class KeyPlacer(BoardModifier):
     ) -> None:
         super().__init__(board)
         self._stab_rotation_by_switch: dict = {}
+        self._connection_presets: Dict[str, ConnectionPreset] = {}
 
     def apply_switch_connection_template(
         self,
         switch: pcbnew.FOOTPRINT,
         angle: float,
         template_connection: List[pcbnew.PCB_TRACK],
-    ) -> None:
+    ) -> List[pcbnew.PCB_TRACK]:
         """
         :param switch: Switch footprint to be routed.
         :param angle: Rotation angle (in degrees) of switch footprint
@@ -464,11 +538,13 @@ class KeyPlacer(BoardModifier):
                                     routing switch and diode pads. Normalised to
                                     switch position coordinate. Templates
                                     items must not have netcodes assigned.
+        :return: Elements added to the board.
         """
         logger.info("Using template replication method")
         if angle != 0:
             logger.info(f"Routing at {angle} degree angle")
         switch_position = get_position(switch)
+        placed = []
         rejects = []
         for item in template_connection:
             # item is either PCB_TRACK or PCB_VIA, since via extends track
@@ -493,8 +569,12 @@ class KeyPlacer(BoardModifier):
             # a second time should succeed.
             if result is None:
                 rejects.append(new_track)
+            else:
+                placed.append(new_track)
         for item in rejects:
-            self.add_track_to_board(item)
+            if self.add_track_to_board(item) is not None:
+                placed.append(item)
+        return placed
 
     def route_switch_with_diode(
         self,
@@ -706,14 +786,51 @@ class KeyPlacer(BoardModifier):
 
         return result
 
-    def load_connection_preset(
-        self, key_format: str, diode_format: str, source_path: str
-    ) -> List[pcbnew.PCB_TRACK]:
-        board = pcbnew.LoadBoard(source_path)
-        tracks = board.GetTracks()
-        for t in tracks:
-            t.SetNetCode(0)
-        return tracks
+    def load_kicad_pcb_preset(
+        self, source_path: str, key_format: str, diode_format: str
+    ) -> ConnectionPreset:
+        template = self.load_template(source_path)
+        template_matrix = KeyMatrix(template, key_format, diode_format)
+        number_of_template_switches = template_matrix.number_of_switches()
+        if number_of_template_switches != 1:
+            msg = (
+                f"Template file '{source_path}' "
+                "must have exactly one switch. "
+                f"Found {number_of_template_switches} switches using "
+                f"'{key_format}' annotation format."
+            )
+            raise PluginError(msg)
+        switch_reference = template_matrix.first_switch_reference()
+        switch = template_matrix.switch_by_reference(switch_reference)
+        diodes = template_matrix.diodes_by_switch_reference(switch_reference)
+        positions = [
+            self.get_current_relative_element_position(switch, diode)
+            for diode in diodes
+        ]
+        tracks = normalize_template_tracks(list(template.GetTracks()), switch)
+        return ConnectionPreset(positions, tracks, source_board=template)
+
+    def load_json_preset(self, source_path: str) -> ConnectionPreset:
+        preset = load_switch_preset(source_path)
+        return ConnectionPreset(
+            preset_diode_positions(preset),
+            preset_items_to_tracks(self.board, preset),
+        )
+
+    def _get_connection_preset(
+        self, element_info: ElementInfo, key_format: str
+    ) -> ConnectionPreset:
+        path = self._normalize_template_path(element_info.template_path)
+        if path not in self._connection_presets:
+            logger.info(f"Loading connection preset from {path}")
+            if is_json_preset(path):
+                preset = self.load_json_preset(path)
+            else:
+                preset = self.load_kicad_pcb_preset(
+                    path, key_format, element_info.annotation_format
+                )
+            self._connection_presets[path] = preset
+        return self._connection_presets[path]
 
     def _calculate_reference_coordinate(
         self,
@@ -1010,20 +1127,127 @@ class KeyPlacer(BoardModifier):
         self,
         key_matrix: KeyMatrix,
         template_connection: List[pcbnew.PCB_TRACK],
-    ) -> None:
+    ) -> Dict[str, List[pcbnew.PCB_TRACK]]:
+        """
+        :return: Template elements placed for each switch reference
+                 (empty when template is not used). These are board items,
+                 they must not be accessed once removed from the board.
+        """
+        placed_by_switch: Dict[str, List[pcbnew.PCB_TRACK]] = {}
         if template_connection:
-            for _, switch_footprint in key_matrix.switches_by_reference():
+            total = len(template_connection)
+            for reference, switch_footprint in key_matrix.switches_by_reference():
                 angle = -1 * switch_footprint.GetOrientationDegrees()
-                self.apply_switch_connection_template(
+                placed = self.apply_switch_connection_template(
                     switch_footprint, angle, template_connection
                 )
-            # when done, delete all template items
-            for item in template_connection:
-                self.board.RemoveNative(item)
+                placed_by_switch[reference] = placed
+                if rejected := total - len(placed):
+                    logger.warning(
+                        f"{reference}: {rejected} of {total} template elements "
+                        "could not be placed due to collisions"
+                    )
+            if placed_by_switch and not any(placed_by_switch.values()):
+                msg = (
+                    "None of the switch-diode template elements could be placed, "
+                    "template does not fit used footprints or their placement"
+                )
+                raise PluginError(msg)
+            # template items are copies which are never added to the board,
+            # so there is nothing to remove (note that they can't be matched with
+            # board items by UUID, `Duplicate` preserves it on KiCad 6)
         else:
             for reference, switch_footprint in key_matrix.switches_by_reference():
                 diodes = key_matrix.diodes_by_switch_reference(reference)
                 self.route_switch_with_diode(switch_footprint, diodes)
+        return placed_by_switch
+
+    def check_relative_diode_positions(self, key_matrix: KeyMatrix) -> None:
+        """Logs warning for each switch whose diodes are placed differently
+        (relative to the switch) than the diodes of the first switch.
+        Used when diodes are not placed by kbplacer but routed with template
+        which assumes the same relative position for each switch.
+        """
+
+        tolerance = 0.001  # mm and degrees
+
+        def _same(p1: ElementPosition, p2: ElementPosition) -> bool:
+            angle_diff = (p1.orientation - p2.orientation) % 360
+            return (
+                abs(p1.x - p2.x) < tolerance
+                and abs(p1.y - p2.y) < tolerance
+                and min(angle_diff, 360 - angle_diff) < tolerance
+                and p1.side == p2.side
+            )
+
+        expected: Optional[List[ElementPosition]] = None
+        expected_reference = ""
+        mismatched = []
+        for reference, switch in key_matrix.switches_by_reference_ordered():
+            positions = [
+                self.get_current_relative_element_position(switch, d)
+                for d in key_matrix.diodes_by_switch_reference(reference)
+            ]
+            if expected is None:
+                expected = positions
+                expected_reference = reference
+            elif len(positions) != len(expected) or not all(
+                _same(p1, p2) for p1, p2 in zip(positions, expected)
+            ):
+                mismatched.append(reference)
+        if mismatched:
+            logger.warning(
+                "Diodes of switches "
+                f"{', '.join(mismatched)} are placed differently than diodes of "
+                f"{expected_reference}, switch-diode template tracks may not "
+                "connect them"
+            )
+
+    def check_template_connections(
+        self,
+        key_matrix: KeyMatrix,
+        placed_by_switch: Dict[str, List[pcbnew.PCB_TRACK]],
+    ) -> None:
+        """Logs warning for each switch whose template tracks do not connect it
+        with its diodes or which connect pads of different nets.
+
+        Only template elements placed for a given switch and pads of that switch
+        and its diodes are considered, tracks connect by matching endpoints.
+        Must be called before any of placed elements is removed from the board.
+        Removing dangling tracks later does not change the result, chain of
+        tracks connecting two pads never has dangling end.
+        """
+        unconnected = []
+        shorts = []
+        for reference, tracks in placed_by_switch.items():
+            switch = key_matrix.switch_by_reference(reference)
+            diodes = key_matrix.diodes_by_switch_reference(reference)
+            groups = _group_connected_pads(switch, diodes, tracks)
+            for diode in diodes:
+                diode_reference = diode.GetReference()
+                nets = {n for n in get_common_nets(switch, diode) if n != 0}
+                if nets and not any(
+                    _group_connects(g, reference, diode_reference, nets) for g in groups
+                ):
+                    unconnected.append(f"{reference}-{diode_reference}")
+
+            for group in groups:
+                netnames = sorted({p.GetNetname() for _, p in group if p.GetNetCode()})
+                if len(netnames) > 1:
+                    shorts.append(f"{reference} ({', '.join(netnames)})")
+
+        if unconnected:
+            logger.warning(
+                "Switch-diode template did not connect: "
+                f"{', '.join(unconnected)}. Check that template matches used "
+                "footprints and diode position."
+            )
+        if shorts:
+            logger.warning(
+                "Switch-diode template connects pads of different nets: "
+                f"{', '.join(shorts)}. Check that template matches used "
+                "footprints and diode position."
+            )
 
     def route_rows_and_columns(self, key_matrix: KeyMatrix) -> None:
         pads = get_pads_by_net(self.board)
@@ -1058,9 +1282,15 @@ class KeyPlacer(BoardModifier):
 
     def _get_relative_position_source(self, element: ElementInfo) -> pcbnew.BOARD:
         if element.position_option == PositionOption.PRESET:
-            return self.load_template(
-                self._normalize_template_path(element.template_path)
-            )
+            path = self._normalize_template_path(element.template_path)
+            if is_json_preset(path):
+                msg = (
+                    f"JSON preset '{element.template_path}' can't be used for "
+                    f"'{element.annotation_format}' elements, JSON presets "
+                    "are supported only for diodes"
+                )
+                raise PluginError(msg)
+            return self.load_template(path)
         else:
             return self.board
 
@@ -1088,26 +1318,22 @@ class KeyPlacer(BoardModifier):
         self, key_matrix: KeyMatrix, diode_info: ElementInfo
     ) -> List[ElementInfo]:
         infos = []
-        if diode_info.position_option in [
-            PositionOption.RELATIVE,
-            PositionOption.PRESET,
-        ]:
-            source = self._get_relative_position_source(diode_info)
+        if diode_info.position_option == PositionOption.PRESET:
+            preset = self._get_connection_preset(diode_info, key_matrix.key_format)
+            if preset.diode_positions is None:
+                logger.info("Preset does not define diode positions, not moving diodes")
+                temp_info = copy.copy(diode_info)
+                temp_info.position = None
+                infos.append(temp_info)
+            for position in preset.diode_positions or []:
+                temp_info = copy.copy(diode_info)
+                temp_info.position = position
+                logger.info(f"Element info updated: {temp_info}")
+                infos.append(temp_info)
+        elif diode_info.position_option == PositionOption.RELATIVE:
             template_matrix = KeyMatrix(
-                source, key_matrix.key_format, diode_info.annotation_format
+                self.board, key_matrix.key_format, diode_info.annotation_format
             )
-            number_of_template_switches = template_matrix.number_of_switches()
-            if (
-                diode_info.position_option == PositionOption.PRESET
-                and number_of_template_switches != 1
-            ):
-                msg = (
-                    f"Template file '{diode_info.template_path}' "
-                    "must have exactly one switch. "
-                    f"Found {number_of_template_switches} switches using "
-                    f"'{key_matrix.key_format}' annotation format."
-                )
-                raise PluginError(msg)
             first_switch = template_matrix.first_switch_reference()
             switch = template_matrix.switch_by_reference(first_switch)
             diodes = template_matrix.diodes_by_switch_reference(switch.GetReference())
@@ -1136,14 +1362,14 @@ class KeyPlacer(BoardModifier):
                 route,
             )
         elif diode_info.position_option == PositionOption.PRESET:
-            logger.info(
-                f"Loading diode connection preset from {diode_info.template_path}"
-            )
-            return self.load_connection_preset(
-                key_info.annotation_format,
-                diode_info.annotation_format,
-                self._normalize_template_path(diode_info.template_path),
-            )
+            preset = self._get_connection_preset(diode_info, key_info.annotation_format)
+            if route and not preset.tracks:
+                msg = (
+                    f"Preset '{diode_info.template_path}' has no tracks, "
+                    "switch-diode routing with preset is not possible"
+                )
+                raise PluginError(msg)
+            return preset.tracks
         else:
             return []
 
@@ -1183,6 +1409,18 @@ class KeyPlacer(BoardModifier):
                 f"or '{PositionOption.PRESET}' position option.\n"
                 f"When using '{diode_info.position_option}' ensure that each switch "
                 "has exactly one diode connected to it."
+            )
+            raise PluginError(msg)
+
+        if (
+            diode_info.position_option == PositionOption.PRESET
+            and route_switches_with_diodes
+            and optimize_diodes_orientation
+        ):
+            msg = (
+                f"The '{PositionOption.PRESET}' position option with switch-diode "
+                "routing can't be used with diodes orientation optimization, "
+                "preset tracks assume the same diode orientation for each switch"
             )
             raise PluginError(msg)
 
@@ -1242,7 +1480,15 @@ class KeyPlacer(BoardModifier):
 
         # stage 3 - route elements
         if route_switches_with_diodes:
-            self.route_switches_with_diodes(key_matrix, template_connection)
+            if template_connection and not any(i.position for i in diode_infos):
+                self.check_relative_diode_positions(key_matrix)
+            placed_by_switch = self.route_switches_with_diodes(
+                key_matrix, template_connection
+            )
+            # check before removing dangling tracks, which invalidates removed items
+            if placed_by_switch:
+                self.check_template_connections(key_matrix, placed_by_switch)
+            del placed_by_switch
 
         if route_rows_and_columns:
             self.route_rows_and_columns(key_matrix)

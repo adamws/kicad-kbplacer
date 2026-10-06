@@ -22,6 +22,7 @@ and [ergogen](https://github.com/ergogen/ergogen).
   - [Diode placement and routing](#diode-placement-and-routing)
     - [Diode automatic orientation adjustment](#diode-automatic-orientation-adjustment)
   - [Track templating](#track-templating)
+    - [JSON presets](#json-presets)
   - [Additional elements placement](#additional-elements-placement)
   - [Building board outline](#building-board-outline)
   - [Run without layout](#run-without-layout)
@@ -310,7 +311,7 @@ python -m com_github_adamws_kicad-kbplacer --help
       &emsp;<code>Relative</code> - uses first switch-diode pair to get relative position
       between them and uses that as reference position for remaining pairs<br>
       &emsp;<code>Preset</code> - uses provided <code>kicad_pcb</code> template
-      file to get relative position and tracks for replication for all
+      or JSON preset file to get relative position and tracks for replication for all
       switch-diode pairs
     </td>
   </tr>
@@ -340,7 +341,7 @@ python -m com_github_adamws_kicad-kbplacer --help
   <tr>
     <td align="center" style="vertical-align: middle;">Load from</br>/</br>Save to</td>
     <td>
-      The preset <code>kicad_pcb</code> file path to use when position option is equal <code>Preset</code>
+      The preset <code>kicad_pcb</code> or <code>json</code> file path to use when position option is equal <code>Preset</code>
       or optional file path to store current position and tracks when position option
       is equal <code>Relative</code>.
     </td>
@@ -479,6 +480,29 @@ remaining pairs:
 > [!WARNING]
 > All footprints for diodes and switches **must** have same pad layouts, otherwise connection replication
 > may yield unexpected results
+
+After replication `kicad-kbplacer` logs a warning for every switch which template tracks did not connect
+with its diodes or which got connected to pads of different nets.
+
+<!-- TOC --><a name="json-presets"></a>
+#### JSON presets
+
+`Preset` `Position` option accepts JSON file in place of `kicad_pcb` template, for example
+`--diode "D{} PRESET preset.json"`. This format is meant for tools generating presets
+programmatically. It is described by [switch-preset.schema.json](./docs/switch-preset.schema.json):
+all coordinates are relative to switch origin (switch at 0&deg; orientation, on the front side),
+in integer nanometres, and field names follow KiCad's IPC API types.
+
+Existing `kicad_pcb` template can be converted with:
+
+```shell
+python -m kbplacer.connection_preset to-json diode_template.kicad_pcb > preset.json
+```
+
+JSON presets can't be used for additional elements.
+`Preset` position with switch-diode routing can't be combined with diodes orientation adjustment
+(`--optimize-diodes-orientation`), because template tracks assume the same diode orientation
+for every switch.
 
 <!-- TOC --><a name="additional-elements-placement"></a>
 ### Additional elements placement

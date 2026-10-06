@@ -616,10 +616,14 @@ class ElementTemplateSelectionWidget(wx.Panel):
             else self._("Load from:")
         )
         layout_label = wx.StaticText(self, -1, label)
+        wildcard = "KiCad printed circuit board files (*.kicad_pcb)|*.kicad_pcb"
+        if picker_type == TemplateType.LOAD:
+            # JSON presets can be loaded but never saved
+            wildcard += "|Switch preset files (*.json)|*.json"
         layout_picker = get_file_picker(
             self,
             -1,
-            wildcard="KiCad printed circuit board files (*.kicad_pcb)|*.kicad_pcb",
+            wildcard=wildcard,
             style=wx.FLP_USE_TEXTCTRL
             | (wx.FLP_SAVE if picker_type == TemplateType.SAVE else wx.FLP_OPEN),
         )

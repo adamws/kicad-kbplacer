@@ -293,10 +293,12 @@ def app() -> None:
             "When DEFAULT or UNCHAGED, then POSITION needs to be omitted,\n"
             "when RELATIVE, then POSITION is optional path for saving kicad_pcb template file\n"
             "when PRESET, then POSITION is mandatory path to kicad_pcb template file\n"
+            "or to JSON preset file (see docs/switch-preset.schema.json),\n"
             "when CUSTOM, then POSITION is space separated value of X Y ORIENTATION FRONT|BACK\n"
             "for example:\n"
             "\tD{} RELATIVE\n"
             "\tD{} PRESET /home/user/project/diode_preset.kicad_pcb\n"
+            "\tD{} PRESET /home/user/project/diode_preset.json\n"
             "\tD{} CUSTOM 5 -4.5 90 BACK\n"
             "equal 'D{} DEFAULT' by default"
         ),

@@ -1,0 +1,252 @@
+{
+  "version": 1,
+  "diodes": [
+    {
+      "position": {
+        "x_nm": 0,
+        "y_nm": 3800000
+      },
+      "orientation_deg": 0,
+      "layer": "B.Cu"
+    }
+  ],
+  "items": [
+    {
+      "type": "via",
+      "position": {
+        "x_nm": 0,
+        "y_nm": -2736000
+      },
+      "diameter_nm": 800000,
+      "drill_diameter_nm": 400000
+    },
+    {
+      "type": "track",
+      "start": {
+        "x_nm": 0,
+        "y_nm": 3604000
+      },
+      "end": {
+        "x_nm": 0,
+        "y_nm": 5900000
+      },
+      "width_nm": 250000,
+      "layer": "F.Cu"
+    },
+    {
+      "type": "track",
+      "start": {
+        "x_nm": -1247500,
+        "y_nm": -2736000
+      },
+      "end": {
+        "x_nm": -2784000,
+        "y_nm": -1199500
+      },
+      "width_nm": 250000,
+      "layer": "F.Cu"
+    },
+    {
+      "type": "track",
+      "start": {
+        "x_nm": -2784000,
+        "y_nm": -1199500
+      },
+      "end": {
+        "x_nm": -2784000,
+        "y_nm": 820000
+      },
+      "width_nm": 250000,
+      "layer": "F.Cu"
+    },
+    {
+      "type": "track",
+      "start": {
+        "x_nm": -2784000,
+        "y_nm": 820000
+      },
+      "end": {
+        "x_nm": 0,
+        "y_nm": 3604000
+      },
+      "width_nm": 250000,
+      "layer": "F.Cu"
+    },
+    {
+      "type": "track",
+      "start": {
+        "x_nm": 3214000,
+        "y_nm": -5950000
+      },
+      "end": {
+        "x_nm": 0,
+        "y_nm": -2736000
+      },
+      "width_nm": 250000,
+      "layer": "F.Cu"
+    },
+    {
+      "type": "track",
+      "start": {
+        "x_nm": 3275000,
+        "y_nm": -5950000
+      },
+      "end": {
+        "x_nm": 3214000,
+        "y_nm": -5950000
+      },
+      "width_nm": 250000,
+      "layer": "F.Cu"
+    },
+    {
+      "type": "track",
+      "start": {
+        "x_nm": 0,
+        "y_nm": -2736000
+      },
+      "end": {
+        "x_nm": -1247500,
+        "y_nm": -2736000
+      },
+      "width_nm": 250000,
+      "layer": "F.Cu"
+    },
+    {
+      "type": "track",
+      "start": {
+        "x_nm": -3275000,
+        "y_nm": -5950000
+      },
+      "end": {
+        "x_nm": -3214000,
+        "y_nm": -5950000
+      },
+      "width_nm": 250000,
+      "layer": "B.Cu"
+    },
+    {
+      "type": "track",
+      "start": {
+        "x_nm": -3214000,
+        "y_nm": -5950000
+      },
+      "end": {
+        "x_nm": 0,
+        "y_nm": -2736000
+      },
+      "width_nm": 250000,
+      "layer": "B.Cu"
+    },
+    {
+      "type": "track",
+      "start": {
+        "x_nm": -8275000,
+        "y_nm": 525000
+      },
+      "end": {
+        "x_nm": -5000000,
+        "y_nm": 3800000
+      },
+      "width_nm": 250000,
+      "layer": "F.Cu"
+    },
+    {
+      "type": "track",
+      "start": {
+        "x_nm": -8275000,
+        "y_nm": -3750000
+      },
+      "end": {
+        "x_nm": -8275000,
+        "y_nm": 525000
+      },
+      "width_nm": 250000,
+      "layer": "F.Cu"
+    },
+    {
+      "type": "track",
+      "start": {
+        "x_nm": 8275000,
+        "y_nm": 525000
+      },
+      "end": {
+        "x_nm": 5000000,
+        "y_nm": 3800000
+      },
+      "width_nm": 250000,
+      "layer": "B.Cu"
+    },
+    {
+      "type": "track",
+      "start": {
+        "x_nm": 1100000,
+        "y_nm": 3800000
+      },
+      "end": {
+        "x_nm": 152000,
+        "y_nm": 2852000
+      },
+      "width_nm": 250000,
+      "layer": "B.Cu"
+    },
+    {
+      "type": "track",
+      "start": {
+        "x_nm": -4052000,
+        "y_nm": 2852000
+      },
+      "end": {
+        "x_nm": -5000000,
+        "y_nm": 3800000
+      },
+      "width_nm": 250000,
+      "layer": "B.Cu"
+    },
+    {
+      "type": "track",
+      "start": {
+        "x_nm": 1100000,
+        "y_nm": 3800000
+      },
+      "end": {
+        "x_nm": 5000000,
+        "y_nm": 3800000
+      },
+      "width_nm": 250000,
+      "layer": "B.Cu"
+    },
+    {
+      "type": "track",
+      "start": {
+        "x_nm": 8275000,
+        "y_nm": -3750000
+      },
+      "end": {
+        "x_nm": 8275000,
+        "y_nm": 525000
+      },
+      "width_nm": 250000,
+      "layer": "B.Cu"
+    },
+    {
+      "type": "track",
+      "start": {
+        "x_nm": 152000,
+        "y_nm": 2852000
+      },
+      "end": {
+        "x_nm": -4052000,
+        "y_nm": 2852000
+      },
+      "width_nm": 250000,
+      "layer": "B.Cu"
+    }
+  ],
+  "basis": {
+    "source": "diode_template.kicad_pcb",
+    "switchFootprint": "examples:Kailh_socket_PG1350_optional_reversible",
+    "diodeFootprints": [
+      "Diode_SMD:D_SOD-323F"
+    ]
+  }
+}

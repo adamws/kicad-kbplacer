@@ -2,6 +2,9 @@
 
 - `layout2image.py` - generate KLE style SVG image from keyboard layout
 - `layout2openscad.py` - generate plate for [openscad](https://openscad.org/) (:warning: experimental)
+- `dump_pair_pads.py` - dump switch-local pad positions and nets of a switch-diode pair placed
+  like `--diode "D{} CUSTOM ..."` does, golden data for tools previewing kbplacer placements
+  (requires `pcbnew`)
 - `profiling/kle-ng-api-task.sh` - reproduce a complete kle-ng-api task (schematic + pcb) for memory profiling
 
 ## Memory profiling (memray)

@@ -84,6 +84,37 @@ def test_create_board(tmpdir, request, builder, input_callback) -> None:
     save_and_render(board, tmpdir, request)
 
 
+def test_create_board_duplicated_pad_numbers(tmpdir, request) -> None:
+    # reversible footprint has three pads numbered "1" and four numbered "2",
+    # all of them must be assigned to the matrix nets
+    pcb_path = f"{tmpdir}/test.kicad_pcb"
+    footprints_dir = str(get_footprints_dir(request))
+    builder = BoardBuilder(
+        pcb_path,
+        switch_footprint=f"{footprints_dir}:Kailh_socket_PG1350_optional_reversible",
+        diode_footprint=f"{footprints_dir}:D_SOD-323",
+    )
+    layout = Path(request.fspath.dirname) / "data/via-layouts/crkbd.json"
+    board = builder.create_board(layout)
+
+    matrix = KeyMatrix(board, "SW{}", "D{}")
+    for reference, switch in matrix.switches_by_reference():
+        (diode,) = matrix.diodes_by_switch_reference(reference)
+        pads_by_number: dict = {}
+        for pad in switch.Pads():
+            pads_by_number.setdefault(pad.GetNumber(), []).append(pad)
+        assert len(pads_by_number["1"]) == 3
+        assert len(pads_by_number["2"]) == 4
+
+        column_nets = {p.GetNetname() for p in pads_by_number["1"]}
+        assert len(column_nets) == 1
+        assert column_nets.pop().startswith("COL")
+
+        diode_net = diode.FindPadByNumber("2").GetNetname()
+        assert {p.GetNetname() for p in pads_by_number["2"]} == {diode_net}
+        assert {p.GetPinFunction() for p in pads_by_number["2"]} == {"2"}
+
+
 def test_create_board_not_annotated_layout(request, builder) -> None:
     test_dir = request.fspath.dirname
     layout = Path(test_dir) / "data/kle-layouts/ansi-104.json"

@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "diodes": [
+    {
+      "position": {
+        "x_nm": -5197000,
+        "y_nm": 4503000
+      },
+      "orientation_deg": 90,
+      "layer": "B.Cu"
+    }
+  ],
+  "items": [
+    {
+      "type": "track",
+      "start": {
+        "x_nm": 2540000,
+        "y_nm": 2481000
+      },
+      "end": {
+        "x_nm": 2540000,
+        "y_nm": -5080000
+      },
+      "width_nm": 250000,
+      "layer": "B.Cu"
+    },
+    {
+      "type": "track",
+      "start": {
+        "x_nm": 1618000,
+        "y_nm": 3403000
+      },
+      "end": {
+        "x_nm": 2540000,
+        "y_nm": 2481000
+      },
+      "width_nm": 250000,
+      "layer": "B.Cu"
+    },
+    {
+      "type": "track",
+      "start": {
+        "x_nm": -5197000,
+        "y_nm": 3403000
+      },
+      "end": {
+        "x_nm": 1618000,
+        "y_nm": 3403000
+      },
+      "width_nm": 250000,
+      "layer": "B.Cu"
+    }
+  ],
+  "basis": {
+    "source": "keyboard-before.kicad_pcb (pre-routed SW1-D1 pair)",
+    "switchFootprint": "examples:SW_Cherry_MX_PCB_1.00u",
+    "diodeFootprints": [
+      "Diode_SMD:D_SOD-323F"
+    ]
+  }
+}

@@ -280,6 +280,16 @@ def __get_parameters():
     )
     test_params.append(param)
 
+    # same preset converted to JSON format, must produce identical result
+    param = pytest.param(
+        example,
+        ("Tracks", True),
+        ("DiodeOption2", "D{} PRESET diode_template.json"),
+        "kle.json",
+        id=f"{example};Tracks;DiodeOption2;RAW;PRESET-JSON",
+    )
+    test_params.append(param)
+
     # add one test for via layout
     param = pytest.param(
         "2x2",
@@ -371,6 +381,8 @@ def prepare_project(request, tmpdir, example: str, layout_file: str) -> None:
         # each template require own poject file, having one project file and many kicad_pcb
         # will lead to crash on some platforms
         prepare_project_file(request, pcb_path)
+    for template in glob.glob(f"{source_dir}/*_template.json"):
+        shutil.copy(template, tmpdir)
 
     prepare_fp_lib_table(request, tmpdir)
 
@@ -735,6 +747,43 @@ def test_board_creation(
                 # TODO: handle stabilizer footprints
             },
         )
+
+
+def __get_json_preset_parameters():
+    example = "2x3-rotations-custom-diode-with-track"
+    layout_options = {"RAW": "kle.json", "RAW_ANNOTATED": "kle-annotated.json"}
+    return [
+        pytest.param(
+            example,
+            layout_option,
+            id=f"{example};Tracks;DiodeOption2;{layout_option_name};PRESET-JSON",
+        )
+        for layout_option_name, layout_option in layout_options.items()
+    ]
+
+
+@pytest.mark.parametrize("example,layout_option", __get_json_preset_parameters())
+def test_with_examples_json_preset(
+    example, layout_option, example_isolation, kbplacer_process
+) -> None:
+    """JSON preset with the switch-diode pair which is pre-routed in the example
+    must give the same result as `D{} RELATIVE` run, which captures that pair
+    from the board, hence the same references are used.
+    The `diode_template.json` was obtained from the pre-routed pair.
+    """
+    with example_isolation(example, layout_option, "Tracks", "DiodeOption2") as e:
+        layout_path, pcb_path = e
+
+        # the pair comes from the preset, remove pre-routed tracks
+        # (RELATIVE option removes them as well before replicating them):
+        board = pcbnew.LoadBoard(pcb_path)
+        segments = [t for t in board.GetTracks() if t.Type() == pcbnew.PCB_TRACE_T]
+        assert len(segments) == 3
+        for t in segments:
+            board.RemoveNative(t)
+        pcbnew.SaveBoard(pcb_path, board)
+
+        kbplacer_process(True, "D{} PRESET diode_template.json", layout_path, pcb_path)
 
 
 # Use area of board edges bounding box to test if outline is generated.

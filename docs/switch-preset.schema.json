@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/adamws/kicad-kbplacer/blob/master/docs/switch-preset.schema.json",
+  "title": "kbplacer switch preset",
+  "description": "Switch-diode connection preset used with `--diode \"D{} PRESET preset.json\"`. All coordinates are switch-local: switch origin, 0 degree orientation, switch on the front side, +Y down. Units are integer nanometres. Field names follow KiCad IPC API (kipy) types.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "items"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1 },
+    "diodes": {
+      "description": "Diode placements relative to the switch, in the order of diodes associated with a switch. Omit for a tracks-only preset (diodes are not moved).",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/diode" }
+    },
+    "items": {
+      "description": "Tracks and vias. Nets are never stored, kbplacer assigns them from connected pads.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [{ "$ref": "#/$defs/track" }, { "$ref": "#/$defs/via" }]
+      }
+    },
+    "basis": {
+      "description": "Free-form information about what the preset was made for (footprints, placement). Ignored by kbplacer.",
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "nm": {
+      "type": "integer",
+      "minimum": -2147483647,
+      "maximum": 2147483647
+    },
+    "positiveNm": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2147483647
+    },
+    "vector2": {
+      "description": "kipy Vector2",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x_nm", "y_nm"],
+      "properties": {
+        "x_nm": { "$ref": "#/$defs/nm" },
+        "y_nm": { "$ref": "#/$defs/nm" }
+      }
+    },
+    "copperLayer": {
+      "description": "KiCad canonical layer name (kipy.util.board_layer.canonical_name)",
+      "enum": ["F.Cu", "B.Cu"]
+    },
+    "diode": {
+      "description": "kipy FootprintInstance position/orientation/layer",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["position", "orientation_deg", "layer"],
+      "properties": {
+        "position": { "$ref": "#/$defs/vector2" },
+        "orientation_deg": { "type": "number" },
+        "layer": { "$ref": "#/$defs/copperLayer" }
+      }
+    },
+    "track": {
+      "description": "kipy Track. Start and end must differ.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "start", "end", "width_nm", "layer"],
+      "properties": {
+        "type": { "const": "track" },
+        "start": { "$ref": "#/$defs/vector2" },
+        "end": { "$ref": "#/$defs/vector2" },
+        "width_nm": { "$ref": "#/$defs/positiveNm" },
+        "layer": { "$ref": "#/$defs/copperLayer" }
+      }
+    },
+    "via": {
+      "description": "kipy Via (through via, F.Cu to B.Cu). drill_diameter_nm must be smaller than diameter_nm.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "position", "diameter_nm", "drill_diameter_nm"],
+      "properties": {
+        "type": { "const": "via" },
+        "position": { "$ref": "#/$defs/vector2" },
+        "diameter_nm": { "$ref": "#/$defs/positiveNm" },
+        "drill_diameter_nm": { "$ref": "#/$defs/positiveNm" }
+      }
+    }
+  }
+}

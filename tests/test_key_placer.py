@@ -17,6 +17,7 @@ from typing import Iterator, List, Tuple
 import pcbnew
 import pytest
 
+import kbplacer.key_placer
 from kbplacer.board_modifier import (
     get_footprint,
     get_orientation,
@@ -27,7 +28,7 @@ from kbplacer.board_modifier import (
     set_side,
 )
 from kbplacer.defaults import DEFAULT_DIODE_POSITION, ZERO_POSITION
-from kbplacer.element_position import ElementInfo, PositionOption, Side
+from kbplacer.element_position import ElementInfo, ElementPosition, PositionOption, Side
 from kbplacer.key_placer import (
     ANNOTATION_GUIDE_URL,
     KeyboardSwitchIterator,
@@ -1338,3 +1339,201 @@ def test_encoder_position_with_rotation(tmpdir, request) -> None:
 
     encoder_fp = get_footprint(board_encoder, "SW2")
     assert _encoder_shaft_center(encoder_fp) == reference_pos
+
+
+def _preset_track(start, end, layer="F.Cu"):
+    return {
+        "type": "track",
+        "start": {"x_nm": pcbnew.FromMM(start[0]), "y_nm": pcbnew.FromMM(start[1])},
+        "end": {"x_nm": pcbnew.FromMM(end[0]), "y_nm": pcbnew.FromMM(end[1])},
+        "width_nm": 250000,
+        "layer": layer,
+    }
+
+
+# Diode below the switch, on the front. Switch pad 2 is at (2.54, -5.08),
+# diode pads 1 (K) and 2 (A) of D_SOD-323 are at (-1.05, 5) and (1.05, 5).
+PRESET_DIODE = {
+    "position": {"x_nm": 0, "y_nm": 5000000},
+    "orientation_deg": 0,
+    "layer": "F.Cu",
+}
+# SW pad 2 -> D pad 2 (A), passing right of the centre hole:
+PRESET_TRACKS = [
+    _preset_track((2.54, -5.08), (2.54, 5)),
+    _preset_track((2.54, 5), (1.05, 5)),
+]
+
+
+def _write_preset(tmpdir, items, diodes=None) -> str:
+    path = f"{tmpdir}/preset.json"
+    data = {"version": 1, "items": items}
+    if diodes is not None:
+        data["diodes"] = diodes
+    with open(path, "w") as f:
+        json.dump(data, f)
+    return path
+
+
+def _run_with_json_preset(request, path, layout=True, **kwargs) -> pcbnew.BOARD:
+    board = get_board_for_2x2_example(request)
+    key_placer = KeyPlacer(board)
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
+    diode_info = ElementInfo("D{}", PositionOption.PRESET, None, path)
+    layout_path = get_2x2_layout_path(request) if layout else ""
+    key_placer.run(layout_path, key_info, diode_info, True, **kwargs)
+    return board
+
+
+def test_placer_diode_from_json_preset(tmpdir, request, caplog) -> None:
+    path = _write_preset(tmpdir, PRESET_TRACKS, [PRESET_DIODE])
+
+    with caplog.at_level(logging.WARNING):
+        board = _run_with_json_preset(request, path)
+    save_and_render(board, tmpdir, request)
+
+    for i in range(1, 5):
+        switch = get_footprint(board, f"SW{i}")
+        diode = get_footprint(board, f"D{i}")
+        expected = get_position(switch) + pcbnew.VECTOR2I_MM(0, 5)
+        assert get_position(diode) == expected
+        assert get_side(diode) == Side.FRONT
+    assert len(board.GetTracks()) == 4 * len(PRESET_TRACKS)
+    assert "did not connect" not in caplog.text
+    assert "different nets" not in caplog.text
+    assert "could not be placed" not in caplog.text
+
+
+def test_placer_diode_from_tracks_only_json_preset(tmpdir, request, caplog) -> None:
+    # place diodes first, without routing:
+    board = get_board_for_2x2_example(request)
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
+    diode_position = ElementPosition(0, 5, 0, Side.FRONT)
+    diode_info = ElementInfo("D{}", PositionOption.CUSTOM, diode_position, "")
+    KeyPlacer(board).run(get_2x2_layout_path(request), key_info, diode_info)
+    # Deliberately misplace D3 by 2mm, so the preset (which leaves diodes where
+    # they are) can't connect SW3 with it. SW3 tracks end next to D3 pad instead
+    # of in it, become dangling and get removed, both checks must report SW3:
+    d3 = get_footprint(board, "D3")
+    set_position(d3, get_position(d3) + pcbnew.VECTOR2I_MM(0, 2))
+
+    path = _write_preset(tmpdir, PRESET_TRACKS)
+    diode_info = ElementInfo("D{}", PositionOption.PRESET, None, path)
+    positions_before = {
+        f.GetReference(): get_position(f) for f in board.GetFootprints()
+    }
+    with caplog.at_level(logging.WARNING):
+        KeyPlacer(board).run("", key_info, diode_info, True)
+    save_and_render(board, tmpdir, request)
+
+    # nothing moved:
+    for f in board.GetFootprints():
+        assert get_position(f) == positions_before[f.GetReference()]
+    assert "Diodes of switches SW3 are placed differently than diodes of SW1," in (
+        caplog.text
+    )
+    # only SW3 is reported, remaining pairs are connected:
+    assert "Switch-diode template did not connect: SW3-D3. Check" in caplog.text
+    assert "different nets" not in caplog.text
+    assert "could not be placed" not in caplog.text
+
+    tracks = board.GetTracks()
+    assert len(tracks) == 3 * len(PRESET_TRACKS)
+    assert {t.GetNetname() for t in tracks} == {
+        "Net-D1-Pad2",
+        "Net-D2-Pad2",
+        "Net-D4-Pad2",
+    }
+    for i in [1, 2, 4]:
+        switch = get_footprint(board, f"SW{i}")
+        diode_pad = get_footprint(board, f"D{i}").FindPadByNumber("2")
+        ends = [point for t in tracks for point in (t.GetStart(), t.GetEnd())]
+        assert any(diode_pad.HitTest(p) for p in ends)
+        assert any(switch.FindPadByNumber("2").HitTest(p) for p in ends)
+
+
+def test_placer_json_preset_duplicates_with_same_uuid(
+    tmpdir, request, caplog, monkeypatch
+) -> None:
+    # On KiCad 6 `Duplicate()` keeps the UUID of the source item, so all copies of
+    # a template element share it. Emulate that, connection checks must not rely
+    # on UUIDs to tell placed elements apart:
+    original = kbplacer.key_placer.duplicate_track
+
+    def _duplicate_keeping_uuid(item):
+        dup = original(item)
+        dup.m_Uuid.Clone(item.m_Uuid)
+        return dup
+
+    monkeypatch.setattr(kbplacer.key_placer, "duplicate_track", _duplicate_keeping_uuid)
+
+    path = _write_preset(tmpdir, PRESET_TRACKS, [PRESET_DIODE])
+    with caplog.at_level(logging.WARNING):
+        board = _run_with_json_preset(request, path)
+
+    uuids = {t.m_Uuid.AsString() for t in board.GetTracks()}
+    assert len(uuids) == len(PRESET_TRACKS)  # emulation works
+    assert len(board.GetTracks()) == 4 * len(PRESET_TRACKS)
+    assert "did not connect" not in caplog.text
+    assert "different nets" not in caplog.text
+
+
+def test_placer_json_preset_short_detected(tmpdir, request, caplog) -> None:
+    # SW pad 2 -> D pad 1 (K), going around D pad 2:
+    tracks = [
+        _preset_track((2.54, -5.08), (2.54, 6)),
+        _preset_track((2.54, 6), (-1.05, 6)),
+        _preset_track((-1.05, 6), (-1.05, 5)),
+    ]
+    path = _write_preset(tmpdir, tracks, [PRESET_DIODE])
+    with caplog.at_level(logging.WARNING):
+        board = _run_with_json_preset(request, path)
+    save_and_render(board, tmpdir, request)
+
+    assert "Switch-diode template connects pads of different nets: " in caplog.text
+    assert "SW1 (Net-D1-Pad2, ROW0)" in caplog.text
+    assert "Switch-diode template did not connect: " in caplog.text
+    assert "SW1-D1" in caplog.text
+
+
+def test_placer_json_preset_nothing_placed(tmpdir, request) -> None:
+    # track crossing the switch centre hole, can't be placed anywhere:
+    path = _write_preset(tmpdir, [_preset_track((-3, 0), (3, 0))], [PRESET_DIODE])
+    with pytest.raises(
+        PluginError,
+        match="None of the switch-diode template elements could be placed",
+    ):
+        _run_with_json_preset(request, path)
+
+
+def test_placer_json_preset_with_optimize_diodes_orientation(tmpdir, request) -> None:
+    path = _write_preset(tmpdir, PRESET_TRACKS, [PRESET_DIODE])
+    with pytest.raises(
+        PluginError, match="can't be used with diodes orientation optimization"
+    ):
+        _run_with_json_preset(request, path, optimize_diodes_orientation=True)
+
+
+def test_placer_json_preset_for_additional_element(tmpdir, request) -> None:
+    path = _write_preset(tmpdir, PRESET_TRACKS, [PRESET_DIODE])
+    stabilizer = ElementInfo("ST{}", PositionOption.PRESET, None, path)
+    with pytest.raises(PluginError, match="JSON presets are supported only for diodes"):
+        _run_with_json_preset(request, path, additional_elements=[stabilizer])
+
+
+def test_placer_invalid_json_preset(tmpdir, request) -> None:
+    path = _write_preset(tmpdir, [], [PRESET_DIODE])
+    with pytest.raises(PluginError, match=r"\$\.items: expected non-empty array"):
+        _run_with_json_preset(request, path)
+
+
+def test_placer_kicad_pcb_preset_without_tracks(tmpdir, request) -> None:
+    template_path = f"{tmpdir}/template.kicad_pcb"
+    template, _, _ = get_board_with_one_switch(request, "SW_Cherry_MX_PCB_1.00u")
+    template.Save(template_path)
+
+    board = get_board_for_2x2_example(request)
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
+    diode_info = ElementInfo("D{}", PositionOption.PRESET, None, template_path)
+    with pytest.raises(PluginError, match="has no tracks"):
+        KeyPlacer(board).run(get_2x2_layout_path(request), key_info, diode_info, True)

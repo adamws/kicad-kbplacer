@@ -173,6 +173,24 @@ class BoardBuilder:
         return self._add_footprint(fp)
 
     @staticmethod
+    def _set_pads_net(
+        fp: pcbnew.FOOTPRINT,
+        number: str,
+        net: pcbnew.NETINFO_ITEM,
+        pin_function: str,
+    ) -> None:
+        """Assign `net` to every pad numbered `number`.
+
+        Footprints may have several pads with the same number (for example
+        hybrid MX/Alps or reversible switches), all of them belong to the same
+        net (this is what KiCad's netlist update does too).
+        """
+        for pad in fp.Pads():
+            if pad.GetNumber() == number:
+                pad.SetNet(net)
+                pad.SetPinFunction(pin_function)
+
+    @staticmethod
     def _matrix_pad_numbers(fp: pcbnew.FOOTPRINT) -> Tuple[str, str]:
         """Return the ordered (column-side, diode-side) matrix pad numbers
         of a switch or encoder footprint.
@@ -338,26 +356,17 @@ class BoardBuilder:
                     encoder = self._add_encoder_footprint(f"SW{current_ref}")
                     diode = self._add_diode_footprint(f"D{current_ref}")
 
-                    encoder_s1 = encoder.FindPadByNumber("S1")
-                    encoder_s2 = encoder.FindPadByNumber("S2")
-                    encoder_s1.SetPinFunction("S1")
-                    encoder_s2.SetPinFunction("S2")
-                    diode_pad1 = diode.FindPadByNumber("1")
-                    diode_pad2 = diode.FindPadByNumber("2")
-                    diode_pad1.SetPinFunction("K")
-                    diode_pad2.SetPinFunction("A")
-
                     column_name = matrix_net_name("COL", column)
                     net = self._add_or_get_net(column_name)
-                    encoder_s1.SetNet(net)
+                    self._set_pads_net(encoder, "S1", net, "S1")
 
                     row_name = matrix_net_name("ROW", row)
                     net = self._add_or_get_net(row_name)
-                    diode_pad1.SetNet(net)
+                    self._set_pads_net(diode, "1", net, "K")
 
                     net = self._add_or_get_net(f"Net-(D{current_ref}-A)")
-                    encoder_s2.SetNet(net)
-                    diode_pad2.SetNet(net)
+                    self._set_pads_net(encoder, "S2", net, "S2")
+                    self._set_pads_net(diode, "2", net, "A")
 
                     if create_leds:
                         self._add_led_chain_elements(
@@ -376,26 +385,17 @@ class BoardBuilder:
                     if add_stabilizers and uses_stabilizer(k):
                         self._add_stabilizer_footprint(f"ST{current_ref}", key=k)
 
-                    switch_pad1 = switch.FindPadByNumber("1")
-                    switch_pad2 = switch.FindPadByNumber("2")
-                    switch_pad1.SetPinFunction("1")
-                    switch_pad2.SetPinFunction("2")
-                    diode_pad1 = diode.FindPadByNumber("1")
-                    diode_pad2 = diode.FindPadByNumber("2")
-                    diode_pad1.SetPinFunction("K")
-                    diode_pad2.SetPinFunction("A")
-
                     column_name = matrix_net_name("COL", column)
                     net = self._add_or_get_net(column_name)
-                    switch_pad1.SetNet(net)
+                    self._set_pads_net(switch, "1", net, "1")
 
                     row_name = matrix_net_name("ROW", row)
                     net = self._add_or_get_net(row_name)
-                    diode_pad1.SetNet(net)
+                    self._set_pads_net(diode, "1", net, "K")
 
                     net = self._add_or_get_net(f"Net-(D{current_ref}-A)")
-                    switch_pad2.SetNet(net)
-                    diode_pad2.SetNet(net)
+                    self._set_pads_net(switch, "2", net, "2")
+                    self._set_pads_net(diode, "2", net, "A")
 
                     if create_leds:
                         self._add_led_chain_elements(
@@ -435,10 +435,10 @@ class BoardBuilder:
                 new_pads = self._matrix_pad_numbers(fp)
                 for default_number, new_number in zip(default_pads, new_pads):
                     default_pad = default_fp.FindPadByNumber(default_number)
-                    new_pad = fp.FindPadByNumber(new_number)
-                    if default_pad and new_pad:
-                        new_pad.SetNet(default_pad.GetNet())
-                        new_pad.SetPinFunction(new_number)
+                    if default_pad:
+                        self._set_pads_net(
+                            fp, new_number, default_pad.GetNet(), new_number
+                        )
 
                 progress[position].append(fp)
 
