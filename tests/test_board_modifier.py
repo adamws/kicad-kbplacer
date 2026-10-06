@@ -12,6 +12,7 @@ import pytest
 from kbplacer.board_modifier import (
     BoardModifier,
     duplicate_track,
+    ensure_swig_iterator_next,
     get_footprint,
     get_optional_footprint,
     set_position_by_points,
@@ -347,3 +348,20 @@ def test_duplicate_track_with_parent_group() -> None:
     assert dup.GetParentGroup() is None
     assert dup.GetStart() == track.GetStart()
     assert dup.GetEnd() == track.GetEnd()
+
+
+def test_swig_iterator_without_next(request, monkeypatch) -> None:
+    # simulate pcbnew build generated with SWIG which does not define legacy
+    # `SwigPyIterator.next` used by KiCad's container iterators:
+    template = (
+        f"{request.fspath.dirname}/../examples/"
+        "2x3-rotations-custom-diode-with-track-and-complex-footprint/"
+        "diode_template.kicad_pcb"
+    )
+    board = pcbnew.LoadBoard(template)
+    monkeypatch.delattr(pcbnew.SwigPyIterator, "next")
+    with pytest.raises(AttributeError, match="has no attribute 'next'"):
+        board.GetTracks()
+
+    ensure_swig_iterator_next()
+    assert len(board.GetTracks()) == 18

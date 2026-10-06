@@ -16,6 +16,21 @@ import pcbnew
 
 from .element_position import Side
 
+
+def ensure_swig_iterator_next() -> None:
+    """Some pcbnew builds (generated with newer SWIG) do not define legacy
+    `SwigPyIterator.next`, which KiCad's own container `__iter__` implementations
+    still call (for example `BOARD.GetTracks()` fails with "'SwigPyIterator'
+    object has no attribute 'next'"). Every kbplacer module iterating KiCad
+    containers imports this module, so patching the class at import is enough.
+    """
+    swig_iterator = getattr(pcbnew, "SwigPyIterator", None)
+    if swig_iterator is not None and not hasattr(swig_iterator, "next"):
+        swig_iterator.next = swig_iterator.__next__
+
+
+ensure_swig_iterator_next()
+
 logger = logging.getLogger(__name__)
 version_match = re.search(r"(\d+)\.(\d+)\.(\d+)", pcbnew.Version())
 KICAD_VERSION = tuple(map(int, version_match.groups())) if version_match else ()
