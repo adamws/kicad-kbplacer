@@ -1162,6 +1162,21 @@ class KeyPlacer(BoardModifier):
                 self.route_switch_with_diode(switch_footprint, diodes)
         return placed_by_switch
 
+    def check_switches_on_front(self, key_matrix: KeyMatrix) -> None:
+        """JSON presets are defined for front side switches and are not flipped,
+        replicating them to back side switches would connect wrong pads."""
+        flipped = [
+            reference
+            for reference, switch in key_matrix.switches_by_reference()
+            if switch.IsFlipped()
+        ]
+        if flipped:
+            msg = (
+                "JSON switch presets support only front side switches, "
+                f"found switches on the back side: {', '.join(flipped)}"
+            )
+            raise PluginError(msg)
+
     def check_relative_diode_positions(self, key_matrix: KeyMatrix) -> None:
         """Logs warning for each switch whose diodes are placed differently
         (relative to the switch) than the diodes of the first switch.
@@ -1480,6 +1495,12 @@ class KeyPlacer(BoardModifier):
 
         # stage 3 - route elements
         if route_switches_with_diodes:
+            if (
+                template_connection
+                and diode_info.position_option == PositionOption.PRESET
+                and is_json_preset(diode_info.template_path)
+            ):
+                self.check_switches_on_front(key_matrix)
             if template_connection and not any(i.position for i in diode_infos):
                 self.check_relative_diode_positions(key_matrix)
             placed_by_switch = self.route_switches_with_diodes(

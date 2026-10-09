@@ -1452,6 +1452,17 @@ def test_placer_diode_from_tracks_only_json_preset(tmpdir, request, caplog) -> N
         assert any(switch.FindPadByNumber("2").HitTest(p) for p in ends)
 
 
+def test_placer_json_preset_rejects_back_side_switches(tmpdir, request) -> None:
+    path = _write_preset(tmpdir, PRESET_TRACKS, [PRESET_DIODE])
+    board = get_board_for_2x2_example(request)
+    key_position = ElementPosition(0, 0, 0, Side.BACK)
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, key_position, "", 1)
+    diode_info = ElementInfo("D{}", PositionOption.PRESET, None, path)
+
+    with pytest.raises(PluginError, match="support only front side switches"):
+        KeyPlacer(board).run(get_2x2_layout_path(request), key_info, diode_info, True)
+
+
 def test_placer_json_preset_duplicates_with_same_uuid(
     tmpdir, request, caplog, monkeypatch
 ) -> None:
