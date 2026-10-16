@@ -499,6 +499,16 @@ Existing `kicad_pcb` template can be converted with:
 python -m kbplacer.connection_preset to-json diode_template.kicad_pcb > preset.json
 ```
 
+Pad centres, layers and nets of a switch-diode pair placed with `CUSTOM` position, in the same
+coordinates, can be printed with:
+
+```shell
+python -m kbplacer.pair_pads \
+  --switch-footprint /path/Switch_Keyboard_Cherry_MX.pretty:SW_Cherry_MX_PCB_1.00u \
+  --diode-footprint /usr/share/kicad/footprints/Diode_SMD.pretty:D_SOD-123F \
+  --diode-position "5.08 4 90 BACK"
+```
+
 JSON presets can't be used for additional elements, and support only front side switches
 (routing fails when any switch is on the back side).
 `Preset` position with switch-diode routing can't be combined with diodes orientation adjustment

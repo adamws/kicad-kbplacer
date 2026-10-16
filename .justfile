@@ -152,6 +152,21 @@ schematic version=default_version layout="wt60_a" *args="":
 schematic-with-leds version=default_version layout="wt60_a" *args="":
     just schematic {{version}} {{layout}} --create-led-sch-file {{args}}
 
+# === Placement ===
+
+# dump pad geometry of switch-diode pair (kbplacer.pair_pads) placed with the bundled
+# test footprints, JSON to stdout (POSITION is 'X Y ORIENTATION FRONT|BACK', pass extra
+# args after it, e.g. --switch-rotation 90)
+pair-pads version=default_version position="5.08 4 90 BACK" *args="":
+    docker run --rm \
+        -v "{{justfile_directory()}}:/workspace" -w /workspace \
+        "{{image_prefix}}:{{version}}" \
+        bash -c "pip3 install -q --no-cache-dir . && \
+            python3 -m kbplacer.pair_pads \
+                --switch-footprint tests/data/footprints/tests.pretty:SW_Cherry_MX_PCB_1.00u \
+                --diode-footprint tests/data/footprints/tests.pretty:D_SOD-323F \
+                --diode-position '{{position}}' {{args}}"
+
 # === Profiling ===
 
 # profile memory of a complete kle-ng-api task (schematic + pcb + LED chain) with memray
