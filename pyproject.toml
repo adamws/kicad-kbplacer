@@ -180,6 +180,15 @@ layout2image = "python tools/layout2image.py {args}"
 kle2kle = "python tools/kle2kle.py {args}"
 test = "python tools/run_tests.py {args}"
 
+# 'tools' with access to system `pcbnew` module, required by pcb2layout.
+# Run all tools tests, including pcb2layout, with `hatch run tools-pcbnew:test`
+# ('tools:test' skips them unless `pcbnew` is importable, e.g. via PYTHONPATH)
+[tool.hatch.envs.tools-pcbnew]
+template = "tools"
+system-packages = true
+[tool.hatch.envs.tools-pcbnew.scripts]
+pcb2layout = "python tools/pcb2layout.py {args}"
+
 [tool.hatch.envs.tools-openscad]
 dependencies = [
   "shapely==2.0.6",

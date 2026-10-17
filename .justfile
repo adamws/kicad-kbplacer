@@ -48,7 +48,7 @@ tools-test version=default_version:
     docker run --rm \
         -v "{{justfile_directory()}}:/workspace" -w /workspace \
         "{{image_prefix}}:{{version}}" \
-        bash -c "pip3 install --no-cache-dir hatch && hatch run tools:test"
+        bash -c "pip3 install --no-cache-dir hatch && hatch run tools-pcbnew:test"
 
 # run layout2image tool and write SVG outputs to ./output_svgs/
 tools-layout2image version=default_version:
@@ -71,6 +71,49 @@ tools-kle2kle version=default_version *args="--help":
         -v "{{justfile_directory()}}:/workspace" -w /workspace \
         "{{image_prefix}}:{{version}}" \
         bash -c "pip3 install --no-cache-dir hatch && hatch run tools:kle2kle {{args}}"
+
+# Downloads .kicad_pcb from URL (GitHub 'blob' links are converted to raw), recovers
+# its layout with pcb2layout, renders it with layout2image and creates kle-ng link,
+# for manual verification.
+# Outputs <name>.kicad_pcb, <name>.json, <name>.svg and <name>.url to ./output_pcb2layout/.
+# ARGS are passed to pcb2layout (default: --verify), for example:
+#   just tools-pcb2layout https://github.com/foostan/crkbd/blob/main/pcbs/corne-cherry/hotswap/corne-cherry.kicad_pcb
+#   just tools-pcb2layout <url> 10.0.6-noble --verify --matrix-labels --switch-pattern "SW{}"
+# reverse-engineer layout of PCB downloaded from URL, render it to SVG and print kle-ng link
+[positional-arguments]
+tools-pcb2layout url version=default_version *args="--verify":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    outdir="{{justfile_directory()}}/output_pcb2layout"
+    mkdir -p "$outdir"
+    url={{quote(url)}}
+    # remaining positional arguments are passed to pcb2layout, preserving quoting
+    shift 2
+    # https://github.com/<owner>/<repo>/blob/<ref>/<path> -> raw.githubusercontent.com
+    url=$(echo "$url" | sed -E 's#^https?://github\.com/([^/]+)/([^/]+)/(blob|raw)/#https://raw.githubusercontent.com/\1/\2/#')
+    name=$(basename "${url%%\?*}" .kicad_pcb)
+    echo ">>> Downloading $url"
+    curl -fsSL "$url" -o "$outdir/$name.kicad_pcb"
+    if ! head -c 100 "$outdir/$name.kicad_pcb" | grep -q "(kicad_pcb"; then
+        echo "Downloaded file is not a KiCad PCB (Git LFS pointer or HTML page?)" >&2
+        exit 1
+    fi
+    docker run --rm \
+        -v "{{justfile_directory()}}:/workspace" -w /workspace \
+        -e NAME="$name" \
+        "{{image_prefix}}:{{version}}" \
+        bash -c 'set -euo pipefail
+            pip3 install -q --no-cache-dir hatch
+            out="output_pcb2layout/$NAME"
+            hatch run tools-pcbnew:pcb2layout --in "$out.kicad_pcb" --out "$out.json" \
+                --force --log-level INFO "$@"
+            hatch run tools-pcbnew:layout2image --in "$out.json" --out "$out.svg" --force
+            python3 -m kbplacer.kle_serial --in "$out.json" --inform KLE_RAW \
+                --outform KLE_RAW --print-url > "$out.url"
+        ' _ "$@"
+    echo ">>> Layout: output_pcb2layout/$name.json"
+    echo ">>> Image:  output_pcb2layout/$name.svg"
+    echo ">>> kle-ng: $(cat "$outdir/$name.url")"
 
 # run layout2openscad tool (pass extra args after --)
 tools-layout2openscad version=default_version *args="--help":
@@ -254,6 +297,6 @@ lint-all:
 # === Cleanup ===
 
 cleanup:
-  rm -rf output_schematic output_memray
+  rm -rf output_schematic output_memray output_pcb2layout
   rm -rf .benchmarks
   rm -f examples/absolem-ergogen/absolem.zip
