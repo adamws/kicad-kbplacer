@@ -350,6 +350,7 @@ def test_duplicate_track_with_parent_group() -> None:
     assert dup.GetEnd() == track.GetEnd()
 
 
+@pytest.mark.skipif(KICAD_VERSION >= (10, 0, 7), reason="Not applicable")
 def test_swig_iterator_without_next(request, monkeypatch) -> None:
     # simulate pcbnew build generated with SWIG which does not define legacy
     # `SwigPyIterator.next` used by KiCad's container iterators:

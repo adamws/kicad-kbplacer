@@ -1,5 +1,5 @@
 image_prefix := "admwscki/kicad-kbplacer-primary"
-default_version := "10.0.6-noble"
+default_version := "10.0.7-noble"
 
 # list available recipes
 default:
