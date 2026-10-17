@@ -1256,6 +1256,11 @@ if __name__ == "__main__":
         help="Opens layout in kle-ng web editor",
     )
     parser.add_argument(
+        "--print-url",
+        action="store_true",
+        help="Prints kle-ng web editor link with the layout",
+    )
+    parser.add_argument(
         "--convert-via-encoders",
         action="store_true",
         help=(
@@ -1281,6 +1286,7 @@ if __name__ == "__main__":
     ergogen_filter = args.ergogen_filter
     collapse = args.collapse
     open_editor = args.open_editor
+    print_url = args.print_url
     convert_via_encoders = args.convert_via_encoders
 
     # set up logger
@@ -1291,7 +1297,7 @@ if __name__ == "__main__":
     if convert_via_encoders and input_format != "KLE_VIA":
         parser.error("--convert-via-encoders can only be used with --inform KLE_VIA")
 
-    if input_format == output_format and not collapse:
+    if input_format == output_format and not (collapse or open_editor or print_url):
         print("Output format equal input format, nothing to do...")
         sys.exit(1)
 
@@ -1333,6 +1339,9 @@ if __name__ == "__main__":
         keyboard = MatrixAnnotatedKeyboard(meta=keyboard.meta, keys=keyboard.keys)
         keyboard.collapse()
         keyboard = keyboard.to_keyboard()
+
+    if print_url:
+        print(keyboard_to_url(keyboard))
 
     if open_editor:
         webbrowser.open(keyboard_to_url(keyboard))

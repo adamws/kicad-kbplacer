@@ -931,6 +931,23 @@ class TestKleSerialCli:
         with open(raw_tmp, "r") as f:
             assert json.load(f) == raw_json
 
+    def test_print_url(self, request, package_path, package_name) -> None:
+        test_dir = request.fspath.dirname
+        layout = f"{test_dir}/../examples/2x3-rotations/kle-annotated.json"
+        p = self._run_subprocess(
+            package_path,
+            package_name,
+            {
+                "--in": layout,
+                "--print-url": "",
+            },
+        )
+        stdout, stderr = p.communicate()
+        assert p.returncode == 0, stderr
+        url = stdout.strip()
+        assert url.startswith("https://editor.keyboard-tools.xyz/#share=")
+        assert keyboard_from_url(url) == get_keyboard_from_file(layout)
+
     @pytest.mark.parametrize(
         "example",
         ["0_sixty", "crkbd", "wt60_a", "wt60_d"],

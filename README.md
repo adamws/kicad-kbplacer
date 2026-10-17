@@ -582,6 +582,8 @@ python -m kbplacer.kle_serial \
 
 This command generates [this](./tests/data/ergogen-layouts/absolem-simple-reference.json) file
 which can be loaded by Keyboard Layout Editor NG.
+Use `--print-url` to print Keyboard Layout Editor NG link with the layout
+(or `--open-editor` to open it in web browser).
 
 In case of VIA-like annotated layouts there is an option to perform 'collapse' operation.
 
