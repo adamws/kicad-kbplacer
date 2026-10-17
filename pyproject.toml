@@ -171,7 +171,7 @@ omit = [
 [tool.hatch.envs.tools]
 dependencies = [
   "colormath==3.0.0",
-  "drawsvg==2.4.1",
+  "drawsvg==2.4.2",
   "PyYAML==6.0.3",
   "pytest>=6.0.0",
 ]
@@ -191,7 +191,7 @@ pcb2layout = "python tools/pcb2layout.py {args}"
 
 [tool.hatch.envs.tools-openscad]
 dependencies = [
-  "shapely==2.0.6",
+  "shapely==2.2.0",
   "solidpython==1.1.3",
   "PyYAML==6.0.3",
 ]
