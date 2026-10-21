@@ -662,6 +662,13 @@ The `kbplacer` is used by additional tools available in [tools](tools/README.md)
         </td>
         <td><img src="resources/example-kle2kle.png"/></td>
     </tr>
+    <tr>
+        <td>
+            <code>pcb2layout.py</code> - reverse-engineer KLE layout from existing <code>.kicad_pcb</code> file</br>
+            (⚠️ experimental)
+        </td>
+        <td><img src="resources/pcb2layout-corne.svg"/></td>
+    </tr>
 </table>
 
 <!-- TOC --><a name="use-in-python-projects"></a>
