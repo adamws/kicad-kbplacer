@@ -47,12 +47,21 @@ def show_with_test_support(class_or_func, *args, **kwargs) -> wx.Dialog:
         # use stdin for gracefully closing GUI when running
         # from pytest. This is required when measuring
         # coverage and process kill would cause measurement to be lost
-        def listen_for_exit():
-            input("Press any key to exit: ")
+        def close() -> None:
             dlg.Close()
             wx.Exit()
 
-        input_thread = threading.Thread(target=listen_for_exit)
+        def listen_for_exit() -> None:
+            try:
+                input("Press any key to exit: ")
+            except EOFError:
+                pass
+            # wx is not thread safe, calling GUI functions from this thread
+            # races with the main loop and randomly crashes the process
+            # (SIGSEGV or GLib assertion). Schedule close on the main thread.
+            wx.CallAfter(close)
+
+        input_thread = threading.Thread(target=listen_for_exit, daemon=True)
         input_thread.start()
 
         dlg.Show()

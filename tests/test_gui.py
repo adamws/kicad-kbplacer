@@ -121,6 +121,7 @@ def run_gui_test(tmpdir, screen_manager, window_name, gui_callback) -> None:
                 p.kill()
                 outs, errs = p.communicate()
 
+            logger.info(f"Process exit code: {p.returncode}")
             logger.info(f"Process stdout: {outs}")
             logger.info(f"Process stderr: {errs}")
 
