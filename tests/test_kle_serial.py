@@ -632,6 +632,21 @@ def test_collapse_layout_with_single_optional_key(request) -> None:
     assert len(result.keys_in_matrix_order()) == 66
 
 
+def test_ghost_keys_are_ignored() -> None:
+    # ghost keys do not participate in the switch matrix, their labels
+    # must not be validated (nor clash with real matrix positions)
+    # fmt: off
+    layout = [
+        ["0,0",{"g":True,"a":7,"w":4},"OLED",{"g":False,"a":4},"0,1"],
+        [{"g":True},"0,0"]
+    ]
+    # fmt: on
+    result = MatrixAnnotatedKeyboard.from_keyboard(parse_kle(layout))
+    labels = [k.labels[0] for k in result.keys_in_matrix_order()]
+    assert labels == ["0,0", "0,1"]
+    assert all(not k.ghost for k in result.key_iterator(ignore_alternative=False))
+
+
 def test_duplicate_matrix_position_in_default_group_not_allowed() -> None:
     # fmt: off
     layout = [

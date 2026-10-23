@@ -376,6 +376,9 @@ class MatrixAnnotatedKeyboard(Keyboard):
         column_prefixes = []
         new_keys = []
         for key in self.keys:
+            # ghost keys are not part of the switch matrix, drop them
+            if key.ghost:
+                continue
             if not key.decal:
                 # check if required labels defined correctly
                 position = self.get_matrix_position(key)
