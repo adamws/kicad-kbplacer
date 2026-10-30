@@ -241,6 +241,25 @@ Goal: e2e assertions no longer need `import pcbnew`, so the same tests can judge
 - Replace `pcbnew.WriteDRCReport` (`conftest.py:393`) with `kicad-cli pcb drc` everywhere.
 - Done when `test_with_examples.py` imports pcbnew only in fixtures that build input boards,
   never in assertions.
+- **Progress 2026-10-30:**
+  - `tests/board_snapshot.py` parses KiCad 6–9 (numbered nets), 10 (nets by name) and
+    11 (`(transform …)`) files. `tests/test_board_snapshot.py` checks it against
+    `pcbnew.LoadBoard` (all example boards, on 6–10) and the 10 vs 11 format on the same
+    board; ad hoc, 100/100 KiCad 10 outputs of the example tests matched pcbnew exactly.
+  - Snapshot references are **per test function**, not per SVG reference directory: tests
+    sharing SVG references differ in what SVGs don't show (net names like `N$1` vs
+    `Net-(D1-A)`, library nicknames, Edge.Cuts). Layout/preset variants of one test share a
+    snapshot and must match each other. Regenerate with `--save-snapshots-as-reference` on
+    KiCad 10 (the SVG option can't be used for non-parametrized tests).
+  - **KiCad 8, 9 and 10 produce identical snapshots** (≤ 2 nm) for all 79 example tests, so
+    the snapshot is compared on every version, not only ≥ 10. On 6/7 only the board outline
+    differs (offsetting), so `outline` is ignored there.
+  - `common_board_checks`, the template and outline assertions now use the snapshot. The
+    snapshot reads nets as stored; pcbnew assigns nets to `(net 0)` tracks on load, so the
+    check is stricter than before (passes on 6–10).
+  - Remaining: the `PLOT_CONTROLLER` → `kicad-cli pcb export svg` switch (`generate_render`
+    is the last pcbnew use on the assertion side). `kicad-cli pcb drc` only exists from
+    KiCad 8, so `WriteDRCReport` stays for 6/7 until they are dropped.
 
 ### Chunk 2 (PoC, part 2): IPC test harness and contract tests
 

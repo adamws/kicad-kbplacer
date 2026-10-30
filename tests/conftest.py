@@ -84,6 +84,13 @@ def pytest_addoption(parser) -> None:
         default=False,
     )
     parser.addoption(
+        "--save-snapshots-as-reference",
+        action="store_true",
+        help="Save board snapshots (tests/board_snapshot.py) of example tests as "
+        "reference. Only on the KiCad major that owns snapshot references",
+        default=False,
+    )
+    parser.addoption(
         "--profile",
         action="store_true",
         help="Run example tests with cProfile",

@@ -15,12 +15,17 @@ import textwrap
 import xml.etree.ElementTree as ET
 from contextlib import contextmanager
 from pathlib import Path
-from typing import cast
 
 import pcbnew
 import pytest
 from xmldiff import actions, main
 
+from .board_snapshot import (
+    compare_snapshots,
+    load_snapshot,
+    save_snapshot,
+    snapshot_board,
+)
 from .conftest import (
     KICAD_VERSION,
     add_track,
@@ -39,6 +44,12 @@ from .conftest import (
 logger = logging.getLogger(__name__)
 
 PROJECT_NAME = "keyboard"
+
+# Board snapshots (`board_snapshot.py`) are recorded on this KiCad major only, all other
+# versions and the IPC backend are compared against them. KiCad 8-10 outputs are
+# identical; on KiCad 6/7 board outline offsetting differs, so outline is not compared
+SNAPSHOT_REFERENCE_MAJOR = 10
+SNAPSHOT_IGNORED = ("outline",) if KICAD_VERSION and KICAD_VERSION < (8, 0, 0) else ()
 
 
 @pytest.fixture
@@ -221,6 +232,43 @@ def assert_example(tmpdir, references_dir: Path) -> None:
         assert_kicad_svg(path, Path(f"{tmpdir}/{PROJECT_NAME}-layers/{path.name}"))
 
 
+def get_snapshot_reference(
+    request, example, tracks_variant, diode_variant, snapshot_name=None
+) -> Path:
+    test_dir = Path(request.module.__file__).parent
+    return (
+        test_dir
+        / f"data/examples-references/kicad{SNAPSHOT_REFERENCE_MAJOR}"
+        / f"{example}/{tracks_variant}-{diode_variant}"
+        # one per test function: tests sharing SVG references may still differ in
+        # what SVGs don't show, like net names, footprint library nicknames or outline
+        / f"{snapshot_name or request.node.originalname}.snapshot.json"
+    )
+
+
+def assert_board_snapshot(
+    request,
+    tmpdir,
+    pcb_path,
+    example,
+    tracks_variant,
+    diode_variant,
+    snapshot_name=None,
+) -> None:
+    actual = snapshot_board(pcb_path)
+    reference = get_snapshot_reference(
+        request, example, tracks_variant, diode_variant, snapshot_name
+    )
+    save_snapshot(actual, Path(tmpdir) / f"report/{reference.name}")
+    if KICAD_VERSION and KICAD_VERSION[0] == SNAPSHOT_REFERENCE_MAJOR:
+        if request.config.getoption("--save-snapshots-as-reference"):
+            reference.parent.mkdir(parents=True, exist_ok=True)
+            save_snapshot(actual, reference)
+    assert reference.is_file(), f"Snapshot reference '{reference}' not found"
+    differences = compare_snapshots(load_snapshot(reference), actual, SNAPSHOT_IGNORED)
+    assert differences == [], "\n".join(differences)
+
+
 def __get_parameters():
     examples = ["2x2", "3x2-sizes", "2x3-rotations", "1x4-rotations-90-step"]
     route_options = {"NoTracks": False, "Tracks": True}
@@ -388,15 +436,22 @@ def prepare_project(request, tmpdir, example: str, layout_file: str) -> None:
 
 
 def common_board_checks(pcb_path: str) -> None:
-    for t in pcbnew.LoadBoard(pcb_path).GetTracks():
-        assert t.GetNetCode() != 0
+    snapshot = snapshot_board(pcb_path)
+    for t in snapshot["tracks"] + snapshot["arcs"]:
+        assert t[2], f"track without net: {t}"
+    for v in snapshot["vias"]:
+        assert v[5], f"via without net: {v}"
 
 
 @pytest.fixture
 def example_isolation(request, tmpdir):
     @contextmanager
     def _isolation(
-        example: str, layout_file: str, tracks_variant: str, diode_variant: str
+        example: str,
+        layout_file: str,
+        tracks_variant: str,
+        diode_variant: str,
+        snapshot_name: str | None = None,
     ):
         prepare_project(request, tmpdir, example, layout_file)
         pcb_path = f"{tmpdir}/{PROJECT_NAME}.kicad_pcb"
@@ -410,6 +465,15 @@ def example_isolation(request, tmpdir):
             request, example, tracks_variant, diode_variant
         )
         assert_example(tmpdir, references_dir)
+        assert_board_snapshot(
+            request,
+            tmpdir,
+            pcb_path,
+            example,
+            tracks_variant,
+            diode_variant,
+            snapshot_name,
+        )
         common_board_checks(pcb_path)
 
     yield _isolation
@@ -516,9 +580,8 @@ def test_saving_connection_template(
         kbplacer_process(
             True, f"D{{}} RELATIVE {template_destination}", layout_path, pcb_path
         )
-        board = pcbnew.LoadBoard(str(template_destination))
-        for t in board.GetTracks():
-            assert t.GetNetCode() != 0
+        for t in snapshot_board(template_destination)["tracks"]:
+            assert t[2], f"track without net: {t}"
     generate_render(request, template_destination)
 
 
@@ -679,27 +742,19 @@ def test_placing_and_routing_when_reference_pair_rotated(
     # note that template is always the same because we normalize it
     # (it does not depend on initial rotation)
     assert Path(saved_template_path).is_file()
-    board = pcbnew.LoadBoard(str(saved_template_path))
-    switch = board.FindFootprintByReference("SW1")
-    diode = board.FindFootprintByReference("D1")
-    assert switch.GetPosition().x == 0
-    assert switch.GetPosition().y == 0
-    assert diode.GetPosition().x == -5197000
-    assert diode.GetPosition().y == 4503000
+    template = snapshot_board(saved_template_path)
+    positions = {f["reference"]: f["position"] for f in template["footprints"]}
+    assert positions["SW1"] == [0, 0]
+    assert positions["D1"] == [-5197000, 4503000]
 
-    def tracks_to_sets():
-        starts = []
-        ends = []
-        for t in board.GetTracks():
-            start = t.GetStart()
-            end = t.GetEnd()
-            starts.append((start.x, start.y))
-            ends.append((end.x, end.y))
-        return set(starts), set(ends)
-
-    starts, ends = tracks_to_sets()
-    assert starts == {(-5197000, 3403000), (1618000, 3403000), (2540000, 2481000)}
-    assert ends == {(2540000, -5080000), (1618000, 3403000), (2540000, 2481000)}
+    segments = sorted(t[3:] for t in template["tracks"])
+    assert segments == sorted(
+        [
+            [[-5197000, 3403000], [1618000, 3403000]],
+            [[1618000, 3403000], [2540000, 2481000]],
+            [[2540000, -5080000], [2540000, 2481000]],
+        ]
+    )
 
 
 def __filter_for_board_creation(parameters):
@@ -798,15 +853,26 @@ def test_board_outline_building(
     example_isolation, kbplacer_process, delta, expected_area
 ) -> None:
     def get_area():
-        board = pcbnew.LoadBoard(pcb_path)
-        bbox = board.GetBoardEdgesBoundingBox()
-        width = cast(float, pcbnew.ToMM(bbox.GetWidth()))
-        height = cast(float, pcbnew.ToMM(bbox.GetHeight()))
-        return width * height
+        # bounding box of Edge.Cuts including stroke, like `GetBoardEdgesBoundingBox`
+        outline = snapshot_board(pcb_path)["outline"]
+        if not outline:
+            return 0
+        xs, ys = [], []
+        for _, stroke, *points in outline:
+            for x, y in points:
+                xs += [x - stroke / 2, x + stroke / 2]
+                ys += [y - stroke / 2, y + stroke / 2]
+        return ((max(xs) - min(xs)) / 1e6) * ((max(ys) - min(ys)) / 1e6)
 
     example = "2x2"
     layout_file = "kle.json"
-    with example_isolation(example, layout_file, "NoTracks", "DefaultDiode") as e:
+    with example_isolation(
+        example,
+        layout_file,
+        "NoTracks",
+        "DefaultDiode",
+        snapshot_name=f"test_board_outline_building[{delta}]",
+    ) as e:
         layout_path, pcb_path = e
         assert get_area() == 0
 
@@ -854,6 +920,9 @@ def test_template_copy_complex(request, tmpdir, kbplacer_process) -> None:
 
     references_dir = get_references_dir(request, example, "NoTracks", "DefaultDiode")
     assert_example(tmpdir, references_dir)
+    assert_board_snapshot(
+        request, tmpdir, working_copy, example, "NoTracks", "DefaultDiode"
+    )
 
 
 def test_version(request, package_name, package_path) -> None:
