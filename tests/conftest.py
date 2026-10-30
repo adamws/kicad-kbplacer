@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+from __future__ import annotations
+
 import base64
 import ctypes
 import glob
@@ -26,14 +28,19 @@ from pyvirtualdisplay.smartdisplay import DisplayTimeoutError, SmartDisplay
 if sys.platform == "win32":
     from ctypes.wintypes import DWORD, HWND, RECT
 
-import pcbnew
 import svgpathtools
+
+try:
+    import pcbnew
+except ImportError:
+    # KiCad >= 11 has no SWIG bindings, only IPC tests (`test_ipc_contract.py`) can run
+    pcbnew = None
 
 Numeric = Union[int, float]
 Box = Tuple[Numeric, Numeric, Numeric, Numeric]
 
 
-version_match = re.search(r"(\d+)\.(\d+)\.(\d+)", pcbnew.Version())
+version_match = re.search(r"(\d+)\.(\d+)\.(\d+)", pcbnew.Version()) if pcbnew else None
 KICAD_VERSION = tuple(map(int, version_match.groups())) if version_match else ()
 MIN_KICAD_VERSION = 6
 logger = logging.getLogger(__name__)
@@ -135,6 +142,8 @@ def prepare_ci_machine() -> None:
 
 @pytest.fixture(autouse=True, scope="session")
 def prepare_kicad_config() -> None:
+    if pcbnew is None:
+        return
     test_dir = Path(__file__).parent
     config_path = pcbnew.SETTINGS_MANAGER.GetUserSettingsPath()
     colors_path = f"{config_path}/colors"

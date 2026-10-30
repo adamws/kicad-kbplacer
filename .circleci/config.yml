@@ -493,6 +493,30 @@ jobs:
     docker:
       - image: admwscki/kicad-kbplacer-primary:<<parameters.version>>
     steps: *in-docker-test-steps
+  test-linux-kicad-nightly-ipc:
+    docker:
+      - image: admwscki/kicad-kbplacer-primary:nightly-jammy
+    steps:
+      - checkout
+      - run:
+          name: Prepare tests
+          command: |
+            pip3 install --no-cache-dir hatch
+      - run:
+          name: Check IPC prerequisites
+          command: |
+            # test_ipc_contract.py skips without these, fail loudly instead
+            python3 -c "import kipy; print(kipy.__file__)"
+            kicad-cli api-server --help > /dev/null
+      - run:
+          name: Run IPC contract tests
+          command: |
+            hatch run test:test --junitxml=test-results/pytest/results.xml \
+              --no-cov -m ipc tests/test_ipc_contract.py
+      - store_artifacts:
+          path: report.html
+      - store_test_results:
+          path: test-results
 
 workflows:
   main:
@@ -592,5 +616,8 @@ workflows:
       - build-nightly-image
       - test-linux-kicad-nightly:
           version: nightly-jammy
+          requires:
+            - build-nightly-image
+      - test-linux-kicad-nightly-ipc:
           requires:
             - build-nightly-image
