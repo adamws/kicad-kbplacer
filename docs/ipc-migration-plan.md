@@ -257,9 +257,20 @@ Goal: e2e assertions no longer need `import pcbnew`, so the same tests can judge
   - `common_board_checks`, the template and outline assertions now use the snapshot. The
     snapshot reads nets as stored; pcbnew assigns nets to `(net 0)` tracks on load, so the
     check is stricter than before (passes on 6–10).
-  - Remaining: the `PLOT_CONTROLLER` → `kicad-cli pcb export svg` switch (`generate_render`
-    is the last pcbnew use on the assertion side). `kicad-cli pcb drc` only exists from
-    KiCad 8, so `WriteDRCReport` stays for 6/7 until they are dropped.
+  - `generate_render` uses `kicad-cli pcb export svg` on KiCad ≥ 8 (`--mode-multi` on ≥ 9,
+    one call per layer on 8), `PLOT_CONTROLLER` stays for 6/7. Same drawing, but
+    `kicad-cli` has no SVG precision option and writes 4 decimals instead of 3, so the 8, 9
+    and 10 SVG references were regenerated (separate commit). Normalizing numbers instead
+    does not work: two independently rounded sources disagree on the last digit.
+  - SVG comparison tolerates numbers differing by one unit in the last decimal place: a
+    1 nm board difference (e.g. after rotating a reference pair by 60° and back) can flip
+    the 4th decimal. Exact geometry is the snapshot's job.
+  - `kicad-cli pcb drc` only exists from KiCad 8, so `WriteDRCReport` stays for 6/7 until
+    they are dropped. Without pcbnew (KiCad 11) `prepare_kicad_config` must find the
+    config dir itself so `--theme user` resolves; not done yet.
+  - Pre-existing: `Edge_cuts` in the render layer list never matched KiCad's `Edge_Cuts`,
+    so the outline was never plotted or compared as SVG. Left as is; the snapshot covers
+    the outline.
 
 ### Chunk 2 (PoC, part 2): IPC test harness and contract tests
 

@@ -18,6 +18,7 @@ from pathlib import Path
 
 import pcbnew
 import pytest
+from lxml import etree
 from xmldiff import actions, main
 
 from .board_snapshot import (
@@ -153,6 +154,38 @@ def kbplacer_gui_process(
     return _process
 
 
+SVG_NUMBER = re.compile(r"-?\d+(?:\.(\d+))?")
+
+
+def numbers_within_last_digit(old: str, new: str) -> bool:
+    """True when `old` and `new` differ only in numbers, each by at most one unit of its
+    last decimal place. Coordinates rounded for the SVG may flip the last digit when the
+    board differs by a nanometer (exact geometry is checked by board snapshots)"""
+    if SVG_NUMBER.sub("#", old) != SVG_NUMBER.sub("#", new):
+        return False
+    for a, b in zip(SVG_NUMBER.finditer(old), SVG_NUMBER.finditer(new)):
+        decimals = max(len(a.group(1) or ""), len(b.group(1) or ""))
+        if abs(float(a.group()) - float(b.group())) > 1.5 * 10**-decimals:
+            return False
+    return True
+
+
+@pytest.mark.parametrize(
+    "old,new,expected",
+    [
+        ("M 71.4847,66.9891 Z", "M 71.4847,66.9890 Z", True),
+        ("M 71.4847,66.9891 Z", "M 71.4847,66.9893 Z", False),
+        ("82.598", "82.599", True),
+        ("82.598", "82.600", False),
+        ("1.0000", "1.0001", True),
+        ("M 1.0,2.0 Z", "L 1.0,2.0 Z", False),
+        ("M 1.0,2.0 Z", "M 1.0,2.0,3.0 Z", False),
+    ],
+)
+def test_numbers_within_last_digit(old, new, expected) -> None:
+    assert numbers_within_last_digit(old, new) == expected
+
+
 def assert_group(expected: ET.Element, actual: ET.Element) -> None:
     expected_str = ET.tostring(expected).decode()
     actual_str = ET.tostring(actual).decode()
@@ -177,6 +210,7 @@ def assert_group(expected: ET.Element, actual: ET.Element) -> None:
 
         logger.info("Evaluating rules exceptions")
         differences = [node for node in edit_script if type(node) != actions.MoveNode]
+        expected_tree = etree.fromstring(expected_str)
 
         for node in list(differences):
             logger.info(f"Action node: {node}")
@@ -184,6 +218,13 @@ def assert_group(expected: ET.Element, actual: ET.Element) -> None:
                 # let 'textLength' attributes to differ:
                 logger.info("'textLength' attribute is allowed to be different")
                 differences.remove(node)
+            elif type(node) == actions.UpdateAttrib:
+                ns = {"svg": "http://www.w3.org/2000/svg"}
+                elements = expected_tree.xpath(node.node, namespaces=ns)
+                old = elements[0].get(node.name) if elements else None
+                if old is not None and numbers_within_last_digit(old, node.value):
+                    logger.info("Numbers differ only by one unit in the last place")
+                    differences.remove(node)
 
         assert not differences, "Not allowed differences found"
     else:

@@ -245,37 +245,72 @@ def remove_tags(root, name) -> None:
         root.remove(elem)
 
 
+# file name suffix of each rendered layer -> layer name accepted by `kicad-cli`
+RENDER_LAYERS = {
+    "B_Cu": "B.Cu",
+    "F_Cu": "F.Cu",
+    "B_Silkscreen": "B.SilkS",
+    "F_Silkscreen": "F.SilkS",
+    # on Kicad6 always printed in black, see: https://gitlab.com/kicad/code/kicad/-/issues/10293:
+    "B_Mask": "B.Mask",
+    "F_Mask": "F.Mask",
+}
+
+
+def _render_layer_names() -> list:
+    """Rendered layers in KiCad layer id order, which is the stacking order of the
+    merged report image (ids were renumbered in KiCad 9)"""
+    if KICAD_VERSION >= (9, 0, 0):
+        order = ["F_Cu", "F_Mask", "B_Cu", "B_Mask", "F_Silkscreen", "B_Silkscreen"]
+    else:
+        order = ["F_Cu", "B_Cu", "B_Silkscreen", "F_Silkscreen", "B_Mask", "F_Mask"]
+    return order
+
+
+def _plot_with_kicad_cli(pcb_path: Path, destination_dir: Path) -> None:
+    """KiCad >= 8. Same drawing as `_plot_with_plot_controller`, but numbers have 4
+    decimals instead of 3, so references for KiCad >= 8 are recorded with this"""
+    common = [
+        "--exclude-drawing-sheet",
+        "--drill-shape-opt",
+        "0",
+        "--theme",
+        "user",
+    ]
+    layers = _render_layer_names()
+    if KICAD_VERSION >= (9, 0, 0):
+        # one file per layer, named like the GUI plot: <board>-<Layer_Name>.svg
+        commands = [
+            [
+                "--mode-multi",
+                "--layers",
+                ",".join(RENDER_LAYERS[name] for name in layers),
+                "--output",
+                f"{destination_dir}/",
+            ]
+        ]
+    else:
+        commands = [
+            [
+                "--layers",
+                RENDER_LAYERS[name],
+                "--output",
+                f"{destination_dir}/{pcb_path.stem}-{name}.svg",
+            ]
+            for name in layers
+        ]
+    for args in commands:
+        subprocess.run(
+            [kicad_cli(), "pcb", "export", "svg", *args, *common, str(pcb_path)],
+            check=True,
+            capture_output=True,
+        )
+
+
 # pcb plotting based on https://github.com/kitspace/kitspace-v2/tree/master/processor/src/tasks/processKicadPCB
 # and https://gitlab.com/kicad/code/kicad/-/blob/master/demos/python_scripts_examples/plot_board.py
-def generate_render(
-    request,
-    pcb_path: Union[str, os.PathLike],
-    *,
-    destination_dir: Union[str, os.PathLike] = "",
-) -> None:
-    pcb_path = Path(pcb_path)
-    pcb_name = pcb_path.stem
+def _plot_with_plot_controller(pcb_path: Path, destination_dir: Path) -> None:
     board = pcbnew.LoadBoard(str(pcb_path))
-    if destination_dir == "":
-        destination_dir = pcb_path.parent
-
-    destination_dir = Path(destination_dir)
-    layers_dir = destination_dir / f"{pcb_name}-layers"
-    assert destination_dir.is_dir()
-    assert not layers_dir.is_dir()
-
-    os.mkdir(layers_dir)
-
-    plot_layers = [
-        "B_Cu",
-        "F_Cu",
-        "B_Silkscreen",
-        "F_Silkscreen",
-        "Edge_cuts",
-        # on Kicad6 always printed in black, see: https://gitlab.com/kicad/code/kicad/-/issues/10293:
-        "B_Mask",
-        "F_Mask",
-    ]
     plot_control = pcbnew.PLOT_CONTROLLER(board)
     plot_options = plot_control.GetPlotOptions()
     plot_options.SetOutputDirectory(destination_dir)
@@ -290,8 +325,7 @@ def generate_render(
     plot_options.SetNegative(False)
     plot_options.SetPlotReference(True)
     plot_options.SetPlotValue(True)
-    if KICAD_VERSION < (9, 0, 1):
-        plot_options.SetPlotInvisibleText(False)
+    plot_options.SetPlotInvisibleText(False)
     if KICAD_VERSION >= (7, 0, 0):
         plot_options.SetDrillMarksType(pcbnew.DRILL_MARKS_NO_DRILL_SHAPE)
         plot_options.SetSvgPrecision(aPrecision=1)
@@ -299,16 +333,15 @@ def generate_render(
         plot_options.SetDrillMarksType(pcbnew.PCB_PLOT_PARAMS.NO_DRILL_SHAPE)
         plot_options.SetSvgPrecision(aPrecision=1, aUseInch=False)
 
-    plot_plan = []
-    start = pcbnew.PCBNEW_LAYER_ID_START
-    end = pcbnew.PCBNEW_LAYER_ID_START + pcbnew.PCB_LAYER_ID_COUNT
-    for i in range(start, end):
-        name = pcbnew.LayerName(i).replace(".", "_")
-        if name in plot_layers:
-            plot_plan.append((name, i))
-
-    for layer_name, layer_id in plot_plan:
-        plot_control.SetLayer(layer_id)
+    layer_ids = {
+        pcbnew.LayerName(i).replace(".", "_"): i
+        for i in range(
+            pcbnew.PCBNEW_LAYER_ID_START,
+            pcbnew.PCBNEW_LAYER_ID_START + pcbnew.PCB_LAYER_ID_COUNT,
+        )
+    }
+    for layer_name in _render_layer_names():
+        plot_control.SetLayer(layer_ids[layer_name])
         if KICAD_VERSION >= (7, 0, 0):
             plot_control.OpenPlotfile(layer_name, pcbnew.PLOT_FORMAT_SVG)
         else:
@@ -319,6 +352,32 @@ def generate_render(
         plot_control.PlotLayer()
         plot_control.ClosePlot()
 
+
+def generate_render(
+    request,
+    pcb_path: Union[str, os.PathLike],
+    *,
+    destination_dir: Union[str, os.PathLike] = "",
+) -> None:
+    pcb_path = Path(pcb_path)
+    pcb_name = pcb_path.stem
+    if destination_dir == "":
+        destination_dir = pcb_path.parent
+
+    destination_dir = Path(destination_dir)
+    layers_dir = destination_dir / f"{pcb_name}-layers"
+    assert destination_dir.is_dir()
+    assert not layers_dir.is_dir()
+
+    os.mkdir(layers_dir)
+
+    if KICAD_VERSION >= (8, 0, 0):
+        _plot_with_kicad_cli(pcb_path, destination_dir)
+    else:
+        _plot_with_plot_controller(pcb_path, destination_dir)
+
+    plot_plan = [(name, None) for name in _render_layer_names()]
+    for layer_name, _ in plot_plan:
         filepath = os.path.join(destination_dir, f"{pcb_name}-{layer_name}.svg")
         tree = ET.parse(filepath)
         root = tree.getroot()
