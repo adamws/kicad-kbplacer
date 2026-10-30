@@ -1,0 +1,188 @@
+{
+  "bulk_update_move_and_rotate": {
+    "items": 8,
+    "requests": 1,
+    "all_applied": true,
+    "pads_rigid": true,
+    "seconds": 0.92
+  },
+  "mixed_types_single_requests": {
+    "created_types": [
+      "FootprintInstance",
+      "Track",
+      "Track",
+      "Via"
+    ],
+    "create_requests": 1,
+    "updated_types": [
+      "FootprintInstance",
+      "Track"
+    ],
+    "update_requests": 1,
+    "remove_requests": 1,
+    "remaining_tracks": 0,
+    "remaining_fps": 8,
+    "seconds": 0.91
+  },
+  "bulk_flip_direction": {
+    "left_right": {
+      "flipped": 4,
+      "requests": 1,
+      "orientation": 180.0,
+      "matches_kbplacer_swig_set_side": false
+    },
+    "top_bottom": {
+      "flipped": 4,
+      "requests": 1,
+      "orientation": -0.0,
+      "matches_kbplacer_swig_set_side": true
+    },
+    "seconds": 1.73
+  },
+  "transaction_visibility_and_order": {
+    "requests_incl_reads": 10,
+    "inside_commit_sees_flip": "BL_B_Cu",
+    "inside_commit_sees_move": false,
+    "inside_commit_sees_created_track": 0,
+    "final_layer": "BL_B_Cu",
+    "final_x": 30000000,
+    "final_tracks": 1,
+    "seconds": 0.97
+  },
+  "drop_commit_rolls_back": {
+    "position_restored": true,
+    "tracks": 0,
+    "seconds": 0.86
+  },
+  "partial_failure": {
+    "update_status": [
+      "ISC_OK",
+      "ISC_NONEXISTENT"
+    ],
+    "good_item_applied": true,
+    "create_status": [
+      "ISC_OK",
+      "ISC_EXISTING"
+    ],
+    "tracks_after": 2,
+    "kipy_create_items_with_dup": 2,
+    "seconds": 0.93
+  },
+  "pad_nets_via_footprint_update": {
+    "pad_nets": {
+      "SW1": {
+        "": "",
+        "1": "NEW_SW1",
+        "2": "N$1"
+      },
+      "SW4": {
+        "": "",
+        "1": "NEW_SW4",
+        "2": "N$4"
+      }
+    },
+    "nets_created": [
+      "NEW_SW1",
+      "NEW_SW2",
+      "NEW_SW3",
+      "NEW_SW4"
+    ],
+    "seconds": 0.87
+  },
+  "large_payload": {
+    "1000": {
+      "created": 1000,
+      "s": 0.02,
+      "remove_s": 0.03
+    },
+    "5000": {
+      "created": 5000,
+      "s": 0.09,
+      "remove_s": 0.13
+    },
+    "20000": {
+      "created": 20000,
+      "s": 0.34,
+      "remove_s": 0.66
+    },
+    "seconds": 2.21
+  },
+  "kbplacer_like_run": {
+    "total_requests": 10,
+    "diodes_back": true,
+    "diode_pads_moved_with_footprint": true,
+    "seconds": 0.97
+  },
+  "flip_inside_dropped_commit": {
+    "layer_after_drop": "BL_F_Cu",
+    "orientation_after_drop": 0.0,
+    "pads_after_drop_equal_original": true,
+    "seconds": 0.85
+  },
+  "stale_update_after_flip": {
+    "layer": "BL_F_Cu",
+    "position": [
+      10000000,
+      10000000
+    ],
+    "pads_are_unflipped_original_moved": true,
+    "seconds": 0.88
+  },
+  "w11_flip_created_in_same_commit": {
+    "flip": {
+      "status": [
+        "ISC_NONEXISTENT"
+      ]
+    },
+    "update_status": [
+      "ISC_NONEXISTENT"
+    ],
+    "requests": 6,
+    "layer": "BL_F_Cu",
+    "position_y": -20150000,
+    "pads_correct": false,
+    "seconds": 0.94
+  },
+  "w11_create_already_flipped": {
+    "fresh_read": {
+      "requests": 3,
+      "layer": "BL_B_Cu",
+      "position_y": 19850000,
+      "pads_correct": true
+    },
+    "flip_refreshed": {
+      "requests": 3,
+      "layer": "BL_B_Cu",
+      "position_y": 19850000,
+      "pads_correct": false
+    },
+    "seconds": 1.92
+  },
+  "w11_create_then_flip_two_commits": {
+    "flip": {
+      "status": [
+        "ISC_OK"
+      ]
+    },
+    "requests": 7,
+    "layer": "BL_B_Cu",
+    "position_y": 19850000,
+    "pads_correct": true,
+    "seconds": 0.95
+  },
+  "update_after_flip_source_object": {
+    "flip_refreshed": {
+      "refreshed_object_has_mirrored_pads": false,
+      "layer": "BL_B_Cu",
+      "position_y": 19850000,
+      "pads_correct": false
+    },
+    "reread": {
+      "refreshed_object_has_mirrored_pads": false,
+      "layer": "BL_B_Cu",
+      "position_y": 19850000,
+      "pads_correct": true
+    },
+    "seconds": 1.86
+  }
+}

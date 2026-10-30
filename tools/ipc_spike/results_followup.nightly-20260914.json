@@ -1,0 +1,114 @@
+{
+  "transforms": {
+    "rotate90": {
+      "orientation": 90.0,
+      "flipped": false,
+      "position": [
+        0,
+        -20150000
+      ],
+      "pads": {
+        "": [
+          0,
+          -25230000
+        ],
+        "1": [
+          -2540000,
+          -16340000
+        ],
+        "2": [
+          -5080000,
+          -22690000
+        ]
+      }
+    },
+    "back": {
+      "orientation": 180.0,
+      "flipped": true,
+      "position": [
+        0,
+        -20150000
+      ],
+      "pads": {
+        "": [
+          -5080000,
+          -20150000
+        ],
+        "1": [
+          3810000,
+          -22690000
+        ],
+        "2": [
+          -2540000,
+          -25230000
+        ]
+      }
+    },
+    "back_then_rotate90": {
+      "orientation": 90.0,
+      "flipped": true,
+      "position": [
+        0,
+        -20150000
+      ],
+      "pads": {
+        "": [
+          0,
+          -25230000
+        ],
+        "1": [
+          2539999,
+          -16340000
+        ],
+        "2": [
+          5080000,
+          -22689999
+        ]
+      }
+    }
+  },
+  "latency": {
+    "ping": {
+      "median_ms": 10.07,
+      "min_ms": 9.98
+    },
+    "get_version": {
+      "median_ms": 10.07,
+      "min_ms": 9.96
+    },
+    "get_footprints": {
+      "median_ms": 10.51,
+      "min_ms": 9.91
+    },
+    "get_nets": {
+      "median_ms": 10.09,
+      "min_ms": 8.87
+    }
+  },
+  "second_server_transfer": {
+    "servers": [
+      "keyboard-before.kicad_pcb",
+      "keyboard-before.kicad_pcb"
+    ],
+    "template_fps": 11,
+    "template_tracks": 3,
+    "created": [
+      "FootprintInstance",
+      "Track",
+      "Track",
+      "Track"
+    ],
+    "pads_of_copy": 3
+  },
+  "kicad_mod_via_wrapper_board": {
+    "loaded": 1,
+    "lib_id": ":SW_Cherry_MX_PCB_1.00u",
+    "pads": 3
+  },
+  "open_second_doc_other_name": {
+    "error": "ApiError: KiCad returned error: cannot open a document from project 'template.kicad_pro' because project 'keyboard-before.kicad_pro' is already open.",
+    "open_docs": [
+      "type: DOCTYPE_PCB board_filename: \"keyboard-before.kicad_pcb\" project {   name: \"keyboard-before\"   path: \"/s/out/multi\" } "
+    ]
+  }
+}

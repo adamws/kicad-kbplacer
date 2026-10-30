@@ -1,0 +1,258 @@
+{
+  "p01_startup_version": {
+    "ok": true,
+    "startup_s": 0.21,
+    "version": "10.99.0-unknown-2291d3f224~189~ubuntu22.04.1",
+    "api_version": "0.0.0 (unknown)",
+    "check_version": true,
+    "seconds": 0.8
+  },
+  "p02_open_board_and_snapshot": {
+    "ok": true,
+    "footprints": 8,
+    "tracks": 0,
+    "pads": 28,
+    "nets": [
+      "",
+      "COL0",
+      "COL1",
+      "N$1",
+      "N$2",
+      "N$3",
+      "N$4",
+      "ROW0",
+      "ROW1"
+    ],
+    "snapshot_s": 0.042,
+    "refs": [
+      "D1",
+      "D2",
+      "D3",
+      "D4",
+      "SW1",
+      "SW2",
+      "SW3",
+      "SW4"
+    ],
+    "seconds": 0.82
+  },
+  "p03_move_footprint_moves_pads": {
+    "ok": true,
+    "origin": [
+      0,
+      -20150000
+    ],
+    "pad_deltas": {
+      "": [
+        5000000,
+        3000000
+      ],
+      "1": [
+        5000000,
+        3000000
+      ],
+      "2": [
+        5000000,
+        3000000
+      ]
+    },
+    "pads_follow": true,
+    "saved_has_new_at": false,
+    "seconds": 0.91
+  },
+  "p04_rotate_direction": {
+    "ok": true,
+    "orientation_before": 0.0,
+    "orientation_after": 90.0,
+    "max_err_nm_vs_ccw_screen": 0,
+    "pads_before": {
+      "": [
+        5080000,
+        -20150000
+      ],
+      "1": [
+        -3810000,
+        -22690000
+      ],
+      "2": [
+        2540000,
+        -25230000
+      ]
+    },
+    "pads_after": {
+      "": [
+        0,
+        -25230000
+      ],
+      "1": [
+        -2540000,
+        -16340000
+      ],
+      "2": [
+        -5080000,
+        -22690000
+      ]
+    },
+    "seconds": 0.88
+  },
+  "p05_flip_to_back": {
+    "ok": true,
+    "flipped": 1,
+    "layer": "BL_B_Cu",
+    "position_kept": true,
+    "orientation": 180.0,
+    "mirrored_left_right": true,
+    "pad_layers": [
+      "BL_B_Cu",
+      "BL_B_Mask",
+      "BL_F_Cu",
+      "BL_F_Mask",
+      "BL_In10_Cu",
+      "BL_In11_Cu",
+      "BL_In12_Cu",
+      "BL_In13_Cu",
+      "BL_In14_Cu",
+      "BL_In15_Cu",
+      "BL_In16_Cu",
+      "BL_In17_Cu",
+      "BL_In18_Cu",
+      "BL_In19_Cu",
+      "BL_In1_Cu",
+      "BL_In20_Cu",
+      "BL_In21_Cu",
+      "BL_In22_Cu",
+      "BL_In23_Cu",
+      "BL_In24_Cu",
+      "BL_In25_Cu",
+      "BL_In26_Cu",
+      "BL_In27_Cu",
+      "BL_In28_Cu",
+      "BL_In29_Cu",
+      "BL_In2_Cu",
+      "BL_In30_Cu",
+      "BL_In3_Cu",
+      "BL_In4_Cu",
+      "BL_In5_Cu",
+      "BL_In6_Cu",
+      "BL_In7_Cu",
+      "BL_In8_Cu",
+      "BL_In9_Cu"
+    ],
+    "seconds": 0.89
+  },
+  "p06_layer_setter_on_existing_footprint": {
+    "ok": true,
+    "layer": "BL_B_Cu",
+    "pads_changed": false,
+    "seconds": 0.89
+  },
+  "p07_tracks_vias_nets": {
+    "ok": true,
+    "created": [
+      "Track(start=Vector2(10000000, 10000000), end=Vector2(20000000, 10000000), layer=BL_B_Cu, net=COL0)",
+      "Track(start=Vector2(10000000, 20000000), end=Vector2(20000000, 20000000), layer=BL_F_Cu, net=KBPLACER_NEW_NET)",
+      "Via(position=Vector2(20000000, 10000000), net=COL0, type=VT_THROUGH, locked=False)"
+    ],
+    "new_net_created": true,
+    "track_nets": [
+      "KBPLACER_NEW_NET",
+      "COL0"
+    ],
+    "tracks_after_remove": 0,
+    "seconds": 0.87
+  },
+  "p08_batching_cost": {
+    "ok": true,
+    "n": 200,
+    "batch_create_s": 0.015,
+    "per_item_create_ms": 10.23,
+    "get_footprints_ms": 10.58,
+    "get_tracks_ms_with_400": 10.56,
+    "seconds": 3.9
+  },
+  "p09_geometry_queries": {
+    "ok": true,
+    "pad_polys": [
+      49,
+      33,
+      33,
+      41,
+      41
+    ],
+    "bbox": "Box2(pos=Vector2(-7275000, -27425000), size=Vector2(14550000, 14550000))",
+    "hit_test_pad_center": true,
+    "rules_type": "BoardDesignRulesResponse",
+    "connected_items": 0,
+    "netclass": {},
+    "seconds": 0.8
+  },
+  "p10_create_new_board": {
+    "ok": true,
+    "doc": "type: DOCTYPE_PCB\nboard_filename: \"new.kicad_pcb\"\nproject {\n  name: \"new\"\n  path: \"/s/out/p10/\"\n}",
+    "exists": true,
+    "files": [
+      "new.kicad_pcb",
+      "new.kicad_prl",
+      "new.kicad_pro"
+    ],
+    "seconds": 0.9
+  },
+  "p11_libraries_and_place_footprint": {
+    "ok": true,
+    "load_all_libraries": {
+      "ok": false,
+      "error": "ApiError: KiCad returned error: no handler available for request of type kiapi.common.commands.LoadAllLibraries"
+    },
+    "wait_for_libraries": {
+      "ok": false,
+      "error": "ApiError: KiCad returned error: no handler available for request of type kiapi.common.commands.GetLibraryStatuses"
+    },
+    "get_library_footprints_examples": {
+      "ok": false,
+      "error": "ApiError: KiCad returned error: no handler available for request of type kiapi.common.commands.GetLibraryItems"
+    },
+    "get_library_footprint": {
+      "ok": false,
+      "error": "ApiError: KiCad returned error: no handler available for request of type kiapi.common.commands.GetItemsFromLibrary"
+    },
+    "place_footprint_from_library": {
+      "ok": false,
+      "error": "ApiError: KiCad returned error: no handler available for request of type kiapi.board.commands.PlaceFootprintFromLibrary"
+    },
+    "seconds": 0.84
+  },
+  "p12_footprint_from_definition_copy": {
+    "ok": true,
+    "created": [
+      "FootprintInstance(id=value: \"522f2719-4c28-4df1-afac-da09d42de3a2\"\n, pos=Vector2(80000000, 80000000), layer=BL_F_Cu)"
+    ],
+    "refs": [
+      "D1",
+      "D2",
+      "D3",
+      "D4",
+      "SW1",
+      "SW2",
+      "SW3",
+      "SW4",
+      "SW99"
+    ],
+    "pads_of_new": 3,
+    "seconds": 0.88
+  },
+  "p13_second_document_headless": {
+    "ok": true,
+    "open_second_error": "ApiError: KiCad returned error: cannot open a document from project 'keyboard-before.kicad_pro' because project 'keyboard-before.kicad_pro' is already open.",
+    "open_docs": [
+      "type: DOCTYPE_PCB\nboard_filename: \"keyboard-before.kicad_pcb\"\nproject {\n  name: \"keyboard-before\"\n  path: \"/s/out/p13\"\n}"
+    ],
+    "board_name": "keyboard-before.kicad_pcb",
+    "seconds": 0.8
+  },
+  "p14_get_as_string": {
+    "ok": true,
+    "len": 40401,
+    "head": "(kicad_pcb\n\t(version 20260901)\n\t(generator \"pcbnew\")\n\t(generator_version \"10.99\"",
+    "seconds": 0.79
+  }
+}
