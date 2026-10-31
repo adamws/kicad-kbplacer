@@ -1,5 +1,5 @@
 image_prefix := "admwscki/kicad-kbplacer-primary"
-default_version := "10.0.7-noble"
+default_version := "10.0.8-noble"
 
 # list available recipes
 default:
@@ -18,7 +18,7 @@ test version=default_version *args="":
 test-all:
     #!/usr/bin/env bash
     overall=0
-    for version in 6.0.11-lunar 7.0.6-lunar 7.0.11-mantic 8.0.9-jammy 9.0.9-noble 10.0.6-noble; do
+    for version in 6.0.11-lunar 7.0.6-lunar 7.0.11-mantic 8.0.9-jammy 9.0.9-noble 10.0.8-noble; do
         echo "=== KiCad $version ==="
         docker run --rm \
             -v "{{justfile_directory()}}:/workspace" -w /workspace \
