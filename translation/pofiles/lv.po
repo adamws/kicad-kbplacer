@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: 2026-06-04 13:39+0200\n"
-"PO-Revision-Date: 2023-07-14 20:04+0200\n"
-"Last-Translator: Automatically generated\n"
+"PO-Revision-Date: 2026-11-01 07:53-0800\n"
+"Last-Translator: Claude Opus 5.5 (AI) <noreply@anthropic.com>\n"
 "Language-Team: none\n"
 "Language: lv\n"
 "MIME-Version: 1.0\n"
@@ -17,86 +17,90 @@ msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
 "based on layout description from "
 msgstr ""
+"Spraudnis mehānisko tastatūru projektēšanai. Tas nodrošina automātisku taustiņu izvietošanu \n"
+"pēc izkārtojuma apraksta no "
 
 msgid "Project website - "
-msgstr ""
+msgstr "Projekta tīmekļa vietne - "
 
 msgid "Geekhack forum thread - "
-msgstr ""
+msgstr "Geekhack foruma pavediens - "
 
 msgid "Save to:"
-msgstr ""
+msgstr "Saglabāt uz:"
 
 msgid "Load from:"
-msgstr ""
+msgstr "Ielādēt no:"
 
 msgid "Keyboard Layout:"
-msgstr ""
+msgstr "Tastatūras izkārtojums:"
 
 msgid "Layout file or kle-ng share link"
-msgstr ""
+msgstr "Izkārtojuma fails vai kle-ng koplietošanas saite"
 
 msgid "How many millimeters 1U spans between switches horizontally"
-msgstr ""
+msgstr "Cik milimetru atbilst 1U starp slēdžiem horizontāli"
 
 msgid "How many millimeters 1U spans between switches vertically"
-msgstr ""
+msgstr "Cik milimetru atbilst 1U starp slēdžiem vertikāli"
 
 msgid "Layout filepath or kle-ng share URL"
-msgstr ""
+msgstr "Izkārtojuma faila ceļš vai kle-ng koplietošanas URL"
 
 msgid "Start index"
-msgstr ""
+msgstr "Sākuma indekss"
 
 msgid "Starting index used to match footprint annotations"
-msgstr ""
+msgstr "Sākuma indekss, ko izmanto korpusu apzīmējumu saskaņošanai"
 
 msgid "Switch settings"
-msgstr ""
+msgstr "Slēdžu iestatījumi"
 
 msgid "Route with switches"
-msgstr ""
+msgstr "Trasēt kopā ar slēdžiem"
 
 msgid "Automatically adjust orientation"
-msgstr ""
+msgstr "Automātiski pielāgot orientāciju"
 
 msgid ""
 "Find optimal diode orientation for minimal distance between switch and diode "
 "common net pads"
 msgstr ""
+"Atrast optimālo diodes orientāciju, lai attālums starp slēdža un diodes "
+"kopējā tīkla kontaktlaukumiem būtu minimāls"
 
 msgid "Switch diodes settings"
-msgstr ""
+msgstr "Slēdžu diožu iestatījumi"
 
 msgid "Additional elements settings"
-msgstr ""
+msgstr "Papildu elementu iestatījumi"
 
 msgid "Route rows and columns"
-msgstr ""
+msgstr "Trasēt rindas un kolonnas"
 
 msgid "Controller circuit template file:"
-msgstr ""
+msgstr "Kontroliera shēmas veidnes fails:"
 
 msgid "Build board outline"
-msgstr ""
+msgstr "Izveidot plates kontūru"
 
 msgid "Outline delta:"
-msgstr ""
+msgstr "Kontūras atstarpe:"
 
 msgid "Layout offset"
-msgstr ""
+msgstr "Izkārtojuma nobīde"
 
 msgid "X placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Tastatūras izkārtojuma novietojuma X nobīde mm"
 
 msgid "Y placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Tastatūras izkārtojuma novietojuma Y nobīde mm"
 
 msgid "Other settings"
-msgstr ""
+msgstr "Citi iestatījumi"
 
 msgid "Open in Keyboard Layout Editor NG"
-msgstr ""
+msgstr "Atvērt Keyboard Layout Editor NG"
 
 msgid "Actions"
-msgstr ""
+msgstr "Darbības"

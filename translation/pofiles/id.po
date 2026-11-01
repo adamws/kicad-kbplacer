@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: 2026-06-04 13:39+0200\n"
-"PO-Revision-Date: 2023-07-14 20:04+0200\n"
-"Last-Translator: Automatically generated\n"
+"PO-Revision-Date: 2026-11-01 07:53-0800\n"
+"Last-Translator: Claude Opus 5.5 (AI) <noreply@anthropic.com>\n"
 "Language-Team: none\n"
 "Language: id\n"
 "MIME-Version: 1.0\n"
@@ -15,86 +15,90 @@ msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
 "based on layout description from "
 msgstr ""
+"Plugin untuk desain keyboard mekanis. Plugin ini menyediakan penempatan tombol otomatis \n"
+"berdasarkan deskripsi tata letak dari "
 
 msgid "Project website - "
-msgstr ""
+msgstr "Situs web proyek - "
 
 msgid "Geekhack forum thread - "
-msgstr ""
+msgstr "Utas forum Geekhack - "
 
 msgid "Save to:"
-msgstr ""
+msgstr "Simpan ke:"
 
 msgid "Load from:"
-msgstr ""
+msgstr "Muat dari:"
 
 msgid "Keyboard Layout:"
-msgstr ""
+msgstr "Tata Letak Keyboard:"
 
 msgid "Layout file or kle-ng share link"
-msgstr ""
+msgstr "Berkas tata letak atau tautan berbagi kle-ng"
 
 msgid "How many millimeters 1U spans between switches horizontally"
-msgstr ""
+msgstr "Berapa milimeter jarak 1U antar-switch secara horizontal"
 
 msgid "How many millimeters 1U spans between switches vertically"
-msgstr ""
+msgstr "Berapa milimeter jarak 1U antar-switch secara vertikal"
 
 msgid "Layout filepath or kle-ng share URL"
-msgstr ""
+msgstr "Path berkas tata letak atau URL berbagi kle-ng"
 
 msgid "Start index"
-msgstr ""
+msgstr "Indeks awal"
 
 msgid "Starting index used to match footprint annotations"
-msgstr ""
+msgstr "Indeks awal yang digunakan untuk mencocokkan anotasi footprint"
 
 msgid "Switch settings"
-msgstr ""
+msgstr "Pengaturan switch"
 
 msgid "Route with switches"
-msgstr ""
+msgstr "Routing bersama switch"
 
 msgid "Automatically adjust orientation"
-msgstr ""
+msgstr "Sesuaikan orientasi secara otomatis"
 
 msgid ""
 "Find optimal diode orientation for minimal distance between switch and diode "
 "common net pads"
 msgstr ""
+"Cari orientasi dioda optimal untuk jarak minimal antara pad net bersama pada "
+"switch dan dioda"
 
 msgid "Switch diodes settings"
-msgstr ""
+msgstr "Pengaturan dioda switch"
 
 msgid "Additional elements settings"
-msgstr ""
+msgstr "Pengaturan elemen tambahan"
 
 msgid "Route rows and columns"
-msgstr ""
+msgstr "Routing baris dan kolom"
 
 msgid "Controller circuit template file:"
-msgstr ""
+msgstr "Berkas templat rangkaian controller:"
 
 msgid "Build board outline"
-msgstr ""
+msgstr "Buat outline papan"
 
 msgid "Outline delta:"
-msgstr ""
+msgstr "Delta outline:"
 
 msgid "Layout offset"
-msgstr ""
+msgstr "Offset tata letak"
 
 msgid "X placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Offset penempatan X untuk tata letak keyboard dalam mm"
 
 msgid "Y placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Offset penempatan Y untuk tata letak keyboard dalam mm"
 
 msgid "Other settings"
-msgstr ""
+msgstr "Pengaturan lainnya"
 
 msgid "Open in Keyboard Layout Editor NG"
-msgstr ""
+msgstr "Buka di Keyboard Layout Editor NG"
 
 msgid "Actions"
-msgstr ""
+msgstr "Tindakan"

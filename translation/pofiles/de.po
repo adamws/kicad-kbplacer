@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: 2026-06-04 13:39+0200\n"
-"PO-Revision-Date: 2024-07-28 22:09+0000\n"
-"Last-Translator: Ettore Atalan <atalanttore@googlemail.com>\n"
+"PO-Revision-Date: 2026-11-01 07:53-0800\n"
+"Last-Translator: Claude Opus 5.5 (AI) <noreply@anthropic.com>\n"
 "Language-Team: German <https://hosted.weblate.org/projects/kicad-kbplacer/"
 "master-source/de/>\n"
 "Language: de\n"
@@ -18,9 +18,8 @@ msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
 "based on layout description from "
 msgstr ""
-"Plugin für die mechanische Tastatur-Design. Es bietet automatische "
-"Tastenplatzierung \n"
-"basierend auf der Layout-Beschreibung von "
+"Plugin für das Design mechanischer Tastaturen. Es bietet automatische Tastenplatzierung \n"
+"basierend auf der Layoutbeschreibung von "
 
 msgid "Project website - "
 msgstr "Projektwebsite - "
@@ -38,28 +37,28 @@ msgid "Keyboard Layout:"
 msgstr "Tastaturlayout:"
 
 msgid "Layout file or kle-ng share link"
-msgstr ""
+msgstr "Layoutdatei oder kle-ng-Freigabelink"
 
 msgid "How many millimeters 1U spans between switches horizontally"
-msgstr ""
+msgstr "Wie viele Millimeter 1U horizontal zwischen den Switches entspricht"
 
 msgid "How many millimeters 1U spans between switches vertically"
-msgstr ""
+msgstr "Wie viele Millimeter 1U vertikal zwischen den Switches entspricht"
 
 msgid "Layout filepath or kle-ng share URL"
-msgstr ""
+msgstr "Pfad zur Layoutdatei oder kle-ng-Freigabe-URL"
 
 msgid "Start index"
-msgstr ""
+msgstr "Startindex"
 
 msgid "Starting index used to match footprint annotations"
-msgstr ""
+msgstr "Startindex für die Zuordnung der Footprint-Annotationen"
 
 msgid "Switch settings"
-msgstr "Schaltereinstellungen"
+msgstr "Switch-Einstellungen"
 
 msgid "Route with switches"
-msgstr ""
+msgstr "Zusammen mit Switches routen"
 
 msgid "Automatically adjust orientation"
 msgstr "Ausrichtung automatisch anpassen"
@@ -68,39 +67,41 @@ msgid ""
 "Find optimal diode orientation for minimal distance between switch and diode "
 "common net pads"
 msgstr ""
+"Optimale Diodenausrichtung für minimalen Abstand zwischen den Pads des "
+"gemeinsamen Netzes von Switch und Diode finden"
 
 msgid "Switch diodes settings"
-msgstr "Schalterdiodeneinstellungen"
+msgstr "Einstellungen der Switch-Dioden"
 
 msgid "Additional elements settings"
 msgstr "Einstellungen für zusätzliche Elemente"
 
 msgid "Route rows and columns"
-msgstr "Zeilen und spalten routen"
+msgstr "Zeilen und Spalten routen"
 
 msgid "Controller circuit template file:"
 msgstr "Controller-Schaltungsvorlagendatei:"
 
 msgid "Build board outline"
-msgstr ""
+msgstr "Platinenumriss erstellen"
 
 msgid "Outline delta:"
-msgstr ""
+msgstr "Umriss-Abstand:"
 
 msgid "Layout offset"
-msgstr ""
+msgstr "Layout-Versatz"
 
 msgid "X placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "X-Platzierungsversatz des Tastaturlayouts in mm"
 
 msgid "Y placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Y-Platzierungsversatz des Tastaturlayouts in mm"
 
 msgid "Other settings"
-msgstr "Andere Einstellungen"
+msgstr "Weitere Einstellungen"
 
 msgid "Open in Keyboard Layout Editor NG"
-msgstr ""
+msgstr "In Keyboard Layout Editor NG öffnen"
 
 msgid "Actions"
-msgstr ""
+msgstr "Aktionen"

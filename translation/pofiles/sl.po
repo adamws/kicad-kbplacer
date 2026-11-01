@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: 2026-06-04 13:39+0200\n"
-"PO-Revision-Date: 2023-07-14 20:04+0200\n"
-"Last-Translator: Automatically generated\n"
+"PO-Revision-Date: 2026-11-01 07:53-0800\n"
+"Last-Translator: Claude Opus 5.5 (AI) <noreply@anthropic.com>\n"
 "Language-Team: none\n"
 "Language: sl\n"
 "MIME-Version: 1.0\n"
@@ -17,86 +17,90 @@ msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
 "based on layout description from "
 msgstr ""
+"Vtičnik za načrtovanje mehanskih tipkovnic. Omogoča samodejno postavitev tipk \n"
+"na podlagi opisa razporeditve iz "
 
 msgid "Project website - "
-msgstr ""
+msgstr "Spletna stran projekta - "
 
 msgid "Geekhack forum thread - "
-msgstr ""
+msgstr "Nit na forumu Geekhack - "
 
 msgid "Save to:"
-msgstr ""
+msgstr "Shrani v:"
 
 msgid "Load from:"
-msgstr ""
+msgstr "Naloži iz:"
 
 msgid "Keyboard Layout:"
-msgstr ""
+msgstr "Razporeditev tipkovnice:"
 
 msgid "Layout file or kle-ng share link"
-msgstr ""
+msgstr "Datoteka razporeditve ali povezava za deljenje kle-ng"
 
 msgid "How many millimeters 1U spans between switches horizontally"
-msgstr ""
+msgstr "Koliko milimetrov ustreza 1U med stikali vodoravno"
 
 msgid "How many millimeters 1U spans between switches vertically"
-msgstr ""
+msgstr "Koliko milimetrov ustreza 1U med stikali navpično"
 
 msgid "Layout filepath or kle-ng share URL"
-msgstr ""
+msgstr "Pot do datoteke razporeditve ali URL za deljenje kle-ng"
 
 msgid "Start index"
-msgstr ""
+msgstr "Začetni indeks"
 
 msgid "Starting index used to match footprint annotations"
-msgstr ""
+msgstr "Začetni indeks za ujemanje oznak odtisov"
 
 msgid "Switch settings"
-msgstr ""
+msgstr "Nastavitve stikal"
 
 msgid "Route with switches"
-msgstr ""
+msgstr "Poveži skupaj s stikali"
 
 msgid "Automatically adjust orientation"
-msgstr ""
+msgstr "Samodejno prilagodi usmerjenost"
 
 msgid ""
 "Find optimal diode orientation for minimal distance between switch and diode "
 "common net pads"
 msgstr ""
+"Poišči optimalno usmerjenost diode za najmanjšo razdaljo med blazinicami "
+"skupne mreže stikala in diode"
 
 msgid "Switch diodes settings"
-msgstr ""
+msgstr "Nastavitve diod stikal"
 
 msgid "Additional elements settings"
-msgstr ""
+msgstr "Nastavitve dodatnih elementov"
 
 msgid "Route rows and columns"
-msgstr ""
+msgstr "Poveži vrstice in stolpce"
 
 msgid "Controller circuit template file:"
-msgstr ""
+msgstr "Datoteka predloge vezja krmilnika:"
 
 msgid "Build board outline"
-msgstr ""
+msgstr "Ustvari obris tiskanine"
 
 msgid "Outline delta:"
-msgstr ""
+msgstr "Odmik obrisa:"
 
 msgid "Layout offset"
-msgstr ""
+msgstr "Zamik razporeditve"
 
 msgid "X placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Zamik X postavitve razporeditve tipkovnice v mm"
 
 msgid "Y placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Zamik Y postavitve razporeditve tipkovnice v mm"
 
 msgid "Other settings"
-msgstr ""
+msgstr "Druge nastavitve"
 
 msgid "Open in Keyboard Layout Editor NG"
-msgstr ""
+msgstr "Odpri v Keyboard Layout Editor NG"
 
 msgid "Actions"
-msgstr ""
+msgstr "Dejanja"

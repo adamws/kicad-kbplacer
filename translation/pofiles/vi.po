@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: 2026-06-04 13:39+0200\n"
-"PO-Revision-Date: 2023-12-13 00:06+0000\n"
-"Last-Translator: Nguyễn Ngọc Khánh <ngockhanhnguyen985@gmail.com>\n"
+"PO-Revision-Date: 2026-11-01 07:53-0800\n"
+"Last-Translator: Claude Opus 5.5 (AI) <noreply@anthropic.com>\n"
 "Language-Team: Vietnamese <https://hosted.weblate.org/projects/kicad-"
 "kbplacer/master-source/vi/>\n"
 "Language: vi\n"
@@ -18,86 +18,90 @@ msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
 "based on layout description from "
 msgstr ""
+"Plugin thiết kế bàn phím cơ. Plugin hỗ trợ tự động sắp xếp phím \n"
+"dựa trên mô tả bố cục từ "
 
 msgid "Project website - "
-msgstr ""
+msgstr "Trang web dự án - "
 
 msgid "Geekhack forum thread - "
-msgstr ""
+msgstr "Chủ đề trên diễn đàn Geekhack - "
 
 msgid "Save to:"
 msgstr "Lưu vào:"
 
 msgid "Load from:"
-msgstr ""
+msgstr "Tải từ:"
 
 msgid "Keyboard Layout:"
-msgstr ""
+msgstr "Bố cục bàn phím:"
 
 msgid "Layout file or kle-ng share link"
-msgstr ""
+msgstr "Tệp bố cục hoặc liên kết chia sẻ kle-ng"
 
 msgid "How many millimeters 1U spans between switches horizontally"
-msgstr ""
+msgstr "Số milimét tương ứng với 1U giữa các switch theo chiều ngang"
 
 msgid "How many millimeters 1U spans between switches vertically"
-msgstr ""
+msgstr "Số milimét tương ứng với 1U giữa các switch theo chiều dọc"
 
 msgid "Layout filepath or kle-ng share URL"
-msgstr ""
+msgstr "Đường dẫn tệp bố cục hoặc URL chia sẻ kle-ng"
 
 msgid "Start index"
-msgstr ""
+msgstr "Chỉ số bắt đầu"
 
 msgid "Starting index used to match footprint annotations"
-msgstr ""
+msgstr "Chỉ số bắt đầu dùng để khớp với ký hiệu tham chiếu của footprint"
 
 msgid "Switch settings"
-msgstr ""
+msgstr "Cài đặt switch"
 
 msgid "Route with switches"
-msgstr ""
+msgstr "Đi dây cùng với switch"
 
 msgid "Automatically adjust orientation"
-msgstr ""
+msgstr "Tự động điều chỉnh hướng"
 
 msgid ""
 "Find optimal diode orientation for minimal distance between switch and diode "
 "common net pads"
 msgstr ""
+"Tìm hướng diode tối ưu để khoảng cách giữa các pad cùng net của switch và "
+"diode là nhỏ nhất"
 
 msgid "Switch diodes settings"
-msgstr ""
+msgstr "Cài đặt diode của switch"
 
 msgid "Additional elements settings"
-msgstr ""
+msgstr "Cài đặt các thành phần bổ sung"
 
 msgid "Route rows and columns"
-msgstr ""
+msgstr "Đi dây hàng và cột"
 
 msgid "Controller circuit template file:"
-msgstr ""
+msgstr "Tệp mẫu mạch vi điều khiển:"
 
 msgid "Build board outline"
-msgstr ""
+msgstr "Tạo đường viền bo mạch"
 
 msgid "Outline delta:"
-msgstr ""
+msgstr "Khoảng cách đường viền:"
 
 msgid "Layout offset"
-msgstr ""
+msgstr "Độ lệch bố cục"
 
 msgid "X placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Độ lệch vị trí X của bố cục bàn phím (mm)"
 
 msgid "Y placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Độ lệch vị trí Y của bố cục bàn phím (mm)"
 
 msgid "Other settings"
 msgstr "Các cài đặt khác"
 
 msgid "Open in Keyboard Layout Editor NG"
-msgstr ""
+msgstr "Mở trong Keyboard Layout Editor NG"
 
 msgid "Actions"
-msgstr ""
+msgstr "Hành động"

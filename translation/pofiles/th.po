@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: 2026-06-04 13:39+0200\n"
-"PO-Revision-Date: 2023-07-14 20:04+0200\n"
-"Last-Translator: Automatically generated\n"
+"PO-Revision-Date: 2026-11-01 07:53-0800\n"
+"Last-Translator: Claude Opus 5.5 (AI) <noreply@anthropic.com>\n"
 "Language-Team: none\n"
 "Language: th\n"
 "MIME-Version: 1.0\n"
@@ -15,86 +15,90 @@ msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
 "based on layout description from "
 msgstr ""
+"ปลั๊กอินสำหรับออกแบบคีย์บอร์ดแมคคานิคอล มีฟีเจอร์วางปุ่มอัตโนมัติ \n"
+"ตามคำอธิบายเลย์เอาต์จาก "
 
 msgid "Project website - "
-msgstr ""
+msgstr "เว็บไซต์โครงการ - "
 
 msgid "Geekhack forum thread - "
-msgstr ""
+msgstr "กระทู้ในฟอรัม Geekhack - "
 
 msgid "Save to:"
-msgstr ""
+msgstr "บันทึกไปที่:"
 
 msgid "Load from:"
-msgstr ""
+msgstr "โหลดจาก:"
 
 msgid "Keyboard Layout:"
-msgstr ""
+msgstr "เลย์เอาต์คีย์บอร์ด:"
 
 msgid "Layout file or kle-ng share link"
-msgstr ""
+msgstr "ไฟล์เลย์เอาต์หรือลิงก์แชร์ kle-ng"
 
 msgid "How many millimeters 1U spans between switches horizontally"
-msgstr ""
+msgstr "ระยะ 1U ระหว่างสวิตช์ในแนวนอนเท่ากับกี่มิลลิเมตร"
 
 msgid "How many millimeters 1U spans between switches vertically"
-msgstr ""
+msgstr "ระยะ 1U ระหว่างสวิตช์ในแนวตั้งเท่ากับกี่มิลลิเมตร"
 
 msgid "Layout filepath or kle-ng share URL"
-msgstr ""
+msgstr "พาธไฟล์เลย์เอาต์หรือ URL แชร์ kle-ng"
 
 msgid "Start index"
-msgstr ""
+msgstr "ดัชนีเริ่มต้น"
 
 msgid "Starting index used to match footprint annotations"
-msgstr ""
+msgstr "ดัชนีเริ่มต้นที่ใช้จับคู่หมายเลขอ้างอิงของฟุตพริ้นท์"
 
 msgid "Switch settings"
-msgstr ""
+msgstr "การตั้งค่าสวิตช์"
 
 msgid "Route with switches"
-msgstr ""
+msgstr "เดินลายร่วมกับสวิตช์"
 
 msgid "Automatically adjust orientation"
-msgstr ""
+msgstr "ปรับทิศทางอัตโนมัติ"
 
 msgid ""
 "Find optimal diode orientation for minimal distance between switch and diode "
 "common net pads"
 msgstr ""
+"ค้นหาทิศทางไดโอดที่เหมาะสมที่สุด "
+"เพื่อให้ระยะห่างระหว่างแพดของเน็ตร่วมของสวิตช์และไดโอดน้อยที่สุด"
 
 msgid "Switch diodes settings"
-msgstr ""
+msgstr "การตั้งค่าไดโอดของสวิตช์"
 
 msgid "Additional elements settings"
-msgstr ""
+msgstr "การตั้งค่าองค์ประกอบเพิ่มเติม"
 
 msgid "Route rows and columns"
-msgstr ""
+msgstr "เดินลายแถวและคอลัมน์"
 
 msgid "Controller circuit template file:"
-msgstr ""
+msgstr "ไฟล์เทมเพลตวงจรคอนโทรลเลอร์:"
 
 msgid "Build board outline"
-msgstr ""
+msgstr "สร้างขอบบอร์ด"
 
 msgid "Outline delta:"
-msgstr ""
+msgstr "ระยะห่างขอบบอร์ด:"
 
 msgid "Layout offset"
-msgstr ""
+msgstr "ออฟเซ็ตเลย์เอาต์"
 
 msgid "X placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "ออฟเซ็ตการวางตำแหน่งแกน X ของเลย์เอาต์คีย์บอร์ด (มม.)"
 
 msgid "Y placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "ออฟเซ็ตการวางตำแหน่งแกน Y ของเลย์เอาต์คีย์บอร์ด (มม.)"
 
 msgid "Other settings"
-msgstr ""
+msgstr "การตั้งค่าอื่นๆ"
 
 msgid "Open in Keyboard Layout Editor NG"
-msgstr ""
+msgstr "เปิดใน Keyboard Layout Editor NG"
 
 msgid "Actions"
-msgstr ""
+msgstr "การดำเนินการ"

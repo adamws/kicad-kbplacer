@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: 2026-06-04 13:39+0200\n"
-"PO-Revision-Date: 2024-09-25 22:16+0000\n"
-"Last-Translator: Milan Šalka <salka.milan@googlemail.com>\n"
+"PO-Revision-Date: 2026-11-01 07:53-0800\n"
+"Last-Translator: Claude Opus 5.5 (AI) <noreply@anthropic.com>\n"
 "Language-Team: Slovak <https://hosted.weblate.org/projects/kicad-kbplacer/"
 "master-source/sk/>\n"
 "Language: sk\n"
@@ -18,18 +18,17 @@ msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
 "based on layout description from "
 msgstr ""
-"Plugin pre mechanický dizajn klávesnice. Obsahuje automatické umiestnenie "
-"kľúča\n"
-"na základe populárneho popisu rozloženie od "
+"Plugin na návrh mechanických klávesníc. Umožňuje automatické rozmiestnenie kláves \n"
+"na základe popisu rozloženia z "
 
 msgid "Project website - "
 msgstr "Webová stránka projektu - "
 
 msgid "Geekhack forum thread - "
-msgstr "Geekhack fórum vlákno - "
+msgstr "Vlákno na fóre Geekhack - "
 
 msgid "Save to:"
-msgstr "Uložiť na:"
+msgstr "Uložiť do:"
 
 msgid "Load from:"
 msgstr "Načítať z:"
@@ -38,69 +37,71 @@ msgid "Keyboard Layout:"
 msgstr "Rozloženie klávesnice:"
 
 msgid "Layout file or kle-ng share link"
-msgstr ""
+msgstr "Súbor rozloženia alebo odkaz na zdieľanie z kle-ng"
 
 msgid "How many millimeters 1U spans between switches horizontally"
-msgstr ""
+msgstr "Koľko milimetrov zodpovedá 1U medzi switchmi vodorovne"
 
 msgid "How many millimeters 1U spans between switches vertically"
-msgstr ""
+msgstr "Koľko milimetrov zodpovedá 1U medzi switchmi zvisle"
 
 msgid "Layout filepath or kle-ng share URL"
-msgstr ""
+msgstr "Cesta k súboru rozloženia alebo URL na zdieľanie z kle-ng"
 
 msgid "Start index"
-msgstr ""
+msgstr "Počiatočný index"
 
 msgid "Starting index used to match footprint annotations"
-msgstr ""
+msgstr "Počiatočný index použitý na priradenie označení footprintov"
 
 msgid "Switch settings"
-msgstr "Nastavenie prepínača"
+msgstr "Nastavenia switchov"
 
 msgid "Route with switches"
-msgstr "Trasa spínačmi"
+msgstr "Viesť spoje spolu so switchmi"
 
 msgid "Automatically adjust orientation"
-msgstr "Automatické nastavenie orientácie"
+msgstr "Automaticky upraviť orientáciu"
 
 msgid ""
 "Find optimal diode orientation for minimal distance between switch and diode "
 "common net pads"
 msgstr ""
+"Nájsť optimálnu orientáciu diódy pre minimálnu vzdialenosť medzi ploškami "
+"spoločnej siete switchu a diódy"
 
 msgid "Switch diodes settings"
-msgstr "Nastavenie spínačov"
+msgstr "Nastavenia diód switchov"
 
 msgid "Additional elements settings"
-msgstr "Ďalšie nastavenia prvkov"
+msgstr "Nastavenia ďalších prvkov"
 
 msgid "Route rows and columns"
-msgstr "Trasy a stĺpce"
+msgstr "Viesť spoje riadkov a stĺpcov"
 
 msgid "Controller circuit template file:"
-msgstr "Súbor šablóny ovládača:"
+msgstr "Súbor šablóny obvodu radiča:"
 
 msgid "Build board outline"
-msgstr "Zostavte si tabuľu"
+msgstr "Vytvoriť obrys dosky"
 
 msgid "Outline delta:"
-msgstr "Outline delta:"
+msgstr "Odsadenie obrysu:"
 
 msgid "Layout offset"
-msgstr ""
+msgstr "Posun rozloženia"
 
 msgid "X placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Posun umiestnenia rozloženia klávesnice v osi X v mm"
 
 msgid "Y placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Posun umiestnenia rozloženia klávesnice v osi Y v mm"
 
 msgid "Other settings"
 msgstr "Ďalšie nastavenia"
 
 msgid "Open in Keyboard Layout Editor NG"
-msgstr ""
+msgstr "Otvoriť v Keyboard Layout Editor NG"
 
 msgid "Actions"
-msgstr ""
+msgstr "Akcie"

@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: 2026-06-04 13:39+0200\n"
-"PO-Revision-Date: 2024-02-19 13:02+0000\n"
-"Last-Translator: Сергій <sergiy.goncharuk.1@gmail.com>\n"
+"PO-Revision-Date: 2026-11-01 07:53-0800\n"
+"Last-Translator: Claude Opus 5.5 (AI) <noreply@anthropic.com>\n"
 "Language-Team: Ukrainian <https://hosted.weblate.org/projects/kicad-kbplacer/"
 "master-source/uk/>\n"
 "Language: uk\n"
@@ -39,45 +39,48 @@ msgid "Keyboard Layout:"
 msgstr "Розкладка клавіатури:"
 
 msgid "Layout file or kle-ng share link"
-msgstr ""
+msgstr "Файл розкладки або посилання kle-ng для спільного доступу"
 
 msgid "How many millimeters 1U spans between switches horizontally"
-msgstr ""
+msgstr "Скільки міліметрів відповідає 1U між перемикачами по горизонталі"
 
 msgid "How many millimeters 1U spans between switches vertically"
-msgstr ""
+msgstr "Скільки міліметрів відповідає 1U між перемикачами по вертикалі"
 
 msgid "Layout filepath or kle-ng share URL"
-msgstr ""
+msgstr "Шлях до файлу розкладки або URL kle-ng для спільного доступу"
 
 msgid "Start index"
-msgstr ""
+msgstr "Початковий індекс"
 
 msgid "Starting index used to match footprint annotations"
 msgstr ""
+"Початковий індекс для зіставлення позиційних позначень посадкових місць"
 
 msgid "Switch settings"
-msgstr "Налаштування перемикача"
+msgstr "Налаштування перемикачів"
 
 msgid "Route with switches"
-msgstr "Траса з перемикачами"
+msgstr "Трасувати разом із перемикачами"
 
 msgid "Automatically adjust orientation"
-msgstr ""
+msgstr "Автоматично налаштувати орієнтацію"
 
 msgid ""
 "Find optimal diode orientation for minimal distance between switch and diode "
 "common net pads"
 msgstr ""
+"Знайти оптимальну орієнтацію діода для мінімальної відстані між контактними "
+"площадками спільного кола перемикача та діода"
 
 msgid "Switch diodes settings"
-msgstr "Налаштування діодів перемикача"
+msgstr "Налаштування діодів перемикачів"
 
 msgid "Additional elements settings"
 msgstr "Налаштування додаткових елементів"
 
 msgid "Route rows and columns"
-msgstr "Трасування рядків і стовпців"
+msgstr "Трасувати рядки і стовпці"
 
 msgid "Controller circuit template file:"
 msgstr "Файл шаблону схеми контролера:"
@@ -89,19 +92,19 @@ msgid "Outline delta:"
 msgstr "Дельта контуру:"
 
 msgid "Layout offset"
-msgstr ""
+msgstr "Зміщення розкладки"
 
 msgid "X placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Зміщення розміщення розкладки клавіатури по X у мм"
 
 msgid "Y placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Зміщення розміщення розкладки клавіатури по Y у мм"
 
 msgid "Other settings"
 msgstr "Інші налаштування"
 
 msgid "Open in Keyboard Layout Editor NG"
-msgstr ""
+msgstr "Відкрити в Keyboard Layout Editor NG"
 
 msgid "Actions"
-msgstr ""
+msgstr "Дії"

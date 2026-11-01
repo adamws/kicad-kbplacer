@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: 2026-06-04 13:39+0200\n"
-"PO-Revision-Date: 2023-07-14 20:04+0200\n"
-"Last-Translator: Google translate\n"
+"PO-Revision-Date: 2026-11-01 07:53-0800\n"
+"Last-Translator: Claude Opus 5.5 (AI) <noreply@anthropic.com>\n"
 "Language-Team: none\n"
 "Language: ja\n"
 "MIME-Version: 1.0\n"
@@ -16,88 +16,88 @@ msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
 "based on layout description from "
 msgstr ""
-"メカニカルキーボード設計用プラグイン。 \n"
-"レイアウトの説明に基づいた自動キー配置を備えています。 "
+"メカニカルキーボード設計用のプラグインです。次のサイトのレイアウト記述に基づく\n"
+"キーの自動配置機能を備えています: "
 
 msgid "Project website - "
 msgstr "プロジェクトのウェブサイト - "
 
 msgid "Geekhack forum thread - "
-msgstr "Geekhack フォーラムスレッド -"
+msgstr "Geekhack フォーラムスレッド - "
 
 msgid "Save to:"
-msgstr ""
+msgstr "保存先:"
 
 msgid "Load from:"
-msgstr ""
+msgstr "読み込み元:"
 
 msgid "Keyboard Layout:"
 msgstr "キーボードレイアウト:"
 
 msgid "Layout file or kle-ng share link"
-msgstr ""
+msgstr "レイアウトファイルまたは kle-ng 共有リンク"
 
 msgid "How many millimeters 1U spans between switches horizontally"
-msgstr ""
+msgstr "スイッチ間の水平方向の 1U あたりのミリメートル数"
 
 msgid "How many millimeters 1U spans between switches vertically"
-msgstr ""
+msgstr "スイッチ間の垂直方向の 1U あたりのミリメートル数"
 
 msgid "Layout filepath or kle-ng share URL"
-msgstr ""
+msgstr "レイアウトファイルのパスまたは kle-ng 共有 URL"
 
 msgid "Start index"
-msgstr ""
+msgstr "開始インデックス"
 
 msgid "Starting index used to match footprint annotations"
-msgstr ""
+msgstr "フットプリントのリファレンス番号との照合に使用する開始インデックス"
 
 msgid "Switch settings"
 msgstr "スイッチの設定"
 
 msgid "Route with switches"
-msgstr ""
+msgstr "スイッチと一緒に配線"
 
 msgid "Automatically adjust orientation"
-msgstr ""
+msgstr "向きを自動調整"
 
 msgid ""
 "Find optimal diode orientation for minimal distance between switch and diode "
 "common net pads"
-msgstr ""
+msgstr "スイッチとダイオードの共通ネットのパッド間距離が最小になるよう、ダイオードの最適な向きを探索します"
 
 msgid "Switch diodes settings"
-msgstr "スイッチダイオード設定"
+msgstr "スイッチ用ダイオードの設定"
 
 msgid "Additional elements settings"
 msgstr "追加要素の設定"
 
 msgid "Route rows and columns"
-msgstr ""
+msgstr "行と列を配線"
 
 msgid "Controller circuit template file:"
 msgstr "コントローラー回路テンプレートファイル:"
 
 msgid "Build board outline"
-msgstr ""
+msgstr "基板外形を作成"
 
 msgid "Outline delta:"
-msgstr ""
+msgstr "外形オフセット:"
 
 msgid "Layout offset"
-msgstr ""
+msgstr "レイアウトオフセット"
 
 msgid "X placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "キーボードレイアウト配置の X オフセット (mm)"
 
 msgid "Y placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "キーボードレイアウト配置の Y オフセット (mm)"
 
 msgid "Other settings"
 msgstr "その他の設定"
 
 msgid "Open in Keyboard Layout Editor NG"
-msgstr ""
+msgstr "Keyboard Layout Editor NG で開く"
 
 msgid "Actions"
-msgstr ""
+msgstr "アクション"

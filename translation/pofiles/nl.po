@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: 2026-06-04 13:39+0200\n"
-"PO-Revision-Date: 2024-03-17 15:02+0000\n"
-"Last-Translator: Mikachu <micah.sh@proton.me>\n"
+"PO-Revision-Date: 2026-11-01 07:53-0800\n"
+"Last-Translator: Claude Opus 5.5 (AI) <noreply@anthropic.com>\n"
 "Language-Team: Dutch <https://hosted.weblate.org/projects/kicad-kbplacer/"
 "master-source/nl/>\n"
 "Language: nl\n"
@@ -32,75 +32,77 @@ msgid "Save to:"
 msgstr "Opslaan in:"
 
 msgid "Load from:"
-msgstr "Laad van:"
+msgstr "Laden van:"
 
 msgid "Keyboard Layout:"
 msgstr "Toetsenbordindeling:"
 
 msgid "Layout file or kle-ng share link"
-msgstr ""
+msgstr "Lay-outbestand of kle-ng-deellink"
 
 msgid "How many millimeters 1U spans between switches horizontally"
-msgstr ""
+msgstr "Hoeveel millimeter 1U horizontaal tussen switches beslaat"
 
 msgid "How many millimeters 1U spans between switches vertically"
-msgstr ""
+msgstr "Hoeveel millimeter 1U verticaal tussen switches beslaat"
 
 msgid "Layout filepath or kle-ng share URL"
-msgstr ""
+msgstr "Pad naar lay-outbestand of kle-ng-deel-URL"
 
 msgid "Start index"
-msgstr ""
+msgstr "Startindex"
 
 msgid "Starting index used to match footprint annotations"
-msgstr ""
+msgstr "Startindex voor het koppelen van footprint-annotaties"
 
 msgid "Switch settings"
-msgstr "Schakelaar instellingen"
+msgstr "Switch-instellingen"
 
 msgid "Route with switches"
-msgstr "Route met schakelaars"
+msgstr "Routeren met switches"
 
 msgid "Automatically adjust orientation"
-msgstr ""
+msgstr "Oriëntatie automatisch aanpassen"
 
 msgid ""
 "Find optimal diode orientation for minimal distance between switch and diode "
 "common net pads"
 msgstr ""
+"Optimale diode-oriëntatie zoeken voor een minimale afstand tussen de pads van"
+" het gemeenschappelijke net van switch en diode"
 
 msgid "Switch diodes settings"
-msgstr "Schakelaar Diode Instellingen"
+msgstr "Instellingen voor switch-diodes"
 
 msgid "Additional elements settings"
 msgstr "Instellingen voor extra elementen"
 
 msgid "Route rows and columns"
-msgstr ""
+msgstr "Rijen en kolommen routeren"
 
 msgid "Controller circuit template file:"
-msgstr "Controllercircuit sjabloonbestand:"
+msgstr "Sjabloonbestand voor controllercircuit:"
 
 msgid "Build board outline"
-msgstr ""
+msgstr "Printplaatcontour maken"
 
 msgid "Outline delta:"
-msgstr ""
+msgstr "Contourmarge:"
 
 msgid "Layout offset"
-msgstr ""
+msgstr "Lay-outverschuiving"
 
 msgid "X placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "X-plaatsingsverschuiving van de toetsenbordindeling in mm"
 
 msgid "Y placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Y-plaatsingsverschuiving van de toetsenbordindeling in mm"
 
 msgid "Other settings"
-msgstr ""
+msgstr "Overige instellingen"
 
 msgid "Open in Keyboard Layout Editor NG"
-msgstr ""
+msgstr "Openen in Keyboard Layout Editor NG"
 
 msgid "Actions"
-msgstr ""
+msgstr "Acties"

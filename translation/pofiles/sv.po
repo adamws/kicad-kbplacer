@@ -2,9 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: 2026-06-04 13:39+0200\n"
-"PO-Revision-Date: 2025-12-07 09:00+0000\n"
-"Last-Translator: Stefan Bjornelund the Gnome "
-"<stefan.bjornelund.gnome@gmail.com>\n"
+"PO-Revision-Date: 2026-11-01 07:53-0800\n"
+"Last-Translator: Claude Opus 5.5 (AI) <noreply@anthropic.com>\n"
 "Language-Team: Swedish <https://hosted.weblate.org/projects/kicad-kbplacer/"
 "master-source/sv/>\n"
 "Language: sv\n"
@@ -39,28 +38,28 @@ msgid "Keyboard Layout:"
 msgstr "Tangentbordslayout:"
 
 msgid "Layout file or kle-ng share link"
-msgstr ""
+msgstr "Layoutfil eller kle-ng-delningslänk"
 
 msgid "How many millimeters 1U spans between switches horizontally"
-msgstr ""
+msgstr "Hur många millimeter 1U motsvarar mellan switchar horisontellt"
 
 msgid "How many millimeters 1U spans between switches vertically"
-msgstr ""
+msgstr "Hur många millimeter 1U motsvarar mellan switchar vertikalt"
 
 msgid "Layout filepath or kle-ng share URL"
-msgstr ""
+msgstr "Sökväg till layoutfil eller kle-ng-delnings-URL"
 
 msgid "Start index"
-msgstr ""
+msgstr "Startindex"
 
 msgid "Starting index used to match footprint annotations"
-msgstr ""
+msgstr "Startindex som används för att matcha footprint-annoteringar"
 
 msgid "Switch settings"
-msgstr "Strömbrytarinställningar"
+msgstr "Switchinställningar"
 
 msgid "Route with switches"
-msgstr "Rutt med strömbrytare"
+msgstr "Routa tillsammans med switchar"
 
 msgid "Automatically adjust orientation"
 msgstr "Justera orienteringen automatiskt"
@@ -69,43 +68,42 @@ msgid ""
 "Find optimal diode orientation for minimal distance between switch and diode "
 "common net pads"
 msgstr ""
+"Hitta optimal diodorientering för minsta avstånd mellan switchens och diodens"
+" pads på gemensamt nät"
 
 msgid "Switch diodes settings"
-msgstr "Brytardiods inställningar"
+msgstr "Inställningar för switchdioder"
 
 #, fuzzy
 msgid "Additional elements settings"
 msgstr "Inställningar för ytterligare element"
 
-#, fuzzy
 msgid "Route rows and columns"
-msgstr "Layout i rader och kolumner"
+msgstr "Routa rader och kolumner"
 
 msgid "Controller circuit template file:"
-msgstr "Mallfil för styrkrets:"
+msgstr "Mallfil för kontrollerkrets:"
 
-#, fuzzy
 msgid "Build board outline"
-msgstr "Konstruktionsskiss"
+msgstr "Skapa kretskortskontur"
 
-#, fuzzy
 msgid "Outline delta:"
-msgstr "Konturdelta:"
+msgstr "Konturmarginal:"
 
 msgid "Layout offset"
-msgstr ""
+msgstr "Layoutförskjutning"
 
 msgid "X placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "X-placeringsförskjutning för tangentbordslayouten i mm"
 
 msgid "Y placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Y-placeringsförskjutning för tangentbordslayouten i mm"
 
 msgid "Other settings"
 msgstr "Andra inställningar"
 
 msgid "Open in Keyboard Layout Editor NG"
-msgstr ""
+msgstr "Öppna i Keyboard Layout Editor NG"
 
 msgid "Actions"
-msgstr ""
+msgstr "Åtgärder"

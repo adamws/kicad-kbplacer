@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: 2026-06-04 13:39+0200\n"
-"PO-Revision-Date: 2023-07-14 20:04+0200\n"
-"Last-Translator: Automatically generated\n"
+"PO-Revision-Date: 2026-11-01 07:53-0800\n"
+"Last-Translator: Claude Opus 5.5 (AI) <noreply@anthropic.com>\n"
 "Language-Team: none\n"
 "Language: it\n"
 "MIME-Version: 1.0\n"
@@ -16,86 +16,90 @@ msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
 "based on layout description from "
 msgstr ""
+"Plugin per la progettazione di tastiere meccaniche. Offre il posizionamento automatico dei tasti \n"
+"in base alla descrizione del layout da "
 
 msgid "Project website - "
-msgstr ""
+msgstr "Sito web del progetto - "
 
 msgid "Geekhack forum thread - "
-msgstr ""
+msgstr "Discussione sul forum Geekhack - "
 
 msgid "Save to:"
-msgstr ""
+msgstr "Salva in:"
 
 msgid "Load from:"
-msgstr ""
+msgstr "Carica da:"
 
 msgid "Keyboard Layout:"
-msgstr ""
+msgstr "Layout della tastiera:"
 
 msgid "Layout file or kle-ng share link"
-msgstr ""
+msgstr "File di layout o link di condivisione kle-ng"
 
 msgid "How many millimeters 1U spans between switches horizontally"
-msgstr ""
+msgstr "Quanti millimetri corrispondono a 1U tra gli switch in orizzontale"
 
 msgid "How many millimeters 1U spans between switches vertically"
-msgstr ""
+msgstr "Quanti millimetri corrispondono a 1U tra gli switch in verticale"
 
 msgid "Layout filepath or kle-ng share URL"
-msgstr ""
+msgstr "Percorso del file di layout o URL di condivisione kle-ng"
 
 msgid "Start index"
-msgstr ""
+msgstr "Indice iniziale"
 
 msgid "Starting index used to match footprint annotations"
-msgstr ""
+msgstr "Indice iniziale usato per associare le annotazioni delle impronte"
 
 msgid "Switch settings"
-msgstr ""
+msgstr "Impostazioni switch"
 
 msgid "Route with switches"
-msgstr ""
+msgstr "Sbroglia insieme agli switch"
 
 msgid "Automatically adjust orientation"
-msgstr ""
+msgstr "Regola automaticamente l'orientamento"
 
 msgid ""
 "Find optimal diode orientation for minimal distance between switch and diode "
 "common net pads"
 msgstr ""
+"Trova l'orientamento ottimale del diodo per ridurre al minimo la distanza tra"
+" le piazzole del net comune di switch e diodo"
 
 msgid "Switch diodes settings"
-msgstr ""
+msgstr "Impostazioni diodi degli switch"
 
 msgid "Additional elements settings"
-msgstr ""
+msgstr "Impostazioni elementi aggiuntivi"
 
 msgid "Route rows and columns"
-msgstr ""
+msgstr "Sbroglia righe e colonne"
 
 msgid "Controller circuit template file:"
-msgstr ""
+msgstr "File modello del circuito del controller:"
 
 msgid "Build board outline"
-msgstr ""
+msgstr "Crea contorno della scheda"
 
 msgid "Outline delta:"
-msgstr ""
+msgstr "Margine del contorno:"
 
 msgid "Layout offset"
-msgstr ""
+msgstr "Offset del layout"
 
 msgid "X placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Offset X di posizionamento del layout della tastiera in mm"
 
 msgid "Y placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Offset Y di posizionamento del layout della tastiera in mm"
 
 msgid "Other settings"
-msgstr ""
+msgstr "Altre impostazioni"
 
 msgid "Open in Keyboard Layout Editor NG"
-msgstr ""
+msgstr "Apri in Keyboard Layout Editor NG"
 
 msgid "Actions"
-msgstr ""
+msgstr "Azioni"

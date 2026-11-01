@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: 2026-06-04 13:39+0200\n"
-"PO-Revision-Date: 2024-07-28 22:09+0000\n"
-"Last-Translator: gallegonovato <fran-carro@hotmail.es>\n"
+"PO-Revision-Date: 2026-11-01 07:53-0800\n"
+"Last-Translator: Claude Opus 5.5 (AI) <noreply@anthropic.com>\n"
 "Language-Team: Spanish <https://hosted.weblate.org/projects/kicad-kbplacer/"
 "master-source/es/>\n"
 "Language: es\n"
@@ -32,34 +32,34 @@ msgid "Save to:"
 msgstr "Guardar en:"
 
 msgid "Load from:"
-msgstr "Carga desde:"
+msgstr "Cargar desde:"
 
 msgid "Keyboard Layout:"
 msgstr "Diseño de teclado:"
 
 msgid "Layout file or kle-ng share link"
-msgstr ""
+msgstr "Archivo de diseño o enlace compartido de kle-ng"
 
 msgid "How many millimeters 1U spans between switches horizontally"
-msgstr ""
+msgstr "Cuántos milímetros abarca 1U entre switches en horizontal"
 
 msgid "How many millimeters 1U spans between switches vertically"
-msgstr ""
+msgstr "Cuántos milímetros abarca 1U entre switches en vertical"
 
 msgid "Layout filepath or kle-ng share URL"
-msgstr ""
+msgstr "Ruta del archivo de diseño o URL compartida de kle-ng"
 
 msgid "Start index"
-msgstr ""
+msgstr "Índice inicial"
 
 msgid "Starting index used to match footprint annotations"
-msgstr ""
+msgstr "Índice inicial usado para emparejar las anotaciones de las huellas"
 
 msgid "Switch settings"
-msgstr "Configuración de los interruptores"
+msgstr "Configuración de los switches"
 
 msgid "Route with switches"
-msgstr "Ruta con switches"
+msgstr "Enrutar junto con los switches"
 
 msgid "Automatically adjust orientation"
 msgstr "Ajustar automáticamente la orientación"
@@ -68,9 +68,11 @@ msgid ""
 "Find optimal diode orientation for minimal distance between switch and diode "
 "common net pads"
 msgstr ""
+"Buscar la orientación óptima del diodo para minimizar la distancia entre los "
+"pads de la red común del switch y del diodo"
 
 msgid "Switch diodes settings"
-msgstr "Configuración de los diodos de los interruptores"
+msgstr "Configuración de los diodos de los switches"
 
 msgid "Additional elements settings"
 msgstr "Configuración de elementos adicionales"
@@ -82,25 +84,25 @@ msgid "Controller circuit template file:"
 msgstr "Archivo de plantilla de circuito del controlador:"
 
 msgid "Build board outline"
-msgstr "Esquema del tablero"
+msgstr "Generar contorno de la placa"
 
 msgid "Outline delta:"
-msgstr "Esquema delta:"
+msgstr "Margen del contorno:"
 
 msgid "Layout offset"
-msgstr ""
+msgstr "Desplazamiento del diseño"
 
 msgid "X placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Desplazamiento X de colocación del diseño del teclado en mm"
 
 msgid "Y placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Desplazamiento Y de colocación del diseño del teclado en mm"
 
 msgid "Other settings"
 msgstr "Otras configuraciones"
 
 msgid "Open in Keyboard Layout Editor NG"
-msgstr ""
+msgstr "Abrir en Keyboard Layout Editor NG"
 
 msgid "Actions"
-msgstr ""
+msgstr "Acciones"

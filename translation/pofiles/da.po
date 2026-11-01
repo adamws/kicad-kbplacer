@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: 2026-06-04 13:39+0200\n"
-"PO-Revision-Date: 2023-07-14 20:04+0200\n"
-"Last-Translator: Automatically generated\n"
+"PO-Revision-Date: 2026-11-01 07:53-0800\n"
+"Last-Translator: Claude Opus 5.5 (AI) <noreply@anthropic.com>\n"
 "Language-Team: none\n"
 "Language: da\n"
 "MIME-Version: 1.0\n"
@@ -16,86 +16,90 @@ msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
 "based on layout description from "
 msgstr ""
+"Plugin til design af mekaniske tastaturer. Det tilbyder automatisk placering af taster \n"
+"baseret på layoutbeskrivelse fra "
 
 msgid "Project website - "
-msgstr ""
+msgstr "Projektets websted - "
 
 msgid "Geekhack forum thread - "
-msgstr ""
+msgstr "Geekhack-forumtråd - "
 
 msgid "Save to:"
-msgstr ""
+msgstr "Gem til:"
 
 msgid "Load from:"
-msgstr ""
+msgstr "Indlæs fra:"
 
 msgid "Keyboard Layout:"
-msgstr ""
+msgstr "Tastaturlayout:"
 
 msgid "Layout file or kle-ng share link"
-msgstr ""
+msgstr "Layoutfil eller kle-ng-delingslink"
 
 msgid "How many millimeters 1U spans between switches horizontally"
-msgstr ""
+msgstr "Hvor mange millimeter 1U svarer til mellem switches vandret"
 
 msgid "How many millimeters 1U spans between switches vertically"
-msgstr ""
+msgstr "Hvor mange millimeter 1U svarer til mellem switches lodret"
 
 msgid "Layout filepath or kle-ng share URL"
-msgstr ""
+msgstr "Sti til layoutfil eller kle-ng-delings-URL"
 
 msgid "Start index"
-msgstr ""
+msgstr "Startindeks"
 
 msgid "Starting index used to match footprint annotations"
-msgstr ""
+msgstr "Startindeks brugt til at matche footprint-annoteringer"
 
 msgid "Switch settings"
-msgstr ""
+msgstr "Switch-indstillinger"
 
 msgid "Route with switches"
-msgstr ""
+msgstr "Rout sammen med switches"
 
 msgid "Automatically adjust orientation"
-msgstr ""
+msgstr "Justér orientering automatisk"
 
 msgid ""
 "Find optimal diode orientation for minimal distance between switch and diode "
 "common net pads"
 msgstr ""
+"Find optimal diodeorientering for mindst mulig afstand mellem switchens og "
+"diodens pads på fælles net"
 
 msgid "Switch diodes settings"
-msgstr ""
+msgstr "Indstillinger for switch-dioder"
 
 msgid "Additional elements settings"
-msgstr ""
+msgstr "Indstillinger for yderligere elementer"
 
 msgid "Route rows and columns"
-msgstr ""
+msgstr "Rout rækker og kolonner"
 
 msgid "Controller circuit template file:"
-msgstr ""
+msgstr "Skabelonfil til controllerkredsløb:"
 
 msgid "Build board outline"
-msgstr ""
+msgstr "Opret printkortets omrids"
 
 msgid "Outline delta:"
-msgstr ""
+msgstr "Omridsafstand:"
 
 msgid "Layout offset"
-msgstr ""
+msgstr "Layoutforskydning"
 
 msgid "X placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "X-placeringsforskydning for tastaturlayoutet i mm"
 
 msgid "Y placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Y-placeringsforskydning for tastaturlayoutet i mm"
 
 msgid "Other settings"
-msgstr ""
+msgstr "Andre indstillinger"
 
 msgid "Open in Keyboard Layout Editor NG"
-msgstr ""
+msgstr "Åbn i Keyboard Layout Editor NG"
 
 msgid "Actions"
-msgstr ""
+msgstr "Handlinger"

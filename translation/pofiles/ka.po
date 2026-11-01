@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: 2026-06-04 13:39+0200\n"
-"PO-Revision-Date: 2023-07-14 20:04+0200\n"
-"Last-Translator: Automatically generated\n"
+"PO-Revision-Date: 2026-11-01 07:53-0800\n"
+"Last-Translator: Claude Opus 5.5 (AI) <noreply@anthropic.com>\n"
 "Language-Team: none\n"
 "Language: ka\n"
 "MIME-Version: 1.0\n"
@@ -15,86 +15,90 @@ msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
 "based on layout description from "
 msgstr ""
+"მოდული მექანიკური კლავიატურების დასაპროექტებლად. ის უზრუნველყოფს კლავიშების ავტომატურ განთავსებას \n"
+"განლაგების აღწერის საფუძველზე, წყარო: "
 
 msgid "Project website - "
-msgstr ""
+msgstr "პროექტის ვებგვერდი - "
 
 msgid "Geekhack forum thread - "
-msgstr ""
+msgstr "Geekhack-ის ფორუმის თემა - "
 
 msgid "Save to:"
-msgstr ""
+msgstr "შენახვა:"
 
 msgid "Load from:"
-msgstr ""
+msgstr "ჩატვირთვა:"
 
 msgid "Keyboard Layout:"
-msgstr ""
+msgstr "კლავიატურის განლაგება:"
 
 msgid "Layout file or kle-ng share link"
-msgstr ""
+msgstr "განლაგების ფაილი ან kle-ng-ის გაზიარების ბმული"
 
 msgid "How many millimeters 1U spans between switches horizontally"
-msgstr ""
+msgstr "რამდენ მილიმეტრს შეადგენს 1U გადამრთველებს შორის ჰორიზონტალურად"
 
 msgid "How many millimeters 1U spans between switches vertically"
-msgstr ""
+msgstr "რამდენ მილიმეტრს შეადგენს 1U გადამრთველებს შორის ვერტიკალურად"
 
 msgid "Layout filepath or kle-ng share URL"
-msgstr ""
+msgstr "განლაგების ფაილის ბილიკი ან kle-ng-ის გაზიარების URL"
 
 msgid "Start index"
-msgstr ""
+msgstr "საწყისი ინდექსი"
 
 msgid "Starting index used to match footprint annotations"
-msgstr ""
+msgstr "საწყისი ინდექსი ნაკვალევების ანოტაციების შესაბამისობისთვის"
 
 msgid "Switch settings"
-msgstr ""
+msgstr "გადამრთველების პარამეტრები"
 
 msgid "Route with switches"
-msgstr ""
+msgstr "მარშრუტიზაცია გადამრთველებთან ერთად"
 
 msgid "Automatically adjust orientation"
-msgstr ""
+msgstr "ორიენტაციის ავტომატური მორგება"
 
 msgid ""
 "Find optimal diode orientation for minimal distance between switch and diode "
 "common net pads"
 msgstr ""
+"დიოდის ოპტიმალური ორიენტაციის პოვნა გადამრთველისა და დიოდის საერთო ქსელის "
+"პადებს შორის მინიმალური მანძილისთვის"
 
 msgid "Switch diodes settings"
-msgstr ""
+msgstr "გადამრთველების დიოდების პარამეტრები"
 
 msgid "Additional elements settings"
-msgstr ""
+msgstr "დამატებითი ელემენტების პარამეტრები"
 
 msgid "Route rows and columns"
-msgstr ""
+msgstr "მწკრივებისა და სვეტების მარშრუტიზაცია"
 
 msgid "Controller circuit template file:"
-msgstr ""
+msgstr "კონტროლერის სქემის შაბლონის ფაილი:"
 
 msgid "Build board outline"
-msgstr ""
+msgstr "დაფის კონტურის აგება"
 
 msgid "Outline delta:"
-msgstr ""
+msgstr "კონტურის დაშორება:"
 
 msgid "Layout offset"
-msgstr ""
+msgstr "განლაგების წანაცვლება"
 
 msgid "X placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "კლავიატურის განლაგების განთავსების X წანაცვლება მმ-ში"
 
 msgid "Y placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "კლავიატურის განლაგების განთავსების Y წანაცვლება მმ-ში"
 
 msgid "Other settings"
-msgstr ""
+msgstr "სხვა პარამეტრები"
 
 msgid "Open in Keyboard Layout Editor NG"
-msgstr ""
+msgstr "გახსნა Keyboard Layout Editor NG-ში"
 
 msgid "Actions"
-msgstr ""
+msgstr "მოქმედებები"

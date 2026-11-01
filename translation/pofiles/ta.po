@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: 2026-06-04 13:39+0200\n"
-"PO-Revision-Date: 2025-01-05 22:01+0000\n"
-"Last-Translator: தமிழ்நேரம் <anishprabu.t@gmail.com>\n"
+"PO-Revision-Date: 2026-11-01 07:53-0800\n"
+"Last-Translator: Claude Opus 5.5 (AI) <noreply@anthropic.com>\n"
 "Language-Team: Tamil <https://hosted.weblate.org/projects/kicad-kbplacer/"
 "master-source/ta/>\n"
 "Language: ta\n"
@@ -18,18 +18,17 @@ msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
 "based on layout description from "
 msgstr ""
-"இயந்திர விசைப்பலகை வடிவமைப்பிற்கான சொருகி. இது தானியங்கி விசை வேலைவாய்ப்பைக் "
-"கொண்டுள்ளது\n"
-" தளவமைப்பு விளக்கத்தின் அடிப்படையில் "
+"இயந்திர விசைப்பலகை வடிவமைப்பிற்கான செருகுநிரல். பின்வரும் தளத்தின் தளவமைப்பு விளக்கத்தின் அடிப்படையில்\n"
+"விசைகளைத் தானாக இடம் அமைக்கிறது: "
 
 msgid "Project website - "
 msgstr "திட்ட வலைத்தளம் - "
 
 msgid "Geekhack forum thread - "
-msgstr "கீகாக் மன்ற நூல் - "
+msgstr "Geekhack மன்ற இழை - "
 
 msgid "Save to:"
-msgstr "சேமிக்கவும்:"
+msgstr "இங்கு சேமிக்கவும்:"
 
 msgid "Load from:"
 msgstr "இருந்து ஏற்றவும்:"
@@ -38,28 +37,28 @@ msgid "Keyboard Layout:"
 msgstr "விசைப்பலகை தளவமைப்பு:"
 
 msgid "Layout file or kle-ng share link"
-msgstr ""
+msgstr "தளவமைப்பு கோப்பு அல்லது kle-ng பகிர்வு இணைப்பு"
 
 msgid "How many millimeters 1U spans between switches horizontally"
-msgstr ""
+msgstr "சுவிட்சுகளுக்கு இடையே கிடைமட்டமாக 1U எத்தனை மில்லிமீட்டர்கள்"
 
 msgid "How many millimeters 1U spans between switches vertically"
-msgstr ""
+msgstr "சுவிட்சுகளுக்கு இடையே செங்குத்தாக 1U எத்தனை மில்லிமீட்டர்கள்"
 
 msgid "Layout filepath or kle-ng share URL"
-msgstr ""
+msgstr "தளவமைப்பு கோப்பு பாதை அல்லது kle-ng பகிர்வு URL"
 
 msgid "Start index"
-msgstr ""
+msgstr "தொடக்கக் குறியீட்டெண்"
 
 msgid "Starting index used to match footprint annotations"
-msgstr ""
+msgstr "footprint குறிப்புகளைப் பொருத்தப் பயன்படும் தொடக்கக் குறியீட்டெண்"
 
 msgid "Switch settings"
-msgstr "அமைப்புகளை மாற்றவும்"
+msgstr "சுவிட்ச் அமைப்புகள்"
 
 msgid "Route with switches"
-msgstr "சுவிட்சுகளுடன் பாதை"
+msgstr "சுவிட்சுகளுடன் சேர்த்து தடம் அமைக்கவும்"
 
 msgid "Automatically adjust orientation"
 msgstr "தானாகவே நோக்குநிலையை சரிசெய்யவும்"
@@ -68,15 +67,17 @@ msgid ""
 "Find optimal diode orientation for minimal distance between switch and diode "
 "common net pads"
 msgstr ""
+"சுவிட்ச் மற்றும் டையோடின் பொது நெட் பேட்களுக்கு இடையிலான தூரம் குறைவாக "
+"இருக்கும் வகையில் உகந்த டையோடு நோக்குநிலையைக் கண்டறியவும்"
 
 msgid "Switch diodes settings"
-msgstr "டையோட்கள் அமைப்புகளை மாற்றவும்"
+msgstr "சுவிட்ச் டையோடு அமைப்புகள்"
 
 msgid "Additional elements settings"
 msgstr "கூடுதல் கூறுகள் அமைப்புகள்"
 
 msgid "Route rows and columns"
-msgstr "பாதை வரிசைகள் மற்றும் நெடுவரிசைகள்"
+msgstr "வரிசைகள் மற்றும் நெடுவரிசைகளுக்குத் தடம் அமைக்கவும்"
 
 msgid "Controller circuit template file:"
 msgstr "கட்டுப்படுத்தி சுற்று வார்ப்புரு கோப்பு:"
@@ -88,19 +89,19 @@ msgid "Outline delta:"
 msgstr "அவுட்லைன் டெல்டா:"
 
 msgid "Layout offset"
-msgstr ""
+msgstr "தளவமைப்பு இடப்பெயர்ச்சி"
 
 msgid "X placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "விசைப்பலகை தளவமைப்பின் X இட இடப்பெயர்ச்சி (மி.மீ)"
 
 msgid "Y placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "விசைப்பலகை தளவமைப்பின் Y இட இடப்பெயர்ச்சி (மி.மீ)"
 
 msgid "Other settings"
 msgstr "பிற அமைப்புகள்"
 
 msgid "Open in Keyboard Layout Editor NG"
-msgstr ""
+msgstr "Keyboard Layout Editor NG இல் திறக்கவும்"
 
 msgid "Actions"
-msgstr ""
+msgstr "செயல்கள்"

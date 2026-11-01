@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: 2026-06-04 13:39+0200\n"
-"PO-Revision-Date: 2023-07-14 20:04+0200\n"
-"Last-Translator: Automatically generated\n"
+"PO-Revision-Date: 2026-11-01 07:53-0800\n"
+"Last-Translator: Claude Opus 5.5 (AI) <noreply@anthropic.com>\n"
 "Language-Team: none\n"
 "Language: ro\n"
 "MIME-Version: 1.0\n"
@@ -17,86 +17,90 @@ msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
 "based on layout description from "
 msgstr ""
+"Plugin pentru proiectarea tastaturilor mecanice. Oferă plasarea automată a tastelor \n"
+"pe baza descrierii aranjamentului din "
 
 msgid "Project website - "
-msgstr ""
+msgstr "Site-ul proiectului - "
 
 msgid "Geekhack forum thread - "
-msgstr ""
+msgstr "Subiect pe forumul Geekhack - "
 
 msgid "Save to:"
-msgstr ""
+msgstr "Salvează în:"
 
 msgid "Load from:"
-msgstr ""
+msgstr "Încarcă din:"
 
 msgid "Keyboard Layout:"
-msgstr ""
+msgstr "Aranjament tastatură:"
 
 msgid "Layout file or kle-ng share link"
-msgstr ""
+msgstr "Fișier de aranjament sau link de partajare kle-ng"
 
 msgid "How many millimeters 1U spans between switches horizontally"
-msgstr ""
+msgstr "Câți milimetri corespund unui 1U între switch-uri pe orizontală"
 
 msgid "How many millimeters 1U spans between switches vertically"
-msgstr ""
+msgstr "Câți milimetri corespund unui 1U între switch-uri pe verticală"
 
 msgid "Layout filepath or kle-ng share URL"
-msgstr ""
+msgstr "Calea fișierului de aranjament sau URL de partajare kle-ng"
 
 msgid "Start index"
-msgstr ""
+msgstr "Index de start"
 
 msgid "Starting index used to match footprint annotations"
-msgstr ""
+msgstr "Index de start folosit pentru potrivirea adnotărilor amprentelor"
 
 msgid "Switch settings"
-msgstr ""
+msgstr "Setări switch-uri"
 
 msgid "Route with switches"
-msgstr ""
+msgstr "Rutează împreună cu switch-urile"
 
 msgid "Automatically adjust orientation"
-msgstr ""
+msgstr "Ajustează automat orientarea"
 
 msgid ""
 "Find optimal diode orientation for minimal distance between switch and diode "
 "common net pads"
 msgstr ""
+"Găsește orientarea optimă a diodei pentru distanța minimă dintre pad-urile "
+"rețelei comune a switch-ului și a diodei"
 
 msgid "Switch diodes settings"
-msgstr ""
+msgstr "Setări diode switch-uri"
 
 msgid "Additional elements settings"
-msgstr ""
+msgstr "Setări elemente suplimentare"
 
 msgid "Route rows and columns"
-msgstr ""
+msgstr "Rutează rândurile și coloanele"
 
 msgid "Controller circuit template file:"
-msgstr ""
+msgstr "Fișier șablon pentru circuitul controlerului:"
 
 msgid "Build board outline"
-msgstr ""
+msgstr "Creează conturul plăcii"
 
 msgid "Outline delta:"
-msgstr ""
+msgstr "Distanța conturului:"
 
 msgid "Layout offset"
-msgstr ""
+msgstr "Decalaj aranjament"
 
 msgid "X placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Decalajul X de plasare a aranjamentului tastaturii în mm"
 
 msgid "Y placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Decalajul Y de plasare a aranjamentului tastaturii în mm"
 
 msgid "Other settings"
-msgstr ""
+msgstr "Alte setări"
 
 msgid "Open in Keyboard Layout Editor NG"
-msgstr ""
+msgstr "Deschide în Keyboard Layout Editor NG"
 
 msgid "Actions"
-msgstr ""
+msgstr "Acțiuni"

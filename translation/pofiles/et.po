@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: 2026-06-04 13:39+0200\n"
-"PO-Revision-Date: 2023-07-14 20:04+0200\n"
-"Last-Translator: Automatically generated\n"
+"PO-Revision-Date: 2026-11-01 07:53-0800\n"
+"Last-Translator: Claude Opus 5.5 (AI) <noreply@anthropic.com>\n"
 "Language-Team: none\n"
 "Language: et\n"
 "MIME-Version: 1.0\n"
@@ -16,86 +16,90 @@ msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
 "based on layout description from "
 msgstr ""
+"Pistikprogramm mehaaniliste klaviatuuride projekteerimiseks. See võimaldab klahvide automaatset paigutamist \n"
+"paigutuse kirjelduse põhjal saidilt "
 
 msgid "Project website - "
-msgstr ""
+msgstr "Projekti veebisait - "
 
 msgid "Geekhack forum thread - "
-msgstr ""
+msgstr "Geekhacki foorumi lõim - "
 
 msgid "Save to:"
-msgstr ""
+msgstr "Salvesta asukohta:"
 
 msgid "Load from:"
-msgstr ""
+msgstr "Laadi asukohast:"
 
 msgid "Keyboard Layout:"
-msgstr ""
+msgstr "Klaviatuuri paigutus:"
 
 msgid "Layout file or kle-ng share link"
-msgstr ""
+msgstr "Paigutusfail või kle-ng jagamislink"
 
 msgid "How many millimeters 1U spans between switches horizontally"
-msgstr ""
+msgstr "Mitu millimeetrit vastab 1U-le lülitite vahel horisontaalselt"
 
 msgid "How many millimeters 1U spans between switches vertically"
-msgstr ""
+msgstr "Mitu millimeetrit vastab 1U-le lülitite vahel vertikaalselt"
 
 msgid "Layout filepath or kle-ng share URL"
-msgstr ""
+msgstr "Paigutusfaili tee või kle-ng jagamise URL"
 
 msgid "Start index"
-msgstr ""
+msgstr "Algindeks"
 
 msgid "Starting index used to match footprint annotations"
-msgstr ""
+msgstr "Algindeks, mida kasutatakse jalajälgede tähiste sobitamiseks"
 
 msgid "Switch settings"
-msgstr ""
+msgstr "Lülitite sätted"
 
 msgid "Route with switches"
-msgstr ""
+msgstr "Marsruudi koos lülititega"
 
 msgid "Automatically adjust orientation"
-msgstr ""
+msgstr "Kohanda suunda automaatselt"
 
 msgid ""
 "Find optimal diode orientation for minimal distance between switch and diode "
 "common net pads"
 msgstr ""
+"Leia dioodi optimaalne suund, et lüliti ja dioodi ühise võrgu kontaktpatjade "
+"vaheline kaugus oleks minimaalne"
 
 msgid "Switch diodes settings"
-msgstr ""
+msgstr "Lülitite dioodide sätted"
 
 msgid "Additional elements settings"
-msgstr ""
+msgstr "Lisaelementide sätted"
 
 msgid "Route rows and columns"
-msgstr ""
+msgstr "Marsruudi read ja veerud"
 
 msgid "Controller circuit template file:"
-msgstr ""
+msgstr "Kontrolleri skeemi mallifail:"
 
 msgid "Build board outline"
-msgstr ""
+msgstr "Loo plaadi kontuur"
 
 msgid "Outline delta:"
-msgstr ""
+msgstr "Kontuuri vahe:"
 
 msgid "Layout offset"
-msgstr ""
+msgstr "Paigutuse nihe"
 
 msgid "X placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Klaviatuuri paigutuse X-nihe millimeetrites"
 
 msgid "Y placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Klaviatuuri paigutuse Y-nihe millimeetrites"
 
 msgid "Other settings"
-msgstr ""
+msgstr "Muud sätted"
 
 msgid "Open in Keyboard Layout Editor NG"
-msgstr ""
+msgstr "Ava rakenduses Keyboard Layout Editor NG"
 
 msgid "Actions"
-msgstr ""
+msgstr "Toimingud"

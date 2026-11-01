@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: 2026-06-04 13:39+0200\n"
-"PO-Revision-Date: 2024-12-07 09:00+0000\n"
-"Last-Translator: gfbdrgng <hnaofegnp@hldrive.com>\n"
+"PO-Revision-Date: 2026-11-01 07:53-0800\n"
+"Last-Translator: Claude Opus 5.5 (AI) <noreply@anthropic.com>\n"
 "Language-Team: Russian <https://hosted.weblate.org/projects/kicad-kbplacer/"
 "master-source/ru/>\n"
 "Language: ru\n"
@@ -19,9 +19,8 @@ msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
 "based on layout description from "
 msgstr ""
-"Плагин для оформления механической клавиатуры. Имеет автоматическое "
-"размещение ключей.\n"
-"на основе описания макета из "
+"Плагин для проектирования механических клавиатур. Обеспечивает автоматическое размещение клавиш\n"
+"на основе описания раскладки из "
 
 msgid "Project website - "
 msgstr "Сайт проекта - "
@@ -30,37 +29,40 @@ msgid "Geekhack forum thread - "
 msgstr "Ветка форума Geekhack - "
 
 msgid "Save to:"
-msgstr "Сохранить:"
+msgstr "Сохранить в:"
 
 msgid "Load from:"
-msgstr "Загрузить:"
+msgstr "Загрузить из:"
 
 msgid "Keyboard Layout:"
 msgstr "Раскладка клавиатуры:"
 
 msgid "Layout file or kle-ng share link"
-msgstr ""
+msgstr "Файл раскладки или ссылка kle-ng для общего доступа"
 
 msgid "How many millimeters 1U spans between switches horizontally"
 msgstr ""
+"Сколько миллиметров соответствует 1U между переключателями по горизонтали"
 
 msgid "How many millimeters 1U spans between switches vertically"
 msgstr ""
+"Сколько миллиметров соответствует 1U между переключателями по вертикали"
 
 msgid "Layout filepath or kle-ng share URL"
-msgstr ""
+msgstr "Путь к файлу раскладки или URL kle-ng для общего доступа"
 
 msgid "Start index"
-msgstr ""
+msgstr "Начальный индекс"
 
 msgid "Starting index used to match footprint annotations"
 msgstr ""
+"Начальный индекс для сопоставления позиционных обозначений посадочных мест"
 
 msgid "Switch settings"
-msgstr "Переключить настройки"
+msgstr "Настройки переключателей"
 
 msgid "Route with switches"
-msgstr "Маршрут с переключателями"
+msgstr "Трассировать вместе с переключателями"
 
 msgid "Automatically adjust orientation"
 msgstr "Автоматическая регулировка ориентации"
@@ -69,39 +71,41 @@ msgid ""
 "Find optimal diode orientation for minimal distance between switch and diode "
 "common net pads"
 msgstr ""
+"Найти оптимальную ориентацию диода для минимального расстояния между "
+"контактными площадками общей цепи переключателя и диода"
 
 msgid "Switch diodes settings"
-msgstr "Переключить настройки диодов"
+msgstr "Настройки диодов переключателей"
 
 msgid "Additional elements settings"
-msgstr "Дополнительные настройки элементов"
+msgstr "Настройки дополнительных элементов"
 
 msgid "Route rows and columns"
-msgstr "Строки и столбцы"
+msgstr "Трассировать строки и столбцы"
 
 msgid "Controller circuit template file:"
 msgstr "Файл шаблона схемы контроллера:"
 
 msgid "Build board outline"
-msgstr "Постройте контур доски"
+msgstr "Построить контур платы"
 
 msgid "Outline delta:"
-msgstr "Контурная дельта:"
+msgstr "Отступ контура:"
 
 msgid "Layout offset"
-msgstr ""
+msgstr "Смещение раскладки"
 
 msgid "X placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Смещение размещения раскладки клавиатуры по X в мм"
 
 msgid "Y placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Смещение размещения раскладки клавиатуры по Y в мм"
 
 msgid "Other settings"
 msgstr "Другие настройки"
 
 msgid "Open in Keyboard Layout Editor NG"
-msgstr ""
+msgstr "Открыть в Keyboard Layout Editor NG"
 
 msgid "Actions"
-msgstr ""
+msgstr "Действия"

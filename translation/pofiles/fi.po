@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: 2026-06-04 13:39+0200\n"
-"PO-Revision-Date: 2024-11-28 14:00+0000\n"
-"Last-Translator: Ricky Tigg <ricky.tigg@gmail.com>\n"
+"PO-Revision-Date: 2026-11-01 07:53-0800\n"
+"Last-Translator: Claude Opus 5.5 (AI) <noreply@anthropic.com>\n"
 "Language-Team: Finnish <https://hosted.weblate.org/projects/kicad-kbplacer/"
 "master-source/fi/>\n"
 "Language: fi\n"
@@ -18,88 +18,90 @@ msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
 "based on layout description from "
 msgstr ""
-"Lisäosa mekaaniseen näppäimistön suunnitteluun. Siinä on automaattinen\n"
-"avainten sijoittelu, joka perustuu asettelun kuvaukseen tästä: "
+"Lisäosa mekaanisten näppäimistöjen suunnitteluun. Siinä on automaattinen\n"
+"näppäinten sijoittelu, joka perustuu asettelun kuvaukseen lähteestä: "
 
 msgid "Project website - "
-msgstr "Hankkeen nettisivut - "
+msgstr "Projektin verkkosivusto - "
 
 msgid "Geekhack forum thread - "
-msgstr "Nörttihakkeri-keskustelupalsta - "
+msgstr "Geekhack-foorumin ketju - "
 
 msgid "Save to:"
 msgstr "Tallenna kohteeseen:"
 
 msgid "Load from:"
-msgstr "Lataa tästä:"
+msgstr "Lataa kohteesta:"
 
 msgid "Keyboard Layout:"
 msgstr "Näppäimistön asettelu:"
 
 msgid "Layout file or kle-ng share link"
-msgstr ""
+msgstr "Asettelutiedosto tai kle-ng-jakolinkki"
 
 msgid "How many millimeters 1U spans between switches horizontally"
-msgstr ""
+msgstr "Kuinka monta millimetriä 1U vastaa kytkinten välillä vaakasuunnassa"
 
 msgid "How many millimeters 1U spans between switches vertically"
-msgstr ""
+msgstr "Kuinka monta millimetriä 1U vastaa kytkinten välillä pystysuunnassa"
 
 msgid "Layout filepath or kle-ng share URL"
-msgstr ""
+msgstr "Asettelutiedoston polku tai kle-ng-jako-URL"
 
 msgid "Start index"
-msgstr ""
+msgstr "Aloitusindeksi"
 
 msgid "Starting index used to match footprint annotations"
-msgstr ""
+msgstr "Aloitusindeksi footprintien viitetunnusten täsmäämiseen"
 
 msgid "Switch settings"
-msgstr "Kytkimen asetukset"
+msgstr "Kytkinten asetukset"
 
 msgid "Route with switches"
-msgstr "Reitti kytkimien kanssa"
+msgstr "Reititä yhdessä kytkinten kanssa"
 
 msgid "Automatically adjust orientation"
-msgstr "Automaattisesti säädä suunta"
+msgstr "Säädä suunta automaattisesti"
 
 msgid ""
 "Find optimal diode orientation for minimal distance between switch and diode "
 "common net pads"
 msgstr ""
+"Etsi diodin optimaalinen suunta, jotta kytkimen ja diodin yhteisen verkon "
+"padien välinen etäisyys on pienin"
 
 msgid "Switch diodes settings"
-msgstr "Kytkimen diodiasetukset"
+msgstr "Kytkinten diodien asetukset"
 
 msgid "Additional elements settings"
 msgstr "Lisäelementtien asetukset"
 
 msgid "Route rows and columns"
-msgstr "Reititä rivejä ja sarakkeita"
+msgstr "Reititä rivit ja sarakkeet"
 
 msgid "Controller circuit template file:"
 msgstr "Ohjainpiirin mallitiedosto:"
 
 msgid "Build board outline"
-msgstr "Rakenna levyn ääriviivat"
+msgstr "Luo piirilevyn ääriviivat"
 
 msgid "Outline delta:"
-msgstr ""
+msgstr "Ääriviivan etäisyys:"
 
 msgid "Layout offset"
-msgstr ""
+msgstr "Asettelun siirtymä"
 
 msgid "X placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Näppäimistön asettelun sijoittelun X-siirtymä millimetreinä"
 
 msgid "Y placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Näppäimistön asettelun sijoittelun Y-siirtymä millimetreinä"
 
 msgid "Other settings"
 msgstr "Muut asetukset"
 
 msgid "Open in Keyboard Layout Editor NG"
-msgstr ""
+msgstr "Avaa Keyboard Layout Editor NG:ssä"
 
 msgid "Actions"
-msgstr ""
+msgstr "Toiminnot"

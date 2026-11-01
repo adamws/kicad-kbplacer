@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: 2026-06-04 13:39+0200\n"
-"PO-Revision-Date: 2023-07-14 20:04+0200\n"
-"Last-Translator: Automatically generated\n"
+"PO-Revision-Date: 2026-11-01 07:53-0800\n"
+"Last-Translator: Claude Opus 5.5 (AI) <noreply@anthropic.com>\n"
 "Language-Team: none\n"
 "Language: ar\n"
 "MIME-Version: 1.0\n"
@@ -15,86 +15,90 @@ msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
 "based on layout description from "
 msgstr ""
+"إضافة لتصميم لوحات المفاتيح الميكانيكية. توفر وضعًا تلقائيًا للمفاتيح \n"
+"استنادًا إلى وصف التخطيط من "
 
 msgid "Project website - "
-msgstr ""
+msgstr "موقع المشروع - "
 
 msgid "Geekhack forum thread - "
-msgstr ""
+msgstr "موضوع منتدى Geekhack - "
 
 msgid "Save to:"
-msgstr ""
+msgstr "حفظ إلى:"
 
 msgid "Load from:"
-msgstr ""
+msgstr "تحميل من:"
 
 msgid "Keyboard Layout:"
-msgstr ""
+msgstr "تخطيط لوحة المفاتيح:"
 
 msgid "Layout file or kle-ng share link"
-msgstr ""
+msgstr "ملف التخطيط أو رابط مشاركة kle-ng"
 
 msgid "How many millimeters 1U spans between switches horizontally"
-msgstr ""
+msgstr "عدد المليمترات التي تمثلها وحدة 1U بين السويتشات أفقيًا"
 
 msgid "How many millimeters 1U spans between switches vertically"
-msgstr ""
+msgstr "عدد المليمترات التي تمثلها وحدة 1U بين السويتشات رأسيًا"
 
 msgid "Layout filepath or kle-ng share URL"
-msgstr ""
+msgstr "مسار ملف التخطيط أو عنوان URL لمشاركة kle-ng"
 
 msgid "Start index"
-msgstr ""
+msgstr "فهرس البداية"
 
 msgid "Starting index used to match footprint annotations"
-msgstr ""
+msgstr "فهرس البداية المستخدم لمطابقة ترقيم البصمات"
 
 msgid "Switch settings"
-msgstr ""
+msgstr "إعدادات السويتشات"
 
 msgid "Route with switches"
-msgstr ""
+msgstr "توجيه المسارات مع السويتشات"
 
 msgid "Automatically adjust orientation"
-msgstr ""
+msgstr "ضبط الاتجاه تلقائيًا"
 
 msgid ""
 "Find optimal diode orientation for minimal distance between switch and diode "
 "common net pads"
 msgstr ""
+"إيجاد الاتجاه الأمثل للصمام الثنائي لتقليل المسافة بين وسائد الشبكة المشتركة "
+"للسويتش والصمام الثنائي"
 
 msgid "Switch diodes settings"
-msgstr ""
+msgstr "إعدادات الصمامات الثنائية للسويتشات"
 
 msgid "Additional elements settings"
-msgstr ""
+msgstr "إعدادات العناصر الإضافية"
 
 msgid "Route rows and columns"
-msgstr ""
+msgstr "توجيه مسارات الصفوف والأعمدة"
 
 msgid "Controller circuit template file:"
-msgstr ""
+msgstr "ملف قالب دائرة المتحكم:"
 
 msgid "Build board outline"
-msgstr ""
+msgstr "إنشاء مخطط حدود اللوحة"
 
 msgid "Outline delta:"
-msgstr ""
+msgstr "إزاحة المخطط:"
 
 msgid "Layout offset"
-msgstr ""
+msgstr "إزاحة التخطيط"
 
 msgid "X placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "إزاحة موضع تخطيط لوحة المفاتيح على المحور X بالمليمتر"
 
 msgid "Y placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "إزاحة موضع تخطيط لوحة المفاتيح على المحور Y بالمليمتر"
 
 msgid "Other settings"
-msgstr ""
+msgstr "إعدادات أخرى"
 
 msgid "Open in Keyboard Layout Editor NG"
-msgstr ""
+msgstr "فتح في Keyboard Layout Editor NG"
 
 msgid "Actions"
-msgstr ""
+msgstr "الإجراءات"

@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: 2026-06-04 13:39+0200\n"
-"PO-Revision-Date: 2024-06-11 10:09+0000\n"
-"Last-Translator: hugoalh <hugoalh@users.noreply.hosted.weblate.org>\n"
+"PO-Revision-Date: 2026-11-01 07:53-0800\n"
+"Last-Translator: Claude Opus 5.5 (AI) <noreply@anthropic.com>\n"
 "Language-Team: Chinese (Traditional) <https://hosted.weblate.org/projects/"
 "kicad-kbplacer/master-source/zh_Hant/>\n"
 "Language: zh_TW\n"
@@ -18,86 +18,88 @@ msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
 "based on layout description from "
 msgstr ""
+"用於機械鍵盤設計的外掛程式。可依據佈局描述自動放置按鍵，\n"
+"佈局描述來源："
 
 msgid "Project website - "
-msgstr "專案網站— "
+msgstr "專案網站 - "
 
 msgid "Geekhack forum thread - "
-msgstr "Geekhack 論壇串— "
+msgstr "Geekhack 論壇討論串 - "
 
 msgid "Save to:"
 msgstr "儲存至："
 
 msgid "Load from:"
-msgstr "載入至："
+msgstr "載入自："
 
 msgid "Keyboard Layout:"
 msgstr "鍵盤佈局："
 
 msgid "Layout file or kle-ng share link"
-msgstr ""
+msgstr "佈局檔案或 kle-ng 分享連結"
 
 msgid "How many millimeters 1U spans between switches horizontally"
-msgstr ""
+msgstr "軸體之間水平方向 1U 對應的公釐數"
 
 msgid "How many millimeters 1U spans between switches vertically"
-msgstr ""
+msgstr "軸體之間垂直方向 1U 對應的公釐數"
 
 msgid "Layout filepath or kle-ng share URL"
-msgstr ""
+msgstr "佈局檔案路徑或 kle-ng 分享 URL"
 
 msgid "Start index"
-msgstr ""
+msgstr "起始編號"
 
 msgid "Starting index used to match footprint annotations"
-msgstr ""
+msgstr "用於比對封裝參考編號的起始編號"
 
 msgid "Switch settings"
-msgstr "開關設定"
+msgstr "軸體設定"
 
 msgid "Route with switches"
-msgstr ""
+msgstr "與軸體一起佈線"
 
 msgid "Automatically adjust orientation"
-msgstr ""
+msgstr "自動調整方向"
 
 msgid ""
 "Find optimal diode orientation for minimal distance between switch and diode "
 "common net pads"
-msgstr ""
+msgstr "尋找二極體的最佳方向，使軸體與二極體共同網路焊墊之間的距離最短"
 
 msgid "Switch diodes settings"
-msgstr "開關二極體設定"
+msgstr "軸體二極體設定"
 
 msgid "Additional elements settings"
-msgstr "附加元素設定"
+msgstr "附加元件設定"
 
 msgid "Route rows and columns"
-msgstr ""
+msgstr "佈線行與列"
 
 msgid "Controller circuit template file:"
-msgstr "控制器電路模板檔案："
+msgstr "控制器電路範本檔案："
 
 msgid "Build board outline"
-msgstr ""
+msgstr "建立板框"
 
 msgid "Outline delta:"
-msgstr ""
+msgstr "板框外擴："
 
 msgid "Layout offset"
-msgstr ""
+msgstr "佈局偏移"
 
 msgid "X placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "鍵盤佈局放置的 X 偏移量（公釐）"
 
 msgid "Y placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "鍵盤佈局放置的 Y 偏移量（公釐）"
 
 msgid "Other settings"
 msgstr "其他設定"
 
 msgid "Open in Keyboard Layout Editor NG"
-msgstr ""
+msgstr "在 Keyboard Layout Editor NG 中開啟"
 
 msgid "Actions"
-msgstr ""
+msgstr "動作"

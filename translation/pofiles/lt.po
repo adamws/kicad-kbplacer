@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: 2026-06-04 13:39+0200\n"
-"PO-Revision-Date: 2023-07-14 20:04+0200\n"
-"Last-Translator: Automatically generated\n"
+"PO-Revision-Date: 2026-11-01 07:53-0800\n"
+"Last-Translator: Claude Opus 5.5 (AI) <noreply@anthropic.com>\n"
 "Language-Team: none\n"
 "Language: lt\n"
 "MIME-Version: 1.0\n"
@@ -17,86 +17,90 @@ msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
 "based on layout description from "
 msgstr ""
+"Papildinys mechaninių klaviatūrų projektavimui. Jis leidžia automatiškai išdėstyti klavišus \n"
+"pagal išdėstymo aprašą iš "
 
 msgid "Project website - "
-msgstr ""
+msgstr "Projekto svetainė - "
 
 msgid "Geekhack forum thread - "
-msgstr ""
+msgstr "Geekhack forumo gija - "
 
 msgid "Save to:"
-msgstr ""
+msgstr "Įrašyti į:"
 
 msgid "Load from:"
-msgstr ""
+msgstr "Įkelti iš:"
 
 msgid "Keyboard Layout:"
-msgstr ""
+msgstr "Klaviatūros išdėstymas:"
 
 msgid "Layout file or kle-ng share link"
-msgstr ""
+msgstr "Išdėstymo failas arba kle-ng bendrinimo nuoroda"
 
 msgid "How many millimeters 1U spans between switches horizontally"
-msgstr ""
+msgstr "Kiek milimetrų atitinka 1U tarp jungiklių horizontaliai"
 
 msgid "How many millimeters 1U spans between switches vertically"
-msgstr ""
+msgstr "Kiek milimetrų atitinka 1U tarp jungiklių vertikaliai"
 
 msgid "Layout filepath or kle-ng share URL"
-msgstr ""
+msgstr "Išdėstymo failo kelias arba kle-ng bendrinimo URL"
 
 msgid "Start index"
-msgstr ""
+msgstr "Pradinis indeksas"
 
 msgid "Starting index used to match footprint annotations"
-msgstr ""
+msgstr "Pradinis indeksas, naudojamas korpusų žymenims sutapatinti"
 
 msgid "Switch settings"
-msgstr ""
+msgstr "Jungiklių nustatymai"
 
 msgid "Route with switches"
-msgstr ""
+msgstr "Trasuoti kartu su jungikliais"
 
 msgid "Automatically adjust orientation"
-msgstr ""
+msgstr "Automatiškai koreguoti orientaciją"
 
 msgid ""
 "Find optimal diode orientation for minimal distance between switch and diode "
 "common net pads"
 msgstr ""
+"Rasti optimalią diodo orientaciją, kad atstumas tarp jungiklio ir diodo "
+"bendro tinklo kontaktinių aikštelių būtų mažiausias"
 
 msgid "Switch diodes settings"
-msgstr ""
+msgstr "Jungiklių diodų nustatymai"
 
 msgid "Additional elements settings"
-msgstr ""
+msgstr "Papildomų elementų nustatymai"
 
 msgid "Route rows and columns"
-msgstr ""
+msgstr "Trasuoti eilutes ir stulpelius"
 
 msgid "Controller circuit template file:"
-msgstr ""
+msgstr "Valdiklio grandinės šablono failas:"
 
 msgid "Build board outline"
-msgstr ""
+msgstr "Sukurti plokštės kontūrą"
 
 msgid "Outline delta:"
-msgstr ""
+msgstr "Kontūro atstumas:"
 
 msgid "Layout offset"
-msgstr ""
+msgstr "Išdėstymo poslinkis"
 
 msgid "X placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Klaviatūros išdėstymo X poslinkis milimetrais"
 
 msgid "Y placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Klaviatūros išdėstymo Y poslinkis milimetrais"
 
 msgid "Other settings"
-msgstr ""
+msgstr "Kiti nustatymai"
 
 msgid "Open in Keyboard Layout Editor NG"
-msgstr ""
+msgstr "Atverti Keyboard Layout Editor NG"
 
 msgid "Actions"
-msgstr ""
+msgstr "Veiksmai"

@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: 2026-06-04 13:39+0200\n"
-"PO-Revision-Date: 2023-07-14 20:04+0200\n"
-"Last-Translator: Automatically generated\n"
+"PO-Revision-Date: 2026-11-01 07:53-0800\n"
+"Last-Translator: Claude Opus 5.5 (AI) <noreply@anthropic.com>\n"
 "Language-Team: none\n"
 "Language: tr\n"
 "MIME-Version: 1.0\n"
@@ -16,86 +16,91 @@ msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
 "based on layout description from "
 msgstr ""
+"Mekanik klavye tasarımı için eklenti. Şu kaynaktaki yerleşim tanımına \n"
+"dayalı otomatik tuş yerleşimi sunar: "
 
 msgid "Project website - "
-msgstr ""
+msgstr "Proje web sitesi - "
 
 msgid "Geekhack forum thread - "
-msgstr ""
+msgstr "Geekhack forum konusu - "
 
 msgid "Save to:"
-msgstr ""
+msgstr "Kaydetme yeri:"
 
 msgid "Load from:"
-msgstr ""
+msgstr "Yükleme yeri:"
 
 msgid "Keyboard Layout:"
-msgstr ""
+msgstr "Klavye Yerleşimi:"
 
 msgid "Layout file or kle-ng share link"
-msgstr ""
+msgstr "Yerleşim dosyası veya kle-ng paylaşım bağlantısı"
 
 msgid "How many millimeters 1U spans between switches horizontally"
-msgstr ""
+msgstr "Switch'ler arasında yatayda 1U'nun kaç milimetreye karşılık geldiği"
 
 msgid "How many millimeters 1U spans between switches vertically"
-msgstr ""
+msgstr "Switch'ler arasında dikeyde 1U'nun kaç milimetreye karşılık geldiği"
 
 msgid "Layout filepath or kle-ng share URL"
-msgstr ""
+msgstr "Yerleşim dosyası yolu veya kle-ng paylaşım URL'si"
 
 msgid "Start index"
-msgstr ""
+msgstr "Başlangıç indeksi"
 
 msgid "Starting index used to match footprint annotations"
 msgstr ""
+"Ayak izi referans numaralarını eşleştirmek için kullanılan başlangıç indeksi"
 
 msgid "Switch settings"
-msgstr ""
+msgstr "Switch ayarları"
 
 msgid "Route with switches"
-msgstr ""
+msgstr "Switch'lerle birlikte yönlendir"
 
 msgid "Automatically adjust orientation"
-msgstr ""
+msgstr "Yönü otomatik ayarla"
 
 msgid ""
 "Find optimal diode orientation for minimal distance between switch and diode "
 "common net pads"
 msgstr ""
+"Switch ile diyotun ortak net pad'leri arasındaki mesafeyi en aza indirmek "
+"için en uygun diyot yönünü bul"
 
 msgid "Switch diodes settings"
-msgstr ""
+msgstr "Switch diyotu ayarları"
 
 msgid "Additional elements settings"
-msgstr ""
+msgstr "Ek öğe ayarları"
 
 msgid "Route rows and columns"
-msgstr ""
+msgstr "Satırları ve sütunları yönlendir"
 
 msgid "Controller circuit template file:"
-msgstr ""
+msgstr "Denetleyici devre şablon dosyası:"
 
 msgid "Build board outline"
-msgstr ""
+msgstr "Kart dış hattını oluştur"
 
 msgid "Outline delta:"
-msgstr ""
+msgstr "Dış hat payı:"
 
 msgid "Layout offset"
-msgstr ""
+msgstr "Yerleşim ofseti"
 
 msgid "X placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Klavye yerleşiminin mm cinsinden X yerleştirme ofseti"
 
 msgid "Y placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Klavye yerleşiminin mm cinsinden Y yerleştirme ofseti"
 
 msgid "Other settings"
-msgstr ""
+msgstr "Diğer ayarlar"
 
 msgid "Open in Keyboard Layout Editor NG"
-msgstr ""
+msgstr "Keyboard Layout Editor NG'de aç"
 
 msgid "Actions"
-msgstr ""
+msgstr "Eylemler"

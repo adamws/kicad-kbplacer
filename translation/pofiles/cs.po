@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: 2026-06-04 13:39+0200\n"
-"PO-Revision-Date: 2023-07-14 20:04+0200\n"
-"Last-Translator: Automatically generated\n"
+"PO-Revision-Date: 2026-11-01 07:53-0800\n"
+"Last-Translator: Claude Opus 5.5 (AI) <noreply@anthropic.com>\n"
 "Language-Team: none\n"
 "Language: cs\n"
 "MIME-Version: 1.0\n"
@@ -16,86 +16,90 @@ msgid ""
 "Plugin for mechanical keyboard design. It features automatic key placement \n"
 "based on layout description from "
 msgstr ""
+"Plugin pro návrh mechanických klávesnic. Umožňuje automatické rozmístění kláves \n"
+"na základě popisu rozložení z "
 
 msgid "Project website - "
-msgstr ""
+msgstr "Webové stránky projektu - "
 
 msgid "Geekhack forum thread - "
-msgstr ""
+msgstr "Vlákno na fóru Geekhack - "
 
 msgid "Save to:"
-msgstr ""
+msgstr "Uložit do:"
 
 msgid "Load from:"
-msgstr ""
+msgstr "Načíst z:"
 
 msgid "Keyboard Layout:"
-msgstr ""
+msgstr "Rozložení klávesnice:"
 
 msgid "Layout file or kle-ng share link"
-msgstr ""
+msgstr "Soubor s rozložením nebo odkaz pro sdílení z kle-ng"
 
 msgid "How many millimeters 1U spans between switches horizontally"
-msgstr ""
+msgstr "Kolik milimetrů odpovídá 1U mezi switchi vodorovně"
 
 msgid "How many millimeters 1U spans between switches vertically"
-msgstr ""
+msgstr "Kolik milimetrů odpovídá 1U mezi switchi svisle"
 
 msgid "Layout filepath or kle-ng share URL"
-msgstr ""
+msgstr "Cesta k souboru s rozložením nebo URL pro sdílení z kle-ng"
 
 msgid "Start index"
-msgstr ""
+msgstr "Počáteční index"
 
 msgid "Starting index used to match footprint annotations"
-msgstr ""
+msgstr "Počáteční index použitý pro párování označení pouzder"
 
 msgid "Switch settings"
-msgstr ""
+msgstr "Nastavení switchů"
 
 msgid "Route with switches"
-msgstr ""
+msgstr "Vést spoje společně se switchi"
 
 msgid "Automatically adjust orientation"
-msgstr ""
+msgstr "Automaticky upravit orientaci"
 
 msgid ""
 "Find optimal diode orientation for minimal distance between switch and diode "
 "common net pads"
 msgstr ""
+"Najít optimální orientaci diody pro minimální vzdálenost mezi ploškami "
+"společné sítě switche a diody"
 
 msgid "Switch diodes settings"
-msgstr ""
+msgstr "Nastavení diod switchů"
 
 msgid "Additional elements settings"
-msgstr ""
+msgstr "Nastavení dalších prvků"
 
 msgid "Route rows and columns"
-msgstr ""
+msgstr "Vést spoje řádků a sloupců"
 
 msgid "Controller circuit template file:"
-msgstr ""
+msgstr "Soubor šablony obvodu řadiče:"
 
 msgid "Build board outline"
-msgstr ""
+msgstr "Vytvořit obrys desky"
 
 msgid "Outline delta:"
-msgstr ""
+msgstr "Odsazení obrysu:"
 
 msgid "Layout offset"
-msgstr ""
+msgstr "Posunutí rozložení"
 
 msgid "X placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Posunutí umístění rozložení klávesnice v ose X v mm"
 
 msgid "Y placement offset for the keyboard layout in mm"
-msgstr ""
+msgstr "Posunutí umístění rozložení klávesnice v ose Y v mm"
 
 msgid "Other settings"
-msgstr ""
+msgstr "Další nastavení"
 
 msgid "Open in Keyboard Layout Editor NG"
-msgstr ""
+msgstr "Otevřít v Keyboard Layout Editor NG"
 
 msgid "Actions"
-msgstr ""
+msgstr "Akce"
