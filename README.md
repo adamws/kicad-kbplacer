@@ -630,6 +630,34 @@ or with a hierarchical root sheet (`--bundle-strategy hierarchical`). By default
 strategy is selected automatically based on KiCad version.
 Run `python -m kbplacer --help` for details.
 
+##### Presets
+
+Layout independent parts of a keyboard (microcontroller circuit, USB connector, ...)
+can be added from [KiCad design blocks](https://docs.kicad.org/9.0/en/eeschema/eeschema_design_blocks.html)
+with `--preset` (may be repeated). Each preset becomes a schematic sheet of the generated
+project and its PCB layout (footprints, tracks, vias, zones) is copied to the board
+created with `--create-pcb-file`, grouped and placed below the keyboard or at given
+position, on the side of the board given with `FRONT`/`BACK` (the layout is
+flipped when the block was designed for the other side):
+
+```shell
+python -m kbplacer --create-pcb-file --create-sch-file --pcb-file keyboard.kicad_pcb \
+  --layout <via-annotated-layout.json> --switch-footprint ... --diode-footprint ... \
+  --preset "design_blocks/kbplacer.kicad_blocks:mcu_atmega32u4_v1 120 30 90 FRONT"
+```
+
+Presets are plain design blocks, editable in KiCad without kbplacer. When added:
+
+- references are renumbered so that they do not collide with each other and with
+  the key matrix (e.g. preset `C1` becomes `C43` if LED chain uses `C1`-`C42`),
+- global labels `GPIO<n>` mark microcontroller pins available for the key matrix,
+  they are renamed to rows and then columns nets, in `GPIO` number order or in the
+  order given with `--matrix-pin-order`. Only one preset may expose them,
+- other global labels (e.g. `MCU_D+`) are kept, they connect presets with each other.
+
+See [available presets](design_blocks/README.md) for the list of bundled presets with
+schematic and PCB previews and how to create new ones.
+
 > [!WARNING]
 > This requires installation with optional <code>schematic</code> dependencies:
 >

@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import argparse
+import copy
 import logging
 import os
 import sys
@@ -13,11 +14,17 @@ import pcbnew
 
 from . import __version__
 from .defaults import DEFAULT_DIODE_POSITION, ZERO_POSITION
+from .design_block import PresetSpec, plan_presets
 from .element_position import ElementInfo, ElementPosition, PositionOption, Side
 from .footprint_loader import FootprintIdentifier
 from .kbplacer_plugin import PluginSettings, run_board, run_schematic
-from .kle_serial import get_keyboard_from_path_or_url, keyboard_to_url
+from .kle_serial import (
+    MatrixAnnotatedKeyboard,
+    get_keyboard_from_path_or_url,
+    keyboard_to_url,
+)
 from .schematic_project import (
+    SchematicRequest,
     hierarchical_root_filename,
     plan_sheet_filenames,
     resolve_bundle_strategy,
@@ -214,6 +221,58 @@ class ElementInfoListAction(ElementInfoAction):
         except ValueError as e:
             raise argparse.ArgumentTypeError(str(e))
         setattr(namespace, self.dest, value)
+
+
+class PresetAction(argparse.Action):
+    """Parses `IDENTIFIER [X Y [ROTATION]] [FRONT|BACK]`, appending to a list
+    (the option may be repeated). Trailing numbers are the position, so the
+    identifier itself may contain spaces."""
+
+    def __call__(self, parser, namespace, values: str, option_string=None) -> None:
+        try:
+            value = self.parse(values, option_string)
+        except ValueError as e:
+            raise argparse.ArgumentTypeError(str(e))
+        items = list(getattr(namespace, self.dest) or [])
+        items.append(value)
+        setattr(namespace, self.dest, items)
+
+    @staticmethod
+    def _is_number(token: str) -> bool:
+        try:
+            float(token)
+        except ValueError:
+            return False
+        return True
+
+    def parse(self, values: str, option_string) -> PresetSpec:
+        tokens = values.split()
+        side = None
+        if len(tokens) > 1:
+            try:
+                side = Side.get(tokens[-1])
+                tokens = tokens[:-1]
+            except ValueError:
+                pass
+        numbers = 0
+        while numbers < min(3, len(tokens) - 1) and self._is_number(
+            tokens[len(tokens) - 1 - numbers]
+        ):
+            numbers += 1
+        if numbers == 1:
+            msg = f"{option_string} position requires both X and Y values."
+            raise ValueError(msg)
+        identifier = " ".join(tokens[: len(tokens) - numbers])
+        if not identifier:
+            msg = f"{option_string} requires design block identifier."
+            raise ValueError(msg)
+        position = None
+        if numbers:
+            floats = [float(v) for v in tokens[len(tokens) - numbers :]]
+            x, y = floats[0], floats[1]
+            rotation = floats[2] if numbers == 3 else 0.0
+            position = (x, y, rotation)
+        return PresetSpec(identifier, position, side)
 
 
 class XYAction(argparse.Action):
@@ -460,6 +519,42 @@ def app() -> None:
         ),
     )
     parser.add_argument(
+        "--preset",
+        dest="presets",
+        default=[],
+        action=PresetAction,
+        metavar="PRESET",
+        help=(
+            "Adds layout independent circuit (for example microcontroller or USB\n"
+            "connector) from a KiCad design block: its schematic becomes a sheet of\n"
+            "the project created by `--create-sch-file`/`--create-led-sch-file` and\n"
+            "its PCB layout is copied to the board created by `--create-pcb-file`.\n"
+            "Space separated value of IDENTIFIER [X Y [ROTATION]] [FRONT|BACK]\n"
+            "where IDENTIFIER is design block directory or path to library and\n"
+            "block name joined with ':', X, Y (mm) and ROTATION (degrees) define\n"
+            "position of design block origin on the board and FRONT|BACK the board\n"
+            "side of its components (block is flipped around its origin when\n"
+            "designed for the other side). When position omitted, block is placed\n"
+            "below the keyboard, when side omitted, block keeps its own side.\n"
+            "May be used multiple times, for example:\n"
+            "\t--preset /path/to/kbplacer.kicad_blocks:mcu_atmega32u4_v1\n"
+            '\t--preset "/path/to/usb_c.kicad_block 120 30 90 BACK"\n'
+            "References are renumbered to not collide with each other and with the\n"
+            "key matrix. Global labels `GPIO<n>` of a preset are renamed to key\n"
+            "matrix rows and columns (rows first, in `GPIO` number order)."
+        ),
+    )
+    parser.add_argument(
+        "--matrix-pin-order",
+        required=False,
+        default="",
+        help=(
+            "Comma separated list of preset `GPIO<n>` labels defining order in which\n"
+            "key matrix rows and then columns are assigned to them,\n"
+            "for example: GPIO4,GPIO5,GPIO0,GPIO1,GPIO2"
+        ),
+    )
+    parser.add_argument(
         "--switch-footprint",
         required=False,
         default="",
@@ -638,11 +733,55 @@ def app() -> None:
         )
         sys.exit(1)
 
+    keyboard = None
+    if layout_path:
+        keyboard = get_keyboard_from_path_or_url(layout_path)
+
+    presets = []
+    if args.presets:
+        if not keyboard:
+            logger.error("--preset requires --layout")
+            sys.exit(1)
+        creates_schematic = args.create_sch_file or args.create_led_sch_file
+        if not creates_schematic and not args.create_pcb_file:
+            logger.error(
+                "--preset requires --create-pcb-file, --create-sch-file "
+                "or --create-led-sch-file"
+            )
+            sys.exit(1)
+        if pcb_file_path and not args.create_pcb_file:
+            logger.warning(
+                "Presets are added only to boards created with --create-pcb-file, "
+                f"{pcb_file_path} is left without them"
+            )
+        matrix_pin_order = [
+            p.strip() for p in args.matrix_pin_order.split(",") if p.strip()
+        ]
+        try:
+            presets = plan_presets(
+                args.presets,
+                MatrixAnnotatedKeyboard.from_keyboard(copy.deepcopy(keyboard)),
+                start_index=args.start_index,
+                with_leds=args.create_led_sch_file or args.create_led_pcb_elements,
+                with_led_capacitors=not args.skip_led_decoupling,
+                matrix_pin_order=matrix_pin_order,
+            )
+        except ValueError as e:
+            logger.error(e)
+            sys.exit(1)
+    elif args.matrix_pin_order:
+        logger.error("--matrix-pin-order requires --preset")
+        sys.exit(1)
+
     requested_sheet_types = []
     if args.create_sch_file:
         requested_sheet_types.append("key_matrix")
     if args.create_led_sch_file:
         requested_sheet_types.append("led_chain")
+    if requested_sheet_types:
+        requested_sheet_types.extend(
+            SchematicRequest("preset", name=p.sheet_name) for p in presets
+        )
 
     if requested_sheet_types:
         # Project basename: `--pcb-file`'s stem when given (matching today's
@@ -703,8 +842,7 @@ def app() -> None:
         led_sch_path = ""
         project_path = ""
 
-    if layout_path:
-        keyboard = get_keyboard_from_path_or_url(layout_path)
+    if keyboard:
         keyboard_url = keyboard_to_url(keyboard)
 
         logger.info(f"User layout: {keyboard_url}")
@@ -756,6 +894,7 @@ def app() -> None:
         create_led_pcb_elements=args.create_led_pcb_elements,
         skip_led_decoupling=args.skip_led_decoupling,
         bundle_strategy=args.bundle_strategy,
+        presets=presets,
     )
 
     if args.create_sch_file or args.create_led_sch_file:

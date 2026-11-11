@@ -115,6 +115,21 @@ tools-pcb2layout url version=default_version *args="--verify":
     echo ">>> Image:  output_pcb2layout/$name.svg"
     echo ">>> kle-ng: $(cat "$outdir/$name.url")"
 
+# Exports schematic and PCB of every design block in design_blocks/ to SVG images
+# (design_blocks/images/) and regenerates presets overview in design_blocks/README.md.
+# Requires KiCad >= 10.0. Run after adding or editing a design block.
+# generate design block (preset) preview images and overview
+tools-block2image version=default_version:
+    docker run --rm \
+        -v "{{justfile_directory()}}:/workspace" -w /workspace \
+        "{{image_prefix}}:{{version}}" \
+        bash -c "pip3 install --no-cache-dir hatch && \
+            hatch run tools:block2image \
+                --in design_blocks/kbplacer.kicad_blocks \
+                --out design_blocks/images \
+                --readme design_blocks/README.md \
+                --log-level INFO"
+
 # run layout2openscad tool (pass extra args after --)
 tools-layout2openscad version=default_version *args="--help":
     docker run --rm \
@@ -194,6 +209,76 @@ schematic version=default_version layout="wt60_a" *args="":
 
 schematic-with-leds version=default_version layout="wt60_a" *args="":
     just schematic {{version}} {{layout}} --create-led-sch-file {{args}}
+
+# Writes PCB and schematic project of LAYOUT (file in tests/data/via-layouts/) with
+# BLOCK design block from design_blocks/kbplacer.kicad_blocks added as `--preset`
+# to ./output_presets/, then reports ERC and schematic parity DRC results and exports
+# schematic PDFs and PCB SVG. POSITION is `[X Y [ROTATION]] [FRONT|BACK]`: block origin
+# on the board (empty places it below the keyboard) and side of its components (empty
+# keeps the block's own side). STRATEGY is flat|hierarchical.
+# Requires KiCad >= 10.0 (design blocks with PCB layout). Examples:
+#   just presets
+#   just presets 10.0.8-noble crkbd mcu_atmega32u4_v2 "196 85 90"  # between halves
+#   just presets 10.0.8-noble crkbd mcu_atmega32u4_v2 "196 85 0 FRONT"
+#   just presets 10.0.8-noble crkbd mcu_atmega32u4_v1 "" flat \
+#       --matrix-pin-order GPIO24,GPIO23,GPIO22,GPIO21,GPIO20,GPIO19,GPIO18,GPIO17,GPIO16,GPIO15,GPIO14,GPIO13,GPIO12,GPIO11
+# build keyboard with design block preset (e.g. MCU circuit) for inspection
+presets version=default_version layout="crkbd" block="mcu_atmega32u4_v1" position="" strategy="hierarchical" *args="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mkdir -p "{{justfile_directory()}}/output_presets"
+    docker run --rm \
+        -v "{{justfile_directory()}}:/workspace" -w /workspace \
+        "{{image_prefix}}:{{version}}" \
+        bash -c '
+            set -euo pipefail
+            pip3 install -q --no-cache-dir .[schematic]
+
+            outdir="output_presets"
+            fp="/usr/share/kicad/footprints"
+            pcb_file="$outdir/{{layout}}.kicad_pcb"
+
+            # kbplacer aborts rather than overwrite; clear stale artifacts
+            rm -rf "$outdir"/*
+
+            python3 -m kbplacer \
+                --layout "tests/data/via-layouts/{{layout}}.json" \
+                --pcb-file "$pcb_file" \
+                --create-pcb-file \
+                --create-sch-file \
+                --bundle-strategy "{{strategy}}" \
+                --switch-footprint "$fp/Button_Switch_Keyboard.pretty:SW_Cherry_MX_1.00u_PCB" \
+                --diode-footprint "$fp/Diode_SMD.pretty:D_SOD-123F" \
+                --preset "design_blocks/kbplacer.kicad_blocks:{{block}} {{position}}" \
+                --log-level "INFO" \
+                {{args}}
+
+            # kicad-cli loads only the first top-level sheet of a flat bundle,
+            # complete ERC and parity results require `hierarchical` strategy
+            kicad-cli sch erc --format json --output "$outdir/erc.json" \
+                "$outdir/{{layout}}.kicad_sch" > /dev/null
+            kicad-cli pcb drc --schematic-parity --format json \
+                --output "$outdir/drc.json" "$pcb_file" > /dev/null
+            python3 - "$outdir" <<"EOF"
+    import collections, json, sys
+    erc = json.load(open(f"{sys.argv[1]}/erc.json"))
+    drc = json.load(open(f"{sys.argv[1]}/drc.json"))
+    count = lambda items: dict(collections.Counter(i["type"] for i in items))
+    print(">>> ERC:   ", count(v for s in erc["sheets"] for v in s["violations"]))
+    print(">>> DRC:   ", count(drc["violations"]))
+    print(">>> Parity:", count(drc["schematic_parity"]) or "OK")
+    EOF
+
+            for sch in "$outdir"/*.kicad_sch; do
+                kicad-cli sch export pdf --output "${sch%.kicad_sch}.pdf" "$sch" > /dev/null
+                echo ">>> Schematic: $sch"
+            done
+            kicad-cli pcb export svg --mode-single --fit-page-to-board \
+                --layers F.Cu,B.Cu,F.SilkS,Edge.Cuts \
+                --output "${pcb_file%.kicad_pcb}.svg" "$pcb_file" > /dev/null
+            echo ">>> PCB:       $pcb_file"
+            echo ">>> PCB image: ${pcb_file%.kicad_pcb}.svg"
+        '
 
 # === Placement ===
 
@@ -297,6 +382,6 @@ lint-all:
 # === Cleanup ===
 
 cleanup:
-  rm -rf output_schematic output_memray output_pcb2layout
+  rm -rf output_schematic output_memray output_pcb2layout output_presets
   rm -rf .benchmarks
   rm -f examples/absolem-ergogen/absolem.zip

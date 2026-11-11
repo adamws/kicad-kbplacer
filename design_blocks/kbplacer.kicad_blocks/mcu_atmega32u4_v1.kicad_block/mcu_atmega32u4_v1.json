@@ -1,0 +1,5 @@
+{
+"description": "ATmega32U4 microcontroller with 16 MHz crystal, reset button, USB data line resistors and decoupling capacitors. Elongated layout with USB data lines leaving to the side.",
+"keywords": "mcu atmega32u4 usb",
+"fields": {}
+}

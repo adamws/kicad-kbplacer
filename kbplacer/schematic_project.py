@@ -5,28 +5,28 @@
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from .board_modifier import KICAD_VERSION
+from .design_block import used_power_references, write_preset_schematic
 from .led_schematic_builder import create_led_chain_schematic
 from .project_builder import create_project_file
 from .schematic_builder import create_key_matrix_schematic
 
-# Index 0 = highest-priority primary sheet. "mcu" is reserved for a future
-# stage; requesting it today raises (see `_build_one`), it's listed here only
-# so its priority slot is already carved out.
-SHEET_TYPE_PRIORITY = ["mcu", "key_matrix", "led_chain"]
+# Index 0 = highest-priority primary sheet. Presets (design blocks, see
+# `design_block.py`) come last, so adding them never renames the generated
+# key matrix/LED chain files. Unlike the other types, "preset" may be
+# requested many times, each request distinguished by its `name`.
+SHEET_TYPE_PRIORITY = ["key_matrix", "led_chain", "preset"]
 
-IMPLEMENTED_SHEET_TYPES = {"key_matrix", "led_chain"}
+IMPLEMENTED_SHEET_TYPES = {"key_matrix", "led_chain", "preset"}
 
 SHEET_FILE_SUFFIXES = {
-    "mcu": "mcu",
     "key_matrix": "key-matrix",
     "led_chain": "led-chain",
 }
 
 SHEET_DISPLAY_NAMES = {
-    "mcu": "MCU",
     "key_matrix": "Key Matrix",
     "led_chain": "Led Chain",
 }
@@ -122,6 +122,37 @@ _ROOT_SHEETFILE_Y_OFFSET = 0.5846
 class SchematicRequest:
     sheet_type: str
     kwargs: Dict[str, Any] = field(default_factory=dict)
+    # distinguishes sheets of the same type (presets), used as the file
+    # suffix and sheet name instead of the per-type defaults
+    name: Optional[str] = None
+
+    def __post_init__(self) -> None:
+        if self.sheet_type == "preset" and not self.name:
+            msg = "Preset schematic request requires a name"
+            raise ValueError(msg)
+
+    @property
+    def key(self) -> str:
+        return (
+            self.sheet_type if self.name is None else f"{self.sheet_type}:{self.name}"
+        )
+
+    @property
+    def file_suffix(self) -> str:
+        return self.name if self.name else SHEET_FILE_SUFFIXES[self.sheet_type]
+
+    @property
+    def display_name(self) -> str:
+        return self.name if self.name else SHEET_DISPLAY_NAMES[self.sheet_type]
+
+
+RequestLike = Union[str, SchematicRequest]
+
+
+def _as_requests(requested: List[RequestLike]) -> List[SchematicRequest]:
+    return [
+        r if isinstance(r, SchematicRequest) else SchematicRequest(r) for r in requested
+    ]
 
 
 def resolve_bundle_strategy(strategy: Optional[str]) -> str:
@@ -150,10 +181,14 @@ def hierarchical_root_filename(project_basename: str) -> str:
 
 def plan_sheet_filenames(
     project_basename: str,
-    requested_types: List[str],
+    requested: List[RequestLike],
     strategy: str = "flat",
 ) -> List[Tuple[str, str]]:
-    """Return `(sheet_type, filename)` pairs in page order for `requested_types`.
+    """Return `(key, filename)` pairs in page order for `requested` sheets.
+
+    `requested` items are sheet types or `SchematicRequest`s, `key` is the
+    sheet type, or `"<type>:<name>"` for named requests (see
+    `SchematicRequest.key`).
 
     Exposed so callers (e.g. the CLI's pre-flight "already exists" check) can
     learn the exact output filenames `create_schematic_project` will use,
@@ -166,17 +201,21 @@ def plan_sheet_filenames(
     suffixed filename - none of them is the project's root sheet, since that
     role is filled by the wrapper root file (see `hierarchical_root_filename`).
     """
-    ordered_types = sorted(requested_types, key=SHEET_TYPE_PRIORITY.index)
-    all_suffixed = strategy == "hierarchical" and len(ordered_types) > 1
+    ordered = _order_requests(_as_requests(requested))
+    all_suffixed = strategy == "hierarchical" and len(ordered) > 1
     planned = []
-    for index, sheet_type in enumerate(ordered_types):
+    for index, request in enumerate(ordered):
         if index == 0 and not all_suffixed:
             filename = f"{project_basename}.kicad_sch"
         else:
-            suffix = SHEET_FILE_SUFFIXES[sheet_type]
-            filename = f"{project_basename}-{suffix}.kicad_sch"
-        planned.append((sheet_type, filename))
+            filename = f"{project_basename}-{request.file_suffix}.kicad_sch"
+        planned.append((request.key, filename))
     return planned
+
+
+def _order_requests(requests: List[SchematicRequest]) -> List[SchematicRequest]:
+    # stable: named requests of one type keep the order they were given in
+    return sorted(requests, key=lambda r: SHEET_TYPE_PRIORITY.index(r.sheet_type))
 
 
 def _build_one(
@@ -189,8 +228,19 @@ def _build_one(
     sheet_page: int,
     instance_path: Optional[str] = None,
     extra_kwargs: Dict[str, Any],
+    power_references: Optional[Dict[str, int]] = None,
 ) -> None:
-    if sheet_type == "key_matrix":
+    if sheet_type == "preset":
+        write_preset_schematic(
+            extra_kwargs["instance"],
+            output_path,
+            project_name=project_name,
+            own_uuid=own_uuid,
+            sheet_page=sheet_page,
+            instance_path=instance_path,
+            power_references=power_references,
+        )
+    elif sheet_type == "key_matrix":
         create_key_matrix_schematic(
             layout_path,
             output_path,
@@ -255,14 +305,39 @@ def _build_hierarchical_root(
         f.write("".join(parts))
 
 
+def _build_all(
+    planned: List[Tuple[SchematicRequest, Path, str, int, Optional[str]]],
+    layout_path,
+    project_name: str,
+) -> None:
+    built: List[Path] = []
+    power_references: Optional[Dict[str, int]] = None
+    for request, output_path, own_uuid, page, instance_path in planned:
+        if request.sheet_type == "preset" and power_references is None:
+            # presets are ordered last, every other sheet is already written
+            power_references = used_power_references(built)
+        _build_one(
+            request.sheet_type,
+            layout_path,
+            output_path,
+            project_name=project_name,
+            own_uuid=own_uuid,
+            sheet_page=page,
+            instance_path=instance_path,
+            extra_kwargs=request.kwargs,
+            power_references=power_references,
+        )
+        built.append(output_path)
+
+
 def create_schematic_project(
     project_path,
     layout_path,
     requests: List[SchematicRequest],
     *,
     strategy: Optional[str] = None,
-) -> None:
-    """Build a KiCad project bundling one `.kicad_sch` per requested type.
+) -> Dict[str, Optional[str]]:
+    """Build a KiCad project bundling one `.kicad_sch` per request.
 
     `strategy` selects how multiple sheets are tied together:
     - "flat": every requested type becomes its own top-level sheet (KiCad 10's
@@ -286,6 +361,12 @@ def create_schematic_project(
     types, the root wrapper takes the project-basename filename and page 1
     instead, and every requested type gets a suffixed filename (see
     `plan_sheet_filenames`).
+
+    Returns, for each request `key`, the KIID path of its sheet as used in
+    footprint paths of a board (`/<sheet_uuid>` for a hierarchical child, `""`
+    for a single self-rooted sheet), or `None` where it can't be relied on:
+    flat multi-sheet projects, whose top-level sheets KiCad's command line
+    tools don't load, so footprint paths could not be verified.
     """
     if not requests:
         msg = "At least one schematic type must be requested"
@@ -302,6 +383,11 @@ def create_schematic_project(
         msg = f"Schematic type(s) not implemented yet: {sorted(unimplemented)}"
         raise NotImplementedError(msg)
 
+    requests_by_key = {r.key: r for r in requests}
+    if len(requests_by_key) != len(requests):
+        msg = "Each schematic request must be unique (by type and name)"
+        raise ValueError(msg)
+
     resolved_strategy = resolve_bundle_strategy(strategy)
 
     if resolved_strategy == "flat" and len(requests) > 1 and KICAD_VERSION < (10, 0, 0):
@@ -314,9 +400,8 @@ def create_schematic_project(
     project_path = Path(project_path)
     project_name = project_path.stem
 
-    requests_by_type = {r.sheet_type: r for r in requests}
     planned_filenames = plan_sheet_filenames(
-        project_name, list(requested_types), strategy=resolved_strategy
+        project_name, list(requests), strategy=resolved_strategy
     )
 
     if resolved_strategy == "hierarchical" and len(requests) > 1:
@@ -325,33 +410,25 @@ def create_schematic_project(
 
         children = []
         planned = []
-        for page, (sheet_type, filename) in enumerate(planned_filenames, start=2):
+        sheet_paths: Dict[str, Optional[str]] = {}
+        for page, (key, filename) in enumerate(planned_filenames, start=2):
+            request = requests_by_key[key]
             sheet_uuid = str(uuid.uuid4())
-            display_name = SHEET_DISPLAY_NAMES[sheet_type]
             output_path = project_path.parent / filename
 
-            children.append((sheet_uuid, filename, display_name, page))
+            children.append((sheet_uuid, filename, request.display_name, page))
             planned.append(
                 (
-                    requests_by_type[sheet_type],
+                    request,
                     output_path,
                     str(uuid.uuid4()),
                     page,
                     f"/{root_uuid}/{sheet_uuid}",
                 )
             )
+            sheet_paths[key] = f"/{sheet_uuid}"
 
-        for request, output_path, own_uuid, page, instance_path in planned:
-            _build_one(
-                request.sheet_type,
-                layout_path,
-                output_path,
-                project_name=project_name,
-                own_uuid=own_uuid,
-                sheet_page=page,
-                instance_path=instance_path,
-                extra_kwargs=request.kwargs,
-            )
+        _build_all(planned, layout_path, project_name)
 
         _build_hierarchical_root(
             project_path.parent / root_filename,
@@ -370,27 +447,20 @@ def create_schematic_project(
             sheets=sheets,
             top_level_sheets=[root_sheet],
         )
-        return
+        return sheet_paths
 
     sheets = []
     planned = []
-    for page, (sheet_type, filename) in enumerate(planned_filenames, start=1):
+    for page, (key, filename) in enumerate(planned_filenames, start=1):
+        request = requests_by_key[key]
         own_uuid = str(uuid.uuid4())
-        display_name = SHEET_DISPLAY_NAMES[sheet_type]
         output_path = project_path.parent / filename
 
-        sheets.append((own_uuid, filename, display_name))
-        planned.append((requests_by_type[sheet_type], output_path, own_uuid, page))
+        sheets.append((own_uuid, filename, request.display_name))
+        planned.append((request, output_path, own_uuid, page, None))
 
-    for request, output_path, own_uuid, page in planned:
-        _build_one(
-            request.sheet_type,
-            layout_path,
-            output_path,
-            project_name=project_name,
-            own_uuid=own_uuid,
-            sheet_page=page,
-            extra_kwargs=request.kwargs,
-        )
+    _build_all(planned, layout_path, project_name)
 
     create_project_file(project_path, sheets=sheets)
+    single_sheet_path = "" if len(requests) == 1 else None
+    return {key: single_sheet_path for key, _ in planned_filenames}

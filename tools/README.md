@@ -3,6 +3,7 @@
 - `layout2image.py` - generate KLE style SVG image from keyboard layout
 - `layout2openscad.py` - generate plate for [openscad](https://openscad.org/) (:warning: experimental)
 - `pcb2layout.py` - reverse-engineer KLE layout from existing `.kicad_pcb` file (:warning: experimental)
+- `block2image.py` - generate preview images and overview of design blocks used as [presets](../design_blocks/README.md)
 - `profiling/kle-ng-api-task.sh` - reproduce a complete kle-ng-api task (schematic + pcb) for memory profiling
 
 ## Memory profiling (memray)
@@ -57,6 +58,25 @@ just tools-pcb2layout https://github.com/foostan/crkbd/blob/main/pcbs/corne-cher
 
 ![pcb2layout-corne](../resources/pcb2layout-corne.svg)
 
+## Design block previews (block2image)
+
+`block2image.py` exports schematic and PCB of every design block of a library
+to SVG images, cropped to their content (PCB is shown from the components side,
+mirrored for blocks designed for the back), and writes markdown overview of the blocks (description,
+`--preset` usage, key matrix capacity, components, `GPIO` pin mapping and the
+images) between `<!-- presets:begin -->` and `<!-- presets:end -->` markers of
+a README file (requires `kicad-cli` of KiCad 10.0+). Blocks named `<name>_v<n>`
+with equal schematic are variants, presented together with the shared circuit
+described once:
+
+```shell
+hatch run tools:block2image --in design_blocks/kbplacer.kicad_blocks \
+  --out design_blocks/images --readme design_blocks/README.md
+```
+
+or `just tools-block2image` to run it inside docker. Result is
+[design_blocks/README.md](../design_blocks/README.md).
+
 ## How to run
 
 The `kbplacer` project uses `pyprojet.toml` with [`hatch`](https://hatch.pypa.io) project manager.
@@ -66,6 +86,7 @@ To execute, run:
 ```shell
 $ hatch run tools:layout2image {args...}
 $ hatch run tools:layout2openscad {args...}
+$ hatch run tools:block2image {args...}
 $ hatch run tools-pcbnew:pcb2layout {args...}
 ```
 
@@ -74,6 +95,7 @@ Alternatively, install required dependencies and run as regular python script:
 ```shell
 python tools/layout2image.py {args...}
 python tools/layout2openscad.py {args...}
+python tools/block2image.py {args...}
 python tools/pcb2layout.py {args...}
 ```
 

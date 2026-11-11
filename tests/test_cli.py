@@ -14,6 +14,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 from kbplacer.__main__ import app
+from kbplacer.element_position import Side
 from kbplacer.defaults import DEFAULT_DIODE_POSITION, ZERO_POSITION
 from kbplacer.element_position import ElementInfo, ElementPosition, PositionOption, Side
 from kbplacer.kbplacer_plugin import PluginSettings
@@ -794,3 +795,60 @@ def test_max_keys_validation_fails(
     assert (
         "Layout has 4 keys, which exceeds the maximum of 3" in error_records[0].message
     )
+
+
+@pytest.mark.parametrize(
+    "value,identifier,position,side",
+    [
+        ("lib.kicad_blocks:mcu", "lib.kicad_blocks:mcu", None, None),
+        ("lib.kicad_blocks:mcu 10 -5.5", "lib.kicad_blocks:mcu", (10, -5.5, 0), None),
+        ("lib.kicad_blocks:mcu 10 20 90", "lib.kicad_blocks:mcu", (10, 20, 90), None),
+        (
+            "/my blocks/usb.kicad_block 1 2",
+            "/my blocks/usb.kicad_block",
+            (1, 2, 0),
+            None,
+        ),
+        ("lib.kicad_blocks:mcu BACK", "lib.kicad_blocks:mcu", None, Side.BACK),
+        ("lib.kicad_blocks:mcu front", "lib.kicad_blocks:mcu", None, Side.FRONT),
+        (
+            "lib.kicad_blocks:mcu 1 2 45 Back",
+            "lib.kicad_blocks:mcu",
+            (1, 2, 45),
+            Side.BACK,
+        ),
+        # single token is always the identifier
+        ("BACK", "BACK", None, None),
+    ],
+)
+def test_preset_option_parsing(value, identifier, position, side) -> None:
+    from kbplacer.__main__ import PresetAction
+
+    spec = PresetAction(["--preset"], "presets").parse(value, "--preset")
+    assert spec.identifier == identifier
+    assert spec.position == position
+    assert spec.side == side
+
+
+@pytest.mark.parametrize(
+    "value", ["lib.kicad_blocks:mcu 10", "", "lib.kicad_blocks:mcu 10 BACK"]
+)
+def test_preset_option_invalid(value) -> None:
+    from kbplacer.__main__ import PresetAction
+
+    with pytest.raises(ValueError):
+        PresetAction(["--preset"], "presets").parse(value, "--preset")
+
+
+def test_preset_requires_layout(caplog, monkeypatch, cli_isolation, tmpdir) -> None:
+    run_mock = Mock()
+    monkeypatch.setattr("kbplacer.__main__.run_board", run_mock)
+
+    board = f"{tmpdir}/new.kicad_pcb"
+    args = ["--pcb-file", board, "--create-pcb-file", "--preset", "lib:mcu"]
+    with cli_isolation(args):
+        with pytest.raises(ExitTest):
+            app()
+
+    run_mock.assert_not_called()
+    assert caplog.records[0].message == "--preset requires --layout"

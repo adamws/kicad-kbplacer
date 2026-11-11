@@ -29,3 +29,4 @@ fp-info-cache
 # example artifacts
 output_schematic/
 output_memray/
+output_presets/

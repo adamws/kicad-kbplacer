@@ -4,12 +4,13 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 
 import pcbnew
 
 from .board_builder import BoardBuilder
+from .design_block import PresetBoardPlacer, PresetInstance
 from .edge_generator import build_board_outline
 from .element_position import ElementInfo, PositionOption
 from .kbplacer_dialog import WindowState
@@ -51,9 +52,18 @@ class PluginSettings:
     create_led_pcb_elements: bool = False
     skip_led_decoupling: bool = False
     bundle_strategy: Optional[str] = None
+    # planned presets (see `design_block.plan_presets`), shared by the
+    # schematic and board runs so that both use the same references and UUIDs
+    presets: List[PresetInstance] = field(default_factory=list)
 
 
-def run_schematic(settings: PluginSettings):
+def _preset_request(instance: PresetInstance) -> SchematicRequest:
+    return SchematicRequest(
+        "preset", name=instance.sheet_name, kwargs={"instance": instance}
+    )
+
+
+def run_schematic(settings: PluginSettings) -> None:
     requests: List[SchematicRequest] = []
     if settings.create_sch_file:
         if not can_create_schematic():
@@ -86,12 +96,16 @@ def run_schematic(settings: PluginSettings):
         )
 
     if requests:
-        create_schematic_project(
+        requests.extend(_preset_request(p) for p in settings.presets)
+        sheet_paths = create_schematic_project(
             settings.project_path,
             settings.layout_path,
             requests,
             strategy=settings.bundle_strategy,
         )
+        # lets `run_board` link preset footprints to the generated symbols
+        for preset in settings.presets:
+            preset.sheet_path = sheet_paths[_preset_request(preset).key]
 
 
 def run_board(settings: PluginSettings) -> pcbnew.BOARD:
@@ -128,6 +142,11 @@ def run_board(settings: PluginSettings) -> pcbnew.BOARD:
         layout_offset=settings.layout_offset,
         encoder_adjustment=settings.encoder_adjustment,
     )
+
+    if settings.presets and settings.create_pcb_file:
+        preset_placer = PresetBoardPlacer(board)
+        for preset in settings.presets:
+            preset_placer.add(preset)
 
     if settings.generate_outline:
         build_board_outline(

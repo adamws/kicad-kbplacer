@@ -1,0 +1,5 @@
+{
+"description": "USB-C receptacle (USB 2.0) with TPD2S017 ESD protection, connector VBUS powers VCC directly. Minimal version without CC pull-down resistors, only USB-A to USB-C cables power the board.",
+"keywords": "usb usb-c connector esd",
+"fields": {}
+}

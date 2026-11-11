@@ -1,0 +1,5 @@
+{
+"description": "USB-C receptacle (USB 2.0) with TPD4E05U06DQA ESD protection, CC pull-down resistors, polyfuse and zener diode on VCC. Clone of Unified Daughterboard (UDB-C) circuit, with two-layer routing.",
+"keywords": "usb usb-c connector esd udb",
+"fields": {}
+}

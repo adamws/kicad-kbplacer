@@ -419,10 +419,18 @@ class TestValidation:
                 project_path, "unused", [SchematicRequest("bogus")]
             )
 
-    def test_mcu_not_implemented_yet(self, tmpdir) -> None:
+    def test_preset_requires_name(self) -> None:
+        with pytest.raises(ValueError, match="requires a name"):
+            SchematicRequest("preset")
+
+    def test_rejects_duplicate_requests(self, tmpdir) -> None:
         project_path = Path(tmpdir) / "keyboard.kicad_pro"
-        with pytest.raises(NotImplementedError):
-            create_schematic_project(project_path, "unused", [SchematicRequest("mcu")])
+        with pytest.raises(ValueError, match="unique"):
+            create_schematic_project(
+                project_path,
+                "unused",
+                [SchematicRequest("key_matrix"), SchematicRequest("key_matrix")],
+            )
 
     def test_rejects_unknown_strategy(self, tmpdir) -> None:
         project_path = Path(tmpdir) / "keyboard.kicad_pro"
