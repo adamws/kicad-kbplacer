@@ -48,6 +48,14 @@ UUID_PATTERN = re.compile(
     r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.I
 )
 
+# library bundled with kbplacer, its blocks are used by name alone
+BUNDLED_LIBRARY = (
+    Path(__file__).resolve().parent.parent
+    / "kbplacer"
+    / "presets"
+    / "kbplacer.kicad_blocks"
+)
+
 README_BEGIN = "<!-- presets:begin -->"
 README_END = "<!-- presets:end -->"
 
@@ -560,6 +568,8 @@ def family_markdown(family: BlockFamily, readme_dir: Path) -> str:
 
 def _block_identifier(directory: Path) -> str:
     library = directory.parent
+    if library.resolve() == BUNDLED_LIBRARY:
+        return directory.stem
     if library.suffix == DESIGN_BLOCK_LIBRARY_SUFFIX:
         return f"{library.as_posix()}:{directory.stem}"
     return directory.as_posix()
@@ -642,8 +652,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         help=(
             "Markdown file to write blocks overview to, content between "
             f"'{README_BEGIN}' and '{README_END}' markers is replaced "
-            "(appended when no markers). Run from directory which `--preset` "
-            "identifiers should be relative to (e.g. repository root)"
+            "(appended when no markers). Blocks of the library bundled with "
+            "kbplacer are identified by name, other by `--in` path"
         ),
     )
     parser.add_argument(

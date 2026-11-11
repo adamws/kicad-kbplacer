@@ -840,6 +840,16 @@ def test_preset_option_invalid(value) -> None:
         PresetAction(["--preset"], "presets").parse(value, "--preset")
 
 
+def test_list_presets(capsys, cli_isolation) -> None:
+    with cli_isolation(["--list-presets"]):
+        with pytest.raises(ExitTest):
+            app()
+    out = capsys.readouterr().out
+    assert "kbplacer/presets/kbplacer.kicad_blocks" in out.replace("\\", "/")
+    assert "\n  mcu_atmega32u4_v1\n      ATmega32U4 microcontroller" in out
+    assert "\n  usb_udb_clone\n" in out
+
+
 def test_preset_requires_layout(caplog, monkeypatch, cli_isolation, tmpdir) -> None:
     run_mock = Mock()
     monkeypatch.setattr("kbplacer.__main__.run_board", run_mock)

@@ -47,6 +47,10 @@ logger = logging.getLogger(__name__)
 DESIGN_BLOCK_SUFFIX = ".kicad_block"
 DESIGN_BLOCK_LIBRARY_SUFFIX = ".kicad_blocks"
 
+# design block library distributed with kbplacer (python package and KiCad
+# plugin), its blocks are referred to by name alone
+BUNDLED_LIBRARY = Path(__file__).parent / "presets" / "kbplacer.kicad_blocks"
+
 GPIO_LABEL_PATTERN = re.compile(r"^GPIO(\d+)$")
 
 _REFERENCE_PATTERN = re.compile(r"^(#?[A-Za-z_]+)(\d+)$")
@@ -73,14 +77,22 @@ class DesignBlock:
         - `path/to/name.kicad_block` - a design block directory,
         - `path/to/library.kicad_blocks:name` - a block in a design block
           library, the same `library_path:item` convention which footprint
-          identifiers use.
+          identifiers use,
+        - `name` - a block of the library bundled with kbplacer.
         """
         directory = Path(identifier)
         if not directory.is_dir():
             library, name = _split_library_identifier(identifier)
             directory = Path(library) / f"{name}{DESIGN_BLOCK_SUFFIX}"
             if not directory.is_dir():
-                msg = f"Design block '{name}' not found in library '{library}'"
+                if name == identifier:  # bundled preset name
+                    available = ", ".join(bundled_presets()) or "none"
+                    msg = (
+                        f"'{name}' is neither a design block directory nor "
+                        f"a bundled preset (available: {available})"
+                    )
+                else:
+                    msg = f"Design block '{name}' not found in library '{library}'"
                 raise ValueError(msg)
 
         if directory.suffix != DESIGN_BLOCK_SUFFIX:
@@ -110,6 +122,15 @@ class DesignBlock:
         return block
 
 
+def bundled_presets() -> List[str]:
+    """Names of the design blocks of the library bundled with kbplacer."""
+    if not BUNDLED_LIBRARY.is_dir():
+        return []
+    return sorted(
+        p.stem for p in BUNDLED_LIBRARY.glob(f"*{DESIGN_BLOCK_SUFFIX}") if p.is_dir()
+    )
+
+
 def _split_library_identifier(identifier: str) -> Tuple[str, str]:
     if len(identifier) >= 3 and identifier[1:3] == ":\\":
         # Windows path (C:\...), library/name separator is the second colon
@@ -117,11 +138,13 @@ def _split_library_identifier(identifier: str) -> Tuple[str, str]:
     else:
         separator = identifier.find(":")
     if separator == -1:
-        msg = (
-            f"'{identifier}' is neither a design block directory nor "
-            "a 'path/to/library.kicad_blocks:block_name' identifier"
-        )
-        raise ValueError(msg)
+        if "/" in identifier or "\\" in identifier:
+            msg = (
+                f"'{identifier}' is neither a design block directory nor "
+                "a 'path/to/library.kicad_blocks:block_name' identifier"
+            )
+            raise ValueError(msg)
+        return str(BUNDLED_LIBRARY), identifier
     library, name = identifier[:separator], identifier[separator + 1 :]
     if not library.endswith(DESIGN_BLOCK_LIBRARY_SUFFIX) or not name:
         msg = (

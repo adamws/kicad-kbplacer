@@ -115,8 +115,8 @@ tools-pcb2layout url version=default_version *args="--verify":
     echo ">>> Image:  output_pcb2layout/$name.svg"
     echo ">>> kle-ng: $(cat "$outdir/$name.url")"
 
-# Exports schematic and PCB of every design block in design_blocks/ to SVG images
-# (design_blocks/images/) and regenerates presets overview in design_blocks/README.md.
+# Exports schematic and PCB of every design block in kbplacer/presets/ to SVG images
+# (kbplacer/presets/images/) and regenerates presets overview in kbplacer/presets/README.md.
 # Requires KiCad >= 10.0. Run after adding or editing a design block.
 # generate design block (preset) preview images and overview
 tools-block2image version=default_version:
@@ -125,9 +125,9 @@ tools-block2image version=default_version:
         "{{image_prefix}}:{{version}}" \
         bash -c "pip3 install --no-cache-dir hatch && \
             hatch run tools:block2image \
-                --in design_blocks/kbplacer.kicad_blocks \
-                --out design_blocks/images \
-                --readme design_blocks/README.md \
+                --in kbplacer/presets/kbplacer.kicad_blocks \
+                --out kbplacer/presets/images \
+                --readme kbplacer/presets/README.md \
                 --log-level INFO"
 
 # run layout2openscad tool (pass extra args after --)
@@ -211,7 +211,7 @@ schematic-with-leds version=default_version layout="wt60_a" *args="":
     just schematic {{version}} {{layout}} --create-led-sch-file {{args}}
 
 # Writes PCB and schematic project of LAYOUT (file in tests/data/via-layouts/) with
-# BLOCK design block from design_blocks/kbplacer.kicad_blocks added as `--preset`
+# BLOCK design block from kbplacer/presets/kbplacer.kicad_blocks added as `--preset`
 # to ./output_presets/, then reports ERC and schematic parity DRC results and exports
 # schematic PDFs and PCB SVG. POSITION is `[X Y [ROTATION]] [FRONT|BACK]`: block origin
 # on the board (empty places it below the keyboard) and side of its components (empty
@@ -249,7 +249,7 @@ presets version=default_version layout="crkbd" block="mcu_atmega32u4_v1" positio
                 --bundle-strategy "{{strategy}}" \
                 --switch-footprint "$fp/Button_Switch_Keyboard.pretty:SW_Cherry_MX_1.00u_PCB" \
                 --diode-footprint "$fp/Diode_SMD.pretty:D_SOD-123F" \
-                --preset "design_blocks/kbplacer.kicad_blocks:{{block}} {{position}}" \
+                --preset "{{block}} {{position}}" \
                 --log-level "INFO" \
                 {{args}}
 

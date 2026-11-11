@@ -26,6 +26,10 @@ _autosave-*
 *-save.kicad_pcb
 fp-info-cache
 
+# KiCad local files of presets source projects and design blocks
+kbplacer/presets/**/*.kicad_prl
+kbplacer/presets/*-backups/
+
 # example artifacts
 output_schematic/
 output_memray/

@@ -3,7 +3,7 @@
 - `layout2image.py` - generate KLE style SVG image from keyboard layout
 - `layout2openscad.py` - generate plate for [openscad](https://openscad.org/) (:warning: experimental)
 - `pcb2layout.py` - reverse-engineer KLE layout from existing `.kicad_pcb` file (:warning: experimental)
-- `block2image.py` - generate preview images and overview of design blocks used as [presets](../design_blocks/README.md)
+- `block2image.py` - generate preview images and overview of design blocks used as [presets](../kbplacer/presets/README.md)
 - `profiling/kle-ng-api-task.sh` - reproduce a complete kle-ng-api task (schematic + pcb) for memory profiling
 
 ## Memory profiling (memray)
@@ -70,12 +70,12 @@ with equal schematic are variants, presented together with the shared circuit
 described once:
 
 ```shell
-hatch run tools:block2image --in design_blocks/kbplacer.kicad_blocks \
-  --out design_blocks/images --readme design_blocks/README.md
+hatch run tools:block2image --in kbplacer/presets/kbplacer.kicad_blocks \
+  --out kbplacer/presets/images --readme kbplacer/presets/README.md
 ```
 
 or `just tools-block2image` to run it inside docker. Result is
-[design_blocks/README.md](../design_blocks/README.md).
+[kbplacer/presets/README.md](../kbplacer/presets/README.md).
 
 ## How to run
 

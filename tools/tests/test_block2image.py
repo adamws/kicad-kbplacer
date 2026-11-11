@@ -16,7 +16,7 @@ if str(TOOLS_DIR) not in sys.path:
 
 import block2image  # noqa: E402
 
-LIBRARY = TOOLS_DIR.parent / "design_blocks" / "kbplacer.kicad_blocks"
+LIBRARY = TOOLS_DIR.parent / "kbplacer" / "presets" / "kbplacer.kicad_blocks"
 
 requires_kicad_cli = pytest.mark.skipif(
     shutil.which("kicad-cli") is None, reason="kicad-cli not available"
@@ -220,8 +220,8 @@ def test_block2image(tmp_path):
     assert text.index("### mcu_atmega32u4\n") < text.index("#### mcu_atmega32u4_v1")
     assert text.index("#### mcu_atmega32u4_v1") < text.index("#### mcu_atmega32u4_v2")
     assert "\nElongated layout with USB data lines leaving to the side.\n" in text
-    assert "--preset design_blocks" not in text  # library given as absolute path
-    assert f"--preset {LIBRARY.as_posix()}:mcu_atmega32u4_v2" in text
+    # bundled library blocks are used by name
+    assert "--preset mcu_atmega32u4_v2\n" in text
     assert "`MCU_D+`, `MCU_D-`" in text
     assert "| `GPIO24` | U1 pin 1 (PE6) |" in text
     assert "| C3-C6 | 0.1u | `Capacitor_SMD:C_0603_1608Metric` |" in text

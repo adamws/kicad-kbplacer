@@ -4,17 +4,20 @@ Presets are layout independent parts of a keyboard (microcontroller circuit,
 USB connector, ...) which `kbplacer` adds to the generated project next to the
 key matrix. They are plain [KiCad design blocks](https://docs.kicad.org/10.0/en/eeschema/eeschema_design_blocks.html),
 so they can be used and edited in KiCad without `kbplacer`.
-Add `design_blocks/kbplacer.kicad_blocks` to KiCad's design block library table
-to place them by hand.
+They are distributed with `kbplacer` (python package and KiCad plugin) in
+`kbplacer.kicad_blocks` library next to this file, add it to KiCad's design
+block library table to place them by hand.
 
-Use a preset with `--preset` option, it may be repeated to combine presets
-(for example microcontroller with USB connector):
+Use a preset by its name with `--preset` option (`python -m kbplacer --list-presets`
+lists them), it may be repeated to combine presets (for example microcontroller
+with USB connector). Design blocks of other libraries are used with
+`path/to/library.kicad_blocks:block_name` identifier.
 
 ```shell
 python -m kbplacer --create-pcb-file --create-sch-file --pcb-file keyboard.kicad_pcb \
   --layout <via-annotated-layout.json> --switch-footprint ... --diode-footprint ... \
-  --preset "design_blocks/kbplacer.kicad_blocks:mcu_atmega32u4_v1 120 30 90 BACK" \
-  --preset "design_blocks/kbplacer.kicad_blocks:usb_udb_clone 120 10 0 BACK"
+  --preset "mcu_atmega32u4_v1 120 30 90 BACK" \
+  --preset "usb_udb_clone 120 10 0 BACK"
 ```
 
 Microcontroller presets connect to USB presets with `MCU_D+`/`MCU_D-` global
@@ -25,9 +28,9 @@ is placed at the given `X Y [ROTATION]` (mm, degrees) or below the keyboard when
 position is omitted. `FRONT` or `BACK` puts its components on that side of the
 board (the layout is flipped around the block origin when needed), so any preset
 works on either side. Previews below show the components side. References are
-renumbered so they do not collide with the key matrix or other presets. See [presets](../README.md#presets) for details.
+renumbered so they do not collide with the key matrix or other presets. See [presets](../../README.md#presets) for details.
 
-To try it, run `just presets` (see [`.justfile`](../.justfile)).
+To try it, run `just presets` (see [`.justfile`](../../.justfile)).
 
 ## Available presets
 
@@ -109,7 +112,7 @@ Variants `mcu_atmega32u4_v1`, `mcu_atmega32u4_v2` share the schematic and differ
 Elongated layout with USB data lines leaving to the side.
 
 ```shell
---preset design_blocks/kbplacer.kicad_blocks:mcu_atmega32u4_v1
+--preset mcu_atmega32u4_v1
 ```
 
 - **PCB:** 47.1 × 13.5 mm
@@ -121,7 +124,7 @@ Elongated layout with USB data lines leaving to the side.
 Compact layout with USB data lines leaving to the top.
 
 ```shell
---preset design_blocks/kbplacer.kicad_blocks:mcu_atmega32u4_v2
+--preset mcu_atmega32u4_v2
 ```
 
 - **PCB:** 32.8 × 22.8 mm
@@ -135,7 +138,7 @@ USB-C receptacle (USB 2.0) with TPD2S017 ESD protection, connector VBUS powers V
 Keywords: usb usb-c connector esd
 
 ```shell
---preset design_blocks/kbplacer.kicad_blocks:usb_minimal
+--preset usb_minimal
 ```
 
 - **PCB:** 9.3 × 11.5 mm
@@ -165,7 +168,7 @@ USB-C receptacle (USB 2.0) with TPD4E05U06DQA ESD protection, CC pull-down resis
 Keywords: usb usb-c connector esd udb
 
 ```shell
---preset design_blocks/kbplacer.kicad_blocks:usb_udb_clone
+--preset usb_udb_clone
 ```
 
 - **PCB:** 13.4 × 14.5 mm
@@ -220,6 +223,6 @@ Keywords: usb usb-c connector esd udb
    ```shell
    just tools-block2image
    # or directly, with KiCad 10.0+ installed:
-   python tools/block2image.py --in design_blocks/kbplacer.kicad_blocks \
-     --out design_blocks/images --readme design_blocks/README.md
+   python tools/block2image.py --in kbplacer/presets/kbplacer.kicad_blocks \
+     --out kbplacer/presets/images --readme kbplacer/presets/README.md
    ```

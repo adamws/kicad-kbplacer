@@ -14,12 +14,14 @@ import pytest
 import sexpdata
 
 from kbplacer.design_block import (
+    BUNDLED_LIBRARY,
     DesignBlock,
     PresetBoardPlacer,
     PresetInstance,
     PresetSpec,
     allocate_references,
     block_side,
+    bundled_presets,
     matrix_net_names,
     plan_presets,
 )
@@ -34,7 +36,7 @@ from .conftest import (
     run_schematic_parity_drc,
 )
 
-LIBRARY = Path(__file__).parent.parent / "design_blocks/kbplacer.kicad_blocks"
+LIBRARY = Path(__file__).parent.parent / "kbplacer/presets/kbplacer.kicad_blocks"
 MCU_V1 = f"{LIBRARY}:mcu_atmega32u4_v1"
 MCU_V2 = f"{LIBRARY}:mcu_atmega32u4_v2"
 USB_BLOCKS = [f"{LIBRARY}:usb_minimal", f"{LIBRARY}:usb_udb_clone"]
@@ -88,8 +90,28 @@ class TestDesignBlockIdentifier:
         with pytest.raises(ValueError, match="not found in library"):
             DesignBlock.from_identifier(f"{LIBRARY}:does_not_exist")
 
+    def test_bundled_identifier(self) -> None:
+        assert BUNDLED_LIBRARY == LIBRARY
+        block = DesignBlock.from_identifier("usb_minimal")
+        assert block.directory == LIBRARY / "usb_minimal.kicad_block"
+        assert block.description.startswith("USB-C receptacle")
+
+    def test_missing_bundled_block(self) -> None:
+        with pytest.raises(ValueError, match=r"nor a bundled preset \(available: mcu"):
+            DesignBlock.from_identifier("does_not_exist")
+
+    def test_bundled_presets(self) -> None:
+        assert bundled_presets() == [
+            "mcu_atmega32u4_v1",
+            "mcu_atmega32u4_v2",
+            "usb_minimal",
+            "usb_udb_clone",
+        ]
+
     @pytest.mark.parametrize(
-        "identifier", ["no_separator", "/some/library.pretty:mcu", f"{LIBRARY}:"]
+        "identifier",
+        ["no_such_block", "relative/no_such_block", "/some/library.pretty:mcu"]
+        + [f"{LIBRARY}:"],
     )
     def test_invalid_identifier(self, identifier) -> None:
         with pytest.raises(ValueError):

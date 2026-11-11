@@ -7,6 +7,7 @@ import copy
 import logging
 import os
 import sys
+import textwrap
 from pathlib import Path
 from typing import List
 
@@ -14,7 +15,13 @@ import pcbnew
 
 from . import __version__
 from .defaults import DEFAULT_DIODE_POSITION, ZERO_POSITION
-from .design_block import PresetSpec, plan_presets
+from .design_block import (
+    BUNDLED_LIBRARY,
+    DesignBlock,
+    PresetSpec,
+    bundled_presets,
+    plan_presets,
+)
 from .element_position import ElementInfo, ElementPosition, PositionOption, Side
 from .footprint_loader import FootprintIdentifier
 from .kbplacer_plugin import PluginSettings, run_board, run_schematic
@@ -275,6 +282,22 @@ class PresetAction(argparse.Action):
         return PresetSpec(identifier, position, side)
 
 
+class ListPresetsAction(argparse.Action):
+    """Prints design blocks bundled with kbplacer and exits."""
+
+    def __init__(self, option_strings, dest, **kwargs) -> None:
+        super().__init__(option_strings, dest, nargs=0, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None) -> None:
+        print(f"Presets bundled in {BUNDLED_LIBRARY}:")
+        for name in bundled_presets():
+            description = DesignBlock.from_identifier(name).description
+            print(f"  {name}")
+            for line in textwrap.wrap(description, width=72):
+                print(f"      {line}")
+        parser.exit()
+
+
 class XYAction(argparse.Action):
     def __call__(self, parser, namespace, values: str, option_string=None) -> None:
         try:
@@ -530,19 +553,26 @@ def app() -> None:
             "the project created by `--create-sch-file`/`--create-led-sch-file` and\n"
             "its PCB layout is copied to the board created by `--create-pcb-file`.\n"
             "Space separated value of IDENTIFIER [X Y [ROTATION]] [FRONT|BACK]\n"
-            "where IDENTIFIER is design block directory or path to library and\n"
+            "where IDENTIFIER is name of preset bundled with kbplacer (see\n"
+            "--list-presets), design block directory or path to library and\n"
             "block name joined with ':', X, Y (mm) and ROTATION (degrees) define\n"
             "position of design block origin on the board and FRONT|BACK the board\n"
             "side of its components (block is flipped around its origin when\n"
             "designed for the other side). When position omitted, block is placed\n"
             "below the keyboard, when side omitted, block keeps its own side.\n"
             "May be used multiple times, for example:\n"
-            "\t--preset /path/to/kbplacer.kicad_blocks:mcu_atmega32u4_v1\n"
-            '\t--preset "/path/to/usb_c.kicad_block 120 30 90 BACK"\n'
+            '\t--preset "mcu_atmega32u4_v1 120 30 90 BACK"\n'
+            "\t--preset /path/to/library.kicad_blocks:usb_c\n"
+            "\t--preset /path/to/usb_c.kicad_block\n"
             "References are renumbered to not collide with each other and with the\n"
             "key matrix. Global labels `GPIO<n>` of a preset are renamed to key\n"
             "matrix rows and columns (rows first, in `GPIO` number order)."
         ),
+    )
+    parser.add_argument(
+        "--list-presets",
+        action=ListPresetsAction,
+        help="List presets bundled with kbplacer and exit",
     )
     parser.add_argument(
         "--matrix-pin-order",

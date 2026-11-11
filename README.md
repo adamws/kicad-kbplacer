@@ -643,7 +643,7 @@ flipped when the block was designed for the other side):
 ```shell
 python -m kbplacer --create-pcb-file --create-sch-file --pcb-file keyboard.kicad_pcb \
   --layout <via-annotated-layout.json> --switch-footprint ... --diode-footprint ... \
-  --preset "design_blocks/kbplacer.kicad_blocks:mcu_atmega32u4_v1 120 30 90 FRONT"
+  --preset "mcu_atmega32u4_v1 120 30 90 FRONT"
 ```
 
 Presets are plain design blocks, editable in KiCad without kbplacer. When added:
@@ -655,8 +655,10 @@ Presets are plain design blocks, editable in KiCad without kbplacer. When added:
   order given with `--matrix-pin-order`. Only one preset may expose them,
 - other global labels (e.g. `MCU_D+`) are kept, they connect presets with each other.
 
-See [available presets](design_blocks/README.md) for the list of bundled presets with
-schematic and PCB previews and how to create new ones.
+Presets bundled with kbplacer (`python -m kbplacer --list-presets`) are used by name,
+other design blocks by `path/to/library.kicad_blocks:block_name` identifier or
+`path/to/block.kicad_block` directory. See [available presets](kbplacer/presets/README.md)
+for the list of bundled presets with schematic and PCB previews and how to create new ones.
 
 > [!WARNING]
 > This requires installation with optional <code>schematic</code> dependencies:
