@@ -1,5 +1,5 @@
 {
-"description": "USB-C receptacle (USB 2.0) with TPD4E05U06DQA ESD protection, CC pull-down resistors, polyfuse and zener diode on VCC. Clone of Unified Daughterboard (UDB-C) circuit, with two-layer routing.",
+"description": "USB-C receptacle (USB 2.0) with TPD4E05U06DQA ESD protection, CC pull-down resistors, polyfuse and zener diode on VCC. Clone of Unified Daughterboard (UDB-C) circuit, with two-layer routing. USB data lines are 0.1524 mm (6 mil) wide, below default 0.2 mm minimum track width of KiCad design rules.",
 "keywords": "usb usb-c connector esd udb",
 "fields": {}
 }

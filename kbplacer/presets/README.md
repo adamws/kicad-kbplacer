@@ -6,7 +6,8 @@ key matrix. They are plain [KiCad design blocks](https://docs.kicad.org/10.0/en/
 so they can be used and edited in KiCad without `kbplacer`.
 They are distributed with `kbplacer` (python package and KiCad plugin) in
 `kbplacer.kicad_blocks` library next to this file, add it to KiCad's design
-block library table to place them by hand.
+block library table to place them by hand (the [demo project](../../demo/demo.kicad_pro)
+already lists it).
 
 Use a preset by its name with `--preset` option (`python -m kbplacer --list-presets`
 lists them), it may be repeated to combine presets (for example microcontroller
@@ -41,7 +42,7 @@ To try it, run `just presets` (see [`.justfile`](../../.justfile)).
 | --- | --- | --- | --- |
 | [mcu_atmega32u4](#mcu_atmega32u4)<br>variants: [mcu_atmega32u4_v1](#mcu_atmega32u4_v1), [mcu_atmega32u4_v2](#mcu_atmega32u4_v2) | ATmega32U4 microcontroller with 16 MHz crystal, reset button, USB data line resistors and decoupling capacitors. | 25 pins, up to 12×13 | <a href="#mcu_atmega32u4_v1"><img src="images/mcu_atmega32u4_v1-pcb.svg" alt="mcu_atmega32u4_v1 PCB" height="80"></a> <a href="#mcu_atmega32u4_v2"><img src="images/mcu_atmega32u4_v2-pcb.svg" alt="mcu_atmega32u4_v2 PCB" height="80"></a> |
 | [usb_minimal](#usb_minimal) | USB-C receptacle (USB 2.0) with TPD2S017 ESD protection, connector VBUS powers VCC directly. Minimal version without CC pull-down resistors, only USB-A to USB-C cables power the board. | - | <a href="#usb_minimal"><img src="images/usb_minimal-pcb.svg" alt="usb_minimal PCB" height="80"></a> |
-| [usb_udb_clone](#usb_udb_clone) | USB-C receptacle (USB 2.0) with TPD4E05U06DQA ESD protection, CC pull-down resistors, polyfuse and zener diode on VCC. Clone of Unified Daughterboard (UDB-C) circuit, with two-layer routing. | - | <a href="#usb_udb_clone"><img src="images/usb_udb_clone-pcb.svg" alt="usb_udb_clone PCB" height="80"></a> |
+| [usb_udb_clone](#usb_udb_clone) | USB-C receptacle (USB 2.0) with TPD4E05U06DQA ESD protection, CC pull-down resistors, polyfuse and zener diode on VCC. Clone of Unified Daughterboard (UDB-C) circuit, with two-layer routing. USB data lines are 0.1524 mm (6 mil) wide, below default 0.2 mm minimum track width of KiCad design rules. | - | <a href="#usb_udb_clone"><img src="images/usb_udb_clone-pcb.svg" alt="usb_udb_clone PCB" height="80"></a> |
 
 ### mcu_atmega32u4
 
@@ -163,7 +164,7 @@ Keywords: usb usb-c connector esd
 
 ### usb_udb_clone
 
-USB-C receptacle (USB 2.0) with TPD4E05U06DQA ESD protection, CC pull-down resistors, polyfuse and zener diode on VCC. Clone of Unified Daughterboard (UDB-C) circuit, with two-layer routing.
+USB-C receptacle (USB 2.0) with TPD4E05U06DQA ESD protection, CC pull-down resistors, polyfuse and zener diode on VCC. Clone of Unified Daughterboard (UDB-C) circuit, with two-layer routing. USB data lines are 0.1524 mm (6 mil) wide, below default 0.2 mm minimum track width of KiCad design rules.
 
 Keywords: usb usb-c connector esd udb
 
@@ -198,12 +199,13 @@ Keywords: usb usb-c connector esd udb
 
 ## Creating presets
 
-1. Draw the circuit in KiCad project (like [`mcu.kicad_sch`](mcu.kicad_sch)
-   or [`usb.kicad_sch`](usb.kicad_sch), which holds both USB circuits, each
-   PCB layout in a group named like its block), route its PCB and save both
-   as one design block to `kbplacer.kicad_blocks` (_Save Selection as Design
-   Block_ in schematic and PCB editors, under the same block name).
-   References in the project may differ from the block, `kbplacer` renumbers
+1. Open [demo project](../../demo/demo.kicad_pro), its design block library
+   table already lists this library as `kbplacer`. Draw the circuit (or place
+   an existing preset to modify it), route its PCB and save both as one design
+   block to `kbplacer` library (_Save Selection as Design Block_ in schematic
+   and PCB editors, under the same block name; to modify a preset, overwrite
+   it). Do not save the demo project afterwards, it is the keyboard demo.
+   References may differ from the block's original ones, `kbplacer` renumbers
    them anyway.
 2. Mark pins which can drive the key matrix with global labels `GPIO0`,
    `GPIO1`, ... `kbplacer` connects them to rows and then columns of the

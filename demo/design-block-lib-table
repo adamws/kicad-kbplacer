@@ -1,0 +1,4 @@
+(design_block_lib_table
+  (version 7)
+  (lib (name "kbplacer")(type "KiCad")(uri "${KIPRJMOD}/../kbplacer/presets/kbplacer.kicad_blocks")(options "")(descr "kbplacer presets"))
+)
