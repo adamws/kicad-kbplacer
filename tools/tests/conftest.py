@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import base64
+import shutil
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
@@ -27,6 +29,43 @@ def tmp_output_dir():
     """Create a temporary directory for test outputs."""
     with tempfile.TemporaryDirectory() as tmpdir:
         yield Path(tmpdir)
+
+
+def add_to_report(tmp_output_dir: Path, image: Path, name: str = "") -> None:
+    """Attach image to the HTML report entry of the currently running test.
+
+    Images are shown in the order of adding, `name` (defaults to file name)
+    is used as image caption.
+    """
+    report_dir = tmp_output_dir / "report"
+    report_dir.mkdir(exist_ok=True)
+    index = len(list(report_dir.iterdir()))
+    shutil.copy(image, report_dir / f"{index:02d}-{name or image.stem}{image.suffix}")
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    pytest_html = item.config.pluginmanager.getplugin("html")
+    outcome = yield
+    report = outcome.get_result()
+    if pytest_html is None or report.when != "call" or report.skipped:
+        return
+
+    extras = getattr(report, "extras", [])
+    if tmp_output_dir := item.funcargs.get("tmp_output_dir"):
+        report_dir = tmp_output_dir / "report"
+        images = sorted(report_dir.glob("*.svg")) if report_dir.is_dir() else []
+        for image in images:
+            content = base64.b64encode(image.read_bytes()).decode("utf-8")
+            extras.append(
+                pytest_html.extras.image(
+                    content,
+                    name=image.stem.split("-", 1)[1],
+                    mime_type="image/svg+xml",
+                    extension="svg",
+                )
+            )
+    report.extras = extras
 
 
 def run_hatch_tool(project_root: Path, tool_name: str, *args, cwd=None):

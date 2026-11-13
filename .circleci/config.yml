@@ -119,6 +119,8 @@ jobs:
           name: Run tools tests
           command: |
             hatch run tools:test
+      - store_artifacts:
+          path: report-tools.html
       - run:
           name: Run layout2image example
           command: |

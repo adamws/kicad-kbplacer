@@ -4,7 +4,28 @@
 
 import pytest
 
-from .conftest import compare_svg_files, run_hatch_tool
+from .conftest import add_to_report, compare_svg_files, run_hatch_tool
+
+
+def render_layout(project_root, input_layout, output_svg):
+    result = run_hatch_tool(
+        project_root,
+        "layout2image",
+        "--in",
+        str(input_layout),
+        "--out",
+        str(output_svg),
+        "--force",
+    )
+
+    if result.returncode != 0:
+        pytest.fail(
+            f"layout2image command failed with return code {result.returncode}\n"
+            f"stdout: {result.stdout}\n"
+            f"stderr: {result.stderr}"
+        )
+
+    assert output_svg.exists()
 
 
 class TestLayout2Image:
@@ -24,27 +45,9 @@ class TestLayout2Image:
         expected_svg = tools_data_dir / "layout2image" / "expected-rotated-keys.svg"
         output_svg = tmp_output_dir / "output-rotated-keys.svg"
 
-        assert input_layout.exists()
-        assert expected_svg.exists()
+        render_layout(project_root, input_layout, output_svg)
+        add_to_report(tmp_output_dir, output_svg, "layout")
 
-        result = run_hatch_tool(
-            project_root,
-            "layout2image",
-            "--in",
-            str(input_layout),
-            "--out",
-            str(output_svg),
-            "--force",
-        )
-
-        if result.returncode != 0:
-            pytest.fail(
-                f"layout2image command failed with return code {result.returncode}\n"
-                f"stdout: {result.stdout}\n"
-                f"stderr: {result.stderr}"
-            )
-
-        assert output_svg.exists()
         assert compare_svg_files(output_svg, expected_svg)
 
     def test_stepped_keys(self, project_root, tools_data_dir, tmp_output_dir):
@@ -57,17 +60,9 @@ class TestLayout2Image:
         expected_svg = tools_data_dir / "layout2image" / "expected-stepped-keys.svg"
         output_svg = tmp_output_dir / "output-stepped-keys.svg"
 
-        result = run_hatch_tool(
-            project_root,
-            "layout2image",
-            "--in",
-            str(input_layout),
-            "--out",
-            str(output_svg),
-            "--force",
-        )
+        render_layout(project_root, input_layout, output_svg)
+        add_to_report(tmp_output_dir, output_svg, "layout")
 
-        assert result.returncode == 0, f"layout2image failed: {result.stderr}"
         assert compare_svg_files(output_svg, expected_svg)
 
     def test_layout2image_help(self, project_root):

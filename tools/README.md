@@ -65,7 +65,7 @@ To execute, run:
 
 ```shell
 $ hatch run tools:layout2image {args...}
-$ hatch run tools:layout2openscad {args...}
+$ hatch run tools-openscad:layout2openscad {args...}
 $ hatch run tools-pcbnew:pcb2layout {args...}
 ```
 
@@ -76,6 +76,15 @@ python tools/layout2image.py {args...}
 python tools/layout2openscad.py {args...}
 python tools/pcb2layout.py {args...}
 ```
+
+## Testing
+
+```shell
+$ hatch run tools:test                 # pcb2layout tests skipped when `pcbnew` not available
+$ hatch run tools-pcbnew:test          # all tests
+```
+
+HTML report is written to `report-tools.html` and includes `layout2image` renderings.
 
 ## Examples
 

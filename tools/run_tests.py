@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 def main():
-    project_root = Path(__file__).parent.parent
+    project_root = Path(__file__).resolve().parent.parent
     test_dir = project_root / "tools" / "tests"
 
     os.chdir(test_dir)
@@ -23,6 +23,9 @@ def main():
         ".",
         "--override-ini=addopts=--tb=short",
         "--no-header",
+        f"--html={project_root / 'report-tools.html'}",
+        f"--css={project_root / 'tests' / 'report' / 'style.css'}",
+        "--self-contained-html",
     ] + sys.argv[1:]
     return subprocess.run(args, check=False).returncode
 
