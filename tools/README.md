@@ -82,9 +82,14 @@ python tools/pcb2layout.py {args...}
 ```shell
 $ hatch run tools:test                 # pcb2layout tests skipped when `pcbnew` not available
 $ hatch run tools-pcbnew:test          # all tests
+$ hatch run tools:test -k layout2openscad --update-references
 ```
 
-HTML report is written to `report-tools.html` and includes `layout2image` renderings.
+Tests compare tool output with reference files in `tools/tests/data`, use
+`--update-references` to regenerate them after intended output change.
+HTML report is written to `report-tools.html` and includes `layout2image` renderings
+and `layout2openscad` plate top views (rendered from generated `.scad` files by
+`tools/tests/scad2svg.py`).
 
 ## Examples
 

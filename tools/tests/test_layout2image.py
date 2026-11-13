@@ -4,7 +4,15 @@
 
 import pytest
 
-from .conftest import add_to_report, compare_svg_files, run_hatch_tool
+from .conftest import (
+    add_to_report,
+    assert_matches_reference,
+    compare_svg_files,
+    run_hatch_tool,
+)
+
+# layouts from kbplacer tests data (tests/data/kle-layouts)
+REGULAR_LAYOUTS = ["ansi-104", "iso-105", "ergodox", "planck"]
 
 
 def render_layout(project_root, input_layout, output_svg):
@@ -31,8 +39,29 @@ def render_layout(project_root, input_layout, output_svg):
 class TestLayout2Image:
     """Test suite for layout2image tool."""
 
+    @pytest.mark.parametrize("layout", REGULAR_LAYOUTS)
+    def test_regular_layouts(
+        self,
+        project_root,
+        kle_layouts_dir,
+        tools_data_dir,
+        tmp_output_dir,
+        update_references,
+        layout,
+    ):
+        input_layout = kle_layouts_dir / f"{layout}.json"
+        expected_svg = tools_data_dir / "layout2image" / f"expected-{layout}.svg"
+        output_svg = tmp_output_dir / f"{layout}.svg"
+
+        render_layout(project_root, input_layout, output_svg)
+        add_to_report(tmp_output_dir, output_svg, "layout")
+
+        assert_matches_reference(
+            output_svg, expected_svg, compare_svg_files, update_references
+        )
+
     def test_rotated_keys_positioning(
-        self, project_root, tools_data_dir, tmp_output_dir
+        self, project_root, tools_data_dir, tmp_output_dir, update_references
     ):
         """
         Test that rotated keys with same y-coordinates are positioned correctly.
@@ -48,9 +77,13 @@ class TestLayout2Image:
         render_layout(project_root, input_layout, output_svg)
         add_to_report(tmp_output_dir, output_svg, "layout")
 
-        assert compare_svg_files(output_svg, expected_svg)
+        assert_matches_reference(
+            output_svg, expected_svg, compare_svg_files, update_references
+        )
 
-    def test_stepped_keys(self, project_root, tools_data_dir, tmp_output_dir):
+    def test_stepped_keys(
+        self, project_root, tools_data_dir, tmp_output_dir, update_references
+    ):
         """
         Test that stepped keys are rendered like in KLE: keytop only on the raised
         (primary) part, lower step in the dark color, and canvas large enough
@@ -63,7 +96,9 @@ class TestLayout2Image:
         render_layout(project_root, input_layout, output_svg)
         add_to_report(tmp_output_dir, output_svg, "layout")
 
-        assert compare_svg_files(output_svg, expected_svg)
+        assert_matches_reference(
+            output_svg, expected_svg, compare_svg_files, update_references
+        )
 
     def test_layout2image_help(self, project_root):
         result = run_hatch_tool(project_root, "layout2image", "--help")
