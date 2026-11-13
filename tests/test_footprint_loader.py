@@ -345,6 +345,20 @@ class TestSwitchFootprintLoader:
         name = loader.get_footprint_name(key=key)
         assert name == "SW_ISO_Enter"
 
+    def test_get_footprint_name_stepped_key_uses_raised_width(self, tmpdir) -> None:
+        lib_path = Path(tmpdir) / "test.pretty"
+        lib_path.mkdir()
+        for width in ["1.00", "1.25", "1.75"]:
+            (lib_path / f"SW_Cherry_MX_PCB_{width}u.kicad_mod").touch()
+
+        loader = SwitchFootprintLoader(f"{lib_path}:SW_Cherry_MX_PCB_{{:.2f}}u")
+
+        # Stepped Caps Lock: the switch sits under the 1.25u raised part,
+        # the 1.75u second rectangle includes the lower step
+        key = Key(width=1.25, width2=1.75, stepped=True)
+        name = loader.get_footprint_name(key=key)
+        assert name == "SW_Cherry_MX_PCB_1.25u"
+
     def test_get_footprint_name_iso_enter_not_available(self, examples_library) -> None:
         # Examples library doesn't have ISO Enter footprint
         loader = SwitchFootprintLoader(f"{examples_library}:SW_Cherry_MX_PCB_{{:.2f}}u")
@@ -499,6 +513,11 @@ class TestStabilizerFootprintLoader:
         key = Key(width=1.25, height=2, width2=1.5, height2=1)
         name = self._loader(stab_library).get_footprint_name(key=key)
         assert name == "Stabilizer_Cherry_MX_2.00u"
+
+    def test_stepped_key_without_stabilizer(self, stab_library) -> None:
+        # Stepped Caps Lock (1.25u raised of 1.75u) is not stabilized
+        key = Key(width=1.25, width2=1.75, stepped=True)
+        assert self._loader(stab_library).get_footprint_name(key=key) is None
 
     def test_exact_match_returns_footprint(self, stab_library) -> None:
         name = self._loader(stab_library).get_footprint_name(key=Key(width=2.0))

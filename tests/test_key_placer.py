@@ -1130,6 +1130,34 @@ def test_stab_rotation_applied_to_st_element_only(request) -> None:
     assert get_orientation(led) == 0
 
 
+# Two rows
+# 1 row: 1.25U raised out of 1.75U + 1U keycap
+# 2 row: 1.25U + 0.5U gap + 1U keycap
+# if handling of raised keys correct they x position should be equal for both columns
+STEPPED_KEYS_LAYOUT = [
+    [{"w": 1.25, "w2": 1.75, "l": True}, "", {"x": 0.5}, ""],
+    [{"w": 1.25}, "", {"x": 0.5}, ""],
+]
+
+
+def test_stepped_keys_switches_centered_on_raised_part(tmpdir, request) -> None:
+    board = pcbnew.CreateEmptyBoard()
+    for i in range(1, 5):
+        add_switch_footprint(board, request, i)
+    key_matrix = KeyMatrix(board, "SW{}", "")
+    keyboard = parse_kle(STEPPED_KEYS_LAYOUT)
+    key_info = ElementInfo("SW{}", PositionOption.DEFAULT, ZERO_POSITION, "", 1)
+
+    key_placer = KeyPlacer(board)
+    key_placer.place_switches(keyboard, key_matrix, key_info, (19.05, 19.05))
+
+    save_and_render(board, tmpdir, request)
+
+    positions = [get_position(get_footprint(board, f"SW{i}")) for i in range(1, 5)]
+    assert positions[0][0] == positions[2][0]
+    assert positions[1][0] == positions[3][0]
+
+
 def _normalize_angle(angle: float) -> float:
     return ((angle + 180) % 360) - 180
 
