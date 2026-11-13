@@ -187,7 +187,9 @@ def build_key(key: Key):
         layers = ["border", "fill", "keytop"]
         for layer in layers:
             group.append(locals()[layer](0, 0, key.width, key.height))
-            if not_rectangle:
+            # stepped keys have keytop only on the raised (primary) part,
+            # the lower step is drawn in the dark color, like in KLE
+            if not_rectangle and not (key.stepped and layer == "keytop"):
                 group.append(locals()[layer](key.x2, key.y2, key.width2, key.height2))
 
     for i, label in enumerate(key.labels):
@@ -220,10 +222,12 @@ def calcualte_canvas_corners(key_iterator: Iterator) -> tuple[int, int, int, int
     max_x = 0
     max_y = 0
     for k in key_iterator:
-        x1 = KEY_WIDTH_PX * k.x
-        x2 = KEY_WIDTH_PX * k.x + KEY_WIDTH_PX * k.width
-        y1 = KEY_HEIGHT_PX * k.y
-        y2 = KEY_HEIGHT_PX * k.y + KEY_HEIGHT_PX * k.height
+        # bounding box of both rectangles, second one is used by
+        # non-rectangular keys like ISO Enter or stepped keys
+        x1 = KEY_WIDTH_PX * (k.x + min(0, k.x2))
+        x2 = KEY_WIDTH_PX * (k.x + max(k.width, k.x2 + k.width2))
+        y1 = KEY_HEIGHT_PX * (k.y + min(0, k.y2))
+        y2 = KEY_HEIGHT_PX * (k.y + max(k.height, k.y2 + k.height2))
 
         for x, y in [(x1, y1), (x2, y1), (x1, y2), (x2, y2)]:
             angle = k.rotation_angle

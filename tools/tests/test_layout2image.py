@@ -47,6 +47,29 @@ class TestLayout2Image:
         assert output_svg.exists()
         assert compare_svg_files(output_svg, expected_svg)
 
+    def test_stepped_keys(self, project_root, tools_data_dir, tmp_output_dir):
+        """
+        Test that stepped keys are rendered like in KLE: keytop only on the raised
+        (primary) part, lower step in the dark color, and canvas large enough
+        for steps at layout edges.
+        """
+        input_layout = tools_data_dir / "layout2image" / "stepped-keys.json"
+        expected_svg = tools_data_dir / "layout2image" / "expected-stepped-keys.svg"
+        output_svg = tmp_output_dir / "output-stepped-keys.svg"
+
+        result = run_hatch_tool(
+            project_root,
+            "layout2image",
+            "--in",
+            str(input_layout),
+            "--out",
+            str(output_svg),
+            "--force",
+        )
+
+        assert result.returncode == 0, f"layout2image failed: {result.stderr}"
+        assert compare_svg_files(output_svg, expected_svg)
+
     def test_layout2image_help(self, project_root):
         result = run_hatch_tool(project_root, "layout2image", "--help")
 
