@@ -82,16 +82,24 @@ def generate(
         if k.decal:
             continue
         p = shapely.box(k.x, -k.y, k.x + k.width, -k.y - k.height)
-        p = affinity.rotate(p, -k.rotation_angle, origin=(k.rotation_x, -k.rotation_y))
+        # keycap outline includes second rectangle of non-rectangular keys,
+        # e.g. lower part of stepped keys, switch is centered on the first one
+        x2, y2 = k.x + k.x2, k.y + k.y2
+        keycap = p.union(shapely.box(x2, -y2, x2 + k.width2, -y2 - k.height2))
+
+        rotation = {"angle": -k.rotation_angle, "origin": (k.rotation_x, -k.rotation_y)}
+        p = affinity.rotate(p, **rotation)
+        keycap = affinity.rotate(keycap, **rotation)
 
         # if align option enabled then use center of first switch as reference point (0, 0)
         if align_origin:
             if offset == None:
                 offset = centroid(p)
             p = affinity.translate(p, -offset.x, -offset.y, 0)
+            keycap = affinity.translate(keycap, -offset.x, -offset.y, 0)
 
         if i not in outline_ignore:
-            outline_switches.append(p)
+            outline_switches.append(keycap)
 
         # get switch center and create cube hole based on it
         c = centroid(p)
