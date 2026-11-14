@@ -13,6 +13,7 @@ from .conftest import (
     compare_scad_files,
     render_plate,
     run_hatch_tool,
+    save_scad_reference,
 )
 from .test_layout2image import REGULAR_LAYOUTS, render_layout
 
@@ -108,7 +109,11 @@ class TestLayout2OpenScad:
         output_scad = generate_plate(project_root, tmp_output_dir, input_layout)
 
         assert_matches_reference(
-            output_scad, expected, compare_scad_files, update_references
+            output_scad,
+            expected,
+            compare_scad_files,
+            update_references,
+            save_scad_reference,
         )
 
     @pytest.mark.parametrize("layout", ["rotated-keys", "stepped-keys"])
@@ -127,7 +132,11 @@ class TestLayout2OpenScad:
         )
 
         assert_matches_reference(
-            output_scad, expected, compare_scad_files, update_references
+            output_scad,
+            expected,
+            compare_scad_files,
+            update_references,
+            save_scad_reference,
         )
 
     @pytest.mark.parametrize(
@@ -148,7 +157,11 @@ class TestLayout2OpenScad:
         output_scad = generate_plate(project_root, tmp_output_dir, input_layout, *args)
 
         assert_matches_reference(
-            output_scad, expected, compare_scad_files, update_references
+            output_scad,
+            expected,
+            compare_scad_files,
+            update_references,
+            save_scad_reference,
         )
 
     def test_ignore_alternative_layouts(
