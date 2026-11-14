@@ -1,0 +1,15 @@
+version: 2.1
+
+# dummy config, to satisfy circleci on automatic ghpages deployment
+
+jobs:
+  build:
+    docker:
+      - image: cimg/base:2022.09
+    steps:
+      - run: echo "Deployment ok"
+
+workflows:
+  main:
+    jobs:
+      - build
